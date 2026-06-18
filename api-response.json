@@ -1,0 +1,275 @@
+1. Language key validation on save
+Any language key in content, title, body, question, answer is now validated against the active Language table. Trying to save {"zz": "..."} returns:
+
+
+{ "error": "Invalid language codes: ['zz']. Active languages: ['en', 'ml']" }
+2. ?lang= filter on all GET endpoints
+Pass ?lang=ml to any admin CMS GET and instead of raw JSON you get:
+
+
+{
+  "block_key": "hero_headline",
+  "content": "കർഷക ഉൽപാദക സംഘടനകളെ...",
+  "available_languages": ["en", "ml"],
+  "is_active": true
+}
+3. How to add a new language (e.g. Tamil)
+
+Admin adds Tamil via POST /api/admin/languages/ → { "code": "ta", "name": "Tamil", ... }
+Now "ta" is a valid key — CMS validation accepts it
+Admin PATCHes any block with { "content": { "en": "...", "ml": "...", "ta": "..." } }
+Frontend sends X-Language: ta → gets Tamil text back
+
+
+
+
+
+Admin - CMS
+
+
+GET
+/api/admin/announcements/
+List announcements
+
+
+Parameters
+Try it out
+No parameters
+
+Responses
+Code	Description	Links
+200	
+No response body
+
+No links
+
+POST
+/api/admin/announcements/
+Create an announcement
+
+
+Parameters
+Try it out
+No parameters
+
+Request body
+
+application/json
+Example Value
+Schema
+{
+  "title": "string",
+  "body": "string",
+  "category": "announcement",
+  "published_date": "2026-06-17",
+  "is_active": true,
+  "order": 32767
+}
+Responses
+Code	Description	Links
+200	
+No response body
+
+No links
+
+GET
+/api/admin/announcements/{id}/
+Retrieve an announcement
+
+
+Parameters
+Try it out
+Name	Description
+id *
+integer
+(path)
+id
+Responses
+Code	Description	Links
+200	
+No response body
+
+No links
+
+PATCH
+/api/admin/announcements/{id}/
+Update an announcement
+
+
+Parameters
+Try it out
+Name	Description
+id *
+integer
+(path)
+id
+Responses
+Code	Description	Links
+200	
+No response body
+
+No links
+
+DELETE
+/api/admin/announcements/{id}/
+Delete an announcement
+
+
+Parameters
+Try it out
+Name	Description
+id *
+integer
+(path)
+id
+Responses
+Code	Description	Links
+204	
+No response body
+
+No links
+
+GET
+/api/admin/faqs/
+List FAQs
+
+
+Parameters
+Try it out
+No parameters
+
+Responses
+Code	Description	Links
+200	
+No response body
+
+No links
+
+POST
+/api/admin/faqs/
+Create a FAQ
+
+
+Parameters
+Try it out
+No parameters
+
+Responses
+Code	Description	Links
+200	
+No response body
+
+No links
+
+GET
+/api/admin/faqs/{id}/
+Retrieve a FAQ
+
+
+Parameters
+Try it out
+Name	Description
+id *
+integer
+(path)
+id
+Responses
+Code	Description	Links
+200	
+No response body
+
+No links
+
+PATCH
+/api/admin/faqs/{id}/
+Update a FAQ
+
+
+Parameters
+Try it out
+Name	Description
+id *
+integer
+(path)
+id
+Responses
+Code	Description	Links
+200	
+No response body
+
+No links
+
+DELETE
+/api/admin/faqs/{id}/
+Delete a FAQ
+
+
+Parameters
+Try it out
+Name	Description
+id *
+integer
+(path)
+id
+Responses
+Code	Description	Links
+204	
+No response body
+
+No links
+
+GET
+/api/admin/site-content/
+List all site content blocks
+
+
+Parameters
+Try it out
+No parameters
+
+Responses
+Code	Description	Links
+200	
+No response body
+
+No links
+
+GET
+/api/admin/site-content/{key}/
+Retrieve a site content block
+
+
+Parameters
+Try it out
+Name	Description
+key *
+string
+(path)
+key
+Responses
+Code	Description	Links
+200	
+No response body
+
+No links
+
+PATCH
+/api/admin/site-content/{key}/
+Update a site content block
+
+
+Send {"content": {"en": "...", "ml": "..."}} to update text. Malayalam is optional.
+
+Parameters
+Try it out
+Name	Description
+key *
+string
+(path)
+key
+Responses
+Code	Description	Links
+200	
+No response body
+
+No links

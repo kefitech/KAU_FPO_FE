@@ -1,0 +1,559 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { CheckCircle2, ChevronDown, ChevronUp, ClipboardList, Edit2, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+
+import { tierAssessmentApi } from "@/app/fpo/_api/tier-assessment";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { TierAssessmentData, TierDomainScore, TierHistoryItem, TierQuestion, TierUpload } from "@/types/fpo";
+
+import { FileUploadSection } from "./_components/file-upload-section";
+import { QuestionField } from "./_components/question-field";
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+type AnswerMap = Record<number, string | number | string[]>;
+
+function tierColor(tier: string) {
+  return (
+    {
+      A: "bg-green-100 text-green-800 border-green-300 dark:bg-green-900/30 dark:text-green-300",
+      B: "bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300",
+      C: "bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-300",
+      D: "bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-900/30 dark:text-orange-300",
+    }[tier] ?? "bg-muted text-muted-foreground border"
+  );
+}
+
+function groupByDomain(questions: TierQuestion[]) {
+  const map = new Map<string, TierQuestion[]>();
+  for (const q of questions) {
+    if (q.input_type === "computed") continue;
+    const key = q.domain_name;
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(q);
+  }
+  return map;
+}
+
+function isVisible(q: TierQuestion, answers: AnswerMap) {
+  if (!q.is_conditional || q.condition_on_question_no === null) return true;
+  return String(answers[q.condition_on_question_no] ?? "") === q.condition_value;
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function TierBadgeLarge({ tier }: { tier: string }) {
+  return (
+    <div
+      className={`flex h-20 w-20 items-center justify-center rounded-full border-2 text-3xl font-bold ${tierColor(tier)}`}
+    >
+      {tier || "—"}
+    </div>
+  );
+}
+
+function SaveIndicator({ status }: { status: "idle" | "saving" | "saved" }) {
+  if (status === "idle") return null;
+  if (status === "saving")
+    return (
+      <span className="flex items-center gap-1.5 text-muted-foreground text-xs">
+        <Loader2 className="h-3 w-3 animate-spin" />
+        Saving…
+      </span>
+    );
+  return (
+    <span className="flex items-center gap-1.5 text-green-600 text-xs dark:text-green-400">
+      <CheckCircle2 className="h-3 w-3" />
+      Saved
+    </span>
+  );
+}
+
+function SubmittedView({
+  data,
+  onReopen,
+  reopening,
+}: {
+  data: TierAssessmentData;
+  onReopen?: () => void;
+  reopening?: boolean;
+}) {
+  const { assessment } = data;
+  if (!assessment) return null;
+  const domains = assessment.domain_scores ?? [];
+  const total = assessment.total_score ? Number(assessment.total_score) : null;
+
+  return (
+    <div className="flex flex-col gap-6">
+      {/* Tier result card */}
+      <div className="flex flex-col items-center gap-4 rounded-xl border bg-card p-8 text-center shadow-sm">
+        <p className="font-medium text-muted-foreground text-sm">
+          {data.financial_year} Assessment Result
+        </p>
+        <TierBadgeLarge tier={assessment.tier_assigned} />
+        <div>
+          <p className="font-bold text-2xl">Tier {assessment.tier_assigned || "—"}</p>
+          {total !== null && (
+            <p className="mt-1 text-muted-foreground text-sm">
+              Total Score: <span className="font-semibold text-foreground">{total.toFixed(1)}</span>
+            </p>
+          )}
+        </div>
+        {assessment.submitted_at && (
+          <p className="text-muted-foreground text-xs">
+            Submitted on{" "}
+            {new Date(assessment.submitted_at).toLocaleDateString("en-IN", {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            })}
+          </p>
+        )}
+        {onReopen && (
+          <Button variant="outline" size="sm" onClick={onReopen} disabled={reopening}>
+            {reopening ? (
+              <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />Reopening…</>
+            ) : (
+              <><Edit2 className="mr-1.5 h-3.5 w-3.5" />Edit Assessment</>
+            )}
+          </Button>
+        )}
+      </div>
+
+      {/* Domain scores */}
+      {domains.length > 0 && (
+        <div className="rounded-xl border bg-card shadow-sm">
+          <div className="border-b px-5 py-3.5">
+            <h2 className="font-semibold text-sm">Score Breakdown by Domain</h2>
+          </div>
+          <div className="divide-y">
+            {domains.map((d) => (
+              <DomainScoreRow key={d.domain_code} domain={d} />
+            ))}
+          </div>
+          {total !== null && (
+            <div className="flex items-center justify-between border-t bg-muted/30 px-5 py-3">
+              <span className="font-semibold text-sm">Total</span>
+              <div className="flex items-center gap-3">
+                <span className="font-bold text-sm">
+                  {total.toFixed(1)} / {domains.reduce((s, d) => s + d.max_score, 0)}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DomainScoreRow({ domain }: { domain: TierDomainScore }) {
+  const pct = domain.max_score > 0 ? (domain.score / domain.max_score) * 100 : 0;
+  return (
+    <div className="flex items-center gap-4 px-5 py-3">
+      <span className="min-w-0 flex-1 text-sm">{domain.domain_name}</span>
+      <div className="flex items-center gap-3">
+        <div className="hidden h-1.5 w-28 overflow-hidden rounded-full bg-muted sm:block">
+          <div
+            className="h-full rounded-full bg-primary transition-all"
+            style={{ width: `${Math.min(100, Math.max(0, pct))}%` }}
+          />
+        </div>
+        <span className="w-20 text-right font-medium text-sm tabular-nums">
+          {domain.score.toFixed(1)} / {domain.max_score}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function HistorySection({ items, currentYear }: { items: TierHistoryItem[]; currentYear: string }) {
+  const [open, setOpen] = useState(false);
+  const past = items.filter((i) => i.financial_year !== currentYear && i.status === "submitted");
+  if (past.length === 0) return null;
+
+  return (
+    <div className="rounded-xl border bg-card shadow-sm">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between px-5 py-4 text-left"
+      >
+        <span className="font-semibold text-sm">Past Assessment History</span>
+        <div className="flex items-center gap-2 text-muted-foreground text-xs">
+          <span>{past.length} record{past.length !== 1 ? "s" : ""}</span>
+          {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        </div>
+      </button>
+
+      {open && (
+        <div className="divide-y border-t">
+          {past.map((item) => (
+            <div key={item.id} className="flex items-center gap-4 px-5 py-3.5">
+              <span className="font-medium text-sm">{item.financial_year}</span>
+              <div
+                className={`rounded-full border px-2.5 py-0.5 font-bold text-xs ${tierColor(item.tier_assigned)}`}
+              >
+                Tier {item.tier_assigned}
+              </div>
+              <span className="text-muted-foreground text-sm">Score: {Number(item.total_score).toFixed(1)}</span>
+              <span className="ml-auto text-muted-foreground text-xs">
+                {new Date(item.submitted_at).toLocaleDateString("en-IN", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
+
+export default function TierAssessmentPage() {
+  const queryClient = useQueryClient();
+  const [answerMap, setAnswerMap] = useState<AnswerMap>({});
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearQueueRef = useRef<Set<number>>(new Set());
+  const assessmentIdRef = useRef<number | null>(null);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["fpo-tier-assessment"],
+    queryFn: tierAssessmentApi.get,
+    staleTime: 60_000,
+  });
+
+  const { data: history = [] } = useQuery({
+    queryKey: ["fpo-tier-history"],
+    queryFn: tierAssessmentApi.history,
+    staleTime: 60_000,
+  });
+
+  // Populate answer map when assessment loads
+  useEffect(() => {
+    const assessment = data?.assessment;
+    if (!assessment) return;
+    assessmentIdRef.current = assessment.id;
+    if (assessment.answers?.length) {
+      const map: AnswerMap = {};
+      for (const a of assessment.answers) {
+        if (a.answer !== null && a.answer !== undefined) {
+          map[a.question_no] = a.answer;
+        }
+      }
+      setAnswerMap(map);
+    }
+  }, [data?.assessment?.id]);
+
+  const saveMutation = useMutation({
+    mutationFn: (payload: { answers: Record<string, string | number | string[] | null> }) =>
+      tierAssessmentApi.save(assessmentIdRef.current!, payload.answers),
+    onSuccess: () => {
+      clearQueueRef.current.clear();
+      setSaveStatus("saved");
+      setTimeout(() => setSaveStatus((s) => (s === "saved" ? "idle" : s)), 2000);
+    },
+    onError: () => setSaveStatus("idle"),
+  });
+
+  const startMutation = useMutation({
+    mutationFn: tierAssessmentApi.start,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["fpo-tier-assessment"] }),
+    onError: (err: unknown) => {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 409) {
+        queryClient.invalidateQueries({ queryKey: ["fpo-tier-assessment"] });
+      } else {
+        toast.error("Failed to start assessment");
+      }
+    },
+  });
+
+  const submitMutation = useMutation({
+    mutationFn: () => tierAssessmentApi.submit(assessmentIdRef.current!),
+    onSuccess: () => {
+      toast.success("Assessment submitted! Your tier has been assigned.");
+      queryClient.invalidateQueries({ queryKey: ["fpo-tier-assessment"] });
+      queryClient.invalidateQueries({ queryKey: ["fpo-tier-history"] });
+      queryClient.invalidateQueries({ queryKey: ["fpo-dashboard"] });
+    },
+    onError: () =>
+      toast.error("Submission failed. Ensure all required questions are answered."),
+  });
+
+  const reopenMutation = useMutation({
+    mutationFn: () => tierAssessmentApi.reopen(assessmentIdRef.current!),
+    onSuccess: () => {
+      toast.success("Assessment reopened. You can now edit your answers.");
+      queryClient.invalidateQueries({ queryKey: ["fpo-tier-assessment"] });
+      queryClient.invalidateQueries({ queryKey: ["fpo-dashboard"] });
+    },
+    onError: () => toast.error("Failed to reopen assessment. Please try again."),
+  });
+
+  function scheduleSave(map: AnswerMap) {
+    if (!assessmentIdRef.current) return;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    setSaveStatus("saving");
+    const snapshot = { ...map };
+    const clears = new Set(clearQueueRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      const answers: Record<string, string | number | string[] | null> = {};
+      for (const [k, v] of Object.entries(snapshot)) {
+        answers[k] = v;
+      }
+      for (const qNo of clears) {
+        answers[String(qNo)] = null;
+      }
+      saveMutation.mutate({ answers });
+    }, 1000);
+  }
+
+  function updateAnswer(qNo: number, value: string | number | string[]) {
+    const next = { ...answerMap, [qNo]: value };
+
+    // Cascade-clear children whose condition no longer holds
+    if (data?.questions) {
+      for (const q of data.questions) {
+        if (q.is_conditional && q.condition_on_question_no === qNo) {
+          const condMet = String(value) === q.condition_value;
+          if (!condMet && next[q.question_no] !== undefined) {
+            clearQueueRef.current.add(q.question_no);
+            delete next[q.question_no];
+          }
+        }
+      }
+    }
+
+    setAnswerMap(next);
+    scheduleSave(next);
+  }
+
+  // ── Loading ─────────────────────────────────────────────────────────────────
+  if (isLoading) {
+    return (
+      <div className="flex flex-col gap-6 p-6">
+        <Skeleton className="h-8 w-48" />
+        <div className="flex flex-col gap-4 rounded-xl border p-6">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-6 w-full" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const assessment = data?.assessment;
+  const questions = data?.questions ?? [];
+  const financialYear = data?.financial_year ?? "";
+
+  // ── No assessment yet ────────────────────────────────────────────────────────
+  if (!assessment) {
+    return (
+      <div className="flex flex-col gap-6 p-6">
+        <div>
+          <h1 className="font-bold text-2xl">Tier Assessment</h1>
+          <p className="mt-0.5 text-muted-foreground text-sm">
+            Annual assessment to determine your FPO's performance tier
+          </p>
+        </div>
+
+        <div className="flex flex-col items-center gap-5 rounded-xl border bg-card p-12 text-center shadow-sm">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+            <ClipboardList className="h-8 w-8 text-primary" />
+          </div>
+          <div>
+            <p className="font-semibold text-lg">
+              {financialYear} Assessment Not Started
+            </p>
+            <p className="mt-1 max-w-sm text-muted-foreground text-sm">
+              Complete the annual tier assessment to receive your FPO performance rating and unlock
+              relevant support programmes.
+            </p>
+          </div>
+          <Button
+            onClick={() => startMutation.mutate()}
+            disabled={startMutation.isPending}
+            size="lg"
+          >
+            {startMutation.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Starting…
+              </>
+            ) : (
+              "Start Assessment"
+            )}
+          </Button>
+        </div>
+
+        <HistorySection items={history} currentYear={financialYear} />
+      </div>
+    );
+  }
+
+  // ── Submitted — read-only results ────────────────────────────────────────────
+  if (assessment.status === "submitted") {
+    return (
+      <div className="flex flex-col gap-6 p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="font-bold text-2xl">Tier Assessment</h1>
+            <p className="mt-0.5 text-muted-foreground text-sm">{financialYear} Financial Year</p>
+          </div>
+          <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+            Submitted
+          </Badge>
+        </div>
+
+        <SubmittedView
+          data={data}
+          onReopen={() => reopenMutation.mutate()}
+          reopening={reopenMutation.isPending}
+        />
+        <HistorySection items={history} currentYear={financialYear} />
+      </div>
+    );
+  }
+
+  // ── Draft — question form ────────────────────────────────────────────────────
+  const uploads: TierUpload[] = assessment.uploads ?? [];
+  const uploadsForQuestion = (qNo: number) => uploads.filter((u) => u.question_no === qNo);
+  const domains = groupByDomain(questions);
+  const visibleRequired = questions.filter(
+    (q) => q.is_required && q.input_type !== "computed" && isVisible(q, answerMap),
+  );
+  const answeredRequired = visibleRequired.filter((q) => {
+    const val = answerMap[q.question_no];
+    if (val === undefined || val === null || val === "") return false;
+    if (Array.isArray(val)) return val.length > 0;
+    return true;
+  });
+  const allRequiredDone = answeredRequired.length === visibleRequired.length;
+
+  return (
+    <div className="flex flex-col gap-6 p-6">
+      {/* Header */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="font-bold text-2xl">Tier Assessment</h1>
+          <p className="mt-0.5 text-muted-foreground text-sm">{financialYear} Financial Year</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <SaveIndicator status={saveStatus} />
+          <Badge variant="secondary" className="bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
+            Draft
+          </Badge>
+        </div>
+      </div>
+
+      {/* Progress */}
+      <div className="flex items-center gap-3 rounded-lg border bg-muted/30 px-4 py-2.5 text-sm">
+        <span className="text-muted-foreground">Progress:</span>
+        <span className="font-medium">
+          {answeredRequired.length} / {visibleRequired.length} required questions answered
+        </span>
+        <div className="ml-auto hidden h-1.5 w-32 overflow-hidden rounded-full bg-muted sm:block">
+          <div
+            className="h-full rounded-full bg-primary transition-all"
+            style={{
+              width:
+                visibleRequired.length > 0
+                  ? `${(answeredRequired.length / visibleRequired.length) * 100}%`
+                  : "0%",
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Domain question groups */}
+      {Array.from(domains.entries()).map(([domainName, qs]) => (
+        <div key={domainName} className="rounded-xl border bg-card shadow-sm">
+          <div className="border-b bg-muted/30 px-5 py-3">
+            <h2 className="font-semibold text-sm">{domainName}</h2>
+          </div>
+          <div className="divide-y">
+            {qs.map((q) => {
+              const visible = isVisible(q, answerMap);
+              if (!visible) return null;
+              return (
+                <div key={q.question_no} className="px-5 py-4">
+                  <div className="mb-3 flex items-start gap-2">
+                    <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-muted-foreground text-xs">
+                      {q.question_no}
+                    </span>
+                    <p className="text-sm leading-relaxed">
+                      {q.text}
+                      {q.is_required && (
+                        <span className="ml-1 text-destructive" aria-hidden>*</span>
+                      )}
+                    </p>
+                  </div>
+                  <div className="pl-7">
+                    <QuestionField
+                      question={q}
+                      value={answerMap[q.question_no]}
+                      onChange={(val) => updateAnswer(q.question_no, val)}
+                      readOnly={q.is_prefilled}
+                    />
+                    {q.is_prefilled && (
+                      <p className="mt-1 text-muted-foreground text-xs">Pre-filled from registration data</p>
+                    )}
+                    {q.has_upload && (
+                      <FileUploadSection
+                        assessmentId={assessment.id}
+                        questionNo={q.question_no}
+                        uploads={uploadsForQuestion(q.question_no)}
+                        uploadLabel={q.upload_label}
+                        onUploadsChange={() =>
+                          queryClient.invalidateQueries({ queryKey: ["fpo-tier-assessment"] })
+                        }
+                      />
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+
+      {/* Submit */}
+      <div className="flex items-center justify-between rounded-xl border bg-card p-4 shadow-sm">
+        <p className="text-muted-foreground text-sm">
+          {allRequiredDone
+            ? "All required questions answered. Ready to submit."
+            : `${visibleRequired.length - answeredRequired.length} required question${
+                visibleRequired.length - answeredRequired.length !== 1 ? "s" : ""
+              } remaining.`}
+        </p>
+        <Button
+          onClick={() => submitMutation.mutate()}
+          disabled={submitMutation.isPending || !allRequiredDone}
+        >
+          {submitMutation.isPending ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Submitting…
+            </>
+          ) : (
+            "Submit Assessment"
+          )}
+        </Button>
+      </div>
+
+      <HistorySection items={history} currentYear={financialYear} />
+    </div>
+  );
+}
