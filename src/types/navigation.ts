@@ -4,7 +4,7 @@
 export interface MenuItem {
   id: string;
   title: string;
-  titleMl?: string; // Malayalam title
+  translations?: Record<string, string>; // locale code → translated title
   url: string;
   icon: string; // Icon name as string (e.g., "LayoutDashboard", "Users")
   badge?: string | number;
@@ -18,7 +18,7 @@ export interface MenuItem {
 export interface MenuGroup {
   id: string;
   label: string;
-  labelMl?: string; // Malayalam label
+  translations?: Record<string, string>; // locale code → translated label
   items: MenuItem[];
 }
 

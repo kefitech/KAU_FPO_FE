@@ -40,7 +40,7 @@ function MenuItemComponent({
   locale?: string;
 }) {
   const Icon = getIcon(item.icon);
-  const title = locale === "ml" && item.titleMl ? item.titleMl : item.title;
+  const title = item.translations?.[locale] ?? item.title;
   const isActive = pathname === item.url || pathname.startsWith(`${item.url}/`);
 
   if (item.children && item.children.length > 0) {
@@ -58,7 +58,7 @@ function MenuItemComponent({
             <SidebarMenuSub>
               {item.children.map((child) => {
                 const ChildIcon = getIcon(child.icon);
-                const childTitle = locale === "ml" && child.titleMl ? child.titleMl : child.title;
+                const childTitle = child.translations?.[locale] ?? child.title;
                 const isChildActive = pathname === child.url;
 
                 return (
@@ -121,7 +121,7 @@ export function DynamicSidebar({ config, locale = "en" }: DynamicSidebarProps) {
 
       <SidebarContent>
         {config.groups.map((group) => {
-          const groupLabel = locale === "ml" && group.labelMl ? group.labelMl : group.label;
+          const groupLabel = group.translations?.[locale] ?? group.label;
 
           return (
             <SidebarGroup key={group.id}>

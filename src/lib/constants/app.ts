@@ -49,12 +49,8 @@ export const MAP_CONFIG = {
 } as const;
 
 export const LOCALES = {
-  DEFAULT: (process.env.NEXT_PUBLIC_DEFAULT_LOCALE || "en") as "en" | "ml",
-  SUPPORTED: (process.env.NEXT_PUBLIC_SUPPORTED_LOCALES?.split(",") || ["en", "ml"]) as Array<"en" | "ml">,
-  NAMES: {
-    en: "English",
-    ml: "മലയാളം",
-  },
+  DEFAULT: process.env.NEXT_PUBLIC_DEFAULT_LOCALE || "en",
+  SUPPORTED: process.env.NEXT_PUBLIC_SUPPORTED_LOCALES?.split(",") ?? ["en", "ml"],
 } as const;
 
 export const FEATURE_FLAGS = {

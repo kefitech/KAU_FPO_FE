@@ -31,9 +31,17 @@ export function DataTablePagination({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-between">
-        <Skeleton className="h-4 w-32" />
-        <Skeleton className="h-8 w-56" />
+      <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
+        <Skeleton className="h-5 w-36" />
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-8 w-32" />
+          <Skeleton className="h-5 w-20" />
+          <div className="flex items-center gap-1">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-8 w-8" />
+            ))}
+          </div>
+        </div>
       </div>
     );
   }

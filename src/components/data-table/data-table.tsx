@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -69,20 +69,32 @@ export function DataTable<TData>({
     tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, []);
 
-  const extraParams: Record<string, string> = {};
-  filters.forEach((f) => {
-    const val = searchParams.get(f.key);
-    if (val) extraParams[f.key] = val;
-  });
+  const extraParams = useMemo(() => {
+    const p: Record<string, string> = {};
+    filters.forEach((f) => {
+      const val = searchParams.get(f.key);
+      if (val) p[f.key] = val;
+    });
+    return p;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams.toString(), filters.map((f) => f.key).join(",")]);
 
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: [queryKey, params, extraParams],
     queryFn: () => queryFn({ ...params, ...extraParams }),
     placeholderData: (prev) => prev,
+    staleTime: 30_000,
   });
 
   const total = data?.meta?.pagination?.total_count ?? 0;
   const rows = data?.data ?? [];
+
+  // When query data changes (page/filter/refetch), stale row indices become invalid — reset selection.
+  useEffect(() => {
+    if (data === undefined) return;
+    setRowSelection({});
+    startTransition(() => onSelectionChange?.([]));
+  }, [data]);
 
   const slNoColumn: ColumnDef<TData> = {
     id: "_slno",
@@ -97,6 +109,7 @@ export function DataTable<TData>({
 
   const selectColumn: ColumnDef<TData> = {
     id: "_select",
+    meta: { width: "44px" },
     enableSorting: false,
     enableHiding: false,
     header: ({ table }) => (
@@ -104,7 +117,7 @@ export function DataTable<TData>({
         checked={table.getIsAllPageRowsSelected()}
         onCheckedChange={(checked) => {
           table.toggleAllPageRowsSelected(!!checked);
-          onSelectionChange?.(checked ? rows : []);
+          startTransition(() => onSelectionChange?.(checked ? rows : []));
         }}
         aria-label="Select all"
       />
@@ -139,7 +152,7 @@ export function DataTable<TData>({
         .filter((key) => newSelection[key])
         .map((key) => rows[Number(key)])
         .filter(Boolean);
-      onSelectionChange(selected);
+      startTransition(() => onSelectionChange(selected));
     }
   };
 

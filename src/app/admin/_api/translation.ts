@@ -21,6 +21,10 @@ export const translationApi = {
 
   verify: (id: number) => api.post(`${BASE}${id}/verify/`),
 
+  bulkVerify: (ids: number[]) => api.post(`${BASE}bulk-verify/`, { ids }),
+
+  bulkDelete: (ids: number[]) => api.post(`${BASE}bulk-delete/`, { ids }),
+
   bulkCreate: (payload: BulkTranslationPayload) => api.post(`${BASE}bulk_create/`, payload),
 
   importFile: (formData: FormData) =>

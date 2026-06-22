@@ -218,8 +218,9 @@ export function TranslationImportDialog({ open, onClose, t, tCommon }: Translati
               Step 3 — Upload Filled File
             </p>
 
-            <button
-              type="button"
+            <div
+              role="button"
+              tabIndex={0}
               onDragOver={(e) => {
                 e.preventDefault();
                 setDragOver(true);
@@ -227,6 +228,7 @@ export function TranslationImportDialog({ open, onClose, t, tCommon }: Translati
               onDragLeave={() => setDragOver(false)}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") fileInputRef.current?.click(); }}
               className={`flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 transition-colors ${
                 dragOver
                   ? "border-primary bg-primary/5"
@@ -270,7 +272,7 @@ export function TranslationImportDialog({ open, onClose, t, tCommon }: Translati
                   </div>
                 </>
               )}
-            </button>
+            </div>
 
             <label className="flex cursor-pointer items-center gap-2.5">
               <input
