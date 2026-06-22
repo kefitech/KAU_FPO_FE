@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import "leaflet/dist/leaflet.css";
 
@@ -59,10 +59,12 @@ interface Props {
 
 export function KeralaDistrictMap({ data, locale }: Props) {
   const [geoData, setGeoData] = useState<FeatureCollection | null>(null);
-  const countMap = useRef(new Map<string, DistrictEntry>());
   const tooltipRef = useRef<HTMLDivElement | null>(null);
 
   const isDark = usePreferencesStore((s) => s.resolvedThemeMode === "dark");
+
+  // Computed synchronously during render so styleFeature/onEachFeature always see current data
+  const countMap = useMemo(() => new Map(data.map((d) => [d.name, d])), [data]);
 
   useEffect(() => {
     // Floating hover tooltip
@@ -137,14 +139,10 @@ export function KeralaDistrictMap({ data, locale }: Props) {
     }
   }, [isDark]);
 
-  useEffect(() => {
-    countMap.current = new Map(data.map((d) => [d.name, d]));
-  }, [data]);
-
   const styleFeature = (
     feature?: Feature<Geometry, { shapeName: string }>,
   ): PathOptions => {
-    const count = countMap.current.get(feature?.properties?.shapeName ?? "")?.count ?? 0;
+    const count = countMap.get(feature?.properties?.shapeName ?? "")?.count ?? 0;
     return {
       fillColor: getDistrictColor(count),
       fillOpacity: 0.82,
@@ -157,7 +155,7 @@ export function KeralaDistrictMap({ data, locale }: Props) {
     feature: Feature<Geometry, { shapeName: string }>,
     layer: Layer,
   ) => {
-    const entry = countMap.current.get(feature.properties.shapeName);
+    const entry = countMap.get(feature.properties.shapeName);
     const count = entry?.count ?? 0;
     const displayName =
       locale === "ml"

@@ -8,7 +8,6 @@ export const apiClient = axios.create({
   withCredentials: true, // sends HttpOnly cookies automatically on every request
   headers: {
     "Content-Type": "application/json",
-    "ngrok-skip-browser-warning": "true",
   },
 });
 
@@ -32,7 +31,14 @@ apiClient.interceptors.response.use(
   (response: AxiosResponse) => response,
   (error: AxiosError) => {
     if (error.response?.status === 401 && typeof window !== "undefined") {
-      window.location.href = "/v1/login";
+      const PUBLIC_AUTH_PATHS = ["/v1/login", "/v1/register", "/forgot-password", "/verify-otp", "/reset-password"];
+      const alreadyOnLogin = PUBLIC_AUTH_PATHS.some(
+        (p) => window.location.pathname === p || window.location.pathname.startsWith(p + "/"),
+      );
+      if (!alreadyOnLogin) {
+        window.location.href = "/v1/login";
+        return new Promise(() => {}); // never resolves — page is navigating away
+      }
     }
 
     if (!error.response) {

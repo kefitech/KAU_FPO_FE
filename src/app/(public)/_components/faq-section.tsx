@@ -45,10 +45,11 @@ export function FaqSection() {
   if (visibleTabs.length === 0) return null;
 
   return (
-    <section className="bg-white py-16">
-      <div className="container mx-auto max-w-4xl px-4">
-        <h2 className="mb-2 font-bold text-3xl text-gray-900">Frequently Asked Questions</h2>
-        <p className="mb-8 text-muted-foreground">Everything you need to know about FPOs and the platform</p>
+    <section id="faq" className="bg-gray-50 py-24">
+      <div className="container mx-auto max-w-4xl px-6">
+        <p className="mb-3 font-semibold text-green-600 text-sm uppercase tracking-widest">FAQs</p>
+        <h2 className="mb-2 font-bold text-3xl text-gray-900 md:text-4xl">Frequently Asked Questions</h2>
+        <p className="mb-8 text-gray-500">Everything you need to know about FPOs and the platform</p>
 
         <div className="mb-6 flex flex-wrap gap-2">
           {visibleTabs.map((tab) => (

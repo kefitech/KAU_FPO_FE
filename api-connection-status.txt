@@ -1,0 +1,226 @@
+KAU-FPO Platform — API Connection Status
+==========================================
+Generated: 2026-06-19
+Backend: Django (localhost:8000)
+Frontend: Next.js (localhost:3000)
+
+
+========================================
+✅ CONNECTED TO FRONTEND
+========================================
+
+AUTH
+----
+POST   /api/auth/login/                        ✅ Connected
+POST   /api/auth/logout/                       ✅ Connected
+GET    /api/auth/me/                           ✅ Connected
+POST   /api/auth/register/                     ✅ Connected (FPO user self-registration)
+POST   /api/auth/password/forgot/              ✅ Connected
+POST   /api/auth/password/reset/               ✅ Connected
+POST   /api/auth/password/change-current/      ✅ Connected
+
+2FA
+---
+GET    /api/auth/2fa/status/                   ✅ Connected
+POST   /api/auth/2fa/setup/                    ✅ Connected
+POST   /api/auth/2fa/verify-setup/             ✅ Connected
+POST   /api/auth/2fa/login/verify/             ✅ Connected
+POST   /api/auth/2fa/login/backup/             ✅ Connected
+POST   /api/auth/2fa/regenerate-backup-codes/  ✅ Connected
+POST   /api/auth/2fa/disable/                  ✅ Connected
+POST   /api/auth/2fa/disable/{user_id}/        ✅ Connected
+
+NOTIFICATIONS - INBOX
+---------------------
+GET    /api/notifications/inbox/               ✅ Connected
+GET    /api/notifications/inbox/{id}/          ✅ Connected
+POST   /api/notifications/inbox/{id}/read/     ✅ Connected
+POST   /api/notifications/inbox/read_all/      ✅ Connected
+GET    /api/notifications/inbox/unread_count/  ✅ Connected
+
+PUBLIC (No Auth)
+----------------
+GET    /api/public/languages/                  ✅ Connected
+GET    /api/public/site-content/               ✅ Connected
+GET    /api/public/announcements/              ✅ Connected
+GET    /api/public/faqs/                       ✅ Connected
+GET    /api/public/stats/                      ✅ Connected
+GET    /api/translations/public/               ✅ Connected
+
+FPO PORTAL
+----------
+GET    /api/fpo/dashboard/                     ✅ Connected
+GET    /api/fpo/schemes/                       ✅ Connected
+POST   /api/fpo/claim/                         ✅ Connected
+GET    /api/experts/                           ✅ Connected
+
+ADMIN
+-----
+GET    /api/admin/dashboard/stats/             ✅ Connected
+GET    /api/admin/applications/                ✅ Connected
+GET    /api/admin/announcements/               ✅ Connected
+POST   /api/admin/announcements/               ✅ Connected
+PATCH  /api/admin/announcements/{id}/          ✅ Connected
+DELETE /api/admin/announcements/{id}/          ✅ Connected
+GET    /api/admin/faqs/                        ✅ Connected
+POST   /api/admin/faqs/                        ✅ Connected
+PATCH  /api/admin/faqs/{id}/                   ✅ Connected
+DELETE /api/admin/faqs/{id}/                   ✅ Connected
+GET    /api/admin/site-content/                ✅ Connected
+PATCH  /api/admin/site-content/{key}/          ✅ Connected
+GET    /api/admin/ownership-claims/            ✅ Connected
+
+
+========================================
+❌ BUILT IN BACKEND — NOT CONNECTED YET
+========================================
+
+FPO REGISTRATION WIZARD
+-----------------------
+POST   /api/fpo/eligibility-check/             ❌ Not connected
+POST   /api/fpo/register/                      ❌ Not connected  (Step 1)
+GET    /api/fpo/me/                            ❌ Not connected  (get profile + wizard progress)
+PATCH  /api/fpo/me/                            ❌ Not connected  (Steps 2/3/4)
+GET    /api/fpo/me/status/                     ❌ Not connected  (status + timeline)
+POST   /api/fpo/validate-field/                ❌ Not connected  (per-field blur validation)
+POST   /api/fpo/email-verify/send/             ❌ Not connected
+POST   /api/fpo/email-verify/confirm/          ❌ Not connected
+POST   /api/fpo/phone-verify/send/             ❌ Not connected
+POST   /api/fpo/phone-verify/confirm/          ❌ Not connected
+POST   /api/fpo/me/documents/                  ❌ Not connected  (upload)
+GET    /api/fpo/me/documents/                  ❌ Not connected  (list)
+DELETE /api/fpo/me/documents/{id}/             ❌ Not connected
+POST   /api/fpo/me/submit/                     ❌ Not connected  (submit application)
+
+FPO TEAM MANAGEMENT
+-------------------
+GET    /api/fpo/me/team/                       ❌ Not connected
+POST   /api/fpo/me/team/invite/                ❌ Not connected
+POST   /api/fpo/me/team/bulk-invite/           ❌ Not connected
+POST   /api/fpo/me/team/bulk-invite-file/      ❌ Not connected
+POST   /api/fpo/me/team/bulk-activate/         ❌ Not connected
+POST   /api/fpo/me/team/bulk-deactivate/       ❌ Not connected
+POST   /api/fpo/me/team/{id}/deactivate/       ❌ Not connected
+POST   /api/fpo/me/team/{id}/reset-password/   ❌ Not connected
+
+FPO TIER ASSESSMENT
+-------------------
+GET    /api/fpo/me/tier-assessment/            ❌ Not connected
+POST   /api/fpo/me/tier-assessment/            ❌ Not connected
+PATCH  /api/fpo/me/tier-assessment/{id}/       ❌ Not connected
+POST   /api/fpo/me/tier-assessment/{id}/submit/ ❌ Not connected
+GET    /api/fpo/me/tier-assessment/history/    ❌ Not connected
+
+ADMIN — FPO APPLICATIONS
+-------------------------
+GET    /api/admin/applications/{id}/           ❌ Not connected  (full detail)
+POST   /api/admin/applications/{id}/reject/    ❌ Not connected
+POST   /api/admin/applications/{id}/request-info/ ❌ Not connected
+POST   /api/admin/applications/{id}/verify-document/{doc_id}/ ❌ Not connected
+POST   /api/admin/applications/{id}/assign-tier/ ❌ Not connected
+
+ADMIN — FPO USER MANAGEMENT
+-----------------------------
+GET    /api/admin/fpo-users/                   ❌ Not connected
+GET    /api/admin/fpo-users/{id}/              ❌ Not connected
+POST   /api/admin/fpo-users/{id}/activate/     ❌ Not connected
+POST   /api/admin/fpo-users/{id}/deactivate/   ❌ Not connected
+POST   /api/admin/fpo-users/{id}/reset-password/ ❌ Not connected
+
+ADMIN — SUB ADMINS
+------------------
+GET    /api/admin/sub-admins/                  ❌ Not connected
+POST   /api/admin/sub-admins/                  ❌ Not connected
+GET    /api/admin/sub-admins/{id}/             ❌ Not connected
+PATCH  /api/admin/sub-admins/{id}/             ❌ Not connected
+DELETE /api/admin/sub-admins/{id}/             ❌ Not connected
+POST   /api/admin/sub-admins/{id}/activate/    ❌ Not connected
+POST   /api/admin/sub-admins/{id}/deactivate/  ❌ Not connected
+POST   /api/admin/sub-admins/{id}/reset-password/ ❌ Not connected
+GET    /api/admin/sub-admins/{id}/permissions/ ❌ Not connected
+POST   /api/admin/sub-admins/{id}/permissions/ ❌ Not connected
+
+ADMIN — LANGUAGES & TRANSLATIONS
+---------------------------------
+GET    /api/admin/languages/                   ❌ Not connected
+POST   /api/admin/languages/                   ❌ Not connected
+PATCH  /api/admin/languages/{id}/              ❌ Not connected
+POST   /api/admin/languages/{id}/activate/     ❌ Not connected
+POST   /api/admin/languages/{id}/deactivate/   ❌ Not connected
+GET    /api/admin/translation-categories/      ❌ Not connected
+GET    /api/admin/translations/                ❌ Not connected
+POST   /api/admin/translations/                ❌ Not connected
+GET    /api/admin/translations/export/         ❌ Not connected
+POST   /api/admin/translations/import_file/    ❌ Not connected
+
+ADMIN — EXPERTS
+---------------
+GET    /api/admin/experts/                     ❌ Not connected
+POST   /api/admin/experts/                     ❌ Not connected
+GET    /api/admin/experts/{id}/                ❌ Not connected
+PATCH  /api/admin/experts/{id}/                ❌ Not connected
+POST   /api/admin/experts/{id}/activate/       ❌ Not connected
+POST   /api/admin/experts/{id}/deactivate/     ❌ Not connected
+GET    /api/admin/experts/{id}/enquiries/      ❌ Not connected
+
+ADMIN — SCHEMES
+---------------
+GET    /api/admin/schemes/                     ❌ Not connected
+POST   /api/admin/schemes/                     ❌ Not connected
+GET    /api/admin/schemes/{id}/                ❌ Not connected
+PATCH  /api/admin/schemes/{id}/                ❌ Not connected
+POST   /api/admin/schemes/{id}/activate/       ❌ Not connected
+POST   /api/admin/schemes/{id}/deactivate/     ❌ Not connected
+
+ADMIN — OWNERSHIP CLAIMS (DETAIL ACTIONS)
+------------------------------------------
+GET    /api/admin/ownership-claims/{id}/       ❌ Not connected
+POST   /api/admin/ownership-claims/{id}/approve/ ❌ Not connected
+POST   /api/admin/ownership-claims/{id}/reject/  ❌ Not connected
+
+ADMIN — AUDIT LOGS
+------------------
+GET    /api/admin/audit-logs/                  ❌ Not connected
+
+ADMIN — NOTIFICATIONS
+---------------------
+GET    /api/notifications/template-codes/      ❌ Not connected
+POST   /api/notifications/template-codes/      ❌ Not connected
+GET    /api/notifications/templates/           ❌ Not connected
+POST   /api/notifications/templates/           ❌ Not connected
+GET    /api/notifications/channel-settings/    ❌ Not connected
+POST   /api/notifications/channel-settings/    ❌ Not connected
+
+ADMIN — MENU MANAGEMENT
+------------------------
+GET    /api/admin/menu/                        ❌ Not connected
+POST   /api/admin/menu/                        ❌ Not connected
+PATCH  /api/admin/menu/{id}/                   ❌ Not connected
+DELETE /api/admin/menu/{id}/                   ❌ Not connected
+
+ADMIN — PERMISSIONS
+--------------------
+GET    /api/admin/fpo-permissions/             ❌ Not connected
+POST   /api/admin/fpo-permissions/             ❌ Not connected
+GET    /api/admin/page-access/                 ❌ Not connected
+POST   /api/admin/page-access/                 ❌ Not connected
+
+ADMIN — EXTERNAL APIS
+---------------------
+GET    /api/admin/external-apis/               ❌ Not connected
+POST   /api/admin/external-apis/               ❌ Not connected
+PATCH  /api/admin/external-apis/{id}/          ❌ Not connected
+POST   /api/admin/external-apis/{id}/activate/ ❌ Not connected
+POST   /api/admin/external-apis/{id}/deactivate/ ❌ Not connected
+
+PUBLIC — MASTER DATA
+---------------------
+GET    /api/public/master-data/                ❌ Not connected
+
+
+========================================
+SUMMARY
+========================================
+Connected     : 38 endpoints
+Not Connected : 73 endpoints
+Total Built   : 111 endpoints

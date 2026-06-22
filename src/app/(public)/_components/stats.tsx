@@ -1,52 +1,89 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 
-import { type PublicStats, siteContentApi } from "@/lib/api/site-content";
+const FACTS = [
+  { id: 1, end: 250, unit: "+", title: "Registered FPOs" },
+  { id: 2, end: 14, unit: "", title: "Kerala Districts Covered" },
+  { id: 3, end: 98, unit: "%", title: "Member Satisfaction" },
+  { id: 4, end: 500, unit: "K+", title: "Farmers Connected" },
+];
 
-export function Stats() {
-  const [stats, setStats] = useState<PublicStats | null>(null);
+function Counter({ end, unit }: { end: number; unit: string }) {
+  const [count, setCount] = useState(0);
+  const ref = useRef<HTMLSpanElement>(null);
+  const started = useRef(false);
 
   useEffect(() => {
-    siteContentApi.getStats().then(setStats).catch(() => {});
-  }, []);
-
-  const items = [
-    {
-      value: stats ? `${stats.total_registrations}+` : "—",
-      label: "FPOs Registered",
-      sublabel: "Across Kerala",
-    },
-    {
-      value: stats ? `${stats.approved_fpos}+` : "—",
-      label: "Approved FPOs",
-      sublabel: "Active on platform",
-    },
-    {
-      value: stats ? String(stats.total_districts) : "—",
-      label: "Districts Covered",
-      sublabel: "All of Kerala",
-    },
-    {
-      value: "85+",
-      label: "Expert Consultants",
-      sublabel: "On the platform",
-    },
-  ];
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !started.current) {
+          started.current = true;
+          const duration = 2000;
+          const step = Math.ceil(end / (duration / 16));
+          let current = 0;
+          const timer = setInterval(() => {
+            current = Math.min(current + step, end);
+            setCount(current);
+            if (current >= end) clearInterval(timer);
+          }, 16);
+        }
+      },
+      { threshold: 0.3 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [end]);
 
   return (
-    <section className="border-y bg-white py-16">
-      <div className="container mx-auto max-w-7xl px-4">
-        <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
-          {items.map((stat) => (
-            <div key={stat.label} className="text-center">
-              <p className="font-bold text-4xl text-green-600">{stat.value}</p>
-              <p className="mt-1 font-medium text-gray-900 text-sm">{stat.label}</p>
-              <p className="text-muted-foreground text-xs">{stat.sublabel}</p>
+    <span ref={ref} className="timer">
+      {count}
+      {unit}
+    </span>
+  );
+}
+
+export function Stats() {
+  return (
+    <div className="fun-facts-area default-padding">
+      <div className="shape-left">
+        <Image src="/images/agrul/shape/27.png" alt="shape" width={120} height={120} />
+      </div>
+
+      <div className="container">
+        <div className="item-inner">
+          <div className="shape-right">
+            <Image src="/images/agrul/shape/26.png" alt="shape" width={200} height={200} />
+          </div>
+          <div className="row">
+            <div className="col-lg-4 fun-fact-style-one">
+              <div className="heading">
+                <div className="sub-title">Our Achievements</div>
+                <h2 className="title">
+                  Delivering Value <br /> Since 2020
+                </h2>
+              </div>
             </div>
-          ))}
+            <div className="col-lg-8 fun-fact-style-one text-end">
+              <div className="row">
+                {FACTS.map((fact) => (
+                  <div key={fact.id} className="col-lg-4 col-md-4 item">
+                    <div className="fun-fact-style-one-item">
+                      <div className="counter">
+                        <Counter end={fact.end} unit={fact.unit} />
+                      </div>
+                      <span className="medium">{fact.title}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-    </section>
+    </div>
   );
 }

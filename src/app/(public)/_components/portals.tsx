@@ -1,95 +1,74 @@
 import Link from "next/link";
 
-import { ArrowRight, Building2, Landmark, ShieldCheck, Sprout } from "lucide-react";
-
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-
 const PORTALS = [
   {
-    icon: Sprout,
+    flaticon: "flaticon-farmer",
     title: "FPO Portal",
     badge: "For FPO Managers",
     description:
-      "Manage your Farmer Producer Organization — register members, track crops, access markets, and get AI-based recommendations.",
+      "Manage your FPO — register members, track crops, access markets, and get AI-based recommendations.",
     href: "/fpo/dashboard",
-    color: "text-green-600",
-    bgColor: "bg-green-100",
-    badgeColor: "border-green-200 bg-green-50 text-green-700",
   },
   {
-    icon: ShieldCheck,
+    flaticon: "flaticon-settings",
     title: "Admin Portal",
     badge: "For Administrators",
     description:
-      "Full system control — manage FPO registrations, approve applications, configure platform settings, and oversee operations.",
+      "Full system control — manage FPO registrations, approve applications, and oversee operations.",
     href: "/admin/dashboard",
-    color: "text-blue-600",
-    bgColor: "bg-blue-100",
-    badgeColor: "border-blue-200 bg-blue-50 text-blue-700",
   },
   {
-    icon: Landmark,
+    flaticon: "flaticon-agriculture",
     title: "Government Portal",
     badge: "For Officials",
     description:
-      "Monitor FPO performance across districts, generate compliance reports, and track agricultural programme outcomes.",
+      "Monitor FPO performance across districts, generate reports, and track programme outcomes.",
     href: "/government/dashboard",
-    color: "text-purple-600",
-    bgColor: "bg-purple-100",
-    badgeColor: "border-purple-200 bg-purple-50 text-purple-700",
   },
   {
-    icon: Building2,
+    flaticon: "flaticon-plant",
     title: "CBBO Portal",
     badge: "For CBBO Coordinators",
     description:
-      "Cluster-level oversight of FPO activities, capacity building tracking, and linkage programme management.",
+      "Cluster-level oversight of FPO activities, capacity building, and linkage programme management.",
     href: "/cbbo/dashboard",
-    color: "text-orange-600",
-    bgColor: "bg-orange-100",
-    badgeColor: "border-orange-200 bg-orange-50 text-orange-700",
   },
 ];
 
 export function Portals() {
   return (
-    <section id="portals" className="bg-white py-20">
-      <div className="container mx-auto max-w-7xl px-4">
-        <div className="mb-12 text-center">
-          <h2 className="font-bold text-3xl text-gray-900 md:text-4xl">Portals for every stakeholder</h2>
-          <p className="mt-4 text-muted-foreground">Each role gets a dedicated, tailored experience</p>
+    <div id="portals" className="services-style-one-area default-padding bg-gray">
+      <div className="container">
+        <div className="row">
+          <div className="col-lg-8 offset-lg-2">
+            <div className="site-heading text-center">
+              <h5 className="sub-title">Access</h5>
+              <h2 className="title">Portals For Every Stakeholder</h2>
+              <div className="devider" />
+            </div>
+          </div>
         </div>
 
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {PORTALS.map((portal) => {
-            const Icon = portal.icon;
-            return (
-              <Card key={portal.title} className="group flex flex-col border transition-shadow hover:shadow-lg">
-                <CardHeader className="pb-3">
-                  <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${portal.bgColor}`}>
-                    <Icon className={`h-6 w-6 ${portal.color}`} />
-                  </div>
-                  <Badge variant="outline" className={`mt-3 w-fit text-xs ${portal.badgeColor}`}>
-                    {portal.badge}
-                  </Badge>
-                  <h3 className="font-semibold text-base text-gray-900">{portal.title}</h3>
-                </CardHeader>
-                <CardContent className="flex flex-1 flex-col justify-between gap-4">
-                  <p className="text-muted-foreground text-sm">{portal.description}</p>
-                  <Button variant="outline" size="sm" className="w-full group-hover:border-green-300" asChild>
-                    <Link href={portal.href}>
-                      Go to {portal.title}
-                      <ArrowRight className="ml-2 h-3 w-3" />
-                    </Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            );
-          })}
+        <div className="row">
+          {PORTALS.map((portal) => (
+            <div key={portal.title} className="col-lg-3 col-md-6 mb-30">
+              <div className="services-style-one text-center">
+                <div className="icon">
+                  <i className={portal.flaticon} />
+                </div>
+                <span className="badge badge-light">{portal.badge}</span>
+                <h5 className="mt-15">
+                  <Link href={portal.href}>{portal.title}</Link>
+                </h5>
+                <p>{portal.description}</p>
+                <Link className="btn btn-theme btn-xs radius mt-20" href={portal.href}>
+                  Access Portal
+                </Link>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
-    </section>
+    </div>
   );
 }
