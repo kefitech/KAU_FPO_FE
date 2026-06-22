@@ -20,7 +20,16 @@ export function useAuth() {
       if ("user" in data) {
         setUser(data.user);
         toast.success("Login successful");
-        router.push("/dashboard");
+        const stage = data.redirect?.stage;
+        if (stage === "wizard_step" || stage === "verify_email" || stage === "verify_phone" || stage === "upload_documents" || stage === "submit") {
+          router.push("/fpo/register");
+        } else if (stage === "status") {
+          router.push("/fpo/status");
+        } else if (stage === "dashboard") {
+          router.push("/fpo/dashboard");
+        } else {
+          router.push("/dashboard");
+        }
       }
     },
     onError: (error: unknown) => {

@@ -48,6 +48,12 @@ export function useDataTable({ defaultPageSize = 10 }: UseDataTableOptions = {})
   const setOrdering = (o: string) => updateParams({ ordering: o });
   const setFilter = (key: string, value: string) => updateParams({ [key]: value, page: 1 });
 
+  const clearFilters = (keys: string[]) => {
+    const updates: Record<string, string | number> = { page: 1 };
+    for (const key of keys) updates[key] = "";
+    updateParams(updates as Parameters<typeof updateParams>[0]);
+  };
+
   return {
     params: { page, page_size, search, ordering },
     setPage,
@@ -55,6 +61,7 @@ export function useDataTable({ defaultPageSize = 10 }: UseDataTableOptions = {})
     setSearch,
     setOrdering,
     setFilter,
+    clearFilters,
     searchParams,
   };
 }

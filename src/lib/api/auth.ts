@@ -1,6 +1,6 @@
 import type { LoginCredentials, LoginResponse, MeResponse } from "@/types";
 
-import { api } from "./client";
+import { api, publicApi } from "./client";
 
 export interface RegisterPayload {
   first_name: string;
@@ -15,7 +15,7 @@ export interface RegisterPayload {
 
 export const authApi = {
   register: (payload: RegisterPayload) =>
-    api.post<{ status: string; data: import("@/types").User }>("/auth/register/", payload).then((r) => r.data.data),
+    publicApi.post<{ status: string; data: import("@/types").User }>("/auth/register/", payload).then((r) => r.data.data),
 
   login: (credentials: LoginCredentials) =>
     api.post<{ status: string; data: LoginResponse }>("/auth/login/", credentials).then((r) => r.data.data),

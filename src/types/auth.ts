@@ -43,7 +43,7 @@ export interface MeResponse {
 export type LoginResponse =
   | { two_factor_required: true; partial_token: string }
   | { must_change_password: true; partial_token: string }
-  | { two_factor_required?: false; must_change_password?: false; user: User };
+  | { two_factor_required?: false; must_change_password?: false; user: User; menu: SidebarMenuItem[] | null; redirect: FpoRedirect | null };
 
 export interface TwoFactorStatus {
   is_enabled: boolean;

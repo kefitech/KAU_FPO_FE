@@ -54,13 +54,20 @@ function FpoRegisterPageInner() {
   const {
     data: fetchedProfile,
     isLoading,
+    isError,
     refetch,
   } = useQuery({
     queryKey: ["fpo-me"],
     queryFn: fpoRegistrationApi.getProfile,
     enabled: !skipInitialFetch,
     staleTime: 30_000,
+    retry: false,
   });
+
+  // New user — no FPO record yet. Start at step 1.
+  useEffect(() => {
+    if (isError) setDisplayStep(1);
+  }, [isError]);
 
   useEffect(() => {
     if (!fetchedProfile) return;

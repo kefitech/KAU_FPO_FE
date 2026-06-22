@@ -48,7 +48,8 @@ type T = Record<string, string>;
 
 // ─── Status badge ─────────────────────────────────────────────────────────────
 
-function formatDocType(type: string): string {
+function formatDocType(type: string | undefined | null): string {
+  if (!type) return "—";
   return type
     .split("_")
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
@@ -696,7 +697,7 @@ export default function ApplicationDetailPage() {
             <InfoRow label={t.field_name_ml ?? "FPO Name (Malayalam)"} value={app.name_ml} />
             <InfoRow
               label={t.field_registered_under ?? "Registered Under"}
-              value={formatDocType(app.registered_under)}
+              value={formatDocType(app.legal_structure ?? app.registered_under)}
             />
             <InfoRow label={t.field_reg_number ?? "Registration Number"} value={app.registration_number} />
             <InfoRow label={t.field_cin ?? "CIN Number"} value={app.cin_number} />

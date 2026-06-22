@@ -92,9 +92,13 @@ export interface ApplicationDetail {
   registration_number: string;
   cin_number: string;
   date_of_registration: string;
-  registered_under: string;
+  legal_structure: string;
+  legal_structure_detail: string;
+  registered_under?: string; // legacy alias — use legal_structure
   pan_number: string;
   gst_number: string;
+  promoting_agency: string | null;
+  facilitating_agency_name: string | null;
   // Step 2
   district: string;
   district_display: string;

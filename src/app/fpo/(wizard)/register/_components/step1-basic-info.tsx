@@ -21,20 +21,32 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { masterDataApi, type MasterDataItem } from "@/lib/api/master-data";
 import type { FpoProfile } from "@/types/fpo";
 
-const schema = z.object({
-  name: z.string().min(1, { message: "FPO name is required" }),
-  name_ml: z.string().optional(),
-  legal_structure: z.string().min(1, { message: "Please select registration type" }),
-  legal_structure_detail: z.string().optional(),
-  registration_number: z.string().min(1, { message: "Registration number is required" }),
-  cin_number: z.string().optional(),
-  date_of_registration: z.string().min(1, { message: "Date of registration is required" }),
-  pan_number: z
-    .string()
-    .min(1, { message: "PAN number is required" })
-    .regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i, { message: "Enter a valid PAN number (e.g. AABCK1234D)" }),
-  gst_number: z.string().optional(),
-});
+const CIN_REQUIRED_STRUCTURES = ["companies_act", "producer_companies"];
+
+const schema = z
+  .object({
+    name: z.string().min(1, { message: "FPO name is required" }),
+    name_ml: z.string().optional(),
+    legal_structure: z.string().min(1, { message: "Please select registration type" }),
+    legal_structure_detail: z.string().optional(),
+    registration_number: z.string().min(1, { message: "Registration number is required" }),
+    cin_number: z.string().optional(),
+    date_of_registration: z.string().min(1, { message: "Date of registration is required" }),
+    pan_number: z
+      .string()
+      .min(1, { message: "PAN number is required" })
+      .regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i, { message: "Enter a valid PAN number (e.g. AABCK1234D)" }),
+    gst_number: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (CIN_REQUIRED_STRUCTURES.includes(data.legal_structure) && !data.cin_number?.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["cin_number"],
+        message: "CIN number is required for Companies Act / Producer Companies",
+      });
+    }
+  });
 
 type FormValues = z.infer<typeof schema>;
 type FieldValidationState = Record<string, { error: string | null; duplicate: boolean }>;
@@ -283,14 +295,17 @@ export function Step1BasicInfo({ profile, onSave, onSuccess }: Step1Props) {
         </Field>
 
         <Field>
-          <FieldLabel htmlFor="cin_number">CIN Number</FieldLabel>
+          <FieldLabel htmlFor="cin_number">
+            CIN Number {CIN_REQUIRED_STRUCTURES.includes(selectedStructure) && <span className="text-destructive">*</span>}
+          </FieldLabel>
           <Input
             id="cin_number"
             placeholder="e.g. U01400KL2024PLC..."
             {...register("cin_number")}
             onBlur={() => handleBlurValidation("cin_number")}
           />
-          {fieldErrors.cin_number?.error && (
+          {errors.cin_number && <FieldError errors={[errors.cin_number]} />}
+          {!errors.cin_number && fieldErrors.cin_number?.error && (
             <ServerFieldError error={fieldErrors.cin_number.error} duplicate={fieldErrors.cin_number.duplicate} />
           )}
         </Field>

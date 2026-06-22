@@ -32,6 +32,7 @@ interface DataTableToolbarProps<TData> {
   onSearch: (value: string) => void;
   filters?: FilterConfig[];
   onFilter?: (key: string, value: string) => void;
+  onClearFilters?: () => void;
   activeFilters?: Record<string, string>;
   extra?: React.ReactNode;
   onRefresh?: () => void;
@@ -44,6 +45,7 @@ export function DataTableToolbar<TData>({
   onSearch,
   filters = [],
   onFilter,
+  onClearFilters,
   activeFilters = {},
   extra,
   onRefresh,
@@ -113,11 +115,7 @@ export function DataTableToolbar<TData>({
         <Button
           variant="ghost"
           size="sm"
-          onClick={() =>
-            filters.forEach((f) => {
-              onFilter?.(f.key, "");
-            })
-          }
+          onClick={() => onClearFilters?.()}
           className="h-9 text-muted-foreground"
         >
           <X className="mr-1 h-3.5 w-3.5" />

@@ -31,7 +31,7 @@ apiClient.interceptors.response.use(
   (response: AxiosResponse) => response,
   (error: AxiosError) => {
     if (error.response?.status === 401 && typeof window !== "undefined") {
-      const PUBLIC_AUTH_PATHS = ["/v1/login", "/v1/register", "/forgot-password", "/verify-otp", "/reset-password"];
+      const PUBLIC_AUTH_PATHS = ["/v1/login", "/v1/register", "/register", "/forgot-password", "/verify-otp", "/reset-password"];
       const alreadyOnLogin = PUBLIC_AUTH_PATHS.some(
         (p) => window.location.pathname === p || window.location.pathname.startsWith(p + "/"),
       );
@@ -82,4 +82,27 @@ export const api = {
     apiRequest<T>({ method: "PATCH", url, data, ...config }),
 
   delete: <T>(url: string, config?: AxiosRequestConfig) => apiRequest<T>({ method: "DELETE", url, ...config }),
+};
+
+// ── Public API client — no cookies sent (for open endpoints like registration) ──
+
+export const publicApiClient = axios.create({
+  baseURL: API_CONFIG.BASE_URL,
+  timeout: API_CONFIG.TIMEOUT,
+  withCredentials: false, // never sends session cookies — avoids 401 on AllowAny views
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+async function publicApiRequest<T>(config: AxiosRequestConfig): Promise<{ data: T; status: number }> {
+  const response = await publicApiClient(config);
+  return { data: response.data, status: response.status };
+}
+
+export const publicApi = {
+  get: <T>(url: string, config?: AxiosRequestConfig) => publicApiRequest<T>({ method: "GET", url, ...config }),
+
+  post: <T>(url: string, data?: unknown, config?: AxiosRequestConfig) =>
+    publicApiRequest<T>({ method: "POST", url, data, ...config }),
 };

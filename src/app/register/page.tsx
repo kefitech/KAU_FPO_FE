@@ -24,7 +24,6 @@ import {
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { authApi } from "@/lib/api/auth";
-import { useAuthStore } from "@/stores/auth-store";
 import { DISTRICT_OPTIONS } from "@/types/fpo";
 
 type Stage = "eligibility" | "phone-otp" | "account";
@@ -376,7 +375,6 @@ function AccountStep({
   verifiedPhone: string;
 }) {
   const router = useRouter();
-  const setUser = useAuthStore((s) => s.setUser);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -397,8 +395,8 @@ function AccountStep({
   const passwordsMismatch = confirmVal.length > 0 && passwordVal !== confirmVal;
 
   const submitMutation = useMutation({
-    mutationFn: async (values: AccountValues) => {
-      await authApi.register({
+    mutationFn: (values: AccountValues) =>
+      authApi.register({
         first_name: values.first_name,
         last_name: values.last_name,
         email: values.email,
@@ -407,15 +405,10 @@ function AccountStep({
         confirm_password: values.confirm_password,
         eligibility_token: eligibilityToken,
         phone_token: phoneToken,
-      });
-      await authApi.login({ username: values.email, password: values.password });
-      return authApi.me();
-    },
-    onSuccess: (me) => {
-      setUser(me.user);
-      sessionStorage.setItem("show_welcome", "1");
-      sessionStorage.setItem("fpo_first_visit", "1");
-      router.push("/fpo/register");
+      }),
+    onSuccess: () => {
+      toast.success("Account created! Please log in to continue.");
+      router.push("/v1/login");
     },
     onError: (err: unknown) => {
       const apiErr = err as { data?: { errors?: Record<string, string[]> }; message?: string } | undefined;

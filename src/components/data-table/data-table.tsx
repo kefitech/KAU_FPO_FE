@@ -56,7 +56,7 @@ export function DataTable<TData>({
   onSelectionChange,
   onRowClick,
 }: DataTableProps<TData>) {
-  const { params, setPage, setPageSize, setSearch, setFilter, setOrdering, searchParams } = useDataTable({
+  const { params, setPage, setPageSize, setSearch, setFilter, clearFilters, setOrdering, searchParams } = useDataTable({
     defaultPageSize,
   });
 
@@ -175,6 +175,7 @@ export function DataTable<TData>({
         onSearch={setSearch}
         filters={filters}
         onFilter={setFilter}
+        onClearFilters={() => clearFilters(filters.map((f) => f.key))}
         activeFilters={activeFilters}
         onRefresh={() => refetch()}
         isRefreshing={isFetching}

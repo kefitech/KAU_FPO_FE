@@ -1,4 +1,4 @@
-import { api } from "@/lib/api/client";
+import { api, publicApi } from "@/lib/api/client";
 import type {
   FpoApplicationStatus,
   FpoDocument,
@@ -21,16 +21,18 @@ type Wrapped<T> = { status: string; message: string; data: T };
 const unwrap = <T>(r: { data: Wrapped<T> }) => r.data.data;
 
 export const fpoRegistrationApi = {
+  // Public endpoints — no session cookie sent to avoid 401 on AllowAny views
   checkEligibility: (payload: FpoEligibilityPayload) =>
-    api.post<Wrapped<FpoEligibilityResponse>>(`${BASE}eligibility-check/`, payload).then(unwrap),
+    publicApi.post<Wrapped<FpoEligibilityResponse>>(`${BASE}eligibility-check/`, payload).then(unwrap),
 
   sendPreRegisterOtp: (phone: string) =>
-    api.post<Wrapped<{ phone: string }>>(`${BASE}pre-register/send-otp/`, { phone }).then(unwrap),
+    publicApi.post<Wrapped<{ phone: string }>>(`${BASE}pre-register/send-otp/`, { phone }).then(unwrap),
 
   verifyPreRegisterOtp: (phone: string, otp: string) =>
-    api.post<Wrapped<{ phone_token: string }>>(`${BASE}pre-register/verify-otp/`, { phone, otp }).then(unwrap),
+    publicApi.post<Wrapped<{ phone_token: string }>>(`${BASE}pre-register/verify-otp/`, { phone, otp }).then(unwrap),
 
-  register: (payload: FpoRegisterPayload) => api.post<Wrapped<FpoProfile>>(`${BASE}register/`, payload).then(unwrap),
+  register: (payload: FpoRegisterPayload) =>
+    api.post<Wrapped<FpoProfile>>(`${BASE}register/`, payload).then(unwrap),
 
   getProfile: () => api.get<Wrapped<FpoProfile>>(`${BASE}me/`).then(unwrap),
 

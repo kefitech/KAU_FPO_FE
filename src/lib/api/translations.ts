@@ -1,4 +1,4 @@
-import { apiClient } from "./client";
+import { publicApiClient } from "./client";
 
 export type TranslationScreen = Record<string, string>;
 export type TranslationsData = Record<string, TranslationScreen>;
@@ -12,7 +12,7 @@ export const translationsApi = {
   getPublic: async (lang = "en", screen?: string): Promise<TranslationsData> => {
     const params: Record<string, string> = { lang };
     if (screen) params.screen = screen;
-    const response = await apiClient.get<TranslationsResponse>("/translations/public/", { params });
+    const response = await publicApiClient.get<TranslationsResponse>("/translations/public/", { params });
     return response.data.data;
   },
 };

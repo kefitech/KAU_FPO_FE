@@ -1,4 +1,4 @@
-import { api } from "@/lib/api/client";
+import { publicApi } from "@/lib/api/client";
 
 export interface SiteContentBlocks {
   hero_headline: string;
@@ -40,31 +40,31 @@ export interface PublicLanguage {
 
 export const siteContentApi = {
   getLanguages: (): Promise<PublicLanguage[]> =>
-    api.get("/public/languages/").then((r) => {
+    publicApi.get("/public/languages/").then((r) => {
       const d = r.data as Record<string, unknown>;
       return (Array.isArray(d.data) ? d.data : []) as PublicLanguage[];
     }),
 
   getBlocks: (): Promise<SiteContentBlocks> =>
-    api.get("/public/site-content/").then((r) => {
+    publicApi.get("/public/site-content/").then((r) => {
       const d = r.data as Record<string, unknown>;
       return (d.data ?? d) as SiteContentBlocks;
     }),
 
   getStats: (): Promise<PublicStats> =>
-    api.get("/public/stats/").then((r) => {
+    publicApi.get("/public/stats/").then((r) => {
       const d = r.data as Record<string, unknown>;
       return (d.data ?? d) as PublicStats;
     }),
 
   getAnnouncements: (): Promise<PublicAnnouncement[]> =>
-    api.get("/public/announcements/").then((r) => {
+    publicApi.get("/public/announcements/").then((r) => {
       const d = r.data as Record<string, unknown>;
       return (Array.isArray(d.data) ? d.data : []) as PublicAnnouncement[];
     }),
 
   getFaqs: (category: string): Promise<PublicFaq[]> =>
-    api.get("/public/faqs/", { params: { category } }).then((r) => {
+    publicApi.get("/public/faqs/", { params: { category } }).then((r) => {
       const d = r.data as Record<string, unknown>;
       return (Array.isArray(d.data) ? d.data : []) as PublicFaq[];
     }),
