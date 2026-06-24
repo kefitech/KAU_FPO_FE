@@ -5,7 +5,7 @@
   "author": "Kefi Tech Solutions Pvt Ltd",
   "private": true,
   "scripts": {
-    "dev": "NODE_OPTIONS='--max-old-space-size=1024' next dev",
+    "dev": "set NODE_OPTIONS=--max-old-space-size=1024 && next dev",
     "dev:clean": "pkill -f next-server || true && rm -rf .next && next dev",
     "build": "next build",
     "start": "next start",

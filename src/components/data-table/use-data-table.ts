@@ -37,7 +37,7 @@ export function useDataTable({ defaultPageSize = 10 }: UseDataTableOptions = {})
         params.set("page", "1");
       }
 
-      router.push(`${pathname}?${params.toString()}`);
+      router.replace(`${pathname}?${params.toString()}`);
     },
     [pathname, router, searchParams],
   );
