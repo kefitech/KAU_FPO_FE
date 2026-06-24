@@ -23,6 +23,8 @@ const SEGMENT_LABELS: Record<string, string> = {
   profile: "Profile",
   security: "Security",
   "sub-admins": "Sub-Admins",
+  "fpo-users": "FPO Users",
+  "audit-logs": "Audit Logs",
   "external-apis": "External APIs",
   applications: "FPO Applications",
   "ownership-claims": "Ownership Claims",

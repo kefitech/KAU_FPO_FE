@@ -101,14 +101,29 @@ export function getApplicationColumns(t: T, tCommon: T): ColumnDef<ApplicationLi
       cell: ({ row }) => <StatusBadge status={row.original.status} label={row.original.status_display} />,
     },
     {
+      accessorKey: "primary_user_name",
+      header: t.col_primary_user ?? "Primary User",
+      enableSorting: false,
+      cell: ({ row }) => (
+        <div className="flex flex-col">
+          <span className="font-medium text-sm">{row.original.primary_user_name ?? "—"}</span>
+          {row.original.primary_user_email && (
+            <span className="text-muted-foreground text-xs">{row.original.primary_user_email}</span>
+          )}
+        </div>
+      ),
+    },
+    {
       accessorKey: "current_tier",
       header: t.col_tier ?? "Tier",
-      cell: ({ row }) =>
-        row.original.current_tier ? (
-          <Badge variant="outline">{row.original.current_tier}</Badge>
+      cell: ({ row }) => {
+        const tier = row.original.tier ?? row.original.current_tier;
+        return tier ? (
+          <Badge variant="outline">{tier}</Badge>
         ) : (
           <span className="text-muted-foreground text-xs">—</span>
-        ),
+        );
+      },
       enableSorting: false,
     },
     {

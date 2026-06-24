@@ -1,70 +1,290 @@
-1. Language key validation on save
-Any language key in content, title, body, question, answer is now validated against the active Language table. Trying to save {"zz": "..."} returns:
-
-
-{ "error": "Invalid language codes: ['zz']. Active languages: ['en', 'ml']" }
-2. ?lang= filter on all GET endpoints
-Pass ?lang=ml to any admin CMS GET and instead of raw JSON you get:
-
-
-{
-  "block_key": "hero_headline",
-  "content": "കർഷക ഉൽപാദക സംഘടനകളെ...",
-  "available_languages": ["en", "ml"],
-  "is_active": true
-}
-3. How to add a new language (e.g. Tamil)
-
-Admin adds Tamil via POST /api/admin/languages/ → { "code": "ta", "name": "Tamil", ... }
-Now "ta" is a valid key — CMS validation accepts it
-Admin PATCHes any block with { "content": { "en": "...", "ml": "...", "ta": "..." } }
-Frontend sends X-Language: ta → gets Tamil text back
-
-
-
-
-
-Admin - CMS
+Admin - FPO Applications
 
 
 GET
-/api/admin/announcements/
-List announcements
+/api/admin/applications/
+List FPO applications
 
+
+Paginated list of all FPO applications. Filter by status, district, tier, or search by name/application_id.
 
 Parameters
-Try it out
-No parameters
+Cancel
+Name	Description
+district
+string
+(query)
+Filter by district code (e.g. TSR, KLM)
 
+district
+search
+string
+(query)
+Search by FPO name or application_id
+
+search
+status
+string
+(query)
+Filter by FPO status (draft/submitted/under_review/approved/rejected/info_required/suspended)
+
+status
+tier
+string
+(query)
+Filter by tier (A/B/C/D)
+
+tier
+Execute
+Clear
 Responses
-Code	Description	Links
-200	
-No response body
+Curl
 
-No links
+curl -X 'GET' \
+  'http://localhost:8000/api/admin/applications/' \
+  -H 'accept: */*' \
+  -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzgxODcwNTU2LCJpYXQiOjE3ODE4NjY5NTYsImp0aSI6ImM4ZWQ2ZWZjM2MyNjRkZjdhN2U1YjAzZWRhZmQ4ZDdiIiwidXNlcl9pZCI6IjEifQ.bKeNK5RonssHmaS_gR5AeeagNkX4cBdd4ya-mePvvig'
+Request URL
+http://localhost:8000/api/admin/applications/
+Server response
+Code	Details
+200	
+Response body
+Download
+{
+  "status": "success",
+  "message": "Success",
+  "data": [
+    {
+      "id": 3,
+      "application_id": "KAU-FPO-TVM-2026-0001",
+      "name": "Kerala Farmers Producer Company Limited",
+      "name_ml": "കേരള ഫാർമേഴ്‌സ് പ്രൊഡ്യൂസർ കമ്പനി ലിമിറ്റഡ്",
+      "district": "TVM",
+      "district_display": "Thiruvananthapuram",
+      "status": "approved",
+      "status_display": "Approved",
+      "tier": "C",
+      "current_tier": "C",
+      "current_step": 4,
+      "total_members": 15,
+      "office_email": "athul.gopan@kefitech.com",
+      "office_phone": "9207225824",
+      "email_verified": true,
+      "phone_verified": true,
+      "primary_user_id": 11,
+      "primary_user_name": "Athul Gopan",
+      "primary_user_email": "athulgopan4@gmail.com",
+      "primary_user_phone": "9207225824",
+      "created_at": "2026-06-12T15:12:48+0530",
+      "updated_at": "2026-06-12T17:51:55+0530"
+    }
+  ],
+  "meta": {
+    "pagination": {
+      "page": 1,
+      "page_size": 20,
+      "total_count": 1,
+      "total_pages": 1,
+      "has_next": false,
+      "has_previous": false
+    }
+  }
+}
+
+
+GET
+/api/admin/applications/{fpo_id}/
+Get full FPO application detail
+
+
+Returns all wizard data, documents with verification status, and full status timeline.
+
+Parameters
+Cancel
+Name	Description
+fpo_id *
+integer
+(path)
+3
+Execute
+Clear
+Responses
+Curl
+
+curl -X 'GET' \
+  'http://localhost:8000/api/admin/applications/3/' \
+  -H 'accept: */*' \
+  -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzgxODcwNTU2LCJpYXQiOjE3ODE4NjY5NTYsImp0aSI6ImM4ZWQ2ZWZjM2MyNjRkZjdhN2U1YjAzZWRhZmQ4ZDdiIiwidXNlcl9pZCI6IjEifQ.bKeNK5RonssHmaS_gR5AeeagNkX4cBdd4ya-mePvvig'
+Request URL
+http://localhost:8000/api/admin/applications/3/
+Server response
+Code	Details
+200	
+Response body
+Download
+{
+  "status": "success",
+  "message": "Success",
+  "data": {
+    "id": 3,
+    "application_id": "KAU-FPO-TVM-2026-0001",
+    "status": "approved",
+    "tier": "C",
+    "current_step": 4,
+    "name": "Kerala Farmers Producer Company Limited",
+    "name_ml": "കേരള ഫാർമേഴ്‌സ് പ്രൊഡ്യൂസർ കമ്പനി ലിമിറ്റഡ്",
+    "legal_structure": "state_specific_csa",
+    "legal_structure_detail": "kerala_co_operative_societies_act_1969",
+    "registration_number": "REG/FPO/2024/00125",
+    "cin_number": "U01409KL2024PTC123456",
+    "date_of_registration": "2024-03-15",
+    "pan_number": "AABCK1234D",
+    "gst_number": "32AABCK1234D1Z5",
+    "district": "TVM",
+    "block_taluk": "nedumangad",
+    "village_town": "Thiruvananthapuram",
+    "address_line1": "KefiTech Solutions Pvt Ltd , Trivandrum periyar building module 1  Trivandrum",
+    "address_line2": "",
+    "pincode": "695581",
+    "office_phone": "9207225824",
+    "office_email": "athul.gopan@kefitech.com",
+    "website": "https://kefitech.com/",
+    "email_verified": true,
+    "phone_verified": true,
+    "latitude": "8.556583",
+    "longitude": "76.882118",
+    "signatory_name": "Athul Gopan",
+    "signatory_designation": "ceo",
+    "signatory_phone": "9207225824",
+    "signatory_email": "athulgopan4@gmail.com",
+    "signatory_aadhaar_last4": "1111",
+    "total_members": 15,
+    "male_members": 10,
+    "female_members": 5,
+    "sc_st_members": null,
+    "promoting_agency": "nddb",
+    "facilitating_agency_name": "Athul Agency",
+    "ceo_available": true,
+    "accountant_available": true,
+    "total_directors": 5,
+    "women_directors": 0,
+    "directors_under_35": 0,
+    "primary_commodities": [
+      "rice_paddy",
+      "pearl_millet",
+      "arecanut",
+      "coriander",
+      "mango",
+      "banana_stem",
+      "honey_products",
+      "spice_processing"
+    ],
+    "secondary_commodities": [],
+    "annual_turnover": "5.76",
+    "bank_name": "hdfc_bank",
+    "bank_branch": "Kazhakootam",
+    "account_number": "11420100244141",
+    "ifsc_code": "HDFC0001496",
+    "description": "",
+    "primary_user": {
+      "id": 11,
+      "name": "Athul Gopan",
+      "email": "athulgopan4@gmail.com",
+      "phone": "9207225824"
+    },
+    "documents": [
+      {
+        "id": 6,
+        "document_type": "bank_details",
+        "file_url": "http://localhost:8000/media/fpo/3/documents/bank_details/8266b14891ec4e1299a1b5566bd17a54.pdf",
+        "file_size": 32212,
+        "mime_type": "application/pdf",
+        "is_verified": true,
+        "verified_by_name": "athul gopan",
+        "verified_at": "2026-06-22T12:48:52+0530",
+        "created_at": "2026-06-12T17:51:34+0530"
+      },
+      {
+        "id": 5,
+        "document_type": "fpo_reg_cert",
+        "file_url": "http://localhost:8000/media/fpo/3/documents/fpo_reg_cert/3e2b1d7da37745e2ac452704c6cd2d40.pdf",
+        "file_size": 510041,
+        "mime_type": "application/pdf",
+        "is_verified": true,
+        "verified_by_name": "athul gopan",
+        "verified_at": "2026-06-22T12:48:53+0530",
+        "created_at": "2026-06-12T17:51:19+0530"
+      },
+      {
+        "id": 7,
+        "document_type": "pan_card",
+        "file_url": "http://localhost:8000/media/fpo/3/documents/pan_card/b917da6ff8084653a57a40289b90ba66.pdf",
+        "file_size": 278565,
+        "mime_type": "application/pdf",
+        "is_verified": true,
+        "verified_by_name": "athul gopan",
+        "verified_at": "2026-06-22T12:48:55+0530",
+        "created_at": "2026-06-12T17:51:42+0530"
+      }
+    ],
+    "status_history": [
+      {
+        "from_status": "",
+        "to_status": "draft",
+        "changed_by_name": "Athul Gopan",
+        "notes": "FPO registration started.",
+        "created_at": "2026-06-12T15:12:48+0530"
+      },
+      {
+        "from_status": "draft",
+        "to_status": "submitted",
+        "changed_by_name": "Athul Gopan",
+        "notes": "",
+        "created_at": "2026-06-12T17:51:55+0530"
+      },
+      {
+        "from_status": "submitted",
+        "to_status": "approved",
+        "changed_by_name": null,
+        "notes": "Auto-approved on submission.",
+        "created_at": "2026-06-12T17:51:55+0530"
+      }
+    ],
+    "created_at": "2026-06-12T15:12:48+0530",
+    "updated_at": "2026-06-12T17:51:55+0530"
+  }
+}
+
+
 
 POST
-/api/admin/announcements/
-Create an announcement
+/api/admin/applications/{fpo_id}/request-info/
+Request additional information from FPO
 
+
+Transitions APPROVED → INFO_REQUIRED. FPO user receives email with the notes and can re-submit once they have addressed the request.
+
+Note: Since approval is automated, admin raises info requests on an already-APPROVED FPO.
 
 Parameters
-Try it out
-No parameters
-
+Cancel
+Name	Description
+fpo_id *
+integer
+(path)
+3
 Request body
 
 application/json
-Example Value
+Examples: 
+Request info
+Edit Value
 Schema
 {
-  "title": "string",
-  "body": "string",
-  "category": "announcement",
-  "published_date": "2026-06-17",
-  "is_active": true,
-  "order": 32767
+  "notes": "Please upload a clearer copy of the bank statement."
 }
+Execute
 Responses
 Code	Description	Links
 200	
@@ -72,126 +292,27 @@ No response body
 
 No links
 
-GET
-/api/admin/announcements/{id}/
-Retrieve an announcement
 
-
-Parameters
-Try it out
-Name	Description
-id *
-integer
-(path)
-id
-Responses
-Code	Description	Links
-200	
-No response body
-
-No links
-
-PATCH
-/api/admin/announcements/{id}/
-Update an announcement
-
-
-Parameters
-Try it out
-Name	Description
-id *
-integer
-(path)
-id
-Responses
-Code	Description	Links
-200	
-No response body
-
-No links
-
-DELETE
-/api/admin/announcements/{id}/
-Delete an announcement
-
-
-Parameters
-Try it out
-Name	Description
-id *
-integer
-(path)
-id
-Responses
-Code	Description	Links
-204	
-No response body
-
-No links
-
-GET
-/api/admin/faqs/
-List FAQs
-
-
-Parameters
-Try it out
-No parameters
-
-Responses
-Code	Description	Links
-200	
-No response body
-
-No links
 
 POST
-/api/admin/faqs/
-Create a FAQ
+/api/admin/applications/{fpo_id}/verify-document/{doc_id}/
+Mark a document as verified
 
 
-Parameters
-Try it out
-No parameters
-
-Responses
-Code	Description	Links
-200	
-No response body
-
-No links
-
-GET
-/api/admin/faqs/{id}/
-Retrieve a FAQ
-
+Sets is_verified=True on the document and records who verified it and when.
 
 Parameters
-Try it out
+Cancel
 Name	Description
-id *
+doc_id *
 integer
 (path)
-id
-Responses
-Code	Description	Links
-200	
-No response body
-
-No links
-
-PATCH
-/api/admin/faqs/{id}/
-Update a FAQ
-
-
-Parameters
-Try it out
-Name	Description
-id *
+doc_id
+fpo_id *
 integer
 (path)
-id
+fpo_id
+Execute
 Responses
 Code	Description	Links
 200	
@@ -199,34 +320,43 @@ No response body
 
 No links
 
-DELETE
-/api/admin/faqs/{id}/
-Delete a FAQ
 
 
+
+
+
+POST
+/api/admin/applications/{fpo_id}/assign-tier/
+Manually assign tier to an FPO
+
+
+Admin override — manually assign a tier (A/B/C/D) to an FPO for a specific financial year.
+
+Creates a new FPOTierHistory record and syncs FPO.tier immediately.
+
+Use this when the auto-scored tier needs correction.
+
+Request body:
+
+{ "tier": "A", "financial_year": "2026-27", "notes": "Manually verified — exceptional performance" }
 Parameters
-Try it out
+Cancel
 Name	Description
-id *
+fpo_id *
 integer
 (path)
-id
-Responses
-Code	Description	Links
-204	
-No response body
+fpo_id
+Request body
 
-No links
-
-GET
-/api/admin/site-content/
-List all site content blocks
-
-
-Parameters
-Try it out
-No parameters
-
+application/json
+Edit Value
+Schema
+{
+  "tier": "A",
+  "financial_year": "0632-49",
+  "notes": "string"
+}
+Execute
 Responses
 Code	Description	Links
 200	
@@ -234,42 +364,543 @@ No response body
 
 No links
 
-GET
-/api/admin/site-content/{key}/
-Retrieve a site content block
 
+
+GET
+/api/admin/audit-logs/
+List audit log events
+
+
+Paginated audit trail of all system events. Supports filtering by action type, FPO, user, and date range.
+
+Available action types: create, update, delete, soft_delete, restore, login, logout, failed_login, password_change, password_reset, export, import, document_upload, document_delete, fpo_profile_change, fpo_submit, fpo_status_change, tier_recalculation, fpo_user_invite, fpo_user_activate, fpo_user_deactivate
 
 Parameters
-Try it out
+Cancel
 Name	Description
-key *
+action
 string
-(path)
-key
-Responses
-Code	Description	Links
-200	
-No response body
+(query)
+Filter by action type
 
-No links
+action
+fpo_id
+integer
+(query)
+Filter by FPO ID — shows all events on that FPO
 
-PATCH
-/api/admin/site-content/{key}/
-Update a site content block
-
-
-Send {"content": {"en": "...", "ml": "..."}} to update text. Malayalam is optional.
-
-Parameters
-Try it out
-Name	Description
-key *
+3
+from_date
 string
-(path)
-key
-Responses
-Code	Description	Links
-200	
-No response body
+(query)
+Start date (YYYY-MM-DD)
 
-No links
+from_date
+to_date
+string
+(query)
+End date (YYYY-MM-DD)
+
+to_date
+user_id
+integer
+(query)
+Filter by user who performed the action
+
+user_id
+Execute
+Clear
+Responses
+Curl
+
+curl -X 'GET' \
+  'http://localhost:8000/api/admin/audit-logs/?fpo_id=3' \
+  -H 'accept: application/json' \
+  -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzgxODcwNTU2LCJpYXQiOjE3ODE4NjY5NTYsImp0aSI6ImM4ZWQ2ZWZjM2MyNjRkZjdhN2U1YjAzZWRhZmQ4ZDdiIiwidXNlcl9pZCI6IjEifQ.bKeNK5RonssHmaS_gR5AeeagNkX4cBdd4ya-mePvvig'
+Request URL
+http://localhost:8000/api/admin/audit-logs/?fpo_id=3
+Server response
+Code	Details
+200	
+Response body
+Download
+{
+  "status": "success",
+  "message": "Success",
+  "data": [
+    {
+      "id": 307,
+      "action": "tier_recalculation",
+      "action_display": "Tier Recalculation",
+      "performed_by": {
+        "id": 11,
+        "name": "Athul Gopan",
+        "role": "fpo_manager"
+      },
+      "object_info": {
+        "model": "fpo",
+        "app": "database",
+        "id": "3",
+        "repr": "Kerala Farmers Producer Company Limited (KAU-FPO-TVM-2026-0001)"
+      },
+      "changes": {
+        "tier": "C",
+        "total_score": "54",
+        "domain_scores": {
+          "I": "13",
+          "V": "10",
+          "II": "10",
+          "IV": "5",
+          "VI": "14",
+          "III": "2"
+        },
+        "financial_year": "2026-27"
+      },
+      "ip_address": "127.0.0.1",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+      "request_path": "/api/fpo/me/tier-assessment/4/submit/",
+      "request_method": "POST",
+      "created_at": "2026-06-22T00:05:08+0530"
+    },
+    {
+      "id": 306,
+      "action": "fpo_user_deactivate",
+      "action_display": "FPO User Deactivated",
+      "performed_by": {
+        "id": 11,
+        "name": "Athul Gopan",
+        "role": "fpo_manager"
+      },
+      "object_info": {
+        "model": "fpo",
+        "app": "database",
+        "id": "3",
+        "repr": "Kerala Farmers Producer Company Limited (KAU-FPO-TVM-2026-0001)"
+      },
+      "changes": {
+        "user_ids": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ]
+      },
+      "ip_address": "127.0.0.1",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+      "request_path": "/api/fpo/me/team/bulk-deactivate/",
+      "request_method": "POST",
+      "created_at": "2026-06-21T23:53:52+0530"
+    },
+    {
+      "id": 305,
+      "action": "fpo_user_activate",
+      "action_display": "FPO User Activated",
+      "performed_by": {
+        "id": 11,
+        "name": "Athul Gopan",
+        "role": "fpo_manager"
+      },
+      "object_info": {
+        "model": "fpo",
+        "app": "database",
+        "id": "3",
+        "repr": "Kerala Farmers Producer Company Limited (KAU-FPO-TVM-2026-0001)"
+      },
+      "changes": {
+        "user_ids": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ]
+      },
+      "ip_address": "127.0.0.1",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+      "request_path": "/api/fpo/me/team/bulk-activate/",
+      "request_method": "POST",
+      "created_at": "2026-06-21T23:53:47+0530"
+    },
+    {
+      "id": 281,
+      "action": "tier_recalculation",
+      "action_display": "Tier Recalculation",
+      "performed_by": {
+        "id": 11,
+        "name": "Athul Gopan",
+        "role": "fpo_manager"
+      },
+      "object_info": {
+        "model": "fpo",
+        "app": "database",
+        "id": "3",
+        "repr": "Kerala Farmers Producer Company Limited (KAU-FPO-TVM-2026-0001)"
+      },
+      "changes": {
+        "tier": "C",
+        "total_score": "54",
+        "domain_scores": {
+          "I": "13",
+          "V": "10",
+          "II": "10",
+          "IV": "5",
+          "VI": "14",
+          "III": "2"
+        },
+        "financial_year": "2026-27"
+      },
+      "ip_address": "127.0.0.1",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+      "request_path": "/api/fpo/me/tier-assessment/4/submit/",
+      "request_method": "POST",
+      "created_at": "2026-06-19T11:19:14+0530"
+    },
+    {
+      "id": 229,
+      "action": "tier_recalculation",
+      "action_display": "Tier Recalculation",
+      "performed_by": {
+        "id": 3,
+        "name": "athul gopan",
+        "role": "super_admin"
+      },
+      "object_info": {
+        "model": "fpo",
+        "app": "database",
+        "id": "3",
+        "repr": "Kerala Farmers Producer Company Limited (KAU-FPO-TVM-2026-0001)"
+      },
+      "changes": {
+        "tier": "A",
+        "notes": "Exceptional performance verified on-site",
+        "financial_year": "2026-27",
+        "manual_override": true
+      },
+      "ip_address": "127.0.0.1",
+      "user_agent": "",
+      "request_path": "/api/admin/applications/3/assign-tier/",
+      "request_method": "POST",
+      "created_at": "2026-06-16T21:32:26+0530"
+    },
+    {
+      "id": 228,
+      "action": "tier_recalculation",
+      "action_display": "Tier Recalculation",
+      "performed_by": {
+        "id": 11,
+        "name": "Athul Gopan",
+        "role": "fpo_manager"
+      },
+      "object_info": {
+        "model": "fpo",
+        "app": "database",
+        "id": "3",
+        "repr": "Kerala Farmers Producer Company Limited (KAU-FPO-TVM-2026-0001)"
+      },
+      "changes": {
+        "tier": "C",
+        "total_score": "54",
+        "domain_scores": {
+          "I": "13",
+          "V": "10",
+          "II": "10",
+          "IV": "5",
+          "VI": "14",
+          "III": "2"
+        },
+        "financial_year": "2026-27"
+      },
+      "ip_address": "127.0.0.1",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+      "request_path": "/api/fpo/me/tier-assessment/4/submit/",
+      "request_method": "POST",
+      "created_at": "2026-06-16T21:24:10+0530"
+    },
+    {
+      "id": 225,
+      "action": "tier_recalculation",
+      "action_display": "Tier Recalculation",
+      "performed_by": {
+        "id": 11,
+        "name": "Athul Gopan",
+        "role": "fpo_manager"
+      },
+      "object_info": {
+        "model": "fpo",
+        "app": "database",
+        "id": "3",
+        "repr": "Kerala Farmers Producer Company Limited (KAU-FPO-TVM-2026-0001)"
+      },
+      "changes": {
+        "tier": "B",
+        "total_score": "75",
+        "domain_scores": {
+          "I": "15",
+          "V": "10",
+          "II": "10",
+          "IV": "14",
+          "VI": "13",
+          "III": "13"
+        },
+        "financial_year": "2026-27"
+      },
+      "ip_address": "127.0.0.1",
+      "user_agent": "",
+      "request_path": "/api/fpo/me/tier-assessment/3/submit/",
+      "request_method": "POST",
+      "created_at": "2026-06-16T20:29:22+0530"
+    },
+    {
+      "id": 223,
+      "action": "tier_recalculation",
+      "action_display": "Tier Recalculation",
+      "performed_by": {
+        "id": 11,
+        "name": "Athul Gopan",
+        "role": "fpo_manager"
+      },
+      "object_info": {
+        "model": "fpo",
+        "app": "database",
+        "id": "3",
+        "repr": "Kerala Farmers Producer Company Limited (KAU-FPO-TVM-2026-0001)"
+      },
+      "changes": {
+        "tier": "B",
+        "total_score": "79",
+        "domain_scores": {
+          "I": "17",
+          "V": "10",
+          "II": "13",
+          "IV": "14",
+          "VI": "13",
+          "III": "12"
+        },
+        "financial_year": "2026-27"
+      },
+      "ip_address": "127.0.0.1",
+      "user_agent": "",
+      "request_path": "/api/fpo/me/tier-assessment/1/submit/",
+      "request_method": "POST",
+      "created_at": "2026-06-16T13:28:13+0530"
+    },
+    {
+      "id": 222,
+      "action": "fpo_user_deactivate",
+      "action_display": "FPO User Deactivated",
+      "performed_by": {
+        "id": 11,
+        "name": "Athul Gopan",
+        "role": "fpo_manager"
+      },
+      "object_info": {
+        "model": "fpo",
+        "app": "database",
+        "id": "3",
+        "repr": "Kerala Farmers Producer Company Limited (KAU-FPO-TVM-2026-0001)"
+      },
+      "changes": {
+        "user_ids": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ]
+      },
+      "ip_address": "127.0.0.1",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+      "request_path": "/api/fpo/me/team/bulk-deactivate/",
+      "request_method": "POST",
+      "created_at": "2026-06-16T11:24:38+0530"
+    },
+    {
+      "id": 221,
+      "action": "fpo_user_deactivate",
+      "action_display": "FPO User Deactivated",
+      "performed_by": {
+        "id": 11,
+        "name": "Athul Gopan",
+        "role": "fpo_manager"
+      },
+      "object_info": {
+        "model": "fpo",
+        "app": "database",
+        "id": "3",
+        "repr": "Kerala Farmers Producer Company Limited (KAU-FPO-TVM-2026-0001)"
+      },
+      "changes": {
+        "deactivated_user": "divya.test@example.com"
+      },
+      "ip_address": "127.0.0.1",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+      "request_path": "/api/fpo/me/team/14/deactivate/",
+      "request_method": "POST",
+      "created_at": "2026-06-16T11:24:34+0530"
+    },
+    {
+      "id": 220,
+      "action": "fpo_user_deactivate",
+      "action_display": "FPO User Deactivated",
+      "performed_by": {
+        "id": 11,
+        "name": "Athul Gopan",
+        "role": "fpo_manager"
+      },
+      "object_info": {
+        "model": "fpo",
+        "app": "database",
+        "id": "3",
+        "repr": "Kerala Farmers Producer Company Limited (KAU-FPO-TVM-2026-0001)"
+      },
+      "changes": {
+        "deactivated_user": "anoop.test@example.com"
+      },
+      "ip_address": "127.0.0.1",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+      "request_path": "/api/fpo/me/team/13/deactivate/",
+      "request_method": "POST",
+      "created_at": "2026-06-16T11:24:32+0530"
+    },
+    {
+      "id": 219,
+      "action": "fpo_user_deactivate",
+      "action_display": "FPO User Deactivated",
+      "performed_by": {
+        "id": 11,
+        "name": "Athul Gopan",
+        "role": "fpo_manager"
+      },
+      "object_info": {
+        "model": "fpo",
+        "app": "database",
+        "id": "3",
+        "repr": "Kerala Farmers Producer Company Limited (KAU-FPO-TVM-2026-0001)"
+      },
+      "changes": {
+        "deactivated_user": "rajan.test@example.com"
+      },
+      "ip_address": "127.0.0.1",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+      "request_path": "/api/fpo/me/team/12/deactivate/",
+      "request_method": "POST",
+      "created_at": "2026-06-16T11:24:30+0530"
+    },
+    {
+      "id": 217,
+      "action": "fpo_user_activate",
+      "action_display": "FPO User Activated",
+      "performed_by": {
+        "id": 11,
+        "name": "Athul Gopan",
+        "role": "fpo_manager"
+      },
+      "object_info": {
+        "model": "fpo",
+        "app": "database",
+        "id": "3",
+        "repr": "Kerala Farmers Producer Company Limited (KAU-FPO-TVM-2026-0001)"
+      },
+      "changes": {
+        "user_ids": [
+          12,
+          13
+        ]
+      },
+      "ip_address": "127.0.0.1",
+      "user_agent": "",
+      "request_path": "/api/fpo/me/team/bulk-activate/",
+      "request_method": "POST",
+      "created_at": "2026-06-16T10:19:23+0530"
+    },
+    {
+      "id": 216,
+      "action": "fpo_user_deactivate",
+      "action_display": "FPO User Deactivated",
+      "performed_by": {
+        "id": 11,
+        "name": "Athul Gopan",
+        "role": "fpo_manager"
+      },
+      "object_info": {
+        "model": "fpo",
+        "app": "database",
+        "id": "3",
+        "repr": "Kerala Farmers Producer Company Limited (KAU-FPO-TVM-2026-0001)"
+      },
+      "changes": {
+        "user_ids": [
+          12,
+          13
+        ]
+      },
+      "ip_address": "127.0.0.1",
+      "user_agent": "",
+      "request_path": "/api/fpo/me/team/bulk-deactivate/",
+      "request_method": "POST",
+      "created_at": "2026-06-16T10:19:23+0530"
+    },
+    {
+      "id": 215,
+      "action": "fpo_user_invite",
+      "action_display": "FPO User Invited",
+      "performed_by": {
+        "id": 11,
+        "name": "Athul Gopan",
+        "role": "fpo_manager"
+      },
+      "object_info": {
+        "model": "fpo",
+        "app": "database",
+        "id": "3",
+        "repr": "Kerala Farmers Producer Company Limited (KAU-FPO-TVM-2026-0001)"
+      },
+      "changes": {
+        "bulk_invited_via_file": [
+          "suresh.test@example.com",
+          "latha.test@example.com"
+        ]
+      },
+      "ip_address": "127.0.0.1",
+      "user_agent": "",
+      "request_path": "/api/fpo/me/team/bulk-invite-file/",
+      "request_method": "POST",
+      "created_at": "2026-06-16T10:19:23+0530"
+    },
+    {
+      "id": 214,
+      "action": "fpo_user_invite",
+      "action_display": "FPO User Invited",
+      "performed_by": {
+        "id": 11,
+        "name": "Athul Gopan",
+        "role": "fpo_manager"
+      },
+      "object_info": {
+        "model": "fpo",
+        "app": "database",
+        "id": "3",
+        "repr": "Kerala Farmers Producer Company Limited (KAU-FPO-TVM-2026-0001)"
+      },
+      "changes": {
+        "bulk_invited": [
+          "anoop.test@example.com",
+          "divya.test@example.com"
+        ]
+      },
+      "ip_address": "127.0.0.1",
+      "user_agent": "",
+      "request_path": "/api/fpo/me/team/bulk-invite/",
+      "request_method": "POST",
+      "created_at": "2026-06-16T10:19:22+0530"
+    },
+    {
+      "id": 213,
+      "action": "fpo_user_deactivate",
+      "action_display": "FPO User Deactivated",
+      "performed_by": {
+        "id": 11,
+        "name": "Athul Gopan",
+        "role": "fpo_manager"
+      

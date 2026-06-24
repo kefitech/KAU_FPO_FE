@@ -246,6 +246,69 @@ export interface AvailablePermission {
   description: string;
 }
 
+// ─── FPO Users ───────────────────────────────────────────────────────────────
+
+export interface FpoUser {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  role: "primary" | "secondary";
+  fpo_id: number;
+  fpo_name: string;
+  is_active: boolean;
+  joined_at: string;
+  last_login: string | null;
+}
+
+// ─── Audit Logs ───────────────────────────────────────────────────────────────
+
+export interface AuditLogPerformedBy {
+  id: number;
+  name: string;
+  role: string;
+}
+
+export interface AuditLogObjectInfo {
+  model: string;
+  app: string;
+  id: string;
+  repr: string;
+}
+
+export interface AuditLog {
+  id: number;
+  action: string;
+  action_display: string;
+  performed_by: string | AuditLogPerformedBy | null;
+  object_info: string | AuditLogObjectInfo | null;
+  changes: string | Record<string, unknown> | null;
+  ip_address: string;
+  user_agent: string;
+  request_path: string;
+  request_method: string;
+  created_at: string;
+}
+
+export function getPerformedByName(performed_by: AuditLog["performed_by"]): string {
+  if (!performed_by) return "System";
+  if (typeof performed_by === "string") return performed_by || "System";
+  return performed_by.name || "System";
+}
+
+export function getObjectInfoDisplay(object_info: AuditLog["object_info"]): string {
+  if (!object_info) return "—";
+  if (typeof object_info === "string") return object_info || "—";
+  return object_info.repr || `${object_info.model} #${object_info.id}`;
+}
+
+export function getChangesDisplay(changes: AuditLog["changes"]): string {
+  if (!changes) return "—";
+  if (typeof changes === "string") return changes || "—";
+  try { return JSON.stringify(changes, null, 2); } catch { return "—"; }
+}
+
 // ─── Notification Inbox ───────────────────────────────────────────────────────
 
 export interface InboxNotification {

@@ -16,15 +16,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 
-interface FilterOption {
+export interface FilterOption {
   label: string;
   value: string;
 }
 
-interface FilterConfig {
+export interface FilterConfig {
   key: string;
   label: string;
-  options: FilterOption[];
+  type?: "select" | "date";
+  options?: FilterOption[];
 }
 
 interface DataTableToolbarProps<TData> {
@@ -94,21 +95,38 @@ export function DataTableToolbar<TData>({
       </div>
 
       {/* Dynamic filters */}
-      {filters.map((filter) => (
-        <select
-          key={filter.key}
-          value={activeFilters[filter.key] ?? ""}
-          onChange={(e) => onFilter?.(filter.key, e.target.value)}
-          className="h-9 min-w-[140px] rounded-md border bg-background px-3 text-foreground text-sm shadow-xs focus:outline-none focus:ring-1 focus:ring-ring"
-        >
-          <option value="">{filter.label}</option>
-          {filter.options.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-      ))}
+      {filters.map((filter) =>
+        filter.type === "date" ? (
+          <div key={filter.key} className="relative">
+            <input
+              type="date"
+              value={activeFilters[filter.key] ?? ""}
+              onChange={(e) => onFilter?.(filter.key, e.target.value)}
+              title={filter.label}
+              className="h-9 min-w-[140px] rounded-md border bg-background px-3 text-foreground text-sm shadow-xs focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+            {!activeFilters[filter.key] && (
+              <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground text-sm">
+                {filter.label}
+              </span>
+            )}
+          </div>
+        ) : (
+          <select
+            key={filter.key}
+            value={activeFilters[filter.key] ?? ""}
+            onChange={(e) => onFilter?.(filter.key, e.target.value)}
+            className="h-9 min-w-[140px] rounded-md border bg-background px-3 text-foreground text-sm shadow-xs focus:outline-none focus:ring-1 focus:ring-ring"
+          >
+            <option value="">{filter.label}</option>
+            {(filter.options ?? []).map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        ),
+      )}
 
       {/* Clear all filters */}
       {hasActiveFilters && (

@@ -36,17 +36,25 @@ export type ApplicationStatus =
 
 export interface ApplicationListItem {
   id: number;
-  uuid: string;
   application_id: string;
   name: string;
+  name_ml: string;
   district: string;
   district_display: string;
   status: ApplicationStatus;
   status_display: string;
+  tier: string | null;
   current_tier: string | null;
+  current_step: number;
   total_members: number | null;
   office_email: string;
   office_phone: string;
+  email_verified: boolean;
+  phone_verified: boolean;
+  primary_user_id: number | null;
+  primary_user_name: string | null;
+  primary_user_email: string | null;
+  primary_user_phone: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -124,6 +132,11 @@ export interface ApplicationDetail {
   male_members: number | null;
   female_members: number | null;
   sc_st_members: number | null;
+  ceo_available: boolean;
+  accountant_available: boolean;
+  total_directors: number | null;
+  women_directors: number | null;
+  directors_under_35: number | null;
   // Step 4
   primary_commodities: string[];
   secondary_commodities: string[];

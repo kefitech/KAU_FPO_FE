@@ -21,19 +21,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import type { DataTableParams, PaginatedResponse } from "@/types/pagination";
 
 import { DataTablePagination } from "./data-table-pagination";
+import type { FilterConfig } from "./data-table-toolbar";
 import { DataTableToolbar } from "./data-table-toolbar";
 import { useDataTable } from "./use-data-table";
-
-interface FilterOption {
-  label: string;
-  value: string;
-}
-
-interface FilterConfig {
-  key: string;
-  label: string;
-  options: FilterOption[];
-}
 
 interface DataTableProps<TData> {
   queryKey: string;
