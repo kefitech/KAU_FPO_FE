@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -130,20 +130,24 @@ export default function LanguagesPage() {
     onError: () => toast.error("Failed to delete translations"),
   });
 
-  function handleBulkVerify() {
+  // After
+  const handleBulkVerify = useCallback(() => {
     const ids = selectedTranslations.map((t) => t.id);
     bulkVerifyMutation.mutate(ids);
-  }
+  }, [selectedTranslations, bulkVerifyMutation]);
 
-  function handleBulkDelete() {
+  const handleBulkDelete = useCallback(() => {
     confirm({
       title: "Delete Translations",
       description: `Are you sure you want to delete ${selectedTranslations.length} translation(s)? This action cannot be undone.`,
       onConfirm: () => bulkDeleteMutation.mutateAsync(selectedTranslations.map((t) => t.id)),
     });
-  }
+  }, [selectedTranslations, bulkDeleteMutation, confirm]);
 
-  const allVerified = useMemo(() => selectedTranslations.length > 0 && selectedTranslations.every((t) => t.is_verified), [selectedTranslations]);
+  const allVerified = useMemo(
+    () => selectedTranslations.length > 0 && selectedTranslations.every((t) => t.is_verified),
+    [selectedTranslations],
+  );
 
   const translationBulkExtra = useMemo(
     () =>
@@ -172,7 +176,14 @@ export default function LanguagesPage() {
           </Button>
         </div>
       ) : undefined,
-    [selectedTranslations.length, allVerified, bulkVerifyMutation.isPending, bulkDeleteMutation.isPending, handleBulkVerify, handleBulkDelete],
+    [
+      selectedTranslations.length,
+      allVerified,
+      bulkVerifyMutation.isPending,
+      bulkDeleteMutation.isPending,
+      handleBulkVerify,
+      handleBulkDelete,
+    ],
   );
 
   const [langView, setLangView] = useState<{ open: boolean; row: Language | null }>({ open: false, row: null });
@@ -429,7 +440,17 @@ export default function LanguagesPage() {
                       {
                         label: tTransTable.action_verify ?? "Mark Verified",
                         icon: ShieldCheck,
-                        onClick: () => setTransView((s) => ({ ...s, open: false })),
+                        onClick: () => {
+                          if (!transView.row) return;
+                          translationApi
+                            .verify(transView.row.id)
+                            .then(() => {
+                              toast.success("Translation marked as verified");
+                              queryClient.invalidateQueries({ queryKey: ["translations"] });
+                              setTransView((s) => ({ ...s, open: false }));
+                            })
+                            .catch(() => toast.error(tCommon.action_failed ?? "Action failed"));
+                        },
                       },
                     ]
                   : []),

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { Table } from "@tanstack/react-table";
 import { RefreshCw, Search, Settings2, X } from "lucide-react";
@@ -55,12 +55,17 @@ export function DataTableToolbar<TData>({
 }: DataTableToolbarProps<TData>) {
   const [localSearch, setLocalSearch] = useState(search);
 
+  const onSearchRef = useRef(onSearch);
+  useEffect(() => {
+    onSearchRef.current = onSearch;
+  }, [onSearch]);
+
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (localSearch !== search) onSearch(localSearch);
+      if (localSearch !== search) onSearchRef.current(localSearch);
     }, 400);
     return () => clearTimeout(timer);
-  }, [localSearch, search, onSearch]);
+  }, [localSearch, search]);
 
   useEffect(() => {
     setLocalSearch(search);
@@ -78,7 +83,7 @@ export function DataTableToolbar<TData>({
           placeholder="Search..."
           value={localSearch}
           onChange={(e) => setLocalSearch(e.target.value)}
-          className="h-9 w-64 pl-8"
+          className="h-9 w-64 pr-8 pl-8"
         />
         {localSearch && (
           <button
@@ -130,12 +135,7 @@ export function DataTableToolbar<TData>({
 
       {/* Clear all filters */}
       {hasActiveFilters && (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => onClearFilters?.()}
-          className="h-9 text-muted-foreground"
-        >
+        <Button variant="ghost" size="sm" onClick={() => onClearFilters?.()} className="h-9 text-muted-foreground">
           <X className="mr-1 h-3.5 w-3.5" />
           Clear
         </Button>

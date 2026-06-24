@@ -12,7 +12,6 @@ import { z } from "zod";
 
 import { rolesApi } from "@/app/admin/_api/roles";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import type { Role } from "@/types/admin";
@@ -30,11 +29,15 @@ interface RoleFormProps {
   role?: Role;
   t?: T;
   tCommon?: T;
+  /** Called after a successful save — use this to close a dialog. */
+  onSuccess?: () => void;
+  /** Called when the Cancel button is clicked — use this to close a dialog. */
+  onCancel?: () => void;
 }
 
 const defaultValues: FormValues = { name: "" };
 
-export function RoleForm({ mode, role, t = {}, tCommon = {} }: RoleFormProps) {
+export function RoleForm({ mode, role, t = {}, tCommon = {}, onSuccess, onCancel }: RoleFormProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const isEdit = mode === "edit";
@@ -54,13 +57,18 @@ export function RoleForm({ mode, role, t = {}, tCommon = {} }: RoleFormProps) {
   }, [role?.id, role?.name, role, reset]);
 
   const mutation = useMutation({
-    mutationFn: (values: FormValues) => (isEdit ? rolesApi.update(role!.id, values) : rolesApi.create(values)),
+    mutationFn: (values: FormValues) => (isEdit && role ? rolesApi.update(role?.id, values) : rolesApi.create(values)),
     onSuccess: () => {
       toast.success(
         isEdit ? (t.toast_updated ?? "Role updated successfully") : (t.toast_created ?? "Role created successfully"),
       );
       queryClient.invalidateQueries({ queryKey: ["roles"] });
-      if (!isEdit) router.push("/admin/roles");
+
+      if (onSuccess) {
+        onSuccess();
+      } else if (!isEdit) {
+        router.push("/admin/roles");
+      }
     },
     onError: (error: unknown) => {
       const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
@@ -68,46 +76,41 @@ export function RoleForm({ mode, role, t = {}, tCommon = {} }: RoleFormProps) {
     },
   });
 
-  return (
-    <div className="mx-auto w-full max-w-lg">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{t.section_details ?? "Role Details"}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="flex flex-col gap-6">
-            <FieldGroup>
-              <Field>
-                <FieldLabel htmlFor="role-name">
-                  {t.name_label ?? "Role Name"} <span className="text-destructive">*</span>
-                </FieldLabel>
-                <Controller
-                  control={control}
-                  name="name"
-                  render={({ field }) => (
-                    <Input
-                      id="role-name"
-                      placeholder={t.name_placeholder ?? "e.g. FPO Manager"}
-                      maxLength={100}
-                      {...field}
-                    />
-                  )}
-                />
-                {errors.name && <FieldError errors={[errors.name]} />}
-              </Field>
-            </FieldGroup>
+  function handleCancel() {
+    if (onCancel) {
+      onCancel();
+    } else {
+      router.push("/admin/roles");
+    }
+  }
 
-            <div className="flex items-center justify-end gap-3">
-              <Button type="button" variant="outline" onClick={() => router.push("/admin/roles")}>
-                {tCommon.cancel_btn ?? "Cancel"}
-              </Button>
-              <Button type="submit" disabled={mutation.isPending}>
-                {mutation.isPending ? "Saving..." : (tCommon.save_btn ?? "Save")}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+  return (
+    <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="flex flex-col gap-4">
+      <FieldGroup className="gap-4">
+        <Field>
+          <FieldLabel htmlFor="role-name">
+            {t.name_label ?? "Role Name"} <span className="text-destructive">*</span>
+          </FieldLabel>
+          <Controller
+            control={control}
+            name="name"
+            render={({ field }) => (
+              <Input id="role-name" placeholder={t.name_placeholder ?? "e.g. FPO Manager"} maxLength={100} {...field} />
+            )}
+          />
+          {errors.name && <FieldError errors={[errors.name]} />}
+        </Field>
+      </FieldGroup>
+
+      {/* Footer — matches Cancel / Save pattern in the Action dialog */}
+      <div className="flex justify-end gap-2 pt-2">
+        <Button type="button" variant="outline" onClick={handleCancel}>
+          {tCommon.cancel_btn ?? "Cancel"}
+        </Button>
+        <Button type="submit" disabled={mutation.isPending}>
+          {mutation.isPending ? "Saving..." : (tCommon.save_btn ?? "Save")}
+        </Button>
+      </div>
+    </form>
   );
 }

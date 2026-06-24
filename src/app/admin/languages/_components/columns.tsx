@@ -28,6 +28,13 @@ function LanguageActions({ language, t, tCommon }: { language: Language; t: T; t
     },
     onError: () => toast.error(tCommon.action_failed ?? "Action failed"),
   });
+  const handleToggle = () => {
+    if (language.is_active && language.is_default) {
+      toast.error("A default language cannot be deactivated. Please set another language as default first.");
+      return;
+    }
+    toggleMutation.mutate();
+  };
 
   const defaultMutation = useMutation({
     mutationFn: () => languageApi.setDefault(language.id),
@@ -37,6 +44,14 @@ function LanguageActions({ language, t, tCommon }: { language: Language; t: T; t
     },
     onError: () => toast.error(tCommon.action_failed ?? "Action failed"),
   });
+
+  const handleSetDefault = () => {
+    if (!language.is_active) {
+      toast.error("An inactive language cannot be set as default. Please activate the language first.");
+      return;
+    }
+    defaultMutation.mutate();
+  };
 
   const deleteMutation = useMutation({
     mutationFn: () => languageApi.delete(language.id),
@@ -61,12 +76,12 @@ function LanguageActions({ language, t, tCommon }: { language: Language; t: T; t
         { label: tCommon.edit ?? "Edit", onClick: () => router.push(`/admin/languages/${language.id}/edit`) },
         {
           label: t.action_set_default ?? "Set as Default",
-          onClick: () => defaultMutation.mutate(),
+          onClick: handleSetDefault,
           hidden: language.is_default,
         },
         {
           label: language.is_active ? (t.action_deactivate ?? "Deactivate") : (t.action_activate ?? "Activate"),
-          onClick: () => toggleMutation.mutate(),
+          onClick: handleToggle,
         },
         {
           label: tCommon.delete_btn ?? "Delete",

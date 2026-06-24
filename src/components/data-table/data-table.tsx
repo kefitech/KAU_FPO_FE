@@ -66,8 +66,7 @@ export function DataTable<TData>({
       if (val) p[f.key] = val;
     });
     return p;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams.toString(), filters.map((f) => f.key).join(",")]);
+  }, [searchParams, filters]);
 
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: [queryKey, params, extraParams],
@@ -84,7 +83,7 @@ export function DataTable<TData>({
     if (data === undefined) return;
     setRowSelection({});
     startTransition(() => onSelectionChange?.([]));
-  }, [data]);
+  }, [data, onSelectionChange]);
 
   const slNoColumn: ColumnDef<TData> = {
     id: "_slno",
@@ -186,13 +185,13 @@ export function DataTable<TData>({
         table={table}
       />
 
-      <div className="relative overflow-clip rounded-lg border border-border/70 shadow-xs">
+      <div className="relative overflow-x-auto rounded-lg border border-border/70 shadow-xs">
         {isFetching && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-[1px]">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
         )}
-        <Table className="table-fixed">
+        <Table className="min-w-full">
           <TableHeader className="border-border/70 border-b bg-muted/60">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
