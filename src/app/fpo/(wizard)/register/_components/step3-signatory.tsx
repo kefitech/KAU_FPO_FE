@@ -10,19 +10,24 @@ import { z } from "zod";
 
 import { fpoRegistrationApi } from "@/app/fpo/_api/fpo-registration";
 import { Button } from "@/components/ui/button";
-import { useVoiceGuidance } from "@/hooks/use-voice-guidance";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { masterDataApi, type MasterDataItem } from "@/lib/api/master-data";
+import { useVoiceGuidance } from "@/hooks/use-voice-guidance";
+import { type MasterDataItem, masterDataApi } from "@/lib/api/master-data";
 import type { FpoProfile } from "@/types/fpo";
 
 const toNum = (msg: string) => z.string().refine((v) => !Number.isNaN(Number(v)) && v !== "", { message: msg });
-const toOptionalNum = () => z.string().refine((v) => v === "" || !Number.isNaN(Number(v)), { message: "Enter a valid number" });
+const toOptionalNum = () =>
+  z.string().refine((v) => v === "" || !Number.isNaN(Number(v)), { message: "Enter a valid number" });
 
 const schema = z.object({
-  signatory_name: z.string().min(1, { message: "Signatory name is required" }),
+  signatory_name: z
+    .string()
+    .min(1, { message: "Signatory name is required" })
+    .max(100, { message: "Signatory name must be at most 100 characters" })
+    .regex(/^[a-zA-Z\s]+$/, { message: "Only alphabetic characters and spaces are allowed" }),
   signatory_designation: z.string().min(1, { message: "Designation is required" }),
   signatory_phone: z.string().refine((v) => /^\d{10}$/.test(v), { message: "Enter a valid 10-digit phone number" }),
   signatory_email: z.string().email({ message: "Enter a valid email address" }),
@@ -90,8 +95,14 @@ export function Step3Signatory({ profile, onSave, onSuccess, onBack }: Step3Prop
   const [agenciesLoaded, setAgenciesLoaded] = useState(false);
 
   useEffect(() => {
-    masterDataApi.get("signatory_designation").then((data) => { setDesignations(data); setDesignationsLoaded(true); });
-    masterDataApi.get("promoting_agency").then((data) => { setAgencies(data); setAgenciesLoaded(true); });
+    masterDataApi.get("signatory_designation").then((data) => {
+      setDesignations(data);
+      setDesignationsLoaded(true);
+    });
+    masterDataApi.get("promoting_agency").then((data) => {
+      setAgencies(data);
+      setAgenciesLoaded(true);
+    });
   }, []);
 
   const {
@@ -129,11 +140,7 @@ export function Step3Signatory({ profile, onSave, onSuccess, onBack }: Step3Prop
     const label = FIELD_LABELS[firstField] ?? String(firstField);
     const val = getValues(firstField);
     const isEmpty = !val || val === "";
-    speak(
-      isEmpty
-        ? `You haven't filled ${label}. This is a required field.`
-        : `Please enter a valid ${label}.`,
-    );
+    speak(isEmpty ? `You haven't filled ${label}. This is a required field.` : `Please enter a valid ${label}.`);
   }
 
   const submitMutation = useMutation({
@@ -190,7 +197,7 @@ export function Step3Signatory({ profile, onSave, onSuccess, onBack }: Step3Prop
             <FieldLabel htmlFor="signatory_name">
               Full Name <span className="text-destructive">*</span>
             </FieldLabel>
-            <Input id="signatory_name" placeholder="e.g. Rajan Kumar" {...register("signatory_name")} />
+            <Input id="signatory_name" placeholder="e.g. Rajan Kumar" maxLength={100} {...register("signatory_name")} />
             {errors.signatory_name && <FieldError errors={[errors.signatory_name]} />}
           </Field>
 
@@ -231,7 +238,12 @@ export function Step3Signatory({ profile, onSave, onSuccess, onBack }: Step3Prop
             <FieldLabel htmlFor="signatory_email">
               Email <span className="text-destructive">*</span>
             </FieldLabel>
-            <Input id="signatory_email" type="email" placeholder="signatory@email.com" {...register("signatory_email")} />
+            <Input
+              id="signatory_email"
+              type="email"
+              placeholder="signatory@email.com"
+              {...register("signatory_email")}
+            />
             {errors.signatory_email && <FieldError errors={[errors.signatory_email]} />}
           </Field>
         </div>
@@ -259,7 +271,14 @@ export function Step3Signatory({ profile, onSave, onSuccess, onBack }: Step3Prop
           <FieldLabel htmlFor="total_members">
             Total Members <span className="text-destructive">*</span>
           </FieldLabel>
-          <Input id="total_members" type="number" min={10} placeholder="Minimum 10" className="w-40" {...register("total_members")} />
+          <Input
+            id="total_members"
+            type="number"
+            min={10}
+            placeholder="Minimum 10"
+            className="w-40"
+            {...register("total_members")}
+          />
           {errors.total_members && <FieldError errors={[errors.total_members]} />}
         </Field>
 
@@ -314,7 +333,11 @@ export function Step3Signatory({ profile, onSave, onSuccess, onBack }: Step3Prop
 
           <Field>
             <FieldLabel htmlFor="facilitating_agency_name">Facilitating Agency Name</FieldLabel>
-            <Input id="facilitating_agency_name" placeholder="e.g. NABARD Kerala" {...register("facilitating_agency_name")} />
+            <Input
+              id="facilitating_agency_name"
+              placeholder="e.g. NABARD Kerala"
+              {...register("facilitating_agency_name")}
+            />
           </Field>
         </div>
 
