@@ -13,12 +13,12 @@ import { z } from "zod";
 
 import { fpoRegistrationApi } from "@/app/fpo/_api/fpo-registration";
 import { Button } from "@/components/ui/button";
-import { useVoiceGuidance } from "@/hooks/use-voice-guidance";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { masterDataApi, type MasterDataItem } from "@/lib/api/master-data";
+import { useVoiceGuidance } from "@/hooks/use-voice-guidance";
+import { type MasterDataItem, masterDataApi } from "@/lib/api/master-data";
 import { DISTRICT_OPTIONS, type FpoProfile } from "@/types/fpo";
 
 import type { LatLng } from "./map-pin-picker";
@@ -134,14 +134,18 @@ export function Step2Contact({ profile, onSave, onSuccess, onBack }: Step2Props)
   const selectedDistrict = watch("district");
 
   useEffect(() => {
-    if (!selectedDistrict) { setBlocks([]); setBlocksLoaded(false); return; }
+    if (!selectedDistrict) {
+      setBlocks([]);
+      setBlocksLoaded(false);
+      return;
+    }
     setBlocksLoaded(false);
     masterDataApi.get("block", selectedDistrict).then((data) => {
       setBlocks(data);
       setBlocksLoaded(true);
       if (!profile.block_taluk) setValue("block_taluk", "", { shouldValidate: false });
     });
-  }, [selectedDistrict, setValue]);
+  }, [selectedDistrict, setValue, profile.block_taluk]);
 
   const validateMutation = useMutation({
     mutationFn: ({ field, value }: { field: string; value: string }) => fpoRegistrationApi.validateField(field, value),
@@ -159,11 +163,7 @@ export function Step2Contact({ profile, onSave, onSuccess, onBack }: Step2Props)
     const label = FIELD_LABELS[firstField] ?? String(firstField);
     const val = getValues(firstField);
     const isEmpty = !val || val === "";
-    speak(
-      isEmpty
-        ? `You haven't filled ${label}. This is a required field.`
-        : `Please enter a valid ${label}.`,
-    );
+    speak(isEmpty ? `You haven't filled ${label}. This is a required field.` : `Please enter a valid ${label}.`);
   }
 
   function handleBlurValidation(field: string) {
@@ -434,13 +434,16 @@ export function Step2Contact({ profile, onSave, onSuccess, onBack }: Step2Props)
         name="location"
         render={({ field }) => (
           <Field>
-            <FieldLabel>FPO Location on Map</FieldLabel>
+            <FieldLabel>
+              FPO Location on Map <span className="text-destructive">*</span>
+            </FieldLabel>
             <MapPinPicker
               value={field.value as LatLng | null}
               onChange={field.onChange}
               onGpsLocation={handleGpsLocation}
               flyTo={mapFlyTarget}
             />
+            {errors.location && <FieldError errors={[errors.location]} />}
           </Field>
         )}
       />
@@ -455,6 +458,10 @@ export function Step2Contact({ profile, onSave, onSuccess, onBack }: Step2Props)
             variant="outline"
             disabled={submitMutation.isPending}
             onClick={handleSubmit((v) => {
+              if (!v.location) {
+                setError("location", { type: "manual", message: "Please pin your FPO location on the map" });
+                return;
+              }
               setSaveMode("save");
               submitMutation.mutate(v, { onSuccess: () => onSave?.() });
             }, handleInvalidSubmit)}
@@ -465,6 +472,10 @@ export function Step2Contact({ profile, onSave, onSuccess, onBack }: Step2Props)
             type="button"
             disabled={submitMutation.isPending}
             onClick={handleSubmit((v) => {
+              if (!v.location) {
+                setError("location", { type: "manual", message: "Please pin your FPO location on the map" });
+                return;
+              }
               setSaveMode("next");
               submitMutation.mutate(v, { onSuccess: () => onSuccess() });
             }, handleInvalidSubmit)}

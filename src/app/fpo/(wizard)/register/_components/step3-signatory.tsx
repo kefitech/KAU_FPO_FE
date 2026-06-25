@@ -22,30 +22,45 @@ const toNum = (msg: string) => z.string().refine((v) => !Number.isNaN(Number(v))
 const toOptionalNum = () =>
   z.string().refine((v) => v === "" || !Number.isNaN(Number(v)), { message: "Enter a valid number" });
 
-const schema = z.object({
-  signatory_name: z
-    .string()
-    .min(1, { message: "Signatory name is required" })
-    .max(100, { message: "Signatory name must be at most 100 characters" })
-    .regex(/^[a-zA-Z\s]+$/, { message: "Only alphabetic characters and spaces are allowed" }),
-  signatory_designation: z.string().min(1, { message: "Designation is required" }),
-  signatory_phone: z.string().refine((v) => /^\d{10}$/.test(v), { message: "Enter a valid 10-digit phone number" }),
-  signatory_email: z.string().email({ message: "Enter a valid email address" }),
-  signatory_aadhaar_last4: z.string().refine((v) => /^\d{4}$/.test(v), { message: "Enter last 4 digits of Aadhaar" }),
-  total_members: toNum("Total members is required").refine((v) => Number(v) >= 10, {
-    message: "Minimum 10 members required",
-  }),
-  male_members: toNum("Required"),
-  female_members: toNum("Required"),
-  sc_st_members: toOptionalNum(),
-  promoting_agency: z.string().min(1, { message: "Promoting agency is required" }),
-  facilitating_agency_name: z.string().optional(),
-  ceo_available: z.boolean(),
-  accountant_available: z.boolean(),
-  total_directors: toNum("Required"),
-  women_directors: toOptionalNum(),
-  directors_under_35: toOptionalNum(),
-});
+const schema = z
+  .object({
+    signatory_name: z
+      .string()
+      .min(1, { message: "Signatory name is required" })
+      .max(100, { message: "Signatory name must be at most 100 characters" })
+      .regex(/^[a-zA-Z\s]+$/, { message: "Only alphabetic characters and spaces are allowed" }),
+    signatory_designation: z.string().min(1, { message: "Designation is required" }),
+    signatory_phone: z.string().refine((v) => /^\d{10}$/.test(v), { message: "Enter a valid 10-digit phone number" }),
+    signatory_email: z.string().email({ message: "Enter a valid email address" }),
+    signatory_aadhaar_last4: z.string().refine((v) => /^\d{4}$/.test(v), { message: "Enter last 4 digits of Aadhaar" }),
+    total_members: toNum("Total members is required").refine((v) => Number(v) >= 10, {
+      message: "Minimum 10 members required",
+    }),
+    male_members: toNum("Required"),
+    female_members: toNum("Required"),
+    sc_st_members: toOptionalNum(),
+    promoting_agency: z.string().min(1, { message: "Promoting agency is required" }),
+    facilitating_agency_name: z.string().optional(),
+    ceo_available: z.boolean(),
+    accountant_available: z.boolean(),
+    total_directors: toNum("Required"),
+    women_directors: toOptionalNum(),
+    directors_under_35: toOptionalNum(),
+  })
+  .superRefine((data, ctx) => {
+    const total = Number(data.total_members);
+    const male = Number(data.male_members);
+    const female = data.female_members ? Number(data.female_members) : 0;
+    const scst = data.sc_st_members ? Number(data.sc_st_members) : 0;
+
+    if (male + female + scst !== total) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Male (${male}) + Female (${female}) + SC/ST (${scst}) must equal Total Members (${total})`,
+        path: ["sc_st_members"],
+      });
+    }
+  });
 
 type FormValues = {
   signatory_name: string;
