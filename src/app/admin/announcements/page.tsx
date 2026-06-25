@@ -6,10 +6,11 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
+import { type AdminAnnouncement, adminAnnouncementsApi } from "@/app/admin/_api/announcements";
 import { DataTable } from "@/components/data-table/data-table";
+import { Button } from "@/components/ui/button";
 import { useConfirmStore } from "@/stores/confirm-store";
-import { adminAnnouncementsApi, type AdminAnnouncement } from "@/app/admin/_api/announcements";
+
 import { getAnnouncementColumns } from "./_components/columns";
 
 export default function AnnouncementsPage() {
@@ -31,7 +32,7 @@ export default function AnnouncementsPage() {
     onDelete: (item: AdminAnnouncement) =>
       confirm({
         title: "Delete Announcement",
-        description: `Are you sure you want to delete "${item.title}"?`,
+        description: `Are you sure you want to delete "${item.title.en}"?`,
         onConfirm: () => deleteMutation.mutateAsync(item.id),
       }),
   });
@@ -41,7 +42,9 @@ export default function AnnouncementsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-bold text-2xl">Announcements</h1>
-          <p className="text-muted-foreground text-sm mt-0.5">Manage news and announcements shown on the landing page.</p>
+          <p className="text-muted-foreground text-sm mt-0.5">
+            Manage news and announcements shown on the landing page.
+          </p>
         </div>
         <Button className="bg-green-600 hover:bg-green-700" onClick={() => router.push("/admin/announcements/new")}>
           <Plus className="mr-2 h-4 w-4" />
