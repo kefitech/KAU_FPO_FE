@@ -10,17 +10,16 @@ import { z } from "zod";
 
 import { fpoRegistrationApi } from "@/app/fpo/_api/fpo-registration";
 import { Button } from "@/components/ui/button";
-import { useVoiceGuidance } from "@/hooks/use-voice-guidance";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { masterDataApi, type MasterDataItem } from "@/lib/api/master-data";
+import { useVoiceGuidance } from "@/hooks/use-voice-guidance";
+import { type MasterDataItem, masterDataApi } from "@/lib/api/master-data";
 import type { FpoProfile } from "@/types/fpo";
 
 import { CommodityInput } from "./commodity-input";
-
 
 const FIELD_LABELS: Partial<Record<string, string>> = {
   primary_commodities: "Primary Commodities",
@@ -30,39 +29,63 @@ const FIELD_LABELS: Partial<Record<string, string>> = {
   ifsc_code: "IFSC Code",
 };
 
-const ONES = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
-              "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen",
-              "Seventeen", "Eighteen", "Nineteen"];
+const ONES = [
+  "",
+  "One",
+  "Two",
+  "Three",
+  "Four",
+  "Five",
+  "Six",
+  "Seven",
+  "Eight",
+  "Nine",
+  "Ten",
+  "Eleven",
+  "Twelve",
+  "Thirteen",
+  "Fourteen",
+  "Fifteen",
+  "Sixteen",
+  "Seventeen",
+  "Eighteen",
+  "Nineteen",
+];
 const TENS = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
 
 function twoDigitWords(n: number): string {
   if (n === 0) return "";
   if (n < 20) return ONES[n];
-  return TENS[Math.floor(n / 10)] + (n % 10 ? " " + ONES[n % 10] : "");
+  return TENS[Math.floor(n / 10)] + (n % 10 ? ` ${ONES[n % 10]}` : "");
 }
 
 function lakhsToWords(lakhs: number): string {
   const rupees = Math.round(lakhs * 100000);
   if (rupees === 0) return "";
-  const crore    = Math.floor(rupees / 10_000_000);
-  const lakh     = Math.floor((rupees % 10_000_000) / 100_000);
+  const crore = Math.floor(rupees / 10_000_000);
+  const lakh = Math.floor((rupees % 10_000_000) / 100_000);
   const thousand = Math.floor((rupees % 100_000) / 1_000);
-  const rest     = rupees % 1_000;
-  const hundred  = Math.floor(rest / 100);
-  const rem      = rest % 100;
+  const rest = rupees % 1_000;
+  const hundred = Math.floor(rest / 100);
+  const rem = rest % 100;
   const parts: string[] = [];
-  if (crore    > 0) parts.push(twoDigitWords(crore) + " Crore");
-  if (lakh     > 0) parts.push(twoDigitWords(lakh) + " Lakh");
-  if (thousand > 0) parts.push(twoDigitWords(thousand) + " Thousand");
-  if (hundred  > 0) parts.push(ONES[hundred] + " Hundred");
-  if (rem      > 0) parts.push(twoDigitWords(rem));
+  if (crore > 0) parts.push(`${twoDigitWords(crore)} Crore`);
+  if (lakh > 0) parts.push(`${twoDigitWords(lakh)} Lakh`);
+  if (thousand > 0) parts.push(`${twoDigitWords(thousand)} Thousand`);
+  if (hundred > 0) parts.push(`${ONES[hundred]} Hundred`);
+  if (rem > 0) parts.push(twoDigitWords(rem));
   return parts.join(" ");
 }
 
 const schema = z.object({
   primary_commodities: z.array(z.string()).min(1, { message: "Add at least one primary commodity" }),
   secondary_commodities: z.array(z.string()),
-  annual_turnover: z.string().optional(),
+  annual_turnover: z
+    .string()
+    .optional()
+    .refine((v) => !v || /^\d+(\.\d{1,2})?$/.test(v), { message: "Enter a valid amount (e.g. 25.50)" })
+    .refine((v) => !v || Number(v) >= 0, { message: "Amount cannot be negative" })
+    .refine((v) => !v || v.replace(".", "").length <= 15, { message: "Amount cannot exceed 15 digits" }),
   bank_name: z.string().min(1, { message: "Bank name is required" }),
   bank_branch: z.string().min(1, { message: "Branch is required" }),
   account_number: z.string().min(1, { message: "Account number is required" }),
@@ -93,7 +116,10 @@ export function Step4Business({ profile, onSave, onSuccess, onBack }: Step4Props
 
   useEffect(() => {
     masterDataApi.get("commodity").then(setCommodities);
-    masterDataApi.get("bank_name").then((data) => { setBankNames(data); setBankNamesLoaded(true); });
+    masterDataApi.get("bank_name").then((data) => {
+      setBankNames(data);
+      setBankNamesLoaded(true);
+    });
   }, []);
 
   const {
@@ -129,8 +155,10 @@ export function Step4Business({ profile, onSave, onSuccess, onBack }: Step4Props
       const words = lakhsToWords(lakhs);
       if (words) speak(`You have entered ${words} rupees`);
     }, 800);
-    return () => { if (speechTimeout.current) clearTimeout(speechTimeout.current); };
-  }, [turnoverValue]);
+    return () => {
+      if (speechTimeout.current) clearTimeout(speechTimeout.current);
+    };
+  }, [turnoverValue, speak]);
 
   const validateMutation = useMutation({
     mutationFn: ({ field, value }: { field: string; value: string }) => fpoRegistrationApi.validateField(field, value),
@@ -148,11 +176,7 @@ export function Step4Business({ profile, onSave, onSuccess, onBack }: Step4Props
     const label = FIELD_LABELS[firstField] ?? firstField;
     const val = getValues(firstField as keyof FormValues);
     const isEmpty = !val || (Array.isArray(val) && val.length === 0) || val === "";
-    speak(
-      isEmpty
-        ? `You haven't filled ${label}. This is a required field.`
-        : `Please enter a valid ${label}.`,
-    );
+    speak(isEmpty ? `You haven't filled ${label}. This is a required field.` : `Please enter a valid ${label}.`);
   }
 
   function handleBlurValidation(field: string) {
@@ -385,4 +409,3 @@ export function Step4Business({ profile, onSave, onSuccess, onBack }: Step4Props
     </form>
   );
 }
-
