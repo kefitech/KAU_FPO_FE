@@ -73,6 +73,9 @@ function SubAdminActions({ subAdmin, t, tConfirm, tCommon }: { subAdmin: SubAdmi
         t.reset_password_description ??
         'A temporary password will be generated and sent to "{name}" via email. They will be required to change it on next login.'
       ).replace("{name}", name),
+      confirmLabel: "Reset",
+      confirmingLabel: "Sending...",
+      variant: "default",
       onConfirm: () => resetPasswordMutation.mutateAsync(),
     });
   }
@@ -84,6 +87,9 @@ function SubAdminActions({ subAdmin, t, tConfirm, tCommon }: { subAdmin: SubAdmi
       description: (
         t.delete_description ?? 'Are you sure you want to delete "{name}"? This action cannot be undone.'
       ).replace("{name}", name),
+      confirmLabel: tCommon.delete_btn ?? "Delete",
+      confirmingLabel: tCommon.deleting ?? "Deleting...",
+      variant: "destructive",
       onConfirm: () => deleteMutation.mutateAsync(),
     });
   }
