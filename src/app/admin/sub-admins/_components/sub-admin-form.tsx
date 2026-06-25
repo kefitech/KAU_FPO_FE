@@ -116,7 +116,6 @@ export function SubAdminForm({ mode, subAdmin, t = {}, tCommon = {} }: SubAdminF
   useEffect(() => {
     if (editingValues) reset(editingValues);
   }, [reset, editingValues]);
-
   const { data: availablePermsData } = useQuery({
     queryKey: ["available-permissions"],
     queryFn: () => subAdminsApi.getAvailablePermissions({ page: 1, page_size: 100 }),
