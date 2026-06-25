@@ -27,9 +27,12 @@ const NOTIFICATION_CHANNELS: { value: NotificationChannelType; label: string }[]
 ];
 
 const createSchema = z.object({
-  email: z.email({ error: "Valid email is required" }).max(254, { message: "Email must be under 254 characters" }),
+  email: z
+    .string()
+    .email({ message: "Enter a valid email address" })
+    .max(50, { message: "Email must be at most 50 characters" }),
   first_name: z.string().min(1, { message: "First name is required" }).max(50, { message: "Max 50 characters" }),
-  last_name: z.string().max(50, { message: "Max 50 characters" }),
+  last_name: z.string().min(1, { message: "Last name is required" }).max(50, { message: "Max 50 characters" }),
   phone: z
     .string()
     .min(10, { message: "Enter a valid phone number" })
@@ -40,9 +43,12 @@ const createSchema = z.object({
 });
 
 const editSchema = z.object({
-  email: z.email({ error: "Valid email is required" }).max(254, { message: "Email must be under 254 characters" }),
+  email: z
+    .string()
+    .email({ message: "Enter a valid email address" })
+    .max(35, { message: "Email must be at most 35 characters" }),
   first_name: z.string().min(1, { message: "First name is required" }).max(50, { message: "Max 50 characters" }),
-  last_name: z.string().max(50, { message: "Max 50 characters" }),
+  last_name: z.string().min(1, { message: "Last name is required" }).max(50, { message: "Max 50 characters" }),
   phone: z
     .string()
     .min(10, { message: "Enter a valid phone number" })
@@ -99,10 +105,12 @@ export function SubAdminForm({ mode, subAdmin, t = {}, tCommon = {} }: SubAdminF
     control,
     handleSubmit,
     reset,
+    setFocus,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema) as unknown as Resolver<FormValues>,
     defaultValues: editingValues ?? defaultValues,
+    mode: "onChange",
   });
 
   useEffect(() => {
@@ -158,7 +166,31 @@ export function SubAdminForm({ mode, subAdmin, t = {}, tCommon = {} }: SubAdminF
   });
 
   return (
-    <form onSubmit={handleSubmit((v) => mutation.mutate(v))}>
+    <form
+      onSubmit={handleSubmit(
+        (v) => mutation.mutate(v),
+        (formErrors) => {
+          const firstError = Object.keys(formErrors)[0];
+          if (firstError) {
+            const el = document.getElementById(
+              firstError === "first_name"
+                ? "sa-first-name"
+                : firstError === "last_name"
+                  ? "sa-last-name"
+                  : firstError === "email"
+                    ? "sa-email"
+                    : firstError === "phone"
+                      ? "sa-phone"
+                      : "",
+            );
+            if (el) {
+              el.scrollIntoView({ behavior: "smooth", block: "center" });
+              el.focus();
+            }
+          }
+        },
+      )}
+    >
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
         <Card>
           <CardHeader>
@@ -187,7 +219,9 @@ export function SubAdminForm({ mode, subAdmin, t = {}, tCommon = {} }: SubAdminF
                 </Field>
 
                 <Field>
-                  <FieldLabel htmlFor="sa-last-name">{t.last_name_label ?? "Last Name"}</FieldLabel>
+                  <FieldLabel htmlFor="sa-last-name">
+                    {t.last_name_label ?? "Last Name"} <span className="text-destructive">*</span>
+                  </FieldLabel>
                   <Controller
                     control={control}
                     name="last_name"
@@ -200,6 +234,7 @@ export function SubAdminForm({ mode, subAdmin, t = {}, tCommon = {} }: SubAdminF
                       />
                     )}
                   />
+                  {errors.last_name && <FieldError errors={[errors.last_name]} />}
                 </Field>
               </div>
 
@@ -216,7 +251,7 @@ export function SubAdminForm({ mode, subAdmin, t = {}, tCommon = {} }: SubAdminF
                       type="email"
                       placeholder={t.email_placeholder ?? "admin@example.com"}
                       disabled={isEdit}
-                      maxLength={254}
+                      maxLength={50}
                       {...field}
                     />
                   )}
