@@ -7,20 +7,13 @@ import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { CheckCircle2, ChevronRight, Eye, EyeOff, Smartphone, XCircle } from "lucide-react";
-import { Controller, type Resolver } from "react-hook-form";
-import { useForm } from "react-hook-form";
+import { Controller, type Resolver, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
 import { fpoRegistrationApi } from "@/app/fpo/_api/fpo-registration";
 import { Button } from "@/components/ui/button";
-import {
-  Combobox,
-  ComboboxContent,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxList,
-} from "@/components/ui/combobox";
+import { Combobox, ComboboxContent, ComboboxInput, ComboboxItem, ComboboxList } from "@/components/ui/combobox";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { authApi } from "@/lib/api/auth";
@@ -31,7 +24,10 @@ type Stage = "eligibility" | "phone-otp" | "account";
 // ─── Eligibility form ─────────────────────────────────────────────────────────
 
 const eligibilitySchema = z.object({
-  member_count: z.coerce.number().min(10, { message: "Minimum 10 members required" }).max(100000, { message: "Cannot exceed 1,00,000 members" }),
+  member_count: z.coerce
+    .number()
+    .min(10, { message: "Minimum 10 members required" })
+    .max(100000, { message: "Cannot exceed 1,00,000 members" }),
   district: z.string().min(1, { message: "Select a district" }),
   registered_under_act: z.boolean(),
   has_valid_registration: z.boolean(),
@@ -50,9 +46,7 @@ function EligibilityStep({ onPass }: { onPass: (token: string) => void }) {
   const [errors, setErrors] = useState<string[]>([]);
   const [districtQuery, setDistrictQuery] = useState("");
   const skipNextInputChange = useRef(false);
-  const filteredDistricts = DISTRICT_OPTIONS.filter((o) =>
-    o.label.toLowerCase().includes(districtQuery.toLowerCase()),
-  );
+  const filteredDistricts = DISTRICT_OPTIONS.filter((o) => o.label.toLowerCase().includes(districtQuery.toLowerCase()));
   const { register, handleSubmit, control, formState } = useForm<EligibilityValues>({
     resolver: zodResolver(eligibilitySchema) as unknown as Resolver<EligibilityValues>,
     mode: "onTouched",
@@ -345,9 +339,18 @@ function PhoneOtpStep({ onPass, onBack }: { onPass: (phoneToken: string, phone: 
 
 const accountSchema = z
   .object({
-    first_name: z.string().min(1, { message: "First name is required" }),
-    last_name: z.string().min(1, { message: "Last name is required" }),
-    email: z.string().email({ message: "Enter a valid email address" }),
+    first_name: z
+      .string()
+      .min(1, { message: "First name is required" })
+      .max(20, { message: "First name must be at most 20 characters" }),
+    last_name: z
+      .string()
+      .min(1, { message: "Last name is required" })
+      .max(20, { message: "Last name must be at most 20 characters" }),
+    email: z
+      .string()
+      .email({ message: "Enter a valid email address" })
+      .max(35, { message: "Email must be at most 35 characters" }),
     password: z
       .string()
       .min(8, { message: "At least 8 characters" })
@@ -495,8 +498,17 @@ function AccountStep({
               { label: "One lowercase letter (a–z)", met: /[a-z]/.test(passwordVal) },
               { label: "One number (0–9)", met: /[0-9]/.test(passwordVal) },
             ].map(({ label, met }) => (
-              <p key={label} className={`flex items-center gap-1.5 text-xs ${met ? "text-green-600" : "text-muted-foreground"}`}>
-                {met ? <CheckCircle2 className="h-3 w-3 shrink-0" /> : <span className="ml-0.5 h-3 w-3 shrink-0 inline-flex items-center justify-center rounded-full border border-current text-[8px]">✕</span>}
+              <p
+                key={label}
+                className={`flex items-center gap-1.5 text-xs ${met ? "text-green-600" : "text-muted-foreground"}`}
+              >
+                {met ? (
+                  <CheckCircle2 className="h-3 w-3 shrink-0" />
+                ) : (
+                  <span className="ml-0.5 h-3 w-3 shrink-0 inline-flex items-center justify-center rounded-full border border-current text-[8px]">
+                    ✕
+                  </span>
+                )}
                 {label}
               </p>
             ))}
