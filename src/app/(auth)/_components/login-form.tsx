@@ -83,7 +83,9 @@ export function LoginForm() {
         router.push(resolvePostLoginPath(meData.redirect));
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Invalid username or password.");
+      const axiosErr = error as { response?: { data?: { message?: string } }; message?: string } | undefined;
+      const msg = axiosErr?.response?.data?.message ?? axiosErr?.message ?? "Invalid username or password.";
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }
