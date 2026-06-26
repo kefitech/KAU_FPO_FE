@@ -31,8 +31,8 @@ import { z } from "zod";
 import {
   type ApplicationStatus,
   type AssignTierPayload,
-  type TierAuditLogEntry,
   adminApplicationsApi,
+  type TierAuditLogEntry,
 } from "@/app/admin/_api/applications";
 import { auditLogsApi } from "@/app/admin/_api/audit-logs";
 import { fpoUsersApi } from "@/app/admin/_api/fpo-users";
@@ -49,7 +49,7 @@ import { translationsApi } from "@/lib/api/translations";
 import { useAuthStore } from "@/stores/auth-store";
 import { useConfirmStore } from "@/stores/confirm-store";
 import { useLocaleStore } from "@/stores/locale-store";
-import { getObjectInfoDisplay, getPerformedByName, type AuditLog, type FpoUser } from "@/types/admin";
+import { type AuditLog, type FpoUser, getObjectInfoDisplay, getPerformedByName } from "@/types/admin";
 
 type T = Record<string, string>;
 
@@ -57,11 +57,17 @@ type T = Record<string, string>;
 
 function formatDocType(type: string | undefined | null): string {
   if (!type) return "—";
-  return type.split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+  return type
+    .split("_")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
 }
 
 function formatStatus(status: string): string {
-  return status.split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+  return status
+    .split("_")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
 }
 
 function StatusBadge({ status }: { status: ApplicationStatus }) {
@@ -92,7 +98,15 @@ function InfoRow({ label, value }: { label: string; value?: string | number | nu
   );
 }
 
-function SectionCard({ icon: Icon, title, children }: { icon: React.ElementType; title: string; children: React.ReactNode }) {
+function SectionCard({
+  icon: Icon,
+  title,
+  children,
+}: {
+  icon: React.ElementType;
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex flex-col gap-4 rounded-lg border bg-card p-5">
       <div className="flex items-center gap-2">
@@ -109,32 +123,69 @@ function SectionCard({ icon: Icon, title, children }: { icon: React.ElementType;
 const rejectSchema = z.object({ reason: z.string().min(20, { message: "Reason must be at least 20 characters" }) });
 type RejectValues = z.infer<typeof rejectSchema>;
 
-function RejectDialog({ fpoId, t, tCommon, open, onOpenChange }: { fpoId: number; t: T; tCommon: T; open: boolean; onOpenChange: (v: boolean) => void }) {
+function RejectDialog({
+  fpoId,
+  t,
+  tCommon,
+  open,
+  onOpenChange,
+}: {
+  fpoId: number;
+  t: T;
+  tCommon: T;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
   const queryClient = useQueryClient();
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<RejectValues>({ resolver: zodResolver(rejectSchema) });
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<RejectValues>({ resolver: zodResolver(rejectSchema) });
   const mutation = useMutation({
     mutationFn: (values: RejectValues) => adminApplicationsApi.reject(fpoId, values.reason),
     onSuccess: () => {
       toast.success(t.reject_dialog_title ?? "Application rejected");
       queryClient.invalidateQueries({ queryKey: ["application", fpoId] });
       queryClient.invalidateQueries({ queryKey: ["applications"] });
-      reset(); onOpenChange(false);
+      reset();
+      onOpenChange(false);
     },
     onError: (err: unknown) => toast.error(err instanceof Error ? err.message : "Failed to reject"),
   });
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) reset();
+        onOpenChange(v);
+      }}
+    >
       <DialogContent className="max-w-md">
-        <DialogHeader><DialogTitle>{t.reject_dialog_title ?? "Reject Application"}</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>{t.reject_dialog_title ?? "Reject Application"}</DialogTitle>
+        </DialogHeader>
         <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="flex flex-col gap-4">
           <Field>
-            <FieldLabel htmlFor="reason">{t.reject_reason_label ?? "Rejection Reason"} <span className="text-destructive">*</span></FieldLabel>
-            <Textarea id="reason" placeholder={t.reject_reason_hint ?? "Minimum 20 characters"} rows={4} {...register("reason")} />
+            <FieldLabel htmlFor="reason">
+              {t.reject_reason_label ?? "Rejection Reason"} <span className="text-destructive">*</span>
+            </FieldLabel>
+            <Textarea
+              id="reason"
+              placeholder={t.reject_reason_hint ?? "Minimum 20 characters"}
+              rows={4}
+              {...register("reason")}
+            />
             {errors.reason && <FieldError errors={[errors.reason]} />}
           </Field>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>{tCommon.cancel ?? "Cancel"}</Button>
-            <Button type="submit" variant="destructive" disabled={mutation.isPending}>{mutation.isPending ? "Rejecting…" : (t.btn_reject ?? "Reject Application")}</Button>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              {tCommon.cancel ?? "Cancel"}
+            </Button>
+            <Button type="submit" variant="destructive" disabled={mutation.isPending}>
+              {mutation.isPending ? "Rejecting…" : (t.btn_reject ?? "Reject Application")}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -145,32 +196,69 @@ function RejectDialog({ fpoId, t, tCommon, open, onOpenChange }: { fpoId: number
 const requestInfoSchema = z.object({ notes: z.string().min(10, { message: "Notes must be at least 10 characters" }) });
 type RequestInfoValues = z.infer<typeof requestInfoSchema>;
 
-function RequestInfoDialog({ fpoId, t, tCommon, open, onOpenChange }: { fpoId: number; t: T; tCommon: T; open: boolean; onOpenChange: (v: boolean) => void }) {
+function RequestInfoDialog({
+  fpoId,
+  t,
+  tCommon,
+  open,
+  onOpenChange,
+}: {
+  fpoId: number;
+  t: T;
+  tCommon: T;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
   const queryClient = useQueryClient();
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<RequestInfoValues>({ resolver: zodResolver(requestInfoSchema) });
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<RequestInfoValues>({ resolver: zodResolver(requestInfoSchema) });
   const mutation = useMutation({
     mutationFn: (values: RequestInfoValues) => adminApplicationsApi.requestInfo(fpoId, values.notes),
     onSuccess: () => {
       toast.success(t.req_info_btn_submit ?? "Information requested");
       queryClient.invalidateQueries({ queryKey: ["application", fpoId] });
       queryClient.invalidateQueries({ queryKey: ["applications"] });
-      reset(); onOpenChange(false);
+      reset();
+      onOpenChange(false);
     },
     onError: (err: unknown) => toast.error(err instanceof Error ? err.message : "Failed to request information"),
   });
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) reset();
+        onOpenChange(v);
+      }}
+    >
       <DialogContent className="max-w-md">
-        <DialogHeader><DialogTitle>{t.req_info_dialog_title ?? "Request Additional Information"}</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>{t.req_info_dialog_title ?? "Request Additional Information"}</DialogTitle>
+        </DialogHeader>
         <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="flex flex-col gap-4">
           <Field>
-            <FieldLabel htmlFor="notes">{t.req_info_notes_label ?? "Notes for FPO"} <span className="text-destructive">*</span></FieldLabel>
-            <Textarea id="notes" placeholder={t.req_info_notes_hint ?? "Describe what is needed"} rows={4} {...register("notes")} />
+            <FieldLabel htmlFor="notes">
+              {t.req_info_notes_label ?? "Notes for FPO"} <span className="text-destructive">*</span>
+            </FieldLabel>
+            <Textarea
+              id="notes"
+              placeholder={t.req_info_notes_hint ?? "Describe what is needed"}
+              rows={4}
+              {...register("notes")}
+            />
             {errors.notes && <FieldError errors={[errors.notes]} />}
           </Field>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>{tCommon.cancel ?? "Cancel"}</Button>
-            <Button type="submit" disabled={mutation.isPending}>{mutation.isPending ? "Sending…" : (t.req_info_btn_submit ?? "Send Request")}</Button>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              {tCommon.cancel ?? "Cancel"}
+            </Button>
+            <Button type="submit" disabled={mutation.isPending}>
+              {mutation.isPending ? "Sending…" : (t.req_info_btn_submit ?? "Send Request")}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -181,27 +269,72 @@ function RequestInfoDialog({ fpoId, t, tCommon, open, onOpenChange }: { fpoId: n
 const userLimitSchema = z.object({ max_secondary_users: z.number().int().min(1).max(500) });
 type UserLimitValues = z.infer<typeof userLimitSchema>;
 
-function UserLimitDialog({ fpoId, current, t, tCommon, open, onOpenChange }: { fpoId: number; current: number; t: T; tCommon: T; open: boolean; onOpenChange: (v: boolean) => void }) {
+function UserLimitDialog({
+  fpoId,
+  current,
+  t,
+  tCommon,
+  open,
+  onOpenChange,
+}: {
+  fpoId: number;
+  current: number;
+  t: T;
+  tCommon: T;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
   const queryClient = useQueryClient();
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<UserLimitValues>({ resolver: zodResolver(userLimitSchema), defaultValues: { max_secondary_users: current } });
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<UserLimitValues>({
+    resolver: zodResolver(userLimitSchema),
+    defaultValues: { max_secondary_users: current },
+  });
   const mutation = useMutation({
     mutationFn: (values: UserLimitValues) => adminApplicationsApi.setUserLimit(fpoId, values.max_secondary_users),
-    onSuccess: () => { toast.success("User limit updated"); queryClient.invalidateQueries({ queryKey: ["application", fpoId] }); onOpenChange(false); },
+    onSuccess: () => {
+      toast.success("User limit updated");
+      queryClient.invalidateQueries({ queryKey: ["application", fpoId] });
+      onOpenChange(false);
+    },
     onError: (err: unknown) => toast.error(err instanceof Error ? err.message : "Failed to update"),
   });
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) reset();
+        onOpenChange(v);
+      }}
+    >
       <DialogContent className="max-w-xs">
-        <DialogHeader><DialogTitle>{t.user_limit_dialog_title ?? "Set Secondary User Limit"}</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>{t.user_limit_dialog_title ?? "Set Secondary User Limit"}</DialogTitle>
+        </DialogHeader>
         <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="flex flex-col gap-4">
           <Field>
             <FieldLabel htmlFor="max_secondary_users">{t.user_limit_field_label ?? "Max Secondary Users"}</FieldLabel>
-            <Input id="max_secondary_users" type="number" min={1} max={500} className="w-32" {...register("max_secondary_users", { valueAsNumber: true })} />
+            <Input
+              id="max_secondary_users"
+              type="number"
+              min={1}
+              max={500}
+              className="w-32"
+              {...register("max_secondary_users", { valueAsNumber: true })}
+            />
             {errors.max_secondary_users && <FieldError errors={[errors.max_secondary_users]} />}
           </Field>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>{tCommon.cancel ?? "Cancel"}</Button>
-            <Button type="submit" disabled={mutation.isPending}>{tCommon.save ?? "Save"}</Button>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              {tCommon.cancel ?? "Cancel"}
+            </Button>
+            <Button type="submit" disabled={mutation.isPending}>
+              {tCommon.save ?? "Save"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -215,36 +348,96 @@ const TIER_OPTIONS = ["A", "B", "C", "D"] as const;
 
 function tierBadgeClass(tier: string) {
   return (
-    { A: "bg-green-100 text-green-800 border-green-300 dark:bg-green-900/30 dark:text-green-300", B: "bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300", C: "bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-300", D: "bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-900/30 dark:text-orange-300" }[tier] ?? "bg-muted text-muted-foreground border"
+    {
+      A: "bg-green-100 text-green-800 border-green-300 dark:bg-green-900/30 dark:text-green-300",
+      B: "bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300",
+      C: "bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-300",
+      D: "bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-900/30 dark:text-orange-300",
+    }[tier] ?? "bg-muted text-muted-foreground border"
   );
 }
 
-const assignTierSchema = z.object({ tier: z.string().min(1), financial_year: z.string().min(1), notes: z.string().optional() });
+const assignTierSchema = z.object({
+  tier: z.string().min(1),
+  financial_year: z
+    .string()
+    .min(1, "Financial year is required")
+    .regex(/^\d{4}-\d{2}$/, "Financial year must be in YYYY-YY format")
+    .refine((val) => {
+      const [startStr, endSuffix] = val.split("-");
+      const startYear = parseInt(startStr, 10);
+      const endYear = parseInt(startStr.slice(0, 2) + endSuffix, 10);
+      return endYear > startYear;
+    }, "End year must be greater than start year"),
+  notes: z.string().optional(),
+});
 type AssignTierValues = z.infer<typeof assignTierSchema>;
 
-function AssignTierDialog({ fpoId, open, onOpenChange }: { fpoId: number; open: boolean; onOpenChange: (v: boolean) => void }) {
+function AssignTierDialog({
+  fpoId,
+  open,
+  onOpenChange,
+}: {
+  fpoId: number;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
   const queryClient = useQueryClient();
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<AssignTierValues>({ resolver: zodResolver(assignTierSchema), defaultValues: { tier: "", financial_year: "", notes: "" } });
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<AssignTierValues>({
+    resolver: zodResolver(assignTierSchema),
+    defaultValues: { tier: "", financial_year: "", notes: "" },
+  });
   const mutation = useMutation({
     mutationFn: (values: AssignTierValues) => adminApplicationsApi.assignTier(fpoId, values as AssignTierPayload),
-    onSuccess: () => { toast.success("Tier assigned"); queryClient.invalidateQueries({ queryKey: ["application", fpoId] }); queryClient.invalidateQueries({ queryKey: ["tier-history", fpoId] }); reset(); onOpenChange(false); },
+    onSuccess: () => {
+      toast.success("Tier assigned");
+      queryClient.invalidateQueries({ queryKey: ["application", fpoId] });
+      queryClient.invalidateQueries({ queryKey: ["tier-history", fpoId] });
+      reset();
+      onOpenChange(false);
+    },
     onError: (err: unknown) => toast.error(err instanceof Error ? err.message : "Failed to assign tier"),
   });
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) reset();
+        onOpenChange(v);
+      }}
+    >
       <DialogContent className="max-w-sm">
-        <DialogHeader><DialogTitle>Assign Tier (Manual Override)</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>Assign Tier (Manual Override)</DialogTitle>
+        </DialogHeader>
         <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="flex flex-col gap-4">
           <Field>
-            <FieldLabel htmlFor="tier">Tier <span className="text-destructive">*</span></FieldLabel>
-            <select id="tier" {...register("tier")} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
+            <FieldLabel htmlFor="tier">
+              Tier <span className="text-destructive">*</span>
+            </FieldLabel>
+            <select
+              id="tier"
+              {...register("tier")}
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            >
               <option value="">Select tier…</option>
-              {TIER_OPTIONS.map((t) => <option key={t} value={t}>Tier {t}</option>)}
+              {TIER_OPTIONS.map((t) => (
+                <option key={t} value={t}>
+                  Tier {t}
+                </option>
+              ))}
             </select>
             {errors.tier && <FieldError errors={[errors.tier]} />}
           </Field>
           <Field>
-            <FieldLabel htmlFor="financial_year">Financial Year <span className="text-destructive">*</span></FieldLabel>
+            <FieldLabel htmlFor="financial_year">
+              Financial Year <span className="text-destructive">*</span>
+            </FieldLabel>
             <Input id="financial_year" placeholder="e.g. 2026-27" {...register("financial_year")} />
             {errors.financial_year && <FieldError errors={[errors.financial_year]} />}
           </Field>
@@ -253,8 +446,12 @@ function AssignTierDialog({ fpoId, open, onOpenChange }: { fpoId: number; open: 
             <Textarea id="notes" rows={3} placeholder="Reason for manual override…" {...register("notes")} />
           </Field>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" disabled={mutation.isPending}>{mutation.isPending ? "Assigning…" : "Assign Tier"}</Button>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={mutation.isPending}>
+              {mutation.isPending ? "Assigning…" : "Assign Tier"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -284,11 +481,41 @@ function TierHistorySection({ entries }: { entries: TierAuditLogEntry[] }) {
             return (
               <tr key={log.id} className="text-sm">
                 <td className="py-2.5 pr-4 font-medium tabular-nums">{log.changes.financial_year}</td>
-                <td className="py-2.5 pr-4"><span className={`inline-flex items-center rounded-full border px-2 py-0.5 font-bold text-xs ${tierBadgeClass(log.changes.tier)}`}>Tier {log.changes.tier}</span></td>
-                <td className="py-2.5 pr-4 tabular-nums text-muted-foreground">{score !== null ? `${score.toFixed(1)} / 100` : "—"}</td>
-                <td className="py-2.5 pr-4">{isManual ? <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">Manual</Badge> : <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">Auto</Badge>}</td>
+                <td className="py-2.5 pr-4">
+                  <span
+                    className={`inline-flex items-center rounded-full border px-2 py-0.5 font-bold text-xs ${tierBadgeClass(log.changes.tier)}`}
+                  >
+                    Tier {log.changes.tier}
+                  </span>
+                </td>
+                <td className="py-2.5 pr-4 tabular-nums text-muted-foreground">
+                  {score !== null ? `${score.toFixed(1)} / 100` : "—"}
+                </td>
+                <td className="py-2.5 pr-4">
+                  {isManual ? (
+                    <Badge
+                      variant="secondary"
+                      className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                    >
+                      Manual
+                    </Badge>
+                  ) : (
+                    <Badge
+                      variant="secondary"
+                      className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                    >
+                      Auto
+                    </Badge>
+                  )}
+                </td>
                 <td className="py-2.5 pr-4 text-muted-foreground">{log.user_name ?? "System"}</td>
-                <td className="py-2.5 text-muted-foreground text-xs">{new Date(log.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</td>
+                <td className="py-2.5 text-muted-foreground text-xs">
+                  {new Date(log.created_at).toLocaleDateString("en-IN", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })}
+                </td>
               </tr>
             );
           })}
@@ -306,13 +533,19 @@ function TeamUserRow({ user }: { user: FpoUser }) {
 
   const activateMutation = useMutation({
     mutationFn: () => fpoUsersApi.activate(user.id),
-    onSuccess: () => { toast.success("User activated"); queryClient.invalidateQueries({ queryKey: ["fpo-team", user.fpo_id] }); },
+    onSuccess: () => {
+      toast.success("User activated");
+      queryClient.invalidateQueries({ queryKey: ["fpo-team", user.fpo_id] });
+    },
     onError: () => toast.error("Failed to activate"),
   });
 
   const deactivateMutation = useMutation({
     mutationFn: () => fpoUsersApi.deactivate(user.id),
-    onSuccess: () => { toast.success("User deactivated"); queryClient.invalidateQueries({ queryKey: ["fpo-team", user.fpo_id] }); },
+    onSuccess: () => {
+      toast.success("User deactivated");
+      queryClient.invalidateQueries({ queryKey: ["fpo-team", user.fpo_id] });
+    },
     onError: () => toast.error("Failed to deactivate"),
   });
 
@@ -355,15 +588,22 @@ function TeamUserRow({ user }: { user: FpoUser }) {
       </div>
       <div className="flex items-center gap-2 shrink-0">
         {user.is_active ? (
-          <Badge variant="outline" className="border-green-500/40 bg-green-500/10 text-[11px] text-green-700 dark:text-green-400">Active</Badge>
+          <Badge
+            variant="outline"
+            className="border-green-500/40 bg-green-500/10 text-[11px] text-green-700 dark:text-green-400"
+          >
+            Active
+          </Badge>
         ) : (
-          <Badge variant="outline" className="border-muted text-[11px] text-muted-foreground">Inactive</Badge>
+          <Badge variant="outline" className="border-muted text-[11px] text-muted-foreground">
+            Inactive
+          </Badge>
         )}
         <RowActions
           actions={[
             {
               label: user.is_active ? "Deactivate" : "Activate",
-              onClick: () => user.is_active ? deactivateMutation.mutate() : activateMutation.mutate(),
+              onClick: () => (user.is_active ? deactivateMutation.mutate() : activateMutation.mutate()),
               disabled: activateMutation.isPending || deactivateMutation.isPending,
             },
             {
@@ -389,16 +629,21 @@ function TeamTab({ fpoId }: { fpoId: number }) {
 
   const users = data?.data ?? [];
 
-  if (isLoading) return (
-    <div className="flex flex-col gap-3">
-      {[1, 2, 3].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
-    </div>
-  );
+  if (isLoading)
+    return (
+      <div className="flex flex-col gap-3">
+        {[1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-14 w-full" />
+        ))}
+      </div>
+    );
 
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <p className="text-muted-foreground text-sm">{users.length} user{users.length !== 1 ? "s" : ""}</p>
+        <p className="text-muted-foreground text-sm">
+          {users.length} user{users.length !== 1 ? "s" : ""}
+        </p>
         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => refetch()} disabled={isFetching}>
           <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
         </Button>
@@ -407,7 +652,9 @@ function TeamTab({ fpoId }: { fpoId: number }) {
         <p className="text-muted-foreground text-sm py-4 text-center">No users found for this FPO.</p>
       ) : (
         <div className="flex flex-col">
-          {users.map((user) => <TeamUserRow key={user.id} user={user} />)}
+          {users.map((user) => (
+            <TeamUserRow key={user.id} user={user} />
+          ))}
         </div>
       )}
     </div>
@@ -436,13 +683,27 @@ function AuditLogTab({ fpoId }: { fpoId: number }) {
     setPageSize(size);
     setPage(1);
   }
-
-  if (isLoading) return (
-    <div className="flex flex-col gap-4">
-      {Array.from({ length: pageSize }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
-      <DataTablePagination page={1} pageSize={pageSize} total={0} onPageChange={() => {}} onPageSizeChange={() => {}} isLoading />
-    </div>
-  );
+  const noop = () => undefined;
+  if (isLoading)
+    return (
+      <div className="flex flex-col gap-4">
+        {Array.from({ length: pageSize }).map((_, i) => (
+          <Skeleton key={i} className="h-10 w-full" />
+        ))}
+        <DataTablePagination
+          page={1}
+          pageSize={pageSize}
+          total={0}
+          onPageChange={() => {
+            noop;
+          }}
+          onPageSizeChange={() => {
+            noop;
+          }}
+          isLoading
+        />
+      </div>
+    );
 
   return (
     <div className="flex flex-col gap-4">
@@ -459,12 +720,23 @@ function AuditLogTab({ fpoId }: { fpoId: number }) {
           {logs.map((log: AuditLog) => (
             <div key={log.id} className="flex items-start gap-4 py-3">
               <span className="text-muted-foreground text-xs whitespace-nowrap pt-0.5 w-36 shrink-0">
-                {new Date(log.created_at).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                {new Date(log.created_at).toLocaleString("en-IN", {
+                  day: "2-digit",
+                  month: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
               </span>
-              <Badge variant="secondary" className="text-[11px] shrink-0">{log.action_display || log.action}</Badge>
+              <Badge variant="secondary" className="text-[11px] shrink-0">
+                {log.action_display || log.action}
+              </Badge>
               <div className="min-w-0 flex flex-col gap-0.5">
                 <span className="text-sm font-medium">{getPerformedByName(log.performed_by)}</span>
-                {log.object_info != null && <span className="text-muted-foreground text-xs truncate">{getObjectInfoDisplay(log.object_info)}</span>}
+                {log.object_info != null && (
+                  <span className="text-muted-foreground text-xs truncate">
+                    {getObjectInfoDisplay(log.object_info)}
+                  </span>
+                )}
               </div>
             </div>
           ))}
@@ -515,8 +787,12 @@ function ApplicationDetailContent() {
   const [assignTierOpen, setAssignTierOpen] = useState(false);
 
   useEffect(() => {
-    translationsApi.getPublic(locale, "applications_table,common")
-      .then((data) => { setT(data.applications_table ?? {}); setTCommon(data.common ?? {}); })
+    translationsApi
+      .getPublic(locale, "applications_table,common")
+      .then((data) => {
+        setT(data.applications_table ?? {});
+        setTCommon(data.common ?? {});
+      })
       .catch(() => undefined);
   }, [locale]);
 
@@ -535,19 +811,30 @@ function ApplicationDetailContent() {
 
   const markUnderReviewMutation = useMutation({
     mutationFn: () => adminApplicationsApi.markUnderReview(fpoId),
-    onSuccess: () => { toast.success("Marked as Under Review"); queryClient.invalidateQueries({ queryKey: ["application", fpoId] }); queryClient.invalidateQueries({ queryKey: ["applications"] }); },
+    onSuccess: () => {
+      toast.success("Marked as Under Review");
+      queryClient.invalidateQueries({ queryKey: ["application", fpoId] });
+      queryClient.invalidateQueries({ queryKey: ["applications"] });
+    },
     onError: (err: unknown) => toast.error(err instanceof Error ? err.message : "Action failed"),
   });
 
   const approveMutation = useMutation({
     mutationFn: () => adminApplicationsApi.approve(fpoId),
-    onSuccess: () => { toast.success(t.btn_approve ?? "Application approved"); queryClient.invalidateQueries({ queryKey: ["application", fpoId] }); queryClient.invalidateQueries({ queryKey: ["applications"] }); },
+    onSuccess: () => {
+      toast.success(t.btn_approve ?? "Application approved");
+      queryClient.invalidateQueries({ queryKey: ["application", fpoId] });
+      queryClient.invalidateQueries({ queryKey: ["applications"] });
+    },
     onError: (err: unknown) => toast.error(err instanceof Error ? err.message : "Failed to approve"),
   });
 
   const verifyDocMutation = useMutation({
     mutationFn: (docId: number) => adminApplicationsApi.verifyDocument(fpoId, docId),
-    onSuccess: () => { toast.success(t.doc_verified ?? "Document verified"); queryClient.invalidateQueries({ queryKey: ["application", fpoId] }); },
+    onSuccess: () => {
+      toast.success(t.doc_verified ?? "Document verified");
+      queryClient.invalidateQueries({ queryKey: ["application", fpoId] });
+    },
     onError: (err: unknown) => toast.error(err instanceof Error ? err.message : "Failed to verify"),
   });
 
@@ -560,10 +847,14 @@ function ApplicationDetailContent() {
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-8 py-6">
         <Skeleton className="h-8 w-64" />
         <div className="flex gap-4">
-          {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-9 w-24" />)}
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-9 w-24" />
+          ))}
         </div>
         <div className="grid gap-5 lg:grid-cols-2">
-          {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-48 w-full" />)}
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-48 w-full" />
+          ))}
         </div>
       </div>
     );
@@ -576,7 +867,12 @@ function ApplicationDetailContent() {
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-start gap-3">
-          <Button variant="ghost" size="icon" className="mt-0.5 h-8 w-8" onClick={() => router.push("/admin/applications")}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="mt-0.5 h-8 w-8"
+            onClick={() => router.push("/admin/applications")}
+          >
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
@@ -585,7 +881,9 @@ function ApplicationDetailContent() {
               <StatusBadge status={app.status} />
               {app.tier && <Badge variant="outline">Tier {app.tier}</Badge>}
             </div>
-            {app.application_id && <p className="mt-0.5 font-mono text-muted-foreground text-sm">{app.application_id}</p>}
+            {app.application_id && (
+              <p className="mt-0.5 font-mono text-muted-foreground text-sm">{app.application_id}</p>
+            )}
           </div>
         </div>
 
@@ -594,19 +892,32 @@ function ApplicationDetailContent() {
             {t.btn_user_limit ?? "User Limit"} ({app.max_secondary_users})
           </Button>
           {app.status === "submitted" && (
-            <Button size="sm" variant="outline" onClick={() => markUnderReviewMutation.mutate()} disabled={markUnderReviewMutation.isPending}>
-              <ChevronRight className="mr-1.5 h-4 w-4" />{t.btn_start_review ?? "Start Review"}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => markUnderReviewMutation.mutate()}
+              disabled={markUnderReviewMutation.isPending}
+            >
+              <ChevronRight className="mr-1.5 h-4 w-4" />
+              {t.btn_start_review ?? "Start Review"}
             </Button>
           )}
           {app.status === "under_review" && (
             <>
               <Button size="sm" variant="outline" onClick={() => setRequestInfoOpen(true)}>
-                <AlertCircle className="mr-1.5 h-4 w-4" />{t.btn_request_info ?? "Request Info"}
+                <AlertCircle className="mr-1.5 h-4 w-4" />
+                {t.btn_request_info ?? "Request Info"}
               </Button>
               <Button size="sm" variant="destructive" onClick={() => setRejectOpen(true)}>
-                <XCircle className="mr-1.5 h-4 w-4" />{t.btn_reject ?? "Reject"}
+                <XCircle className="mr-1.5 h-4 w-4" />
+                {t.btn_reject ?? "Reject"}
               </Button>
-              <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => approveMutation.mutate()} disabled={approveMutation.isPending}>
+              <Button
+                size="sm"
+                className="bg-green-600 hover:bg-green-700"
+                onClick={() => approveMutation.mutate()}
+                disabled={approveMutation.isPending}
+              >
                 <CheckCheck className="mr-1.5 h-4 w-4" />
                 {approveMutation.isPending ? "Approving…" : (t.btn_approve ?? "Approve")}
               </Button>
@@ -642,7 +953,10 @@ function ApplicationDetailContent() {
               <div className="grid grid-cols-2 gap-3">
                 <InfoRow label={t.field_name_en ?? "FPO Name (English)"} value={app.name} />
                 <InfoRow label={t.field_name_ml ?? "FPO Name (Malayalam)"} value={app.name_ml} />
-                <InfoRow label={t.field_registered_under ?? "Registered Under"} value={formatDocType(app.legal_structure ?? app.registered_under)} />
+                <InfoRow
+                  label={t.field_registered_under ?? "Registered Under"}
+                  value={formatDocType(app.legal_structure ?? app.registered_under)}
+                />
                 <InfoRow label={t.field_reg_number ?? "Registration Number"} value={app.registration_number} />
                 <InfoRow label={t.field_cin ?? "CIN Number"} value={app.cin_number} />
                 <InfoRow label={t.field_reg_date ?? "Date of Registration"} value={app.date_of_registration} />
@@ -658,26 +972,42 @@ function ApplicationDetailContent() {
                 <InfoRow label={t.field_village_town ?? "Village / Town"} value={app.village_town} />
                 <InfoRow label={t.field_pincode ?? "Pincode"} value={app.pincode} />
                 <div className="col-span-2">
-                  <InfoRow label={t.field_address ?? "Address"} value={[app.address_line1, app.address_line2].filter(Boolean).join(", ")} />
+                  <InfoRow
+                    label={t.field_address ?? "Address"}
+                    value={[app.address_line1, app.address_line2].filter(Boolean).join(", ")}
+                  />
                 </div>
                 <div className="flex flex-col gap-0.5">
                   <span className="text-muted-foreground text-xs">{t.field_office_phone ?? "Office Phone"}</span>
                   <div className="flex items-center gap-1.5">
                     <span className="font-medium text-sm">{app.office_phone}</span>
-                    {app.phone_verified ? <CheckCircle2 className="h-3.5 w-3.5 text-green-600" /> : <XCircle className="h-3.5 w-3.5 text-destructive" />}
+                    {app.phone_verified ? (
+                      <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                    ) : (
+                      <XCircle className="h-3.5 w-3.5 text-destructive" />
+                    )}
                   </div>
                 </div>
                 <div className="flex flex-col gap-0.5">
                   <span className="text-muted-foreground text-xs">{t.field_office_email ?? "Office Email"}</span>
                   <div className="flex items-center gap-1.5">
                     <span className="font-medium text-sm">{app.office_email}</span>
-                    {app.email_verified ? <CheckCircle2 className="h-3.5 w-3.5 text-green-600" /> : <XCircle className="h-3.5 w-3.5 text-destructive" />}
+                    {app.email_verified ? (
+                      <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                    ) : (
+                      <XCircle className="h-3.5 w-3.5 text-destructive" />
+                    )}
                   </div>
                 </div>
                 {app.website && (
                   <div className="col-span-2 flex flex-col gap-0.5">
                     <span className="text-muted-foreground text-xs">{t.field_website ?? "Website"}</span>
-                    <a href={app.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 font-medium text-primary text-sm hover:underline">
+                    <a
+                      href={app.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 font-medium text-primary text-sm hover:underline"
+                    >
                       {app.website} <ExternalLink className="h-3 w-3" />
                     </a>
                   </div>
@@ -699,7 +1029,7 @@ function ApplicationDetailContent() {
                 <InfoRow label={t.field_female_members ?? "Female"} value={app.female_members?.toString()} />
                 <InfoRow label={t.field_sc_st_members ?? "SC / ST"} value={app.sc_st_members?.toString()} />
               </div>
-              {(app.total_directors != null) && (
+              {app.total_directors != null && (
                 <div className="grid grid-cols-3 gap-3 border-t pt-3">
                   <InfoRow label="Total Directors" value={app.total_directors?.toString()} />
                   <InfoRow label="Women Directors" value={app.women_directors?.toString()} />
@@ -711,14 +1041,25 @@ function ApplicationDetailContent() {
             <SectionCard icon={Landmark} title={t.section_business ?? "Business & Bank"}>
               <div className="grid grid-cols-2 gap-3">
                 <div className="col-span-2">
-                  <InfoRow label={t.field_primary_commodities ?? "Primary Commodities"} value={(app.primary_commodities ?? []).join(", ")} />
+                  <InfoRow
+                    label={t.field_primary_commodities ?? "Primary Commodities"}
+                    value={(app.primary_commodities ?? []).join(", ")}
+                  />
                 </div>
                 {(app.secondary_commodities ?? []).length > 0 && (
                   <div className="col-span-2">
-                    <InfoRow label={t.field_secondary_commodities ?? "Secondary Commodities"} value={(app.secondary_commodities ?? []).join(", ")} />
+                    <InfoRow
+                      label={t.field_secondary_commodities ?? "Secondary Commodities"}
+                      value={(app.secondary_commodities ?? []).join(", ")}
+                    />
                   </div>
                 )}
-                {app.annual_turnover && <InfoRow label={t.field_annual_turnover ?? "Annual Turnover (₹)"} value={Number(app.annual_turnover).toLocaleString("en-IN")} />}
+                {app.annual_turnover && (
+                  <InfoRow
+                    label={t.field_annual_turnover ?? "Annual Turnover (₹)"}
+                    value={Number(app.annual_turnover).toLocaleString("en-IN")}
+                  />
+                )}
               </div>
               <div className="grid grid-cols-2 gap-3 border-t pt-3">
                 <InfoRow label={t.field_bank_name ?? "Bank Name"} value={app.bank_name} />
@@ -726,20 +1067,35 @@ function ApplicationDetailContent() {
                 <InfoRow label={t.field_account_number ?? "Account Number"} value={app.account_number} />
                 <InfoRow label={t.field_ifsc ?? "IFSC Code"} value={app.ifsc_code} />
               </div>
-              {app.description && <div className="border-t pt-3"><InfoRow label={t.field_description ?? "About FPO"} value={app.description} /></div>}
+              {app.description && (
+                <div className="border-t pt-3">
+                  <InfoRow label={t.field_description ?? "About FPO"} value={app.description} />
+                </div>
+              )}
             </SectionCard>
           </div>
 
           {/* Tier Assessment */}
           <div className="flex flex-col gap-4 rounded-lg border bg-card p-5">
             <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2"><Star className="h-4 w-4 text-muted-foreground" /><h3 className="font-semibold text-sm">Tier Assessment</h3></div>
-              {isSuperAdmin && <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setAssignTierOpen(true)}>Assign Tier</Button>}
+              <div className="flex items-center gap-2">
+                <Star className="h-4 w-4 text-muted-foreground" />
+                <h3 className="font-semibold text-sm">Tier Assessment</h3>
+              </div>
+              {isSuperAdmin && (
+                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setAssignTierOpen(true)}>
+                  Assign Tier
+                </Button>
+              )}
             </div>
             <div className="flex items-center gap-3">
               <span className="text-muted-foreground text-sm">Current Tier:</span>
               {app.tier ? (
-                <span className={`inline-flex items-center rounded-full border px-3 py-0.5 font-bold text-sm ${tierBadgeClass(app.tier)}`}>Tier {app.tier}</span>
+                <span
+                  className={`inline-flex items-center rounded-full border px-3 py-0.5 font-bold text-sm ${tierBadgeClass(app.tier)}`}
+                >
+                  Tier {app.tier}
+                </span>
               ) : (
                 <span className="text-muted-foreground text-sm">Not Assessed</span>
               )}
@@ -761,12 +1117,26 @@ function ApplicationDetailContent() {
                     </div>
                     <div className="flex flex-col gap-0.5 pb-4">
                       <div className="flex flex-wrap items-center gap-2">
-                        {entry.from_status && <><span className="text-muted-foreground text-xs capitalize">{entry.from_status.replace("_", " ")}</span><ChevronRight className="h-3 w-3 text-muted-foreground" /></>}
+                        {entry.from_status && (
+                          <>
+                            <span className="text-muted-foreground text-xs capitalize">
+                              {entry.from_status.replace("_", " ")}
+                            </span>
+                            <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                          </>
+                        )}
                         <span className="font-medium text-xs capitalize">{entry.to_status.replace("_", " ")}</span>
                       </div>
                       {entry.notes && <p className="text-muted-foreground text-xs">{entry.notes}</p>}
                       <p className="text-muted-foreground text-xs">
-                        {entry.changed_by_name ?? "System"} · {new Date(entry.created_at).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                        {entry.changed_by_name ?? "System"} ·{" "}
+                        {new Date(entry.created_at).toLocaleString("en-IN", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
                       </p>
                     </div>
                   </div>
@@ -790,12 +1160,21 @@ function ApplicationDetailContent() {
                     <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
                     <div className="min-w-0">
                       <p className="font-medium text-sm">{formatDocType(doc.document_type)}</p>
-                      <p className="text-muted-foreground text-xs">{(doc.file_size / 1024).toFixed(1)} KB · {doc.mime_type}</p>
-                      {doc.verified_by_name && <p className="text-muted-foreground text-xs">Verified by {doc.verified_by_name}</p>}
+                      <p className="text-muted-foreground text-xs">
+                        {(doc.file_size / 1024).toFixed(1)} KB · {doc.mime_type}
+                      </p>
+                      {doc.verified_by_name && (
+                        <p className="text-muted-foreground text-xs">Verified by {doc.verified_by_name}</p>
+                      )}
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
-                    <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary text-xs hover:underline">
+                    <a
+                      href={doc.file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-primary text-xs hover:underline"
+                    >
                       {t.doc_view_link ?? "View"} <ExternalLink className="h-3 w-3" />
                     </a>
                     {doc.is_verified ? (
@@ -804,8 +1183,15 @@ function ApplicationDetailContent() {
                         <span className="font-medium text-xs">{t.doc_verified ?? "Verified"}</span>
                       </div>
                     ) : (
-                      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => verifyDocMutation.mutate(doc.id)} disabled={verifyDocMutation.isPending}>
-                        <CheckCheck className="mr-1 h-3 w-3" />{t.doc_verify_btn ?? "Verify"}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs"
+                        onClick={() => verifyDocMutation.mutate(doc.id)}
+                        disabled={verifyDocMutation.isPending}
+                      >
+                        <CheckCheck className="mr-1 h-3 w-3" />
+                        {t.doc_verify_btn ?? "Verify"}
                       </Button>
                     )}
                   </div>
@@ -832,8 +1218,21 @@ function ApplicationDetailContent() {
 
       {/* Dialogs */}
       <RejectDialog fpoId={fpoId} t={t} tCommon={tCommon} open={rejectOpen} onOpenChange={setRejectOpen} />
-      <RequestInfoDialog fpoId={fpoId} t={t} tCommon={tCommon} open={requestInfoOpen} onOpenChange={setRequestInfoOpen} />
-      <UserLimitDialog fpoId={fpoId} current={app.max_secondary_users} t={t} tCommon={tCommon} open={userLimitOpen} onOpenChange={setUserLimitOpen} />
+      <RequestInfoDialog
+        fpoId={fpoId}
+        t={t}
+        tCommon={tCommon}
+        open={requestInfoOpen}
+        onOpenChange={setRequestInfoOpen}
+      />
+      <UserLimitDialog
+        fpoId={fpoId}
+        current={app.max_secondary_users}
+        t={t}
+        tCommon={tCommon}
+        open={userLimitOpen}
+        onOpenChange={setUserLimitOpen}
+      />
       <AssignTierDialog fpoId={fpoId} open={assignTierOpen} onOpenChange={setAssignTierOpen} />
     </div>
   );
