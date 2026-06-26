@@ -43,7 +43,9 @@ const schema = z
     facilitating_agency_name: z.string().optional(),
     ceo_available: z.boolean(),
     accountant_available: z.boolean(),
-    total_directors: toNum("Required"),
+    total_directors: toNum("Required").refine((v) => Number(v) > 0, {
+      message: "Total directors must be greater than 0",
+    }),
     women_directors: toOptionalNum(),
     directors_under_35: toOptionalNum(),
   })
@@ -183,15 +185,40 @@ export function Step3Signatory({ profile, onSave, onSuccess, onBack }: Step3Prop
     },
     onSettled: () => setSaveMode(null),
     onError: (err: unknown) => {
-      const apiErr = err as { data?: { errors?: Record<string, string[]> }; message?: string } | undefined;
+      const apiErr = err as {
+        data?: { errors?: Record<string, string[]> };
+        message?: string;
+      };
+
       const serverErrors = apiErr?.data?.errors;
+
       if (serverErrors) {
         Object.entries(serverErrors).forEach(([field, messages]) => {
-          setError(field as keyof FormValues, { type: "server", message: messages[0] });
+          const message = messages[0];
+
+          if (field === "non_field_errors") {
+            // Show toast
+            toast.error(message);
+
+            // Mark Total Directors as invalid
+            setError("total_directors", {
+              type: "server",
+              message,
+            });
+
+            return;
+          }
+
+          setError(field as keyof FormValues, {
+            type: "server",
+            message,
+          });
         });
-      } else {
-        toast.error(apiErr?.message ?? "Failed to save. Please try again.");
+
+        return;
       }
+
+      toast.error(apiErr?.message ?? "Failed to save. Please try again.");
     },
   });
 
@@ -361,7 +388,9 @@ export function Step3Signatory({ profile, onSave, onSuccess, onBack }: Step3Prop
               Total Directors <span className="text-destructive">*</span>
             </FieldLabel>
             <Input id="total_directors" type="number" min={0} placeholder="0" {...register("total_directors")} />
-            {errors.total_directors && <FieldError errors={[errors.total_directors]} />}
+            {errors.total_directors && errors.total_directors.type !== "server" && (
+              <FieldError errors={[errors.total_directors]} />
+            )}
           </Field>
 
           <Field>
