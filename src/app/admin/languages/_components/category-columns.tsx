@@ -63,7 +63,11 @@ export function getCategoryColumns(t: T = {}, tCommon: T = {}): ColumnDef<Transl
       accessorKey: "description",
       meta: { width: "40%" },
       header: t.col_description ?? "Description",
-      cell: ({ row }) => <TextCell value={row.original.description} muted />,
+      cell: ({ row }) => (
+        <span className="block truncate max-w-xs" title={row.original.description}>
+          <TextCell value={row.original.description} muted />
+        </span>
+      ),
     },
     {
       accessorKey: "translation_count",

@@ -185,7 +185,7 @@ export function DataTable<TData>({
         table={table}
       />
 
-      <div className="relative overflow-x-auto rounded-lg border border-border/70 shadow-xs">
+      <div className="relative overflow-hidden rounded-lg border border-border/70 shadow-xs">
         {isFetching && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-[1px]">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
