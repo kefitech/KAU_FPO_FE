@@ -69,6 +69,7 @@ export function TemplateForm({ mode, template, t = {}, tCommon = {} }: TemplateF
     handleSubmit,
     reset,
     watch,
+    setError,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -114,7 +115,22 @@ export function TemplateForm({ mode, template, t = {}, tCommon = {} }: TemplateF
       queryClient.invalidateQueries({ queryKey: ["notification-template-codes"] });
       if (!isEdit) router.push("/admin/notifications?tab=templates");
     },
-    onError: () => toast.error(isEdit ? "Failed to update template" : "Failed to create template"),
+    onError: (error: any) => {
+      console.log("raw error:", error);
+      const data = error?.data; // 👈 change error?.response?.data → error?.data
+
+      if (data?.code === "validation_error" && data?.errors) {
+        Object.entries(data.errors).forEach(([field, messages]) => {
+          setError(field as any, {
+            type: "server",
+            message: (messages as string[])[0],
+          });
+        });
+      } else {
+        toast.error(error?.message ?? (isEdit ? "Failed to update template" : "Failed to create template"));
+        //           👆 error.message directly, since interceptor hoisted it up
+      }
+    },
   });
 
   return (
@@ -210,6 +226,7 @@ export function TemplateForm({ mode, template, t = {}, tCommon = {} }: TemplateF
                       placeholder={t.subject_placeholder ?? "e.g. Your FPO application has been approved"}
                       {...field}
                     />
+                    {errors.subject && <FieldError errors={[errors.subject]} />} {/* 👈 add this */}
                   </Field>
                 )}
               />
