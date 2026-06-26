@@ -221,7 +221,9 @@ function PhoneOtpStep({ onPass, onBack }: { onPass: (phoneToken: string, phone: 
       setPhoneError("");
     },
     onError: (err: unknown) => {
-      setPhoneError((err as { message?: string } | undefined)?.message ?? "Failed to send OTP. Please try again.");
+      const axiosErr = err as { response?: { data?: { message?: string } }; message?: string } | undefined;
+      const msg = axiosErr?.response?.data?.message ?? axiosErr?.message ?? "Failed to send OTP. Please try again.";
+      setPhoneError(msg);
     },
   });
 
