@@ -73,6 +73,7 @@ export function LanguageForm({ mode, language, t = {}, tCommon = {} }: LanguageF
     control,
     handleSubmit,
     reset,
+    setError,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -106,7 +107,23 @@ export function LanguageForm({ mode, language, t = {}, tCommon = {} }: LanguageF
       queryClient.invalidateQueries({ queryKey: ["languages"] });
       if (!isEdit) router.push("/admin/languages?tab=languages");
     },
-    onError: () => toast.error(isEdit ? "Failed to update language" : "Failed to add language"),
+    onError: (err: unknown) => {
+      console.log("err:", JSON.stringify(err));
+      const apiErr = err as
+        | { data?: { message?: string; errors?: Record<string, string[]> }; message?: string }
+        | undefined;
+      console.log("serverErrors:", apiErr?.data?.errors);
+      const serverErrors = apiErr?.data?.errors;
+      if (serverErrors && Object.keys(serverErrors).length > 0) {
+        Object.entries(serverErrors).forEach(([field, messages]) => {
+          setError(field as keyof FormValues, { type: "server", message: messages[0] });
+        });
+      } else {
+        toast.error(
+          apiErr?.data?.message ?? apiErr?.message ?? (isEdit ? "Failed to update language" : "Failed to add language"),
+        );
+      }
+    },
   });
 
   return (
@@ -141,7 +158,7 @@ export function LanguageForm({ mode, language, t = {}, tCommon = {} }: LanguageF
                         {t.code_label ?? "Code"} <span className="text-destructive">*</span>
                       </FieldLabel>
                       <Input id="lang-code" placeholder={t.code_placeholder ?? "e.g. ml"} {...field} />
-                      {errors.code && <FieldError errors={[errors.code]} />}
+                      {errors.code && <FieldError errors={[errors.code]} />} {/* ✅ already there */}
                     </Field>
                   )}
                 />

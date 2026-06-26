@@ -31,13 +31,22 @@ apiClient.interceptors.response.use(
   (response: AxiosResponse) => response,
   (error: AxiosError) => {
     if (error.response?.status === 401 && typeof window !== "undefined") {
-      const PUBLIC_AUTH_PATHS = ["/v1/login", "/v1/register", "/register", "/forgot-password", "/verify-otp", "/reset-password"];
+      const PUBLIC_AUTH_PATHS = [
+        "/v1/login",
+        "/v1/register",
+        "/register",
+        "/forgot-password",
+        "/verify-otp",
+        "/reset-password",
+      ];
       const alreadyOnLogin = PUBLIC_AUTH_PATHS.some(
-        (p) => window.location.pathname === p || window.location.pathname.startsWith(p + "/"),
+        (p) => window.location.pathname === p || window.location.pathname.startsWith(`${p}/`),
       );
       if (!alreadyOnLogin) {
         window.location.href = "/v1/login";
-        return new Promise(() => {}); // never resolves — page is navigating away
+        return new Promise(() => {
+          //
+        });
       }
     }
 
@@ -56,11 +65,13 @@ apiClient.interceptors.response.use(
       );
     }
 
-    return Promise.reject({
+    const rejected = {
       message: (error.response?.data as Record<string, unknown>)?.message || error.message || "An error occurred",
       status: error.response?.status,
       data: error.response?.data,
-    });
+    };
+    console.log("interceptor reject:", rejected);
+    return Promise.reject(rejected);
   },
 );
 
