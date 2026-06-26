@@ -54,11 +54,10 @@ const schema = z
     const scst = data.sc_st_members ? Number(data.sc_st_members) : 0;
 
     if (male + female + scst !== total) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: `Male (${male}) + Female (${female}) + SC/ST (${scst}) must equal Total Members (${total})`,
-        path: ["sc_st_members"],
-      });
+      const msg = `Total members is not tally with member count(${male + female + scst})`;
+      for (const path of ["male_members", "female_members", "sc_st_members"] as const) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: msg, path: ["total_members"] });
+      }
     }
   });
 

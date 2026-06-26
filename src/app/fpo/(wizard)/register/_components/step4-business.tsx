@@ -82,10 +82,17 @@ const schema = z.object({
   secondary_commodities: z.array(z.string()),
   annual_turnover: z
     .string()
-    .optional()
-    .refine((v) => !v || /^\d+(\.\d{1,2})?$/.test(v), { message: "Enter a valid amount (e.g. 25.50)" })
-    .refine((v) => !v || Number(v) >= 0, { message: "Amount cannot be negative" })
-    .refine((v) => !v || v.replace(".", "").length <= 15, { message: "Amount cannot exceed 15 digits" }),
+    .trim()
+    .min(1, { message: "Annual turnover is required" })
+    .refine((v) => /^\d+(\.\d{1,3})?$/.test(v), {
+      message: "Enter a valid amount (e.g. 25.50)",
+    })
+    .refine((v) => Number(v) > 0, {
+      message: "Annual turnover must be greater than 0",
+    })
+    .refine((v) => Number(v) <= 9999.99, {
+      message: "Amount cannot exceed 9999.99 lakhs",
+    }),
   bank_name: z.string().min(1, { message: "Bank name is required" }),
   bank_branch: z.string().min(1, { message: "Branch is required" }),
   account_number: z.string().min(1, { message: "Account number is required" }),
@@ -278,6 +285,7 @@ export function Step4Business({ profile, onSave, onSuccess, onBack }: Step4Props
           placeholder="e.g. 25.50"
           {...register("annual_turnover")}
         />
+        {errors.annual_turnover && <FieldError errors={[errors.annual_turnover]} />}
         {(() => {
           const lakhs = Number(watch("annual_turnover"));
           if (!lakhs || lakhs <= 0) return null;
