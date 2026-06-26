@@ -429,14 +429,16 @@ function AccountStep({
       router.push("/v1/login");
     },
     onError: (err: unknown) => {
-      const apiErr = err as { data?: { errors?: Record<string, string[]> }; message?: string } | undefined;
-      const serverErrors = apiErr?.data?.errors;
+      const axiosErr = err as
+        | { response?: { data?: { message?: string; errors?: Record<string, string[]> } }; message?: string }
+        | undefined;
+      const serverErrors = axiosErr?.response?.data?.errors;
       if (serverErrors && Object.keys(serverErrors).length > 0) {
         Object.entries(serverErrors).forEach(([field, messages]) => {
           setError(field as keyof AccountValues, { type: "server", message: messages[0] });
         });
       } else {
-        toast.error(apiErr?.message ?? "Registration failed. Please try again.");
+        toast.error(axiosErr?.response?.data?.message ?? axiosErr?.message ?? "Registration failed. Please try again.");
       }
     },
   });
