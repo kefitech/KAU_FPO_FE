@@ -137,7 +137,11 @@ export function getTemplateColumns(
       accessorKey: "subject",
       meta: { width: "30%" },
       header: t.col_subject ?? "Subject",
-      cell: ({ row }) => <TextCell value={row.original.subject} muted />,
+      cell: ({ row }) => (
+        <span className="block truncate max-w-xs" title={row.original.subject}>
+          <TextCell value={row.original.subject} muted />
+        </span>
+      ),
     },
     {
       accessorKey: "is_active",
