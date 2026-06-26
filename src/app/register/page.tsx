@@ -246,7 +246,8 @@ function PhoneOtpStep({ onPass, onBack }: { onPass: (phoneToken: string, phone: 
       onPass(data.phone_token, phone);
     },
     onError: (err: unknown) => {
-      const msg = err instanceof Error ? err.message : "Invalid OTP. Please try again.";
+      const axiosErr = err as { response?: { data?: { message?: string } }; message?: string } | undefined;
+      const msg = axiosErr?.response?.data?.message ?? axiosErr?.message ?? "Invalid OTP. Please try again.";
       setOtpError(msg);
     },
   });
