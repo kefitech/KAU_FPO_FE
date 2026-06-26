@@ -47,7 +47,7 @@ function EligibilityStep({ onPass }: { onPass: (token: string) => void }) {
   const [districtQuery, setDistrictQuery] = useState("");
   const skipNextInputChange = useRef(false);
   const filteredDistricts = DISTRICT_OPTIONS.filter((o) => o.label.toLowerCase().includes(districtQuery.toLowerCase()));
-  const { register, handleSubmit, control, formState } = useForm<EligibilityValues>({
+  const { register, handleSubmit, control, formState, setValue } = useForm<EligibilityValues>({
     resolver: zodResolver(eligibilitySchema) as unknown as Resolver<EligibilityValues>,
     mode: "onTouched",
     defaultValues: {
@@ -169,7 +169,20 @@ function EligibilityStep({ onPass }: { onPass: (token: string) => void }) {
       </Field>
 
       <div className="flex flex-col gap-3 rounded-lg border p-4">
-        <p className="font-medium text-muted-foreground text-sm">Requirements</p>
+        <div className="flex items-center justify-between">
+          <p className="font-medium text-muted-foreground text-sm">Requirements</p>
+          <button
+            type="button"
+            className="text-green-600 text-xs hover:underline"
+            onClick={() => {
+              setValue("registered_under_act", true);
+              setValue("has_valid_registration", true);
+              setValue("has_bank_account", true);
+            }}
+          >
+            Accept all
+          </button>
+        </div>
         {(
           [
             {
