@@ -40,7 +40,7 @@ const schema = z
     female_members: toNum("Required"),
     sc_st_members: toOptionalNum(),
     promoting_agency: z.string().min(1, { message: "Promoting agency is required" }),
-    facilitating_agency_name: z.string().optional(),
+    facilitating_agency_name: z.string().min(1, { message: "Facilitating agency name is required" }),
     ceo_available: z.boolean(),
     accountant_available: z.boolean(),
     total_directors: toNum("Required").refine((v) => Number(v) > 0, {
@@ -100,6 +100,7 @@ const FIELD_LABELS: Partial<Record<keyof FormValues, string>> = {
   female_members: "Female Members",
   promoting_agency: "Promoting Agency",
   total_directors: "Total Directors",
+  facilitating_agency_name: "Facilitating Agency Name",
 };
 
 export function Step3Signatory({ profile, onSave, onSuccess, onBack }: Step3Props) {
@@ -379,6 +380,7 @@ export function Step3Signatory({ profile, onSave, onSuccess, onBack }: Step3Prop
               placeholder="e.g. NABARD Kerala"
               {...register("facilitating_agency_name")}
             />
+            {errors.facilitating_agency_name && <FieldError errors={[errors.facilitating_agency_name]} />}
           </Field>
         </div>
 

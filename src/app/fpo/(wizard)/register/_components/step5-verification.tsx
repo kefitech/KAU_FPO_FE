@@ -29,8 +29,9 @@ function OtpSection({ type, contact, verified, onVerified }: OtpSectionProps) {
       toast.success(`OTP sent to ${contact}`);
     },
     onError: (err: unknown) => {
-      const msg = (err as { message?: string } | undefined)?.message;
-      toast.error(msg ?? "Failed to send OTP. Please try again.");
+      const error = err as { message?: string; data?: { message?: string } } | undefined;
+      const msg = error?.data?.message ?? error?.message ?? "Failed to send OTP. Please try again.";
+      toast.error(msg);
     },
   });
 
