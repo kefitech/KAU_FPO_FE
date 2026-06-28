@@ -73,7 +73,10 @@ function DocRow({ label, docType, maxSizeMB, uploaded, onUpload, onDelete, isUpl
               variant="ghost"
               size="icon"
               className="h-7 w-7 text-muted-foreground hover:text-destructive"
-              onClick={() => onDelete(uploaded.id)}
+              onClick={() => {
+                console.log("uploaded object:", uploaded);
+                onDelete(uploaded.id);
+              }}
               disabled={isDeleting}
               aria-label="Remove document"
             >
@@ -162,11 +165,11 @@ export function Step6Documents({ onSuccess, onBack }: Step6Props) {
       {/* Required */}
       <div className="rounded-lg border p-4">
         <p className="mb-1 font-medium text-sm">Required Documents</p>
-        <p className="mb-3 text-muted-foreground text-xs">All 4 must be uploaded before submission</p>
+        <p className="mb-3 text-muted-foreground text-xs">All 3 must be uploaded before submission</p>
 
         {isLoading ? (
           <div className="flex flex-col gap-3">
-            {[1, 2, 3, 4].map((i) => (
+            {[1, 2, 3].map((i) => (
               <Skeleton key={i} className="h-10 w-full" />
             ))}
           </div>
@@ -219,7 +222,16 @@ export function Step6Documents({ onSuccess, onBack }: Step6Props) {
         <Button type="button" variant="outline" onClick={onBack}>
           ← Back
         </Button>
-        <Button type="button" onClick={onSuccess} disabled={!allRequiredDone}>
+        <Button
+          type="button"
+          onClick={() => {
+            if (!allRequiredDone) {
+              toast.error(`Please upload all ${REQUIRED_DOC_CONFIG.length} required documents before continuing.`);
+              return;
+            }
+            onSuccess();
+          }}
+        >
           Continue to Review →
         </Button>
       </div>
