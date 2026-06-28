@@ -70,7 +70,7 @@ export function ExpertEnquiryDialog({ open, onOpenChange, expertId, expertName }
               onChange={(e) => setMessage(e.target.value)}
               rows={5}
               maxLength={MAX_CHARS}
-              className="resize-none"
+              className="resize-none break-all"
             />
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>{charCount < MIN_CHARS ? `Minimum ${MIN_CHARS} characters required` : ""}</span>
