@@ -10,7 +10,7 @@ import { z } from "zod";
 
 import { fpoTeamApi } from "@/app/fpo/_api/team";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
@@ -33,9 +33,15 @@ interface InviteDialogProps {
 export function InviteDialog({ open, onOpenChange }: InviteDialogProps) {
   const queryClient = useQueryClient();
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<FormValues>({
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { first_name: "", last_name: "", email: "", phone: "" },
+    mode: "onChange",
   });
 
   useEffect(() => {
@@ -66,12 +72,12 @@ export function InviteDialog({ open, onOpenChange }: InviteDialogProps) {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Invite Team Member</DialogTitle>
+          <DialogDescription className="sr-only">
+            Fill in the details of the person you want to invite to join your team.
+          </DialogDescription>
         </DialogHeader>
 
-        <form
-          onSubmit={handleSubmit((v) => mutation.mutate(v))}
-          className="flex flex-col gap-4 pt-2"
-        >
+        <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="flex flex-col gap-4 pt-2">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field>
               <FieldLabel htmlFor="first_name">

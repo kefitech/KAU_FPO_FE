@@ -106,7 +106,6 @@ export default function FpoTeamPage() {
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col gap-6 p-6">
-
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -136,12 +135,7 @@ export default function FpoTeamPage() {
           <CheckSquare className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm font-medium">{selected.size} selected</span>
           <div className="ml-auto flex gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={isBulkPending}
-              onClick={() => bulkActivateMutation.mutate()}
-            >
+            <Button size="sm" variant="outline" disabled={isBulkPending} onClick={() => bulkActivateMutation.mutate()}>
               {bulkActivateMutation.isPending ? "Activating…" : "Activate"}
             </Button>
             <Button
@@ -164,11 +158,7 @@ export default function FpoTeamPage() {
             <TableRow>
               {isPrimary && (
                 <TableHead className="w-10">
-                  <Checkbox
-                    checked={allSelected}
-                    onCheckedChange={toggleAll}
-                    aria-label="Select all"
-                  />
+                  <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Select all" />
                 </TableHead>
               )}
               <TableHead>Name</TableHead>
@@ -185,22 +175,35 @@ export default function FpoTeamPage() {
             {isLoading ? (
               Array.from({ length: 4 }).map((_, i) => (
                 <TableRow key={i}>
-                  {isPrimary && <TableCell><Skeleton className="h-4 w-4" /></TableCell>}
-                  <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-40" /></TableCell>
-                  <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
-                  <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-20" /></TableCell>
-                  <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
-                  <TableCell className="hidden lg:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
+                  {isPrimary && (
+                    <TableCell>
+                      <Skeleton className="h-4 w-4" />
+                    </TableCell>
+                  )}
+                  <TableCell>
+                    <Skeleton className="h-4 w-32" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-40" />
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell">
+                    <Skeleton className="h-4 w-24" />
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    <Skeleton className="h-4 w-20" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-16 rounded-full" />
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell">
+                    <Skeleton className="h-4 w-24" />
+                  </TableCell>
                   {isPrimary && <TableCell />}
                 </TableRow>
               ))
             ) : members.length === 0 ? (
               <TableRow>
-                <TableCell
-                  colSpan={isPrimary ? 8 : 6}
-                  className="py-12 text-center text-muted-foreground text-sm"
-                >
+                <TableCell colSpan={isPrimary ? 8 : 6} className="py-12 text-center text-muted-foreground text-sm">
                   No team members yet.{isPrimary && ' Use "Invite Member" to add someone.'}
                 </TableCell>
               </TableRow>
@@ -218,9 +221,7 @@ export default function FpoTeamPage() {
                   )}
                   <TableCell className="font-medium">{fullName(member)}</TableCell>
                   <TableCell className="text-muted-foreground">{member.email}</TableCell>
-                  <TableCell className="hidden text-muted-foreground sm:table-cell">
-                    {member.phone || "—"}
-                  </TableCell>
+                  <TableCell className="hidden text-muted-foreground sm:table-cell">{member.phone || "—"}</TableCell>
                   <TableCell className="hidden capitalize text-muted-foreground md:table-cell">
                     {member.role.replace(/_/g, " ")}
                   </TableCell>
@@ -269,6 +270,8 @@ export default function FpoTeamPage() {
                                 title: "Reset Password",
                                 description: `A temporary password will be sent to ${member.email}. They will be required to change it on next login.`,
                                 onConfirm: () => resetPasswordMutation.mutateAsync(member.id),
+                                confirmLabel: "Reset Password",
+                                variant: "default",
                               }),
                             disabled: resetPasswordMutation.isPending,
                           },
