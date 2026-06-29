@@ -37,7 +37,11 @@ const schema = z.object({
   eligibility: z.string().min(1, { message: "Eligibility is required" }),
   benefit_details: z.string().min(1, { message: "Benefit details are required" }),
   application_process: z.string().min(1, { message: "Application process is required" }),
-  official_link: z.string().optional().or(z.literal("")).refine((v) => !v || /^https?:\/\/.+/.test(v), { message: "Must be a valid URL" }),
+  official_link: z
+    .string()
+    .optional()
+    .or(z.literal(""))
+    .refine((v) => !v || /^https?:\/\/.+/.test(v), { message: "Must be a valid URL" }),
   order: z.number().min(0, { message: "Order must be 0 or greater" }).optional(),
   is_active: z.boolean().optional(),
 });
@@ -149,9 +153,7 @@ export function SchemeForm({ mode, scheme }: SchemeFormProps) {
                 <Controller
                   control={control}
                   name="name_ml"
-                  render={({ field }) => (
-                    <Input id="name_ml" placeholder="മലയാളം പേര്" maxLength={300} {...field} />
-                  )}
+                  render={({ field }) => <Input id="name_ml" placeholder="മലയാളം പേര്" maxLength={300} {...field} />}
                 />
               </Field>
 
@@ -292,16 +294,18 @@ export function SchemeForm({ mode, scheme }: SchemeFormProps) {
                 </Field>
 
                 {/* Order */}
-                <Field>
+                {/* <Field>
                   <FieldLabel htmlFor="order">Display Order</FieldLabel>
                   <Controller
                     control={control}
                     name="order"
                     render={({ field }) => (
-                      <Input id="order" type="number" min={0} placeholder="0" className="w-32" {...field} />
+                      <Input id="order" type="number" min={0} placeholder="0" className="w-32" {...field} 
+                      onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                        />
                     )}
                   />
-                </Field>
+                </Field> */}
 
                 {/* Is Active */}
                 <div className="flex items-center gap-2 pt-1">
@@ -309,11 +313,7 @@ export function SchemeForm({ mode, scheme }: SchemeFormProps) {
                     control={control}
                     name="is_active"
                     render={({ field }) => (
-                      <Checkbox
-                        id="is_active"
-                        checked={!!field.value}
-                        onCheckedChange={field.onChange}
-                      />
+                      <Checkbox id="is_active" checked={!!field.value} onCheckedChange={field.onChange} />
                     )}
                   />
                   <label htmlFor="is_active" className="text-sm font-medium cursor-pointer">
