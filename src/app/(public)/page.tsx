@@ -1,29 +1,28 @@
-import { AboutSection } from "./_components/about-section";
-import { AnnouncementsSection } from "./_components/announcements-section";
-import { ContactSection } from "./_components/contact-section";
-import { Features } from "./_components/features";
-import { Footer } from "./_components/footer";
-import { Hero } from "./_components/hero";
-import { Navbar } from "./_components/navbar";
-import { Portals } from "./_components/portals";
-import { Stats } from "./_components/stats";
-import { WhyChooseSection } from "./_components/why-choose-section";
+import AgrulLayout from "./_components/agrul-layout";
+import Banner from "./_components/banner";
+import About from "./_components/about";
+import Services from "./_components/services";
+import ProductList from "./_components/product-list";
+import WhyChoose from "./_components/why-choose";
+import Testimonial from "./_components/testimonial";
+import Gallery from "./_components/gallery";
+import Facts from "./_components/facts";
+import Contact from "./_components/contact";
+import Blog from "./_components/blog";
 
 export default function HomePage() {
   return (
-    <div className="agrul-home">
-      <Navbar />
-      <main>
-        <Hero />
-        <AboutSection />
-        <Features />
-        <WhyChooseSection />
-        <Stats />
-        <Portals />
-        <AnnouncementsSection />
-        <ContactSection />
-      </main>
-      <Footer />
-    </div>
+    <AgrulLayout>
+      <Banner />
+      <About />
+      <Services />
+      <ProductList />
+      <WhyChoose />
+      <Testimonial />
+      <Gallery />
+      <Facts />
+      <Contact />
+      <Blog />
+    </AgrulLayout>
   );
 }

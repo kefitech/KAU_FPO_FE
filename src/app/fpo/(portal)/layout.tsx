@@ -1,5 +1,6 @@
 "use client";
 
+import "@/app/globals.css";
 import { DynamicSidebar } from "@/components/layout/dynamic-sidebar";
 import { LocaleSwitcher } from "@/components/layout/locale-switcher";
 import { NotificationBell } from "@/components/layout/notification-bell";

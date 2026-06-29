@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { useQuery } from "@tanstack/react-query";
-import { LogOut, Settings, Sprout } from "lucide-react";
+import { LogOut, Settings } from "lucide-react";
 
 import {
   Sidebar,
@@ -58,9 +58,8 @@ export function AdminSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-border/50 border-b pb-3">
         <div className="flex items-center gap-2.5 px-2 pt-1">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary">
-            <Sprout className="h-4 w-4 text-primary-foreground" />
-          </div>
+          <img src="/assets/img/logo.png" alt="KAU" className="h-8 w-auto shrink-0 dark:hidden" />
+          <img src="/assets/img/logo-light.png" alt="KAU" className="h-8 w-auto shrink-0 hidden dark:block" />
           <div className="flex flex-col group-data-[collapsible=icon]:hidden">
             <span className="font-semibold text-sm leading-tight tracking-tight">KAU-FPO</span>
             <span className="text-[11px] text-muted-foreground">Admin Portal</span>
@@ -89,7 +88,11 @@ export function AdminSidebar() {
                     const isActive = pathname === item.path || pathname.startsWith(`${item.path}/`);
                     return (
                       <SidebarMenuItem key={item.path}>
-                        <SidebarMenuButton asChild isActive={isActive}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={isActive}
+                          className={isActive ? "!bg-[#49a760]/15 !text-[#49a760] dark:!bg-[#49a760]/20 dark:!text-[#49a760]" : ""}
+                        >
                           <Link href={item.path}>
                             <Icon className="h-4 w-4 shrink-0" />
                             <span className="text-sm group-data-[collapsible=icon]:hidden">{item.label}</span>
@@ -106,7 +109,11 @@ export function AdminSidebar() {
       <SidebarFooter className="border-border/50 border-t pt-2">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={pathname.startsWith("/admin/settings")}>
+            <SidebarMenuButton
+              asChild
+              isActive={pathname.startsWith("/admin/settings")}
+              className={pathname.startsWith("/admin/settings") ? "!bg-[#49a760]/15 !text-[#49a760] dark:!bg-[#49a760]/20 dark:!text-[#49a760]" : ""}
+            >
               <Link href="/admin/settings/profile">
                 <Settings className="h-4 w-4 shrink-0" />
                 <span className="text-sm group-data-[collapsible=icon]:hidden">Settings</span>

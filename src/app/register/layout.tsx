@@ -1,7 +1,7 @@
+import "@/app/globals.css";
 import Link from "next/link";
 
-import { Leaf } from "lucide-react";
-
+import { LocaleSwitcher } from "@/components/layout/locale-switcher";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 
 export default function RegisterLayout({ children }: { children: React.ReactNode }) {
@@ -9,9 +9,7 @@ export default function RegisterLayout({ children }: { children: React.ReactNode
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 dark:from-background dark:via-background dark:to-background">
       <header className="flex items-center justify-between border-b bg-background/80 px-6 py-3 backdrop-blur-sm">
         <Link href="/" className="flex items-center gap-2 font-medium text-sm">
-          <div className="flex size-6 items-center justify-center rounded-md bg-green-600 text-white">
-            <Leaf className="size-4" />
-          </div>
+          <img src="/assets/img/logo.png" alt="KAU" className="h-7 w-auto" />
           KAU-FPO Platform
         </Link>
         <div className="flex items-center gap-3">
@@ -21,6 +19,7 @@ export default function RegisterLayout({ children }: { children: React.ReactNode
               Sign in
             </Link>
           </span>
+          <LocaleSwitcher />
           <ThemeToggle />
         </div>
       </header>

@@ -11,7 +11,6 @@ import { PREFERENCE_DEFAULTS } from "@/lib/preferences/preferences-config";
 import { ThemeBootScript } from "@/scripts/theme-boot";
 import { PreferencesStoreProvider } from "@/stores/preferences/preferences-provider";
 
-import "./globals.css";
 
 export const metadata: Metadata = {
   title: APP_CONFIG.meta.title,

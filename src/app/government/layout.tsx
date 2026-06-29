@@ -1,5 +1,6 @@
 "use client";
 
+import "@/app/globals.css";
 import { DynamicSidebar } from "@/components/layout/dynamic-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { usePortalNavigation } from "@/hooks/use-navigation";

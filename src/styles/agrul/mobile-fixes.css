@@ -1,0 +1,238 @@
+/* =====================================================
+   Mobile fixes for Agrul Home1 in Next.js
+======================================================= */
+
+/* ---- Remove decorative underline shape from banner subtitle ---- */
+.banner-style-one h4::after {
+  display: none;
+}
+
+/* ---- Sidebar info (location, phone, social) ---- */
+.sidebar-info {
+  padding: 20px 30px;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  margin-top: 10px;
+}
+
+.sidebar-info ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 15px;
+}
+
+.sidebar-info ul li {
+  color: var(--color-heading);
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.sidebar-info ul li i {
+  color: var(--color-primary);
+  margin-right: 8px;
+}
+
+.sidebar-social {
+  display: flex;
+  gap: 10px;
+}
+
+.sidebar-social a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 13px;
+}
+
+.sidebar-social a:hover {
+  background: var(--color-secondary);
+  color: var(--color-heading);
+}
+
+/* Hide sidebar-info on desktop */
+@media (min-width: 1024px) {
+  .sidebar-info {
+    display: none;
+  }
+}
+
+/* ---- Dual logo layout ---- */
+.navbar-logos {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.navbar-logos .logo {
+  height: 55px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+  margin-top: 0;
+}
+
+/* ---- Fixed navbar height ---- */
+nav.navbar.validnavs {
+  height: 100px;
+}
+
+nav.navbar.validnavs .container {
+  height: 100%;
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+}
+
+nav.navbar.validnavs .navbar-brand > img {
+  margin-top: 0;
+}
+
+/* ---- Hide mobile-only sidebar elements on desktop ---- */
+@media (min-width: 1024px) {
+  nav.navbar.validnavs .navbar-collapse > img,
+  nav.navbar.validnavs .navbar-collapse > .navbar-toggle {
+    display: none !important;
+  }
+
+  nav.navbar.validnavs .navbar-toggle {
+    display: none !important;
+  }
+}
+
+/* ---- At 1024–1199px: shrink logos ---- */
+@media (min-width: 1024px) and (max-width: 1199px) {
+  .navbar-logos .logo {
+    height: 42px;
+  }
+
+  nav.navbar.validnavs {
+    height: 70px;
+  }
+
+  .navbar-logos {
+    gap: 8px;
+  }
+}
+
+/* ---- Sticky navbar on mobile ---- */
+@media (max-width: 1023px) {
+  nav.navbar.validnavs {
+    position: fixed;
+    width: 100%;
+    top: 0;
+    left: 0;
+    z-index: 9999;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  }
+
+  .banner-area {
+    margin-top: 65px;
+  }
+}
+
+/* ---- Banner: give the fade-mode swiper a real height on mobile ---- */
+@media (max-width: 1023px) {
+
+  .banner-area .swiper,
+  .banner-area .swiper-wrapper,
+  .banner-area .swiper-slide {
+    min-height: 520px;
+  }
+}
+
+@media (max-width: 767px) {
+
+  .banner-area .swiper,
+  .banner-area .swiper-wrapper,
+  .banner-area .swiper-slide {
+    min-height: 420px;
+  }
+}
+
+@media (max-width: 480px) {
+
+  .banner-area .swiper,
+  .banner-area .swiper-wrapper,
+  .banner-area .swiper-slide {
+    min-height: 360px;
+  }
+}
+
+/* ---- Banner h2 font-size scale down on mobile ---- */
+@media (max-width: 991px) {
+  .banner-style-one h2 {
+    font-size: 52px;
+  }
+}
+
+@media (max-width: 767px) {
+  .banner-style-one h2 {
+    font-size: 38px;
+  }
+}
+
+@media (max-width: 480px) {
+  .banner-style-one h2 {
+    font-size: 30px;
+  }
+}
+
+/* ---- Ensure banner content padding on mobile ---- */
+@media (max-width: 767px) {
+  .banner-style-one .content {
+    padding-top: 60px;
+    padding-bottom: 60px;
+  }
+}
+
+/* ---- Fix col-xl-7 on mobile: make it full width ---- */
+@media (max-width: 1199px) {
+  .banner-style-one .col-xl-7 {
+    width: 100%;
+    max-width: 100%;
+    flex: 0 0 100%;
+  }
+}
+
+/* ---- Services carousel: fix slide height collapse on mobile ---- */
+@media (max-width: 767px) {
+  .services-style-one-carousel .swiper-slide {
+    height: auto !important;
+  }
+
+  .services-style-one {
+    margin-bottom: 20px;
+  }
+}
+
+/* ---- Gallery: fix stage width on small screens ---- */
+@media (max-width: 767px) {
+  .container-stage {
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+}
+
+/* ---- Facts: center on mobile ---- */
+@media (max-width: 767px) {
+  .fun-fact-style-one.text-end {
+    text-align: center !important;
+  }
+
+  .fun-fact-style-one .row {
+    justify-content: center;
+  }
+}
+
+/* ---- Contact form: full width inputs on mobile ---- */
+@media (max-width: 767px) {
+  .contact-form .col-lg-6 {
+    width: 100%;
+    max-width: 100%;
+    flex: 0 0 100%;
+  }
+}

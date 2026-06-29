@@ -1,112 +1,122 @@
+"use client";
 import Link from "next/link";
-import Image from "next/image";
+import { useState } from "react";
 
-export function Footer() {
+const Footer = () => {
+  const [email, setEmail] = useState("");
+
+  const handleNewsletter = (e: React.FormEvent) => {
+    e.preventDefault();
+    setEmail("");
+    alert("Thanks For Subscribing!");
+  };
+
   return (
-    <footer className="bg-dark">
+    <footer className="bg-dark text-light" style={{ backgroundImage: "url(/assets/img/shape/brush-down.png)" }}>
       <div className="container">
         <div className="f-items default-padding">
           <div className="row">
-            {/* Brand */}
             <div className="col-lg-4 col-md-6 item">
-              <div className="f-item about">
-                <Image
-                  src="/images/agrul/logo-light.png"
-                  alt="KAU-FPO Platform"
-                  width={160}
-                  height={55}
-                  className="logo"
-                />
-                <p className="mt-20">
-                  AI-Based Digital Platform for KAU-FPO Linkage Programme. Developed by KefiTech in
-                  partnership with Kerala Agricultural University.
-                </p>
-                <div className="social mt-30">
-                  <ul>
-                    <li><a href="#"><i className="fab fa-facebook-f" /></a></li>
-                    <li><a href="#"><i className="fab fa-twitter" /></a></li>
-                    <li><a href="#"><i className="fab fa-youtube" /></a></li>
-                    <li><a href="#"><i className="fab fa-instagram" /></a></li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-
-            {/* Quick Links */}
-            <div className="col-lg-2 col-md-6 item">
-              <div className="f-item link">
-                <h4 className="widget-title">Quick Links</h4>
-                <ul>
-                  <li><Link href="/">Home</Link></li>
-                  <li><Link href="#about">About</Link></li>
-                  <li><Link href="#services">Services</Link></li>
-                  <li><Link href="#portals">Portals</Link></li>
-                  <li><Link href="#contact">Contact</Link></li>
-                </ul>
-              </div>
-            </div>
-
-            {/* Portals */}
-            <div className="col-lg-2 col-md-6 item">
-              <div className="f-item link">
-                <h4 className="widget-title">Portals</h4>
-                <ul>
-                  <li><Link href="/fpo/dashboard">FPO Portal</Link></li>
-                  <li><Link href="/admin/dashboard">Admin Portal</Link></li>
-                  <li><Link href="/government/dashboard">Government</Link></li>
-                  <li><Link href="/cbbo/dashboard">CBBO Portal</Link></li>
-                </ul>
-              </div>
-            </div>
-
-            {/* Account */}
-            <div className="col-lg-4 col-md-6 item">
-              <div className="f-item newsletter">
-                <h4 className="widget-title">Get Started</h4>
+              <div className="footer-item about">
+                <img className="logo" src="/assets/img/logo-light.png" alt="Logo" />
                 <p>
-                  Join the KAU-FPO platform today and empower your Farmer Producer Organization
-                  with digital tools.
+                  Happen active county. Winding morning ambition shyness evident to poor.
+                  Because elderly new to the point to main success.
                 </p>
-                <div className="mt-20">
-                  <Link className="btn btn-theme btn-md radius" href="/register">
-                    Register Your FPO
-                  </Link>
-                </div>
-                <div className="mt-15">
-                  <Link className="btn btn-light btn-md radius" href="/v1/login">
-                    Login to Dashboard
-                  </Link>
-                </div>
-                <div className="built-by mt-30 p-15" style={{ background: "rgba(255,255,255,0.05)", borderRadius: 8 }}>
-                  <small style={{ color: "#aaa" }}>Developed by</small>
-                  <p className="mb-0" style={{ color: "#fff", fontWeight: 700 }}>KefiTech</p>
-                  <small style={{ color: "#aaa" }}>in partnership with KAU</small>
-                </div>
+                <form onSubmit={handleNewsletter} className="newsletter-form">
+                  <input type="email" placeholder="Your Email" className="form-control"
+                    value={email} onChange={(e) => setEmail(e.target.value)} required />
+                  <button type="submit">Go</button>
+                </form>
+              </div>
+            </div>
+
+            <div className="col-lg-2 col-md-6 item">
+              <div className="footer-item link">
+                <h4 className="widget-title">Explore</h4>
+                <ul>
+                  <li><Link href="/about-us">About Us</Link></li>
+                  <li><Link href="/team">Meet Our Team</Link></li>
+                  <li><Link href="/blog-standard">News &amp; Media</Link></li>
+                  <li><Link href="/services">Services</Link></li>
+                  <li><Link href="/contact-us">Contact Us</Link></li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="col-lg-3 col-md-6 item">
+              <div className="footer-item recent-post">
+                <h4 className="widget-title">Recent Posts</h4>
+                <ul>
+                  <li>
+                    <div className="thumb">
+                      <Link href="/blog-single-with-sidebar/1">
+                        <img src="/assets/img/thumbs/3.jpg" alt="Thumb" />
+                      </Link>
+                    </div>
+                    <div className="info">
+                      <div className="meta-title"><span className="post-date">12 Sep, 2024</span></div>
+                      <h5><Link href="/blog-single-with-sidebar/1">Meant widow equal an share least part.</Link></h5>
+                    </div>
+                  </li>
+                  <li>
+                    <div className="thumb">
+                      <Link href="/blog-single-with-sidebar/2">
+                        <img src="/assets/img/thumbs/5.jpg" alt="Thumb" />
+                      </Link>
+                    </div>
+                    <div className="info">
+                      <div className="meta-title"><span className="post-date">18 Jul, 2024</span></div>
+                      <h5><Link href="/blog-single-with-sidebar/2">Future Plan &amp; Strategy for Construction</Link></h5>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="col-lg-3 col-md-6 item">
+              <div className="footer-item contact">
+                <h4 className="widget-title">Contact Info</h4>
+                <ul>
+                  <li>
+                    <div className="icon"><i className="fas fa-home" /></div>
+                    <div className="content"><strong>Address:</strong> 5919 Trussville Crossings Pkwy, Birmingham</div>
+                  </li>
+                  <li>
+                    <div className="icon"><i className="fas fa-envelope" /></div>
+                    <div className="content"><strong>Email:</strong> <a href="mailto:info@validtheme.com">info@validtheme.com</a></div>
+                  </li>
+                  <li>
+                    <div className="icon"><i className="fas fa-phone" /></div>
+                    <div className="content"><strong>Phone:</strong> <a href="tel:2151234567">+123 34598768</a></div>
+                  </li>
+                </ul>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Footer Bottom */}
-      <div className="footer-bottom">
-        <div className="container">
+        <div className="footer-bottom">
           <div className="row">
             <div className="col-lg-6">
-              <p>
-                © {new Date().getFullYear()} Kerala Agricultural University. All rights reserved.
+              <p>&copy; Copyright {new Date().getFullYear()}. All Rights Reserved by{" "}
+                <a href="https://themeforest.net/user/validthemes" target="_blank" rel="noopener noreferrer">validthemes</a>
               </p>
             </div>
             <div className="col-lg-6 text-end">
               <ul>
-                <li><Link href="#">Privacy Policy</Link></li>
-                <li><Link href="#">Terms of Use</Link></li>
-                <li><Link href="#">Support</Link></li>
+                <li><Link href="/about-us">Terms</Link></li>
+                <li><Link href="/about-us">Privacy</Link></li>
+                <li><Link href="/contact-us">Support</Link></li>
               </ul>
             </div>
           </div>
         </div>
       </div>
+      <div className="shape-right-bottom"><img src="/assets/img/shape/10.png" alt="shape" /></div>
+      <div className="shape-left-bottom"><img src="/assets/img/shape/11.png" alt="shape" /></div>
     </footer>
   );
-}
+};
+
+export default Footer;

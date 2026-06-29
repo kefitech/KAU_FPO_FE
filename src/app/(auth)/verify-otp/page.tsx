@@ -5,7 +5,6 @@ import { Suspense, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import { Leaf } from "lucide-react";
 import { toast } from "sonner";
 
 import { LocaleSwitcher } from "@/components/layout/locale-switcher";
@@ -132,60 +131,39 @@ function VerifyOtpForm() {
 
 export default function VerifyOtpPage() {
   return (
-    <div className="relative flex h-svh items-center justify-center overflow-hidden bg-background p-4">
-      <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
+    <div
+      className="relative flex h-svh items-center justify-center overflow-hidden p-4"
+      style={{ backgroundImage: "url('/assets/img/background/background.png')", backgroundSize: "cover", backgroundPosition: "center" }}
+    >
+      {/* Dark mode overlay */}
+      <div className="absolute inset-0 hidden dark:block bg-black/70" />
+
+      {/* Top-right controls */}
+      <div className="fixed top-4 right-4 z-50 flex items-center gap-2 rounded-full bg-white/70 dark:bg-white/10 px-3 py-1.5 shadow backdrop-blur-sm">
         <LocaleSwitcher />
         <ThemeToggle />
       </div>
 
-      <div className="grid w-full max-w-5xl overflow-hidden rounded-2xl shadow-lg lg:grid-cols-2">
-        {/* Left — Form */}
-        <div className="flex flex-col gap-6 bg-card p-8">
-          <Link href="/" className="flex items-center gap-2 font-medium">
-            <div className="flex size-6 items-center justify-center rounded-md bg-green-600 text-white">
-              <Leaf className="size-4" />
-            </div>
-            KAU-FPO Platform
+      {/* Card */}
+      <div className="relative z-10 w-full max-w-md rounded-2xl bg-white/80 dark:bg-neutral-900/90 p-8 shadow-xl backdrop-blur-md flex flex-col gap-6">
+        <Link href="/" className="flex items-center gap-2 font-medium">
+          <img src="/assets/img/logo.png" alt="KAU" className="h-8 w-auto" />
+          KAU-FPO Platform
+        </Link>
+
+        <Suspense fallback={<div className="text-muted-foreground text-sm">Loading...</div>}>
+          <VerifyOtpForm />
+        </Suspense>
+
+        <p className="text-center text-muted-foreground text-sm">
+          <Link href="/forgot-password" className="underline underline-offset-4 hover:text-foreground">
+            ← Back
           </Link>
+        </p>
 
-          <Suspense fallback={<div className="text-muted-foreground text-sm">Loading...</div>}>
-            <VerifyOtpForm />
-          </Suspense>
-
-          <p className="text-center text-muted-foreground text-sm">
-            <Link href="/forgot-password" className="underline underline-offset-4 hover:text-foreground">
-              Back
-            </Link>
-          </p>
-        </div>
-
-        {/* Right — Branding panel */}
-        <div className="hidden flex-col items-center justify-center gap-6 bg-green-700 p-10 text-white lg:flex">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20">
-            <Leaf className="h-7 w-7 text-white" />
-          </div>
-          <div className="text-center">
-            <h2 className="font-bold text-2xl leading-snug">
-              Empowering Farmers,
-              <br />
-              Growing Together
-            </h2>
-            <p className="mt-3 max-w-xs text-green-100 text-sm">
-              Connect with Kerala Agricultural University's digital ecosystem for smarter farming decisions across all
-              14 districts.
-            </p>
-          </div>
-          <div className="grid w-full grid-cols-2 gap-3 text-center">
-            <div className="rounded-xl bg-white/10 p-3">
-              <p className="font-bold text-xl">120+</p>
-              <p className="text-green-100 text-xs">FPOs Registered</p>
-            </div>
-            <div className="rounded-xl bg-white/10 p-3">
-              <p className="font-bold text-xl">18,000+</p>
-              <p className="text-green-100 text-xs">Farmers Connected</p>
-            </div>
-          </div>
-        </div>
+        <a href="/" className="flex items-center justify-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
+          ← Back to Home
+        </a>
       </div>
     </div>
   );
