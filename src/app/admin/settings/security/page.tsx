@@ -109,7 +109,8 @@ function ChangePasswordSection() {
       setOpen(false);
     },
     onError: (error: unknown) => {
-      toast.error(error instanceof Error ? error.message : "Incorrect current password.");
+      const message = (error as { message?: string })?.message ?? "Incorrect current password.";
+      toast.error(message);
     },
   });
 
