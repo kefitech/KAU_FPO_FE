@@ -454,6 +454,7 @@ function AssignTierDialog({
               Notes<span className="text-destructive">*</span>
             </FieldLabel>
             <Textarea id="notes" rows={3} placeholder="Reason for manual override…" {...register("notes")} />
+            {errors.notes && <FieldError errors={[errors.notes]} />}
           </Field>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
