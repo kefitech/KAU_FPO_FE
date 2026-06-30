@@ -31,8 +31,7 @@ export const fpoRegistrationApi = {
   verifyPreRegisterOtp: (phone: string, otp: string) =>
     publicApi.post<Wrapped<{ phone_token: string }>>(`${BASE}pre-register/verify-otp/`, { phone, otp }).then(unwrap),
 
-  register: (payload: FpoRegisterPayload) =>
-    api.post<Wrapped<FpoProfile>>(`${BASE}register/`, payload).then(unwrap),
+  register: (payload: FpoRegisterPayload) => api.post<Wrapped<FpoProfile>>(`${BASE}register/`, payload).then(unwrap),
 
   getProfile: () => api.get<Wrapped<FpoProfile>>(`${BASE}me/`).then(unwrap),
 
@@ -56,10 +55,9 @@ export const fpoRegistrationApi = {
       .post<Wrapped<FpoDocument>>(`${BASE}me/documents/`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       })
-      .then(unwrap);
+      .then((r) => r.data); // return full { status, message, data }
   },
-
-  deleteDocument: (docId: string) => api.delete(`${BASE}me/documents/${docId}/`),
+  deleteDocument: (docId: string) => api.delete<Wrapped<null>>(`${BASE}me/documents/${docId}/`).then((r) => r.data),
 
   sendEmailOtp: () => api.post(`${BASE}email-verify/send/`),
 

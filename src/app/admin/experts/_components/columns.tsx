@@ -19,8 +19,7 @@ function ExpertActions({ expert }: { expert: AdminExpert }) {
   const confirm = useConfirmStore((s) => s.confirm);
 
   const activateMutation = useMutation({
-    mutationFn: () =>
-      expert.is_active ? adminExpertsApi.deactivate(expert.id) : adminExpertsApi.activate(expert.id),
+    mutationFn: () => (expert.is_active ? adminExpertsApi.deactivate(expert.id) : adminExpertsApi.activate(expert.id)),
     onSuccess: () => {
       toast.success(expert.is_active ? "Expert deactivated" : "Expert activated");
       queryClient.invalidateQueries({ queryKey: ["experts"] });
@@ -78,11 +77,17 @@ export function getExpertColumns(): ColumnDef<AdminExpert>[] {
     {
       accessorKey: "name_en",
       header: "Name",
+      // size: 320,
       cell: ({ row }) => (
-        <div>
-          <p className="font-medium">{row.original.name_en}</p>
+        <div className="w-[300px]">
+          <p className="font-medium truncate" title={row.original.name_en}>
+            {row.original.name_en}
+          </p>
+
           {row.original.designation && (
-            <p className="text-xs text-muted-foreground">{row.original.designation}</p>
+            <p className="text-xs text-muted-foreground truncate" title={row.original.designation}>
+              {row.original.designation}
+            </p>
           )}
         </div>
       ),
@@ -91,7 +96,9 @@ export function getExpertColumns(): ColumnDef<AdminExpert>[] {
       accessorKey: "organisation",
       header: "Organisation",
       cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">{row.original.organisation}</span>
+        <div className="w-[350px]">
+          <span className="text-sm text-muted-foreground truncate">{row.original.organisation}</span>
+        </div>
       ),
     },
     {
