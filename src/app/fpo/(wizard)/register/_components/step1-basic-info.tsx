@@ -130,8 +130,8 @@ export function Step1BasicInfo({ profile, onSave, onSuccess }: Step1Props) {
     mutationFn: ({ field, value }: { field: string; value: string }) => fpoRegistrationApi.validateField(field, value),
     onSuccess: (data) => {
       setFieldErrors((prev) => ({ ...prev, [data.field]: { error: data.error, duplicate: data.duplicate } }));
-      if (data.duplicate && data.fpo_id) {
-        setDuplicateFpo({ id: data.fpo_id, name: data.fpo_name ?? "" });
+      if (data.duplicate && data.existing_fpo_id) {
+        setDuplicateFpo({ id: data.existing_fpo_id, name: data.fpo_name ?? "" });
       }
     },
   });
@@ -176,14 +176,14 @@ export function Step1BasicInfo({ profile, onSave, onSuccess }: Step1Props) {
     },
     onSettled: () => setSaveMode(null),
     onError: (err: unknown) => {
-      const apiErr = err as { data?: { duplicate_detected?: boolean; duplicate_field?: string; fpo_id?: number; fpo_name?: string; errors?: Record<string, string[]> }; message?: string } | undefined;
+      const apiErr = err as { data?: { duplicate_detected?: boolean; duplicate_field?: string; existing_fpo_id?: number | null; fpo_name?: string; errors?: Record<string, string[]> }; message?: string } | undefined;
       if (apiErr?.data?.duplicate_detected) {
         setFieldErrors((prev) => ({
           ...prev,
           [apiErr.data?.duplicate_field ?? "registration_number"]: { error: apiErr?.message ?? "Already exists", duplicate: true },
         }));
-        if (apiErr.data?.fpo_id) {
-          setDuplicateFpo({ id: apiErr.data.fpo_id, name: apiErr.data.fpo_name ?? "" });
+        if (apiErr.data?.existing_fpo_id) {
+          setDuplicateFpo({ id: apiErr.data.existing_fpo_id, name: apiErr.data.fpo_name ?? "" });
         }
         return;
       }

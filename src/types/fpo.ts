@@ -187,7 +187,7 @@ export interface FpoFieldValidation {
   valid: boolean;
   error: string | null;
   duplicate: boolean;
-  fpo_id?: number;
+  existing_fpo_id?: number | null;
   fpo_name?: string;
 }
 
