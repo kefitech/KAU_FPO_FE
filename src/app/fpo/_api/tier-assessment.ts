@@ -18,11 +18,14 @@ export const tierAssessmentApi = {
       return (d.data ?? d) as { id: number };
     }),
 
-  save: (id: number, answers: Record<string, AnswerValue>): Promise<void> =>
-    api.patch(`${BASE}${id}/`, { answers }).then(() => undefined),
+  save: (id: number, answers: Record<string, AnswerValue>): Promise<void> => {
+    const safeAnswers = Object.fromEntries(
+      Object.entries(answers).map(([k, v]) => [k, typeof v === "number" ? String(v) : v]),
+    );
+    return api.patch(`${BASE}${id}/`, { answers: safeAnswers }).then(() => undefined);
+  },
 
-  submit: (id: number): Promise<void> =>
-    api.post(`${BASE}${id}/submit/`).then(() => undefined),
+  submit: (id: number): Promise<void> => api.post(`${BASE}${id}/submit/`).then(() => undefined),
 
   history: (): Promise<TierHistoryItem[]> =>
     api.get(`${BASE}history/`).then((r) => {
@@ -42,6 +45,5 @@ export const tierAssessmentApi = {
   deleteUpload: (id: number, uploadId: number): Promise<void> =>
     api.delete(`${BASE}${id}/upload/${uploadId}/`).then(() => undefined),
 
-  reopen: (id: number): Promise<void> =>
-    api.post(`${BASE}${id}/reopen/`).then(() => undefined),
+  reopen: (id: number): Promise<void> => api.post(`${BASE}${id}/reopen/`).then(() => undefined),
 };

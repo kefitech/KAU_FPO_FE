@@ -18,13 +18,13 @@ export function QuestionField({ question, value, onChange, readOnly }: QuestionF
   if (input_type === "number") {
     return (
       <Input
-        type="number"
-        min={answer_config.min}
-        max={answer_config.max}
-        value={value as number ?? ""}
+        type="text"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        value={(value as string) ?? ""}
         onChange={(e) => {
-          const n = e.target.value === "" ? 0 : Number(e.target.value);
-          onChange(n);
+          const val = e.target.value.replace(/[^0-9]/g, "");
+          onChange(val === "" ? "" : val);
         }}
         disabled={readOnly}
         className="max-w-xs"
@@ -87,9 +87,7 @@ export function QuestionField({ question, value, onChange, readOnly }: QuestionF
               value={opt.value}
               checked={selected.includes(opt.value)}
               onChange={(e) => {
-                const next = e.target.checked
-                  ? [...selected, opt.value]
-                  : selected.filter((v) => v !== opt.value);
+                const next = e.target.checked ? [...selected, opt.value] : selected.filter((v) => v !== opt.value);
                 onChange(next);
               }}
               disabled={readOnly}
