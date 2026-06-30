@@ -2,10 +2,17 @@ import { api } from "@/lib/api/client";
 import type { AdminOwnershipClaim } from "@/types/admin";
 
 export interface ClaimsListResponse {
-  count: number;
-  next: string | null;
-  previous: string | null;
-  results: AdminOwnershipClaim[];
+  data: AdminOwnershipClaim[];
+  meta: {
+    pagination: {
+      page: number;
+      page_size: number;
+      total_count: number;
+      total_pages: number;
+      has_next: boolean;
+      has_previous: boolean;
+    };
+  };
 }
 
 export const adminOwnershipClaimsApi = {

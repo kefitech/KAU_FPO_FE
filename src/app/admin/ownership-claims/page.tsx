@@ -19,19 +19,17 @@ import { ClaimReviewDialog } from "./_components/claim-review-dialog";
 type StatusFilter = "all" | "pending" | "approved" | "rejected";
 
 const FILTERS: { value: StatusFilter; label: string }[] = [
-  { value: "all",      label: "All"      },
-  { value: "pending",  label: "Pending"  },
+  { value: "all", label: "All" },
+  { value: "pending", label: "Pending" },
   { value: "approved", label: "Approved" },
   { value: "rejected", label: "Rejected" },
 ];
 
 const STATUS_BADGE: Record<AdminOwnershipClaim["status"], string> = {
-  pending:  "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+  pending: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
   approved: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
   rejected: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
 };
-
-const PAGE_SIZE = 20;
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -51,8 +49,9 @@ export default function OwnershipClaimsPage() {
     placeholderData: (prev) => prev,
   });
 
-  const claims = data?.results ?? [];
-  const totalPages = data ? Math.ceil(data.count / PAGE_SIZE) : 1;
+  const claims = data?.data ?? [];
+  const totalPages = data?.meta?.pagination?.total_pages ?? 1;
+  const totalCount = data?.meta?.pagination?.total_count ?? 0;
 
   function handleFilterChange(f: StatusFilter) {
     setStatusFilter(f);
@@ -67,7 +66,7 @@ export default function OwnershipClaimsPage() {
         <div>
           <h1 className="font-bold text-2xl">Ownership Claims</h1>
           <p className="text-muted-foreground text-sm">
-            {isLoading ? "Loading…" : `${data?.count ?? 0} total claim${data?.count !== 1 ? "s" : ""}`}
+            {isLoading ? "Loading…" : `${totalCount} total claim${totalCount !== 1 ? "s" : ""}`}
           </p>
         </div>
       </div>
@@ -109,12 +108,24 @@ export default function OwnershipClaimsPage() {
             {isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  <TableCell><Skeleton className="h-4 w-28" /></TableCell>
-                  <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-36" /></TableCell>
-                  <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                  <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
-                  <TableCell className="hidden lg:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-28" />
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell">
+                    <Skeleton className="h-4 w-36" />
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    <Skeleton className="h-4 w-24" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-32" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-16 rounded-full" />
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell">
+                    <Skeleton className="h-4 w-24" />
+                  </TableCell>
                   <TableCell />
                 </TableRow>
               ))
@@ -129,7 +140,9 @@ export default function OwnershipClaimsPage() {
                 <TableRow key={claim.id}>
                   <TableCell className="font-medium">{claim.claimant_name}</TableCell>
                   <TableCell className="hidden text-muted-foreground sm:table-cell">{claim.claimant_email}</TableCell>
-                  <TableCell className="hidden text-muted-foreground md:table-cell">{claim.claimant_phone || "—"}</TableCell>
+                  <TableCell className="hidden text-muted-foreground md:table-cell">
+                    {claim.claimant_phone || "—"}
+                  </TableCell>
                   <TableCell className="text-muted-foreground">{claim.fpo_name}</TableCell>
                   <TableCell>
                     <Badge variant="secondary" className={STATUS_BADGE[claim.status]}>
@@ -188,7 +201,9 @@ export default function OwnershipClaimsPage() {
 
       <ClaimReviewDialog
         claim={reviewing}
-        onOpenChange={(open) => { if (!open) setReviewing(null); }}
+        onOpenChange={(open) => {
+          if (!open) setReviewing(null);
+        }}
       />
     </div>
   );
