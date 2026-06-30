@@ -172,6 +172,7 @@ export interface FpoDocument {
   is_verified: boolean;
   verified_at: string | null;
   created_at: string;
+  uuid: string;
 }
 
 export interface FpoDocumentList {
@@ -452,7 +453,6 @@ export const DISTRICT_OPTIONS = [
   { value: "KNR", label: "Kannur" },
   { value: "KSD", label: "Kasaragod" },
 ] as const;
-
 
 export const REQUIRED_DOC_CONFIG: { type: FpoDocumentType; label: string; maxSizeMB: number }[] = [
   { type: "fpo_reg_cert", label: "FPO Registration Certificate", maxSizeMB: 5 },

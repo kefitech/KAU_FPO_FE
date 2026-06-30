@@ -75,7 +75,7 @@ function DocRow({ label, docType, maxSizeMB, uploaded, onUpload, onDelete, isUpl
               className="h-7 w-7 text-muted-foreground hover:text-destructive"
               onClick={() => {
                 console.log("uploaded object:", uploaded);
-                onDelete(uploaded.id);
+                onDelete(uploaded.uuid);
               }}
               disabled={isDeleting}
               aria-label="Remove document"
