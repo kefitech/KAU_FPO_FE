@@ -144,7 +144,11 @@ export function getApplicationColumns(t: T, tCommon: T): ColumnDef<ApplicationLi
     {
       id: "actions",
       header: "",
-      cell: ({ row }) => <ActionsCell row={row.original} t={t} tCommon={tCommon} />,
+      cell: ({ row }) => (
+        <div className="sticky right-0 bg-background">
+          <ActionsCell row={row.original} t={t} tCommon={tCommon} />
+        </div>
+      ),
       enableSorting: false,
       enableHiding: false,
     },
