@@ -128,7 +128,8 @@ export function Step6Documents({ onSuccess, onBack }: Step6Props) {
   const uploadMutation = useMutation({
     mutationFn: ({ type, file }: { type: FpoDocumentType; file: File }) =>
       fpoRegistrationApi.uploadDocument(type, file),
-    onSuccess: () => {
+    onSuccess: (data) => {
+      toast.success(data.message ?? "Document uploaded successfully.");
       queryClient.invalidateQueries({ queryKey: ["fpo-documents"] });
       queryClient.invalidateQueries({ queryKey: ["fpo-me"] });
     },
@@ -137,7 +138,9 @@ export function Step6Documents({ onSuccess, onBack }: Step6Props) {
 
   const deleteMutation = useMutation({
     mutationFn: (docId: string) => fpoRegistrationApi.deleteDocument(docId),
-    onSuccess: () => {
+    onSuccess: (response) => {
+      const msg = (response as any)?.message ?? "Document removed successfully.";
+      toast.success(msg);
       queryClient.invalidateQueries({ queryKey: ["fpo-documents"] });
       queryClient.invalidateQueries({ queryKey: ["fpo-me"] });
     },
@@ -183,7 +186,7 @@ export function Step6Documents({ onSuccess, onBack }: Step6Props) {
               uploaded={getUploaded(cfg.type)}
               onUpload={(type, file) => uploadMutation.mutate({ type, file })}
               onDelete={(id) => deleteMutation.mutate(id)}
-              isUploading={uploadMutation.isPending}
+              isUploading={uploadMutation.isPending && uploadMutation.variables?.type === cfg.type}
               isDeleting={deleteMutation.isPending}
             />
           ))
@@ -211,7 +214,7 @@ export function Step6Documents({ onSuccess, onBack }: Step6Props) {
               uploaded={getUploaded(cfg.type)}
               onUpload={(type, file) => uploadMutation.mutate({ type, file })}
               onDelete={(id) => deleteMutation.mutate(id)}
-              isUploading={uploadMutation.isPending}
+              isUploading={uploadMutation.isPending && uploadMutation.variables?.type === cfg.type}
               isDeleting={deleteMutation.isPending}
             />
           ))
