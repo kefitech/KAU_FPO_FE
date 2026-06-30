@@ -6,6 +6,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { da } from "date-fns/locale";
 import {
   AlertCircle,
   ArrowLeft,
@@ -1175,7 +1176,23 @@ function ApplicationDetailContent() {
                         {(doc.file_size / 1024).toFixed(1)} KB · {doc.mime_type}
                       </p>
                       {doc.verified_by_name && (
-                        <p className="text-muted-foreground text-xs">Verified by {doc.verified_by_name}</p>
+                        <p className="text-muted-foreground text-xs">
+                          Verified by {doc.verified_by_name}
+                          {doc.verified_at && (
+                            <>
+                              {" "}
+                              .{" "}
+                              {new Date(doc.verified_at).toLocaleString("en-IN", {
+                                day: "2-digit",
+                                month: "short",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                hour12: true,
+                              })}
+                            </>
+                          )}
+                        </p>
                       )}
                     </div>
                   </div>
