@@ -1082,7 +1082,7 @@ function ApplicationDetailContent() {
                 <Star className="h-4 w-4 text-muted-foreground" />
                 <h3 className="font-semibold text-sm">Tier Assessment</h3>
               </div>
-              {isSuperAdmin && (
+              {isSuperAdmin && app.status !== "draft" && (
                 <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setAssignTierOpen(true)}>
                   Assign Tier
                 </Button>
