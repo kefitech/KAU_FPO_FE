@@ -357,6 +357,8 @@ function tierBadgeClass(tier: string) {
   );
 }
 
+const currentYear = new Date().getFullYear();
+
 const assignTierSchema = z.object({
   tier: z.string().min(1),
   financial_year: z
@@ -368,8 +370,14 @@ const assignTierSchema = z.object({
       const startYear = parseInt(startStr, 10);
       const endYear = parseInt(startStr.slice(0, 2) + endSuffix, 10);
       return endYear > startYear;
-    }, "End year must be greater than start year"),
-  notes: z.string().optional(),
+    }, "End year must be greater than start year")
+    .refine((val) => {
+      const [startStr, endSuffix] = val.split("-");
+      const startYear = parseInt(startStr, 10);
+      const endYear = parseInt(startStr.slice(0, 2) + endSuffix, 10);
+      return startYear <= new Date().getFullYear() && endYear <= new Date().getFullYear() + 1;
+    }, "Financial year cannot be in the future"),
+  notes: z.string().min(1, "Notes are required"),
 });
 type AssignTierValues = z.infer<typeof assignTierSchema>;
 
@@ -442,7 +450,9 @@ function AssignTierDialog({
             {errors.financial_year && <FieldError errors={[errors.financial_year]} />}
           </Field>
           <Field>
-            <FieldLabel htmlFor="notes">Notes</FieldLabel>
+            <FieldLabel htmlFor="notes">
+              Notes<span className="text-destructive">*</span>
+            </FieldLabel>
             <Textarea id="notes" rows={3} placeholder="Reason for manual override…" {...register("notes")} />
           </Field>
           <DialogFooter>
