@@ -349,7 +349,12 @@ export function Step2Contact({ profile, onSave, onSuccess, onBack }: Step2Props)
         <FieldLabel htmlFor="address_line1">
           Address Line 1 <span className="text-destructive">*</span>
         </FieldLabel>
-        <Input id="address_line1" placeholder="House / Building / Street" {...register("address_line1")} />
+        <Input
+          id="address_line1"
+          placeholder="House / Building / Street"
+          maxLength={150}
+          {...register("address_line1")}
+        />
         {errors.address_line1 && <FieldError errors={[errors.address_line1]} />}
       </Field>
 
@@ -425,7 +430,7 @@ export function Step2Contact({ profile, onSave, onSuccess, onBack }: Step2Props)
 
       <Field>
         <FieldLabel htmlFor="website">Website</FieldLabel>
-        <Input id="website" placeholder="https://yourfpo.com (optional)" {...register("website")} />
+        <Input id="website" placeholder="https://yourfpo.com (optional)" maxLength={60} {...register("website")} />
       </Field>
 
       {/* Map Pin Picker */}

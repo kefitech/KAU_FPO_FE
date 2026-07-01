@@ -13,12 +13,12 @@ import { z } from "zod";
 
 import { fpoRegistrationApi } from "@/app/fpo/_api/fpo-registration";
 import { Button } from "@/components/ui/button";
-import { useVoiceGuidance } from "@/hooks/use-voice-guidance";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { masterDataApi, type MasterDataItem } from "@/lib/api/master-data";
+import { useVoiceGuidance } from "@/hooks/use-voice-guidance";
+import { type MasterDataItem, masterDataApi } from "@/lib/api/master-data";
 import type { FpoProfile } from "@/types/fpo";
 
 const CIN_REQUIRED_STRUCTURES = ["companies_act", "producer_companies"];
@@ -142,11 +142,7 @@ export function Step1BasicInfo({ profile, onSave, onSuccess }: Step1Props) {
     const label = FIELD_LABELS[firstField] ?? String(firstField);
     const val = getValues(firstField);
     const isEmpty = !val || val === "";
-    speak(
-      isEmpty
-        ? `You haven't filled ${label}. This is a required field.`
-        : `Please enter a valid ${label}.`,
-    );
+    speak(isEmpty ? `You haven't filled ${label}. This is a required field.` : `Please enter a valid ${label}.`);
   }
 
   function handleBlurValidation(field: string) {
@@ -176,11 +172,25 @@ export function Step1BasicInfo({ profile, onSave, onSuccess }: Step1Props) {
     },
     onSettled: () => setSaveMode(null),
     onError: (err: unknown) => {
-      const apiErr = err as { data?: { duplicate_detected?: boolean; duplicate_field?: string; existing_fpo_id?: number | null; fpo_name?: string; errors?: Record<string, string[]> }; message?: string } | undefined;
+      const apiErr = err as
+        | {
+            data?: {
+              duplicate_detected?: boolean;
+              duplicate_field?: string;
+              existing_fpo_id?: number | null;
+              fpo_name?: string;
+              errors?: Record<string, string[]>;
+            };
+            message?: string;
+          }
+        | undefined;
       if (apiErr?.data?.duplicate_detected) {
         setFieldErrors((prev) => ({
           ...prev,
-          [apiErr.data?.duplicate_field ?? "registration_number"]: { error: apiErr?.message ?? "Already exists", duplicate: true },
+          [apiErr.data?.duplicate_field ?? "registration_number"]: {
+            error: apiErr?.message ?? "Already exists",
+            duplicate: true,
+          },
         }));
         if (apiErr.data?.existing_fpo_id) {
           setDuplicateFpo({ id: apiErr.data.existing_fpo_id, name: apiErr.data.fpo_name ?? "" });
@@ -213,13 +223,13 @@ export function Step1BasicInfo({ profile, onSave, onSuccess }: Step1Props) {
           <FieldLabel htmlFor="name">
             FPO Name (English) <span className="text-destructive">*</span>
           </FieldLabel>
-          <Input id="name" placeholder="e.g. Kerala Farmers FPO" {...register("name")} />
+          <Input id="name" placeholder="e.g. Kerala Farmers FPO" maxLength={250} {...register("name")} />
           {errors.name && <FieldError errors={[errors.name]} />}
         </Field>
 
         <Field>
           <FieldLabel htmlFor="name_ml">FPO Name (Malayalam)</FieldLabel>
-          <Input id="name_ml" placeholder="e.g. കേരള കർഷകർ FPO" {...register("name_ml")} />
+          <Input id="name_ml" placeholder="e.g. കേരള കർഷകർ FPO" maxLength={250} {...register("name_ml")} />
         </Field>
       </div>
 
@@ -296,7 +306,8 @@ export function Step1BasicInfo({ profile, onSave, onSuccess }: Step1Props) {
 
         <Field>
           <FieldLabel htmlFor="cin_number">
-            CIN Number {CIN_REQUIRED_STRUCTURES.includes(selectedStructure) && <span className="text-destructive">*</span>}
+            CIN Number{" "}
+            {CIN_REQUIRED_STRUCTURES.includes(selectedStructure) && <span className="text-destructive">*</span>}
           </FieldLabel>
           <Input
             id="cin_number"
@@ -409,11 +420,7 @@ export function Step1BasicInfo({ profile, onSave, onSuccess }: Step1Props) {
               submitMutation.mutate(v, { onSuccess: (data) => onSuccess(data) });
             }, handleInvalidSubmit)}
           >
-            {submitMutation.isPending && saveMode === "next"
-              ? "Saving…"
-              : isEdit
-                ? "Next →"
-                : "Get Started →"}
+            {submitMutation.isPending && saveMode === "next" ? "Saving…" : isEdit ? "Next →" : "Get Started →"}
           </Button>
         </div>
       </div>

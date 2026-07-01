@@ -358,11 +358,11 @@ const accountSchema = z
     first_name: z
       .string()
       .min(1, { message: "First name is required" })
-      .max(20, { message: "First name must be at most 20 characters" }),
+      .max(30, { message: "First name must be at most 30 characters" }),
     last_name: z
       .string()
       .min(1, { message: "Last name is required" })
-      .max(20, { message: "Last name must be at most 20 characters" }),
+      .max(30, { message: "Last name must be at most 30 characters" }),
     email: z
       .string()
       .email({ message: "Enter a valid email address" })
@@ -456,7 +456,7 @@ function AccountStep({
           <FieldLabel htmlFor="first_name">
             First Name <span className="text-destructive">*</span>
           </FieldLabel>
-          <Input id="first_name" placeholder="e.g. Rajan" {...register("first_name")} />
+          <Input id="first_name" placeholder="e.g. Rajan" maxLength={50} {...register("first_name")} />
           {errors.first_name && <FieldError errors={[errors.first_name]} />}
         </Field>
 
@@ -464,7 +464,7 @@ function AccountStep({
           <FieldLabel htmlFor="last_name">
             Last Name <span className="text-destructive">*</span>
           </FieldLabel>
-          <Input id="last_name" placeholder="e.g. Kumar" {...register("last_name")} />
+          <Input id="last_name" placeholder="e.g. Kumar" maxLength={50} {...register("last_name")} />
           {errors.last_name && <FieldError errors={[errors.last_name]} />}
         </Field>
       </div>
