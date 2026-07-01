@@ -374,7 +374,9 @@ export function Step3Signatory({ profile, onSave, onSuccess, onBack }: Step3Prop
           </Field>
 
           <Field>
-            <FieldLabel htmlFor="facilitating_agency_name">Facilitating Agency Name</FieldLabel>
+            <FieldLabel htmlFor="facilitating_agency_name">
+              Facilitating Agency Name <span className="text-destructive">*</span>
+            </FieldLabel>
             <Input
               id="facilitating_agency_name"
               placeholder="e.g. NABARD Kerala"

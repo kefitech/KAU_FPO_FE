@@ -400,6 +400,8 @@ function AssignTierDialog({
   } = useForm<AssignTierValues>({
     resolver: zodResolver(assignTierSchema),
     defaultValues: { tier: "", financial_year: "", notes: "" },
+    mode: "onBlur",
+    reValidateMode: "onChange",
   });
   const mutation = useMutation({
     mutationFn: (values: AssignTierValues) => adminApplicationsApi.assignTier(fpoId, values as AssignTierPayload),
@@ -447,14 +449,20 @@ function AssignTierDialog({
             <FieldLabel htmlFor="financial_year">
               Financial Year <span className="text-destructive">*</span>
             </FieldLabel>
-            <Input id="financial_year" placeholder="e.g. 2026-27" {...register("financial_year")} />
+            <Input id="financial_year" placeholder="e.g. 2026-27" maxLength={7} {...register("financial_year")} />
             {errors.financial_year && <FieldError errors={[errors.financial_year]} />}
           </Field>
           <Field>
             <FieldLabel htmlFor="notes">
               Notes<span className="text-destructive">*</span>
             </FieldLabel>
-            <Textarea id="notes" rows={3} placeholder="Reason for manual override…" {...register("notes")} />
+            <Textarea
+              id="notes"
+              rows={3}
+              placeholder="Reason for manual override…"
+              className="break-all whitespace-pre-wrap resize-none"
+              {...register("notes")}
+            />
             {errors.notes && <FieldError errors={[errors.notes]} />}
           </Field>
           <DialogFooter>
