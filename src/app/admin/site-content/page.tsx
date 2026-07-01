@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { useRouter, useSearchParams } from "next/navigation";
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Circle, Pencil, Save, X } from "lucide-react";
 import { toast } from "sonner";
@@ -20,6 +22,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { type AdminSiteBlock, adminSiteContentApi } from "@/app/admin/_api/site-content";
 import { languageApi } from "@/app/admin/_api/language";
 import type { Language } from "@/types/admin";
+import { DocumentsTab } from "./_components/documents-tab";
+import { GalleryTab } from "./_components/gallery-tab";
+import { TeamTab } from "./_components/team-tab";
+import { QuickLinksTab } from "./_components/quick-links-tab";
+import { NewsSourcesTab } from "./_components/news-sources-tab";
+import { FeedbackTab } from "./_components/feedback-tab";
 
 const BLOCK_LABELS: Record<string, string> = {
   hero_headline: "Hero Headline",
@@ -262,7 +270,9 @@ function BlockEditor({ block, languages }: BlockEditorProps) {
   );
 }
 
-export default function SiteContentPage() {
+// ─── Content Blocks tab ───────────────────────────────────────────────────────
+
+function ContentBlocksTab() {
   const { data: blocks, isLoading: blocksLoading } = useQuery({
     queryKey: ["site-content-blocks"],
     queryFn: adminSiteContentApi.getAll,
@@ -281,7 +291,6 @@ export default function SiteContentPage() {
     (a, b) => BLOCK_ORDER.indexOf(a.block_key) - BLOCK_ORDER.indexOf(b.block_key),
   );
   const activeBlock = sortedBlocks.find((b) => b.block_key === activeKey) ?? sortedBlocks[0];
-
   const sortedLangs = [...languages].sort((a, b) => (b.is_default ? 1 : 0) - (a.is_default ? 1 : 0));
 
   const getBlockFillStatus = (block: AdminSiteBlock) => {
@@ -291,90 +300,147 @@ export default function SiteContentPage() {
     return !!(block.content as Record<string, string>)[defaultLang.code]?.trim();
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex gap-6">
+        <div className="w-52 shrink-0 space-y-1">
+          {Array.from({ length: 6 }).map((_, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: skeleton
+            <Skeleton key={i} className="h-10 rounded-md" />
+          ))}
+        </div>
+        <div className="flex-1 space-y-4">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex gap-6 min-h-0">
+      <nav className="w-52 shrink-0 border-r pr-4">
+        <p className="mb-2 px-3 text-muted-foreground text-xs font-medium uppercase tracking-wide">
+          Blocks
+        </p>
+        <ul className="space-y-0.5">
+          {sortedBlocks.map((block) => {
+            const isActive = (activeKey || sortedBlocks[0]?.block_key) === block.block_key;
+            const isFilled = getBlockFillStatus(block);
+            const label = BLOCK_LABELS[block.block_key] ?? block.block_key;
+            return (
+              <li key={block.block_key}>
+                <button
+                  type="button"
+                  onClick={() => setActiveKey(block.block_key)}
+                  className={`flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors ${
+                    isActive
+                      ? "bg-accent text-accent-foreground font-medium"
+                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                  }`}
+                >
+                  {isFilled ? (
+                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-500" />
+                  ) : (
+                    <Circle className="h-3.5 w-3.5 shrink-0 text-muted-foreground/40" />
+                  )}
+                  <span className="truncate">{label}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+        <div className="mt-4 px-3">
+          <div className="rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+            {sortedBlocks.filter(getBlockFillStatus).length} / {sortedBlocks.length} blocks filled
+          </div>
+        </div>
+      </nav>
+
+      <div className="flex-1 min-w-0">
+        {activeBlock ? (
+          <BlockEditor key={activeBlock.block_key} block={activeBlock} languages={languages} />
+        ) : (
+          <div className="flex h-64 items-center justify-center text-muted-foreground text-sm">
+            Select a block to edit
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Tabs config ──────────────────────────────────────────────────────────────
+
+const TABS = [
+  { key: "content-blocks", label: "Content Blocks" },
+  { key: "documents",      label: "Documents"      },
+  { key: "gallery",        label: "Gallery"        },
+  { key: "team",           label: "Team"           },
+  { key: "quick-links",   label: "Quick Links"    },
+  { key: "news-sources",  label: "News Sources"   },
+  { key: "feedback",      label: "Feedback"       },
+] as const;
+
+type TabKey = (typeof TABS)[number]["key"];
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
+export default function SiteContentPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const tab = (searchParams.get("tab") ?? "content-blocks") as TabKey;
+
+  function setTab(key: TabKey) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", key);
+    router.replace(`/admin/site-content?${params.toString()}`);
+  }
+
   return (
     <div className="flex flex-col gap-0 p-6">
       {/* Page header */}
       <div className="mb-6">
         <h1 className="font-bold text-2xl">Site Content</h1>
         <p className="text-muted-foreground text-sm mt-0.5">
-          Edit the content blocks shown on the public landing page.
+          Manage the public landing page content, documents, and media.
         </p>
       </div>
 
-      {isLoading ? (
-        <div className="flex gap-6">
-          <div className="w-56 shrink-0 space-y-1">
-            {Array.from({ length: 6 }).map((_, i) => (
-              // biome-ignore lint/suspicious/noArrayIndexKey: skeleton
-              <Skeleton key={i} className="h-10 rounded-md" />
+      <div className="flex gap-0">
+        {/* Left nav */}
+        <nav className="w-52 shrink-0 border-r pr-6">
+          <ul className="flex flex-col gap-0.5">
+            {TABS.map(({ key, label }) => (
+              <li key={key}>
+                <button
+                  type="button"
+                  onClick={() => setTab(key)}
+                  className={`w-full flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                    tab === key
+                      ? "bg-muted text-foreground"
+                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                  }`}
+                >
+                  {label}
+                </button>
+              </li>
             ))}
-          </div>
-          <div className="flex-1 space-y-4">
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-64 w-full" />
-          </div>
+          </ul>
+        </nav>
+
+        {/* Right content */}
+        <div className="flex-1 min-w-0 pl-8">
+          {tab === "content-blocks" && <ContentBlocksTab />}
+          {tab === "documents" && <DocumentsTab />}
+          {tab === "gallery" && <GalleryTab />}
+          {tab === "team" && <TeamTab />}
+          {tab === "quick-links" && <QuickLinksTab />}
+          {tab === "news-sources" && <NewsSourcesTab />}
+          {tab === "feedback" && <FeedbackTab />}
         </div>
-      ) : (
-        <div className="flex gap-6 min-h-0">
-          {/* Left nav */}
-          <nav className="w-56 shrink-0 border-r pr-4">
-            <p className="mb-2 px-3 text-muted-foreground text-xs font-medium uppercase tracking-wide">
-              Blocks
-            </p>
-            <ul className="space-y-0.5">
-              {sortedBlocks.map((block) => {
-                const isActive = (activeKey || sortedBlocks[0]?.block_key) === block.block_key;
-                const isFilled = getBlockFillStatus(block);
-                const label = BLOCK_LABELS[block.block_key] ?? block.block_key;
-
-                return (
-                  <li key={block.block_key}>
-                    <button
-                      type="button"
-                      onClick={() => setActiveKey(block.block_key)}
-                      className={`flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors ${
-                        isActive
-                          ? "bg-accent text-accent-foreground font-medium"
-                          : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-                      }`}
-                    >
-                      {isFilled ? (
-                        <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-500" />
-                      ) : (
-                        <Circle className="h-3.5 w-3.5 shrink-0 text-muted-foreground/40" />
-                      )}
-                      <span className="truncate">{label}</span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-
-            {/* Fill summary */}
-            <div className="mt-4 px-3">
-              <div className="rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
-                {sortedBlocks.filter(getBlockFillStatus).length} / {sortedBlocks.length} blocks filled
-              </div>
-            </div>
-          </nav>
-
-          {/* Main editor */}
-          <div className="flex-1 min-w-0">
-            {activeBlock ? (
-              <BlockEditor
-                key={activeBlock.block_key}
-                block={activeBlock}
-                languages={languages}
-              />
-            ) : (
-              <div className="flex h-64 items-center justify-center text-muted-foreground text-sm">
-                Select a block to edit
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

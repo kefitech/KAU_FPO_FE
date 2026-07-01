@@ -15,6 +15,25 @@ html {
   scroll-behavior: smooth;
 }
 
+* {
+  scrollbar-color: #000 transparent;
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #000 !important;
+  border-radius: 999px;
+}
+
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -238,6 +257,13 @@ html {
 
 .disable-transitions * {
   transition: none !important;
+}
+
+/* Hide sticky documents panel on mobile */
+@media (max-width: 991px) {
+  .documents-sticky-panel {
+    display: none !important;
+  }
 }
 
 /* TipTap placeholder */

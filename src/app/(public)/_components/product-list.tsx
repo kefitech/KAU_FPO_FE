@@ -4,9 +4,6 @@ import { productData } from "../_data/products";
 const ProductList = () => {
   return (
     <div className="product-list-area default-padding-bottom bottom-less bg-dark text-center text-light">
-      <div className="shape-bottom-right">
-        <img src="/assets/img/shape/21.png" alt="shape" />
-      </div>
       <div className="container">
         <div className="row">
           <div className="col-xl-10 offset-xl-1 mb-50 mb-xs-30">

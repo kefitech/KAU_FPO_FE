@@ -523,6 +523,78 @@ export interface AdminOwnershipClaim {
   created_at: string;
 }
 
+// ─── Site Content — Documents ─────────────────────────────────────────────────
+
+export interface AdminDocument {
+  id: number;
+  title: string | Record<string, string>;
+  title_display: string;
+  file_url: string;
+  file_size: number;
+  is_view_only: boolean;
+  order: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+// ─── Site Content — Gallery ───────────────────────────────────────────────────
+
+export interface AdminGalleryPhoto {
+  id: number;
+  photo_url: string;
+  caption: Record<string, string> | string | null;
+  order: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+// ─── Site Content — Team ──────────────────────────────────────────────────────
+
+export interface AdminTeamMember {
+  id: number;
+  name: string;
+  designation: string | null;
+  photo_url: string | null;
+  order: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+// ─── Site Content — Quick Links ───────────────────────────────────────────────
+
+export interface AdminQuickLink {
+  id: number;
+  name: string;
+  url: string;
+  logo_url: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+// ─── Site Content — News Sources ──────────────────────────────────────────────
+
+export interface AdminNewsSource {
+  id: number;
+  name: string;
+  url: string;
+  logo_url: string | null;
+  category: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+// ─── Site Content — Feedback ──────────────────────────────────────────────────
+
+export interface AdminFeedback {
+  id: number;
+  name: string;
+  email: string;
+  phone: string | null;
+  message: string;
+  status: "unread" | "read" | "resolved";
+  created_at: string;
+}
+
 // ─── Admin Dashboard ──────────────────────────────────────────────────────────
 
 export interface AdminDashboardStats {

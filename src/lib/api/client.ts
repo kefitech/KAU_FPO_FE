@@ -106,6 +106,19 @@ export const publicApiClient = axios.create({
   },
 });
 
+publicApiClient.interceptors.request.use((config) => {
+  if (typeof window !== "undefined") {
+    try {
+      const stored = localStorage.getItem("locale-storage");
+      const locale = stored ? (JSON.parse(stored)?.state?.locale ?? "en") : "en";
+      config.headers["X-Language"] = locale || "en";
+    } catch {
+      config.headers["X-Language"] = "en";
+    }
+  }
+  return config;
+});
+
 async function publicApiRequest<T>(config: AxiosRequestConfig): Promise<{ data: T; status: number }> {
   const response = await publicApiClient(config);
   return { data: response.data, status: response.status };

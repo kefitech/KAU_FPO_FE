@@ -3,10 +3,12 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import CountUp from "react-countup";
 import { faqApi, type Faq } from "@/lib/api/faq";
+import { useLocaleStore } from "@/stores/locale-store";
 
 const WhyChoose = () => {
   const [faqItems, setFaqItems] = useState<Faq[]>([]);
   const [openItem, setOpenItem] = useState<number | null>(null);
+  const locale = useLocaleStore((s) => s.locale);
   const toggle = (id: number) => setOpenItem(openItem === id ? null : id);
 
   useEffect(() => {
@@ -14,7 +16,7 @@ const WhyChoose = () => {
       setFaqItems(res.data);
       if (res.data.length > 0) setOpenItem(res.data[0].id);
     }).catch(() => {});
-  }, []);
+  }, [locale]);
 
   return (
     <div className="choose-us-style-one-area overflow-hidden default-padding">
@@ -30,7 +32,7 @@ const WhyChoose = () => {
                 <div className="icon"><i className="flaticon-farmer" /></div>
                 <div className="fun-fact">
                   <div className="counter">
-                    <div className="timer"><CountUp end={258} enableScrollSpy /></div>
+                    <div className="timer"><CountUp end={258} enableScrollSpy scrollSpyOnce /></div>
                     <div className="operator">K</div>
                   </div>
                   <span className="medium">Agriculture, Organic Products</span>

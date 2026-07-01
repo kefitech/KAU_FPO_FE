@@ -7,9 +7,6 @@ import { serviceData } from "../_data/services";
 const Services = () => {
   return (
     <div className="services-style-one-area default-padding bg-gray half-bg-theme">
-      <div className="shape-extra">
-        <img src="/assets/img/shape/18.png" alt="shape" />
-      </div>
       <div className="container">
         <div className="heading-left">
           <div className="row">
