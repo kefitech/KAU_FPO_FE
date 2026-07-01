@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { z } from "zod";
+import { file, z } from "zod";
 
 import { fpoTeamApi } from "@/app/fpo/_api/team";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,7 @@ export function InviteDialog({ open, onOpenChange }: InviteDialogProps) {
     register,
     handleSubmit,
     reset,
+    setError,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -62,8 +63,25 @@ export function InviteDialog({ open, onOpenChange }: InviteDialogProps) {
       onOpenChange(false);
     },
     onError: (err: unknown) => {
-      const msg = (err as { message?: string })?.message ?? "Failed to send invitation";
-      toast.error(msg);
+      const error = err as {
+        message?: string;
+        status?: number;
+        data?: {
+          errors?: Record<string, string[]>;
+          message?: string;
+        };
+      };
+
+      if (error.data?.errors && Object.keys(error.data.errors).length > 0) {
+        Object.entries(error.data.errors).forEach(([field, messages]) => {
+          setError(field as keyof FormValues, {
+            type: "server",
+            message: messages[0],
+          });
+        });
+      } else {
+        toast.error(error.data?.message ?? error.message ?? "Failed to send invitation");
+      }
     },
   });
 
@@ -101,7 +119,7 @@ export function InviteDialog({ open, onOpenChange }: InviteDialogProps) {
               Email <span className="text-destructive">*</span>
             </FieldLabel>
             <Input id="email" type="email" placeholder="rajan@example.com" {...register("email")} />
-            {errors.email && <FieldError errors={[errors.email]} />}
+            {errors.email && <FieldError errors={[{ message: errors.email.message ?? "" }]} />}
           </Field>
 
           <Field>
