@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, KeyRound } from "lucide-react";
+import { CheckCircle2, Eye, EyeOff, KeyRound, XCircle } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -18,7 +18,12 @@ import { useAuthStore } from "@/stores/auth-store";
 
 const formSchema = z
   .object({
-    new_password: z.string().min(8, { message: "Password must be at least 8 characters." }),
+    new_password: z
+      .string()
+      .min(8, { message: "At least 8 characters" })
+      .regex(/[A-Z]/, { message: "At least one uppercase letter" })
+      .regex(/[a-z]/, { message: "At least one lowercase letter" })
+      .regex(/[0-9]/, { message: "At least one number" }),
     confirm_password: z.string().min(1, { message: "Please confirm your password." }),
   })
   .refine((data) => data.new_password === data.confirm_password, {
@@ -64,7 +69,8 @@ export function ChangePasswordForm() {
       sessionStorage.setItem("show_welcome", "1");
       router.push("/admin/dashboard");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to change password. Please try again.");
+      const err = error as { message?: string; data?: { message?: string } };
+      toast.error(err.data?.message ?? err.message ?? "Failed to change password. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -76,61 +82,104 @@ export function ChangePasswordForm() {
         <Controller
           control={form.control}
           name="new_password"
-          render={({ field, fieldState }) => (
-            <Field className="gap-1.5" data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor="new-password">New Password</FieldLabel>
-              <div className="relative">
-                <Input
-                  {...field}
-                  id="new-password"
-                  type={showNew ? "text" : "password"}
-                  placeholder="••••••••"
-                  autoComplete="new-password"
-                  autoFocus
-                  aria-invalid={fieldState.invalid}
-                  className="pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowNew((v) => !v)}
-                  className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  tabIndex={-1}
-                >
-                  {showNew ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-            </Field>
-          )}
+          render={({ field, fieldState }) => {
+            const passwordVal = field.value ?? "";
+            return (
+              <Field className="gap-1.5" data-invalid={fieldState.invalid}>
+                <FieldLabel htmlFor="new-password">New Password</FieldLabel>
+                <div className="relative">
+                  <Input
+                    {...field}
+                    id="new-password"
+                    type={showNew ? "text" : "password"}
+                    placeholder="••••••••"
+                    autoComplete="new-password"
+                    autoFocus
+                    aria-invalid={fieldState.invalid}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNew((v) => !v)}
+                    className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    tabIndex={-1}
+                  >
+                    {showNew ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                {passwordVal.length > 0 && (
+                  <div className="flex flex-col gap-1 pt-1">
+                    {[
+                      { label: "At least 8 characters", met: passwordVal.length >= 8 },
+                      { label: "One uppercase letter (A–Z)", met: /[A-Z]/.test(passwordVal) },
+                      { label: "One lowercase letter (a–z)", met: /[a-z]/.test(passwordVal) },
+                      { label: "One number (0–9)", met: /[0-9]/.test(passwordVal) },
+                    ].map(({ label, met }) => (
+                      <p
+                        key={label}
+                        className={`flex items-center gap-1.5 text-xs ${met ? "text-green-600" : "text-muted-foreground"}`}
+                      >
+                        {met ? (
+                          <CheckCircle2 className="h-3 w-3 shrink-0" />
+                        ) : (
+                          <span className="ml-0.5 h-3 w-3 shrink-0 inline-flex items-center justify-center rounded-full border border-current text-[8px]">
+                            ✕
+                          </span>
+                        )}
+                        {label}
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </Field>
+            );
+          }}
         />
         <Controller
           control={form.control}
           name="confirm_password"
-          render={({ field, fieldState }) => (
-            <Field className="gap-1.5" data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor="confirm-password">Confirm Password</FieldLabel>
-              <div className="relative">
-                <Input
-                  {...field}
-                  id="confirm-password"
-                  type={showConfirm ? "text" : "password"}
-                  placeholder="••••••••"
-                  autoComplete="new-password"
-                  aria-invalid={fieldState.invalid}
-                  className="pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirm((v) => !v)}
-                  className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  tabIndex={-1}
-                >
-                  {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-            </Field>
-          )}
+          render={({ field, fieldState }) => {
+            const confirmVal = field.value ?? "";
+            const passwordVal = form.watch("new_password") ?? "";
+            const passwordsMatch = confirmVal.length > 0 && passwordVal === confirmVal;
+            const passwordsMismatch = confirmVal.length > 0 && passwordVal !== confirmVal;
+            return (
+              <Field className="gap-1.5" data-invalid={fieldState.invalid}>
+                <FieldLabel htmlFor="confirm-password">Confirm Password</FieldLabel>
+                <div className="relative">
+                  <Input
+                    {...field}
+                    id="confirm-password"
+                    type={showConfirm ? "text" : "password"}
+                    placeholder="••••••••"
+                    autoComplete="new-password"
+                    aria-invalid={fieldState.invalid}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirm((v) => !v)}
+                    className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    tabIndex={-1}
+                  >
+                    {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                {!fieldState.invalid && passwordsMatch && (
+                  <p className="flex items-center gap-1 text-green-600 text-xs">
+                    <CheckCircle2 className="h-3.5 w-3.5" /> Passwords match
+                  </p>
+                )}
+                {!fieldState.invalid && passwordsMismatch && (
+                  <p className="flex items-center gap-1 text-destructive text-xs">
+                    <XCircle className="h-3.5 w-3.5" /> Passwords do not match
+                  </p>
+                )}
+              </Field>
+            );
+          }}
         />
       </FieldGroup>
 
