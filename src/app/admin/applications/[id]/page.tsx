@@ -92,7 +92,7 @@ function InfoRow({ label, value }: { label: string; value?: string | number | nu
   return (
     <div className="flex flex-col gap-0.5">
       <span className="text-muted-foreground text-xs">{label}</span>
-      <span className="font-medium text-sm">
+      <span className="font-medium text-sm text-sm break-words whitespace-pre-wrap">
         {value || <span className="font-normal text-muted-foreground">—</span>}
       </span>
     </div>
@@ -1008,14 +1008,14 @@ function ApplicationDetailContent() {
                     )}
                   </div>
                 </div>
-                <div className="flex flex-col gap-0.5">
+                <div className="flex flex-col gap-0.5 min-w-0">
                   <span className="text-muted-foreground text-xs">{t.field_office_email ?? "Office Email"}</span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-medium text-sm">{app.office_email}</span>
+                  <div className="flex items-start gap-1.5 min-w-0">
+                    <span className="font-medium text-sm break-all">{app.office_email}</span>
                     {app.email_verified ? (
-                      <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                      <CheckCircle2 className="h-3.5 w-3.5 shrink-0 mt-0.5 text-green-600" />
                     ) : (
-                      <XCircle className="h-3.5 w-3.5 text-destructive" />
+                      <XCircle className="h-3.5 w-3.5 shrink-0 mt-0.5 text-destructive" />
                     )}
                   </div>
                 </div>
