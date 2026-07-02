@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 import { fpoTeamApi } from "@/app/fpo/_api/team";
+import { translationsApi } from "@/lib/api/translations";
+import { useLocaleStore } from "@/stores/locale-store";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -23,6 +25,7 @@ const rowSchema = z.object({
 
 type MemberRow = { first_name: string; last_name: string; email: string; phone: string };
 type RowErrors = Partial<Record<keyof MemberRow, string>>;
+type T = Record<string, string>;
 
 const emptyRow = (): MemberRow => ({ first_name: "", last_name: "", email: "", phone: "" });
 
@@ -35,7 +38,15 @@ interface BulkInviteDialogProps {
 
 export function BulkInviteDialog({ open, onOpenChange }: BulkInviteDialogProps) {
   const queryClient = useQueryClient();
+  const locale = useLocaleStore((s) => s.locale);
+  const [t, setT] = useState<T>({});
   const [tab, setTab] = useState<Tab>("json");
+
+  useEffect(() => {
+    translationsApi.getPublic(locale, "fpo_team,common")
+      .then((data) => setT(data.fpo_team ?? {}))
+      .catch(() => undefined);
+  }, [locale]);
   const [rows, setRows] = useState<MemberRow[]>([emptyRow()]);
   const [rowErrors, setRowErrors] = useState<RowErrors[]>([{}]);
   const [rowTouched, setRowTouched] = useState<Partial<Record<keyof MemberRow, boolean>>[]>([{}]);
@@ -101,13 +112,13 @@ export function BulkInviteDialog({ open, onOpenChange }: BulkInviteDialogProps) 
         setShowFailedDialog(true);
         toast.success(`${res.data.success} invited successfully, ${res.data.errors.length} failed — see details`);
       } else {
-        toast.success("Invitations sent");
+        toast.success(t.bulk_invite_toast_success ?? "Invitations sent");
       }
       queryClient.invalidateQueries({ queryKey: ["fpo-team"] });
       onOpenChange(false);
     },
     onError: (err: unknown) => {
-      toast.error((err as { message?: string })?.message ?? "Failed to send invitations");
+      toast.error((err as { message?: string })?.message ?? (t.bulk_invite_toast_failed ?? "Failed to send invitations"));
     },
   });
 
@@ -122,13 +133,13 @@ export function BulkInviteDialog({ open, onOpenChange }: BulkInviteDialogProps) 
         setShowFailedDialog(true);
         toast.success(`${res.data.success} invited successfully, ${res.data.errors.length} failed — see details`);
       } else {
-        toast.success("File uploaded — invitations are being processed");
+        toast.success(t.bulk_invite_toast_success ?? "File uploaded — invitations are being processed");
       }
       queryClient.invalidateQueries({ queryKey: ["fpo-team"] });
       onOpenChange(false);
     },
     onError: (err: unknown) => {
-      toast.error((err as { message?: string })?.message ?? "File upload failed");
+      toast.error((err as { message?: string })?.message ?? (t.bulk_invite_toast_failed ?? "File upload failed"));
     },
   });
 
@@ -139,7 +150,7 @@ export function BulkInviteDialog({ open, onOpenChange }: BulkInviteDialogProps) 
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Bulk Invite Team Members</DialogTitle>
+            <DialogTitle>{t.bulk_invite_dialog_title ?? "Bulk Invite Team Members"}</DialogTitle>
             <DialogDescription className="sr-only">
               Invite multiple team members at once by either filling in their details or uploading a file.
             </DialogDescription>
@@ -240,14 +251,14 @@ export function BulkInviteDialog({ open, onOpenChange }: BulkInviteDialogProps) 
 
               <div className="flex justify-end gap-2 pt-1">
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                  Cancel
+                  {t.bulk_invite_btn_cancel ?? "Cancel"}
                 </Button>
                 <Button
                   onClick={() => jsonMutation.mutate()}
                   disabled={isPending || rows.some((_, i) => Object.values(rowErrors[i] ?? {}).some(Boolean))}
                 >
                   {jsonMutation.isPending
-                    ? "Sending…"
+                    ? (t.invite_btn_sending ?? "Sending…")
                     : `Send ${rows.filter((r) => r.first_name && r.email).length || ""} Invites`}
                 </Button>
               </div>
@@ -300,10 +311,10 @@ export function BulkInviteDialog({ open, onOpenChange }: BulkInviteDialogProps) 
 
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                  Cancel
+                  {t.bulk_invite_btn_cancel ?? "Cancel"}
                 </Button>
                 <Button onClick={() => fileMutation.mutate()} disabled={!file || isPending}>
-                  {fileMutation.isPending ? "Uploading…" : "Upload & Invite"}
+                  {fileMutation.isPending ? (t.bulk_invite_btn_uploading ?? "Uploading…") : (t.bulk_invite_btn_upload ?? "Upload & Invite")}
                 </Button>
               </div>
             </div>

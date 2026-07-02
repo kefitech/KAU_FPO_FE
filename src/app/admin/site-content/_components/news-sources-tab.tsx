@@ -36,6 +36,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
+type T = Record<string, string>;
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const CATEGORIES = [
@@ -280,7 +282,7 @@ function NewsSourceDialog({
 
 // ─── News Sources Tab ─────────────────────────────────────────────────────────
 
-export function NewsSourcesTab() {
+export function NewsSourcesTab({ t = {} }: { t?: T }) {
   const queryClient = useQueryClient();
   const confirm = useConfirmStore((s) => s.confirm);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -296,25 +298,25 @@ export function NewsSourcesTab() {
     mutationFn: ({ id, active }: { id: number; active: boolean }) =>
       active ? newsSourcesApi.activate(id) : newsSourcesApi.deactivate(id),
     onSuccess: () => {
-      toast.success("News source updated.");
+      toast.success(t.toast_source_updated ?? "News source updated.");
       queryClient.invalidateQueries({ queryKey: ["admin-news-sources"] });
     },
-    onError: () => toast.error("Failed to update news source."),
+    onError: () => toast.error(t.toast_source_update_failed ?? "Failed to update news source."),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => newsSourcesApi.remove(id),
     onSuccess: () => {
-      toast.success("News source deleted.");
+      toast.success(t.toast_source_deleted ?? "News source deleted.");
       queryClient.invalidateQueries({ queryKey: ["admin-news-sources"] });
     },
-    onError: () => toast.error("Failed to delete news source."),
+    onError: () => toast.error(t.toast_source_delete_failed ?? "Failed to delete news source."),
   });
 
   function handleDelete(source: AdminNewsSource) {
     confirm({
-      title: "Delete News Source",
-      description: `Are you sure you want to delete "${source.name}"? This cannot be undone.`,
+      title: t.source_delete_title ?? "Delete News Source",
+      description: (t.source_delete_description ?? 'Are you sure you want to delete "{name}"? This cannot be undone.').replace("{name}", source.name),
       onConfirm: () => deleteMutation.mutateAsync(source.id),
     });
   }
@@ -323,14 +325,14 @@ export function NewsSourcesTab() {
     <div className="flex flex-col gap-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold">News Sources</h2>
+        <h2 className="text-base font-semibold">{t.sources_section_title ?? "News Sources"}</h2>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
             <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
           </Button>
           <Button size="sm" onClick={() => { setEditing(null); setDialogOpen(true); }}>
             <Plus className="mr-1.5 h-4 w-4" />
-            Add Source
+            {t.btn_add_source ?? "Add Source"}
           </Button>
         </div>
       </div>

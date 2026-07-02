@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
@@ -9,8 +9,12 @@ import { Plus } from "lucide-react";
 import { adminSchemesApi } from "@/app/admin/_api/schemes";
 import { DataTable } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
+import { translationsApi } from "@/lib/api/translations";
+import { useLocaleStore } from "@/stores/locale-store";
 
 import { getSchemeColumns } from "./_components/columns";
+
+type T = Record<string, string>;
 
 const FILTERS = [
   {
@@ -28,19 +32,32 @@ const FILTERS = [
 
 export default function SchemesPage() {
   const router = useRouter();
+  const locale = useLocaleStore((s) => s.locale);
+  const [t, setT] = useState<T>({});
+  const [tCommon, setTCommon] = useState<T>({});
+
+  useEffect(() => {
+    translationsApi
+      .getPublic(locale, "admin_schemes,common")
+      .then((data) => {
+        setT(data.admin_schemes ?? {});
+        setTCommon(data.common ?? {});
+      })
+      .catch(() => undefined);
+  }, [locale]);
 
   return (
     <div className="flex flex-col gap-6 px-8 py-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-bold text-2xl">Schemes</h1>
+          <h1 className="font-bold text-2xl">{t.page_title ?? "Schemes"}</h1>
           <p className="mt-0.5 text-muted-foreground text-sm">
-            Manage government schemes and subsidies for FPOs
+            {t.page_description ?? "Manage government schemes and subsidies for FPOs"}
           </p>
         </div>
         <Button size="sm" onClick={() => router.push("/admin/schemes/new")}>
           <Plus className="mr-1.5 h-4 w-4" />
-          Add Scheme
+          {t.btn_add ?? "Add Scheme"}
         </Button>
       </div>
 
@@ -48,7 +65,7 @@ export default function SchemesPage() {
         <DataTable
           queryKey="schemes"
           queryFn={adminSchemesApi.getAll}
-          columns={getSchemeColumns()}
+          columns={getSchemeColumns(t, tCommon)}
           filters={FILTERS}
         />
       </Suspense>

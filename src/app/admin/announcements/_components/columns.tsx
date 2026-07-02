@@ -11,9 +11,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { AdminAnnouncement } from "@/app/admin/_api/announcements";
 
+type T = Record<string, string>;
+
 interface ColumnActions {
   onEdit: (item: AdminAnnouncement) => void;
   onDelete: (item: AdminAnnouncement) => void;
+  t: T;
+  tCommon: T;
 }
 
 function formatDate(date: string | null): string {
@@ -21,11 +25,11 @@ function formatDate(date: string | null): string {
   return new Date(date).toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" });
 }
 
-export function getAnnouncementColumns({ onEdit, onDelete }: ColumnActions): ColumnDef<AdminAnnouncement>[] {
+export function getAnnouncementColumns({ onEdit, onDelete, t, tCommon }: ColumnActions): ColumnDef<AdminAnnouncement>[] {
   return [
     {
       accessorKey: "title",
-      header: "Title",
+      header: t.col_title ?? "Title",
       cell: ({ row }) => {
         const title = row.original.title;
         const text = typeof title === "string" ? title : (Object.values(title)[0] ?? "—");
@@ -34,7 +38,7 @@ export function getAnnouncementColumns({ onEdit, onDelete }: ColumnActions): Col
     },
     {
       accessorKey: "category",
-      header: "Category",
+      header: t.col_category ?? "Category",
       cell: ({ row }) => (
         <Badge variant="outline">
           {row.original.category_display ?? row.original.category}
@@ -43,21 +47,21 @@ export function getAnnouncementColumns({ onEdit, onDelete }: ColumnActions): Col
     },
     {
       accessorKey: "published_date",
-      header: "Published",
+      header: t.col_published ?? "Published",
       cell: ({ row }) => formatDate(row.original.published_date),
     },
     {
       accessorKey: "order",
-      header: "Order",
+      header: t.col_order ?? "Order",
     },
     {
       accessorKey: "is_active",
-      header: "Status",
+      header: t.col_status ?? "Status",
       cell: ({ row }) =>
         row.original.is_active ? (
-          <Badge className="bg-green-100 text-green-700 hover:bg-green-100">Active</Badge>
+          <Badge className="bg-green-100 text-green-700 hover:bg-green-100">{tCommon.badge_active ?? "Active"}</Badge>
         ) : (
-          <Badge variant="outline" className="text-muted-foreground">Inactive</Badge>
+          <Badge variant="outline" className="text-muted-foreground">{tCommon.badge_inactive ?? "Inactive"}</Badge>
         ),
     },
     {
@@ -74,14 +78,14 @@ export function getAnnouncementColumns({ onEdit, onDelete }: ColumnActions): Col
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => onEdit(row.original)}>
               <Pencil className="mr-2 h-4 w-4" />
-              Edit
+              {t.action_edit ?? "Edit"}
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => onDelete(row.original)}
               className="text-destructive focus:text-destructive"
             >
               <Trash2 className="mr-2 h-4 w-4" />
-              Delete
+              {t.action_delete ?? "Delete"}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

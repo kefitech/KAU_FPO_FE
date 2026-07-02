@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
@@ -9,10 +9,14 @@ import { Plus } from "lucide-react";
 import { adminExpertsApi } from "@/app/admin/_api/experts";
 import { DataTable } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
+import { translationsApi } from "@/lib/api/translations";
+import { useLocaleStore } from "@/stores/locale-store";
 import type { AdminExpert } from "@/types/admin";
 
 import { getExpertColumns } from "./_components/columns";
 import { ExpertDetailDialog } from "./_components/expert-detail-dialog";
+
+type T = Record<string, string>;
 
 const FILTERS = [
   {
@@ -49,23 +53,36 @@ const FILTERS = [
 
 export default function ExpertsPage() {
   const router = useRouter();
+  const locale = useLocaleStore((s) => s.locale);
+  const [t, setT] = useState<T>({});
+  const [tCommon, setTCommon] = useState<T>({});
   const [detailDialog, setDetailDialog] = useState<{ open: boolean; expert: AdminExpert | null }>({
     open: false,
     expert: null,
   });
 
+  useEffect(() => {
+    translationsApi
+      .getPublic(locale, "admin_experts,common")
+      .then((data) => {
+        setT(data.admin_experts ?? {});
+        setTCommon(data.common ?? {});
+      })
+      .catch(() => undefined);
+  }, [locale]);
+
   return (
     <div className="flex flex-col gap-6 px-8 py-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-bold text-2xl">Expert Directory</h1>
+          <h1 className="font-bold text-2xl">{t.page_title ?? "Experts"}</h1>
           <p className="mt-0.5 text-muted-foreground text-sm">
-            Manage agricultural experts and KAU specialists
+            {t.page_description ?? "Manage agricultural experts and KAU specialists"}
           </p>
         </div>
         <Button size="sm" onClick={() => router.push("/admin/experts/new")}>
           <Plus className="mr-1.5 h-4 w-4" />
-          Add Expert
+          {t.btn_add ?? "Add Expert"}
         </Button>
       </div>
 
@@ -73,7 +90,7 @@ export default function ExpertsPage() {
         <DataTable
           queryKey="experts"
           queryFn={adminExpertsApi.getAll}
-          columns={getExpertColumns()}
+          columns={getExpertColumns(t, tCommon)}
           filters={FILTERS}
           onRowClick={(row) => setDetailDialog({ open: true, expert: row })}
         />

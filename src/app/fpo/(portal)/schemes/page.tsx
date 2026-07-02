@@ -1,16 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useQuery } from "@tanstack/react-query";
 import { ExternalLink, Search } from "lucide-react";
 
 import { schemesApi } from "@/lib/api/schemes";
+import { translationsApi } from "@/lib/api/translations";
+import { useLocaleStore } from "@/stores/locale-store";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { FpoScheme } from "@/types/fpo";
+
+type T = Record<string, string>;
 
 const SCHEME_CATEGORIES = [
   { value: "", label: "All Schemes" },
@@ -43,7 +47,7 @@ function SchemeSkeleton() {
   );
 }
 
-function SchemeCard({ scheme }: { scheme: FpoScheme }) {
+function SchemeCard({ scheme, t }: { scheme: FpoScheme; t: T }) {
   const badgeClass = CATEGORY_BADGE_COLORS[scheme.category] ?? "bg-muted text-muted-foreground";
 
   return (
@@ -54,18 +58,18 @@ function SchemeCard({ scheme }: { scheme: FpoScheme }) {
       <h3 className="font-semibold text-base leading-snug">{scheme.name}</h3>
       {scheme.administering_body && (
         <p className="text-xs text-muted-foreground">
-          <span className="font-medium">Administered by:</span> {scheme.administering_body}
+          <span className="font-medium">{t.card_administered_by ?? "Administered by:"}</span> {scheme.administering_body}
         </p>
       )}
       {scheme.eligibility && (
         <div>
-          <p className="text-xs font-medium text-foreground mb-0.5">Eligibility</p>
+          <p className="text-xs font-medium text-foreground mb-0.5">{t.card_eligibility ?? "Eligibility"}</p>
           <p className="text-xs text-muted-foreground line-clamp-2">{scheme.eligibility}</p>
         </div>
       )}
       {scheme.benefit_details && (
         <div>
-          <p className="text-xs font-medium text-foreground mb-0.5">Benefits</p>
+          <p className="text-xs font-medium text-foreground mb-0.5">{t.card_benefits ?? "Benefits"}</p>
           <p className="text-xs text-muted-foreground line-clamp-2">{scheme.benefit_details}</p>
         </div>
       )}
@@ -74,7 +78,7 @@ function SchemeCard({ scheme }: { scheme: FpoScheme }) {
           <Button variant="outline" size="sm" asChild>
             <a href={scheme.official_link} target="_blank" rel="noopener noreferrer">
               <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-              Visit Website
+              {t.btn_visit ?? "Visit Website"}
             </a>
           </Button>
         </div>
@@ -84,9 +88,17 @@ function SchemeCard({ scheme }: { scheme: FpoScheme }) {
 }
 
 export default function FpoSchemesPage() {
+  const locale = useLocaleStore((s) => s.locale);
+  const [t, setT] = useState<T>({});
   const [activeCategory, setActiveCategory] = useState("");
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
+
+  useEffect(() => {
+    translationsApi.getPublic(locale, "fpo_schemes,common")
+      .then((data) => setT(data.fpo_schemes ?? {}))
+      .catch(() => undefined);
+  }, [locale]);
 
   const { data: schemes, isLoading } = useQuery({
     queryKey: ["fpo-schemes", activeCategory, search],
@@ -107,9 +119,9 @@ export default function FpoSchemesPage() {
     <div className="flex flex-col gap-6 px-6 py-6">
       {/* Header */}
       <div>
-        <h1 className="font-bold text-2xl">Government Schemes</h1>
+        <h1 className="font-bold text-2xl">{t.page_title ?? "Government Schemes"}</h1>
         <p className="mt-0.5 text-muted-foreground text-sm">
-          Browse government schemes and subsidies available to FPOs
+          {t.page_description ?? "Browse government schemes and subsidies available to FPOs"}
         </p>
       </div>
 
@@ -139,13 +151,13 @@ export default function FpoSchemesPage() {
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
               className="pl-8 h-8 text-sm"
-              placeholder="Search schemes…"
+              placeholder={t.search_placeholder ?? "Search schemes…"}
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
             />
           </div>
           <Button type="submit" size="sm" variant="outline" className="h-8">
-            Search
+            {t.btn_search ?? "Search"}
           </Button>
         </form>
       </div>
@@ -160,7 +172,7 @@ export default function FpoSchemesPage() {
         </div>
       ) : !schemes || schemes.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center gap-2">
-          <p className="text-muted-foreground text-sm">No schemes found.</p>
+          <p className="text-muted-foreground text-sm">{t.empty_state ?? "No schemes found."}</p>
           {(activeCategory || search) && (
             <Button
               variant="ghost"
@@ -171,14 +183,14 @@ export default function FpoSchemesPage() {
                 setSearchInput("");
               }}
             >
-              Clear filters
+              {t.btn_clear_filters ?? "Clear filters"}
             </Button>
           )}
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {schemes.map((scheme) => (
-            <SchemeCard key={scheme.id} scheme={scheme} />
+            <SchemeCard key={scheme.id} scheme={scheme} t={t} />
           ))}
         </div>
       )}

@@ -36,12 +36,16 @@ const settingsSchema = z.object({
 });
 type SettingsValues = z.infer<typeof settingsSchema>;
 
+type T = Record<string, string>;
+
 interface Props {
   mode: "create" | "edit";
   id?: number;
+  t?: T;
+  tCommon?: T;
 }
 
-export function AnnouncementForm({ mode, id }: Props) {
+export function AnnouncementForm({ mode, id, t = {}, tCommon = {} }: Props) {
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -117,13 +121,13 @@ export function AnnouncementForm({ mode, id }: Props) {
         : adminAnnouncementsApi.update(id!, payload);
     },
     onSuccess: () => {
-      toast.success(mode === "create" ? "Announcement created" : "Announcement updated");
+      toast.success(mode === "create" ? (t.toast_created ?? "Announcement created") : (t.toast_updated ?? "Announcement updated"));
       queryClient.invalidateQueries({ queryKey: ["announcements"] });
       router.push("/admin/announcements");
     },
     onError: (err: unknown) => {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      toast.error(msg || "Failed to save announcement");
+      toast.error(msg || (t.toast_save_failed ?? "Failed to save announcement"));
     },
   });
 
@@ -134,14 +138,14 @@ export function AnnouncementForm({ mode, id }: Props) {
     const titleVal = titleValues[defCode];
     const bodyVal = bodyValues[defCode];
     if (!titleVal || !titleVal.trim()) {
-      setTitleError(`Title in ${defName} is required`);
+      setTitleError((t.validation_title_required ?? "Title in {lang} is required").replace("{lang}", defName));
       setActiveLang(defCode || activeLang);
       hasError = true;
     } else {
       setTitleError("");
     }
     if (!bodyVal || !bodyVal.trim()) {
-      setBodyError(`Body in ${defName} is required`);
+      setBodyError((t.validation_body_required ?? "Body in {lang} is required").replace("{lang}", defName));
       setActiveLang(defCode || activeLang);
       hasError = true;
     } else {
@@ -167,7 +171,7 @@ export function AnnouncementForm({ mode, id }: Props) {
       <div className="rounded-lg border p-5 space-y-4">
         {/* Language selector row */}
         <div className="flex items-center gap-3">
-          <Label className="text-sm shrink-0">Language:</Label>
+          <Label className="text-sm shrink-0">{t.field_language ?? "Language:"}</Label>
           <Select value={activeLang} onValueChange={setActiveLang}>
             <SelectTrigger className="h-8 w-44 text-sm">
               <SelectValue />
@@ -188,14 +192,14 @@ export function AnnouncementForm({ mode, id }: Props) {
             </SelectContent>
           </Select>
           {activeLang && activeLang !== defaultLang?.code && (
-            <span className="text-muted-foreground text-xs">Optional</span>
+            <span className="text-muted-foreground text-xs">{t.optional_lang ?? "Optional"}</span>
           )}
         </div>
 
         {/* Title */}
         <div>
           <Label>
-            Title
+            {t.field_title ?? "Title"}
             {activeLang === defaultLang?.code && <span className="ml-0.5 text-destructive">*</span>}
           </Label>
           <Input
@@ -214,7 +218,7 @@ export function AnnouncementForm({ mode, id }: Props) {
         {/* Body — rich text */}
         <div>
           <Label>
-            Body
+            {t.field_body ?? "Body"}
             {activeLang === defaultLang?.code && <span className="ml-0.5 text-destructive">*</span>}
           </Label>
           <div className="mt-1.5">
@@ -224,7 +228,7 @@ export function AnnouncementForm({ mode, id }: Props) {
                 setBodyValues((prev) => ({ ...prev, [activeLang]: html }));
                 if (activeLang === defaultLang?.code) setBodyError("");
               }}
-              placeholder="Write the announcement body…"
+              placeholder={t.placeholder_body ?? "Write the announcement body…"}
             />
           </div>
           {activeLang === defaultLang?.code && bodyError && (
@@ -234,17 +238,17 @@ export function AnnouncementForm({ mode, id }: Props) {
 
         {activeLang && activeLang !== defaultLang?.code && (
           <p className="text-muted-foreground text-xs">
-            Optional — leave blank to use the {defaultLang?.name} version as fallback.
+            {(t.optional_fallback ?? "Optional — leave blank to use the {lang} version as fallback.").replace("{lang}", defaultLang?.name ?? "default")}
           </p>
         )}
       </div>
 
       {/* Settings */}
       <div className="rounded-lg border p-5 space-y-4">
-        <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Settings</h3>
+        <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">{t.settings_heading ?? "Settings"}</h3>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <Label>Category</Label>
+            <Label>{t.field_category ?? "Category"}</Label>
             <Controller
               name="category"
               control={control}
@@ -254,15 +258,15 @@ export function AnnouncementForm({ mode, id }: Props) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="announcement">Announcement</SelectItem>
-                    <SelectItem value="news">News</SelectItem>
+                    <SelectItem value="announcement">{t.cat_announcement ?? "Announcement"}</SelectItem>
+                    <SelectItem value="news">{t.cat_news ?? "News"}</SelectItem>
                   </SelectContent>
                 </Select>
               )}
             />
           </div>
           <div>
-            <Label>Published Date</Label>
+            <Label>{t.field_published_date ?? "Published Date"}</Label>
             <Controller
               name="published_date"
               control={control}
@@ -270,7 +274,7 @@ export function AnnouncementForm({ mode, id }: Props) {
             />
           </div>
           <div>
-            <Label>Order</Label>
+            <Label>{t.field_order ?? "Order"}</Label>
             <Controller
               name="order"
               control={control}
@@ -297,17 +301,17 @@ export function AnnouncementForm({ mode, id }: Props) {
                 <Switch checked={field.value} onCheckedChange={field.onChange} />
               )}
             />
-            <Label>Active</Label>
+            <Label>{t.field_is_active ?? "Active"}</Label>
           </div>
         </div>
       </div>
 
       <div className="flex items-center justify-end gap-3">
         <Button type="button" variant="outline" onClick={() => router.push("/admin/announcements")}>
-          Cancel
+          {tCommon.cancel ?? "Cancel"}
         </Button>
         <Button type="submit" disabled={mutation.isPending}>
-          {mutation.isPending ? "Saving…" : mode === "create" ? "Create" : "Save Changes"}
+          {mutation.isPending ? (t.btn_saving ?? "Saving…") : mode === "create" ? (t.btn_create ?? "Create") : (t.btn_save ?? "Save Changes")}
         </Button>
       </div>
     </form>

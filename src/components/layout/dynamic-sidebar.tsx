@@ -22,6 +22,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
+import { useAuth } from "@/hooks/use-auth";
 import { getIcon } from "@/lib/utils/icon-map";
 import type { MenuItem, NavigationConfig } from "@/types/navigation";
 
@@ -39,9 +40,21 @@ function MenuItemComponent({
   pathname: string;
   locale?: string;
 }) {
+  const { logout } = useAuth();
   const Icon = getIcon(item.icon);
   const title = item.translations?.[locale] ?? item.title;
   const isActive = pathname === item.url || pathname.startsWith(`${item.url}/`);
+
+  if (item.id === "logout") {
+    return (
+      <SidebarMenuItem>
+        <SidebarMenuButton onClick={() => logout()}>
+          <Icon className="h-4 w-4 shrink-0" />
+          <span className="text-sm group-data-[collapsible=icon]:hidden">{title}</span>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    );
+  }
 
   if (item.children && item.children.length > 0) {
     return (

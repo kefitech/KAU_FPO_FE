@@ -20,6 +20,8 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Textarea } from "@/components/ui/textarea";
 import type { AdminScheme } from "@/types/admin";
 
+type T = Record<string, string>;
+
 const SCHEME_CATEGORIES = [
   { value: "credit", label: "Credit & Finance" },
   { value: "insurance", label: "Insurance" },
@@ -51,6 +53,8 @@ type FormValues = z.infer<typeof schema>;
 interface SchemeFormProps {
   mode: "create" | "edit";
   scheme?: AdminScheme;
+  t?: T;
+  tCommon?: T;
 }
 
 const defaultValues: FormValues = {
@@ -83,7 +87,7 @@ function schemeToForm(s: AdminScheme): FormValues {
   };
 }
 
-export function SchemeForm({ mode, scheme }: SchemeFormProps) {
+export function SchemeForm({ mode, scheme, t = {}, tCommon = {} }: SchemeFormProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const isEdit = mode === "edit";
@@ -113,13 +117,13 @@ export function SchemeForm({ mode, scheme }: SchemeFormProps) {
       return isEdit ? adminSchemesApi.update(scheme!.id, payload) : adminSchemesApi.create(payload);
     },
     onSuccess: () => {
-      toast.success(isEdit ? "Scheme updated successfully" : "Scheme created successfully");
+      toast.success(isEdit ? (t.toast_updated ?? "Scheme updated successfully") : (t.toast_created ?? "Scheme created successfully"));
       queryClient.invalidateQueries({ queryKey: ["schemes"] });
       router.push("/admin/schemes");
     },
     onError: (error: unknown) => {
       const msg = (error as { message?: string })?.message;
-      toast.error(msg ?? (isEdit ? "Failed to update scheme" : "Failed to create scheme"));
+      toast.error(msg ?? (isEdit ? (t.toast_update_failed ?? "Failed to update scheme") : (t.toast_create_failed ?? "Failed to create scheme")));
     },
   });
 
@@ -127,15 +131,14 @@ export function SchemeForm({ mode, scheme }: SchemeFormProps) {
     <div className="mx-auto w-full max-w-3xl flex flex-col gap-4">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Scheme Details</CardTitle>
+          <CardTitle className="text-base">{t.card_title ?? "Scheme Details"}</CardTitle>
         </CardHeader>
         <CardContent>
           <form id="scheme-form" onSubmit={handleSubmit((v) => mutation.mutate(v))} className="flex flex-col gap-5">
             <FieldGroup>
-              {/* Name EN */}
               <Field>
                 <FieldLabel htmlFor="name_en">
-                  Name (English) <span className="text-destructive">*</span>
+                  {t.field_name_en ?? "Name (English)"} <span className="text-destructive">*</span>
                 </FieldLabel>
                 <Controller
                   control={control}
@@ -147,9 +150,8 @@ export function SchemeForm({ mode, scheme }: SchemeFormProps) {
                 {errors.name_en && <FieldError errors={[errors.name_en]} />}
               </Field>
 
-              {/* Name ML */}
               <Field>
-                <FieldLabel htmlFor="name_ml">Name (Malayalam)</FieldLabel>
+                <FieldLabel htmlFor="name_ml">{t.field_name_ml ?? "Name (Malayalam)"}</FieldLabel>
                 <Controller
                   control={control}
                   name="name_ml"
@@ -157,10 +159,9 @@ export function SchemeForm({ mode, scheme }: SchemeFormProps) {
                 />
               </Field>
 
-              {/* Administering Body */}
               <Field>
                 <FieldLabel htmlFor="administering_body">
-                  Administering Body <span className="text-destructive">*</span>
+                  {t.field_administering_body ?? "Administering Body"} <span className="text-destructive">*</span>
                 </FieldLabel>
                 <Controller
                   control={control}
@@ -172,10 +173,9 @@ export function SchemeForm({ mode, scheme }: SchemeFormProps) {
                 {errors.administering_body && <FieldError errors={[errors.administering_body]} />}
               </Field>
 
-              {/* Category */}
               <Field>
                 <FieldLabel htmlFor="category">
-                  Category <span className="text-destructive">*</span>
+                  {t.field_category ?? "Category"} <span className="text-destructive">*</span>
                 </FieldLabel>
                 <Controller
                   control={control}
@@ -185,7 +185,7 @@ export function SchemeForm({ mode, scheme }: SchemeFormProps) {
                       value={field.value}
                       onChange={field.onChange}
                       options={SCHEME_CATEGORIES}
-                      placeholder="Select category…"
+                      placeholder={t.placeholder_category ?? "Select category…"}
                     />
                   )}
                 />
@@ -195,16 +195,15 @@ export function SchemeForm({ mode, scheme }: SchemeFormProps) {
 
             <div className="border-t pt-4">
               <FieldGroup>
-                {/* Objective */}
                 <Field>
-                  <FieldLabel htmlFor="objective">Objective</FieldLabel>
+                  <FieldLabel htmlFor="objective">{t.field_objective ?? "Objective"}</FieldLabel>
                   <Controller
                     control={control}
                     name="objective"
                     render={({ field }) => (
                       <Textarea
                         id="objective"
-                        placeholder="Brief objective of the scheme"
+                        placeholder={t.placeholder_objective ?? "Brief objective of the scheme"}
                         rows={3}
                         className="resize-none"
                         {...field}
@@ -213,10 +212,9 @@ export function SchemeForm({ mode, scheme }: SchemeFormProps) {
                   />
                 </Field>
 
-                {/* Eligibility */}
                 <Field>
                   <FieldLabel htmlFor="eligibility">
-                    Eligibility <span className="text-destructive">*</span>
+                    {t.field_eligibility ?? "Eligibility"} <span className="text-destructive">*</span>
                   </FieldLabel>
                   <Controller
                     control={control}
@@ -224,7 +222,7 @@ export function SchemeForm({ mode, scheme }: SchemeFormProps) {
                     render={({ field }) => (
                       <Textarea
                         id="eligibility"
-                        placeholder="Who is eligible for this scheme?"
+                        placeholder={t.placeholder_eligibility ?? "Who is eligible for this scheme?"}
                         rows={4}
                         className="resize-none"
                         {...field}
@@ -234,10 +232,9 @@ export function SchemeForm({ mode, scheme }: SchemeFormProps) {
                   {errors.eligibility && <FieldError errors={[errors.eligibility]} />}
                 </Field>
 
-                {/* Benefit Details */}
                 <Field>
                   <FieldLabel htmlFor="benefit_details">
-                    Benefit Details <span className="text-destructive">*</span>
+                    {t.field_benefit_details ?? "Benefit Details"} <span className="text-destructive">*</span>
                   </FieldLabel>
                   <Controller
                     control={control}
@@ -245,7 +242,7 @@ export function SchemeForm({ mode, scheme }: SchemeFormProps) {
                     render={({ field }) => (
                       <Textarea
                         id="benefit_details"
-                        placeholder="What benefits does this scheme provide?"
+                        placeholder={t.placeholder_benefit_details ?? "What benefits does this scheme provide?"}
                         rows={4}
                         className="resize-none"
                         {...field}
@@ -255,10 +252,9 @@ export function SchemeForm({ mode, scheme }: SchemeFormProps) {
                   {errors.benefit_details && <FieldError errors={[errors.benefit_details]} />}
                 </Field>
 
-                {/* Application Process */}
                 <Field>
                   <FieldLabel htmlFor="application_process">
-                    Application Process <span className="text-destructive">*</span>
+                    {t.field_application_process ?? "Application Process"} <span className="text-destructive">*</span>
                   </FieldLabel>
                   <Controller
                     control={control}
@@ -266,7 +262,7 @@ export function SchemeForm({ mode, scheme }: SchemeFormProps) {
                     render={({ field }) => (
                       <Textarea
                         id="application_process"
-                        placeholder="How to apply for this scheme?"
+                        placeholder={t.placeholder_application_process ?? "How to apply for this scheme?"}
                         rows={4}
                         className="resize-none"
                         {...field}
@@ -280,9 +276,8 @@ export function SchemeForm({ mode, scheme }: SchemeFormProps) {
 
             <div className="border-t pt-4">
               <FieldGroup>
-                {/* Official Link */}
                 <Field>
-                  <FieldLabel htmlFor="official_link">Official Link</FieldLabel>
+                  <FieldLabel htmlFor="official_link">{t.field_official_link ?? "Official Link"}</FieldLabel>
                   <Controller
                     control={control}
                     name="official_link"
@@ -293,21 +288,6 @@ export function SchemeForm({ mode, scheme }: SchemeFormProps) {
                   {errors.official_link && <FieldError errors={[errors.official_link]} />}
                 </Field>
 
-                {/* Order */}
-                {/* <Field>
-                  <FieldLabel htmlFor="order">Display Order</FieldLabel>
-                  <Controller
-                    control={control}
-                    name="order"
-                    render={({ field }) => (
-                      <Input id="order" type="number" min={0} placeholder="0" className="w-32" {...field} 
-                      onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                        />
-                    )}
-                  />
-                </Field> */}
-
-                {/* Is Active */}
                 <div className="flex items-center gap-2 pt-1">
                   <Controller
                     control={control}
@@ -317,7 +297,7 @@ export function SchemeForm({ mode, scheme }: SchemeFormProps) {
                     )}
                   />
                   <label htmlFor="is_active" className="text-sm font-medium cursor-pointer">
-                    Active (visible to FPOs)
+                    {t.field_is_active ?? "Active (visible to FPOs)"}
                   </label>
                 </div>
               </FieldGroup>
@@ -328,13 +308,13 @@ export function SchemeForm({ mode, scheme }: SchemeFormProps) {
 
       <div className="flex items-center justify-end gap-3">
         <Button type="button" variant="outline" onClick={() => router.push("/admin/schemes")}>
-          Cancel
+          {tCommon.cancel ?? "Cancel"}
         </Button>
         <Button type="button" variant="ghost" onClick={() => reset(scheme ? schemeToForm(scheme) : defaultValues)}>
-          Reset
+          {tCommon.reset ?? "Reset"}
         </Button>
         <Button type="submit" form="scheme-form" disabled={mutation.isPending}>
-          {mutation.isPending ? "Saving…" : "Save"}
+          {mutation.isPending ? (t.btn_saving ?? "Saving…") : (t.btn_save ?? "Save")}
         </Button>
       </div>
     </div>

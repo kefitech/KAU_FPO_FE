@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useQuery } from "@tanstack/react-query";
 import { MapPin, Search } from "lucide-react";
@@ -8,6 +8,8 @@ import { toast } from "sonner";
 
 import { fpoDashboardApi } from "@/app/fpo/_api/dashboard";
 import { expertsApi } from "@/lib/api/experts";
+import { translationsApi } from "@/lib/api/translations";
+import { useLocaleStore } from "@/stores/locale-store";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ExpertEnquiryDialog } from "@/components/ui/expert-enquiry-dialog";
@@ -15,6 +17,8 @@ import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DISTRICT_OPTIONS, type FpoExpert } from "@/types/fpo";
+
+type T = Record<string, string>;
 
 const EXPERT_CATEGORIES = [
   { value: "", label: "All Experts" },
@@ -57,10 +61,12 @@ function ExpertCard({
   expert,
   isApprovedFpo,
   onContact,
+  t,
 }: {
   expert: FpoExpert;
   isApprovedFpo: boolean;
   onContact: (expert: FpoExpert) => void;
+  t: T;
 }) {
   const badgeClass = CATEGORY_BADGE_COLORS[expert.category] ?? "bg-muted text-muted-foreground";
 
@@ -88,7 +94,7 @@ function ExpertCard({
 
       {expert.primary_expertise && (
         <div>
-          <p className="text-xs font-medium text-foreground mb-0.5">Expertise</p>
+          <p className="text-xs font-medium text-foreground mb-0.5">{t.label_expertise ?? "Expertise"}</p>
           <p className="text-xs text-muted-foreground line-clamp-2">{expert.primary_expertise}</p>
         </div>
       )}
@@ -96,17 +102,17 @@ function ExpertCard({
       <div className="mt-auto pt-2">
         {isApprovedFpo ? (
           <Button size="sm" variant="default" onClick={() => onContact(expert)}>
-            Contact Expert
+            {t.btn_contact ?? "Contact Expert"}
           </Button>
         ) : (
           <Button
             size="sm"
             variant="outline"
             disabled
-            title="Available to approved FPOs only"
+            title={t.btn_contact_locked_title ?? "Available to approved FPOs only"}
             className="opacity-60 cursor-not-allowed"
           >
-            Contact Expert
+            {t.btn_contact_locked ?? "Contact Expert"}
           </Button>
         )}
       </div>
@@ -115,8 +121,16 @@ function ExpertCard({
 }
 
 export default function FpoExpertsPage() {
+  const locale = useLocaleStore((s) => s.locale);
+  const [t, setT] = useState<T>({});
   const [activeCategory, setActiveCategory] = useState("");
   const [district, setDistrict] = useState("");
+
+  useEffect(() => {
+    translationsApi.getPublic(locale, "fpo_experts,common")
+      .then((data) => setT(data.fpo_experts ?? {}))
+      .catch(() => undefined);
+  }, [locale]);
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [enquiryDialog, setEnquiryDialog] = useState<{ open: boolean; expert: FpoExpert | null }>({
@@ -150,7 +164,7 @@ export default function FpoExpertsPage() {
 
   function handleContact(expert: FpoExpert) {
     if (!isApprovedFpo) {
-      toast.error("Your FPO must be approved to contact experts.");
+      toast.error(t.enquiry_not_approved ?? "Your FPO must be approved to contact experts.");
       return;
     }
     setEnquiryDialog({ open: true, expert });
@@ -160,9 +174,9 @@ export default function FpoExpertsPage() {
     <div className="flex flex-col gap-6 px-6 py-6">
       {/* Header */}
       <div>
-        <h1 className="font-bold text-2xl">Expert Directory</h1>
+        <h1 className="font-bold text-2xl">{t.page_title ?? "Expert Directory"}</h1>
         <p className="mt-0.5 text-muted-foreground text-sm">
-          Connect with agricultural experts and KAU specialists
+          {t.page_description ?? "Connect with agricultural experts and KAU specialists"}
         </p>
       </div>
 
@@ -181,7 +195,7 @@ export default function FpoExpertsPage() {
                   : "bg-background text-muted-foreground border-border hover:bg-muted hover:text-foreground"
               }`}
             >
-              {cat.label}
+              {cat.value === "" ? (t.filter_all ?? cat.label) : (t[`filter_${cat.value}`] ?? cat.label)}
             </button>
           ))}
         </div>
@@ -193,7 +207,7 @@ export default function FpoExpertsPage() {
               value={district}
               onChange={setDistrict}
               options={DISTRICT_SELECT_OPTIONS}
-              placeholder="All Districts"
+              placeholder={t.district_placeholder ?? "All Districts"}
             />
           </div>
           <form onSubmit={handleSearch} className="flex items-center gap-2 flex-1">
@@ -201,13 +215,13 @@ export default function FpoExpertsPage() {
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
                 className="pl-8 h-8 text-sm"
-                placeholder="Search experts…"
+                placeholder={t.search_placeholder ?? "Search experts…"}
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
               />
             </div>
             <Button type="submit" size="sm" variant="outline" className="h-8">
-              Search
+              {t.btn_search ?? "Search"}
             </Button>
           </form>
         </div>
@@ -223,7 +237,9 @@ export default function FpoExpertsPage() {
         </div>
       ) : !experts || experts.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center gap-2">
-          <p className="text-muted-foreground text-sm">No experts found.</p>
+          <p className="text-muted-foreground text-sm">
+            {(activeCategory || district || search) ? (t.empty_filtered ?? "No experts match your search. Try adjusting your filters.") : (t.empty_state ?? "No experts found.")}
+          </p>
           {(activeCategory || district || search) && (
             <Button
               variant="ghost"
@@ -235,7 +251,7 @@ export default function FpoExpertsPage() {
                 setSearchInput("");
               }}
             >
-              Clear filters
+              {t.btn_clear_filters ?? "Clear filters"}
             </Button>
           )}
         </div>
@@ -247,6 +263,7 @@ export default function FpoExpertsPage() {
               expert={expert}
               isApprovedFpo={!!isApprovedFpo}
               onContact={handleContact}
+              t={t}
             />
           ))}
         </div>

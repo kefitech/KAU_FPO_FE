@@ -37,6 +37,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
+type T = Record<string, string>;
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface PublicLanguage {
@@ -317,7 +319,7 @@ function DocumentDialog({
 
 // ─── Documents Tab ────────────────────────────────────────────────────────────
 
-export function DocumentsTab() {
+export function DocumentsTab({ t = {} }: { t?: T }) {
   const queryClient = useQueryClient();
   const confirm = useConfirmStore((s) => s.confirm);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -334,25 +336,25 @@ export function DocumentsTab() {
     mutationFn: ({ id, active }: { id: number; active: boolean }) =>
       active ? documentsApi.activate(id) : documentsApi.deactivate(id),
     onSuccess: () => {
-      toast.success("Document updated.");
+      toast.success(t.toast_doc_updated ?? "Document updated.");
       queryClient.invalidateQueries({ queryKey: ["admin-documents"] });
     },
-    onError: () => toast.error("Failed to update document."),
+    onError: () => toast.error(t.toast_doc_update_failed ?? "Failed to update document."),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => documentsApi.remove(id),
     onSuccess: () => {
-      toast.success("Document deleted.");
+      toast.success(t.toast_doc_deleted ?? "Document deleted.");
       queryClient.invalidateQueries({ queryKey: ["admin-documents"] });
     },
-    onError: () => toast.error("Failed to delete document."),
+    onError: () => toast.error(t.toast_doc_delete_failed ?? "Failed to delete document."),
   });
 
   function handleDelete(doc: AdminDocument) {
     confirm({
-      title: "Delete Document",
-      description: `Are you sure you want to delete "${doc.title_display}"? This cannot be undone.`,
+      title: t.doc_delete_title ?? "Delete Document",
+      description: (t.doc_delete_description ?? 'Are you sure you want to delete "{name}"? This cannot be undone.').replace("{name}", doc.title_display),
       onConfirm: () => deleteMutation.mutateAsync(doc.id),
     });
   }
@@ -371,14 +373,14 @@ export function DocumentsTab() {
     <div className="flex flex-col gap-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold">Documents</h2>
+        <h2 className="text-base font-semibold">{t.doc_section_title ?? "Documents"}</h2>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
             <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
           </Button>
           <Button size="sm" onClick={openAdd}>
             <Plus className="mr-1.5 h-4 w-4" />
-            Add Document
+            {t.btn_add_document ?? "Add Document"}
           </Button>
         </div>
       </div>

@@ -13,7 +13,9 @@ import { useConfirmStore } from "@/stores/confirm-store";
 import type { AdminExpert } from "@/types/admin";
 import { DISTRICT_OPTIONS } from "@/types/fpo";
 
-function ExpertActions({ expert }: { expert: AdminExpert }) {
+type T = Record<string, string>;
+
+function ExpertActions({ expert, t, tCommon }: { expert: AdminExpert; t: T; tCommon: T }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const confirm = useConfirmStore((s) => s.confirm);
@@ -21,31 +23,31 @@ function ExpertActions({ expert }: { expert: AdminExpert }) {
   const activateMutation = useMutation({
     mutationFn: () => (expert.is_active ? adminExpertsApi.deactivate(expert.id) : adminExpertsApi.activate(expert.id)),
     onSuccess: () => {
-      toast.success(expert.is_active ? "Expert deactivated" : "Expert activated");
+      toast.success(expert.is_active ? (t.toast_deactivated ?? "Expert deactivated") : (t.toast_activated ?? "Expert activated"));
       queryClient.invalidateQueries({ queryKey: ["experts"] });
     },
     onError: (error: unknown) => {
       const msg = (error as { message?: string })?.message;
-      toast.error(msg ?? "Failed to update expert status");
+      toast.error(msg ?? (tCommon.update_failed ?? "Failed to update expert status"));
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: () => adminExpertsApi.delete(expert.id),
     onSuccess: () => {
-      toast.success("Expert deleted successfully");
+      toast.success(t.toast_deleted ?? "Expert deleted successfully");
       queryClient.invalidateQueries({ queryKey: ["experts"] });
     },
     onError: (error: unknown) => {
       const msg = (error as { message?: string })?.message;
-      toast.error(msg ?? "Failed to delete expert");
+      toast.error(msg ?? (tCommon.delete_failed ?? "Failed to delete expert"));
     },
   });
 
   function handleDelete() {
     confirm({
-      title: "Delete Expert",
-      description: `Are you sure you want to delete "${expert.name_en}"? This action cannot be undone.`,
+      title: t.delete_title ?? "Delete Expert",
+      description: (t.delete_description ?? 'Are you sure you want to delete "{name}"? This action cannot be undone.').replace("{name}", expert.name_en ?? ""),
       onConfirm: () => deleteMutation.mutateAsync(),
     });
   }
@@ -53,13 +55,13 @@ function ExpertActions({ expert }: { expert: AdminExpert }) {
   return (
     <RowActions
       actions={[
-        { label: "Edit", onClick: () => router.push(`/admin/experts/${expert.id}/edit`) },
+        { label: t.action_edit ?? "Edit", onClick: () => router.push(`/admin/experts/${expert.id}/edit`) },
         {
-          label: expert.is_active ? "Deactivate" : "Activate",
+          label: expert.is_active ? (t.action_deactivate ?? "Deactivate") : (t.action_activate ?? "Activate"),
           onClick: () => activateMutation.mutate(),
           separator: true,
         },
-        { label: "Delete", onClick: handleDelete, destructive: true, separator: true },
+        { label: t.action_delete ?? "Delete", onClick: handleDelete, destructive: true, separator: true },
       ]}
     />
   );
@@ -72,18 +74,16 @@ const CATEGORY_BADGE_COLORS: Record<string, string> = {
   facilitator: "bg-teal-100 text-teal-700",
 };
 
-export function getExpertColumns(): ColumnDef<AdminExpert>[] {
+export function getExpertColumns(t: T = {}, tCommon: T = {}): ColumnDef<AdminExpert>[] {
   return [
     {
       accessorKey: "name_en",
-      header: "Name",
-      // size: 320,
+      header: t.col_name ?? "Name",
       cell: ({ row }) => (
         <div className="w-[300px]">
           <p className="font-medium truncate" title={row.original.name_en}>
             {row.original.name_en}
           </p>
-
           {row.original.designation && (
             <p className="text-xs text-muted-foreground truncate" title={row.original.designation}>
               {row.original.designation}
@@ -94,7 +94,7 @@ export function getExpertColumns(): ColumnDef<AdminExpert>[] {
     },
     {
       accessorKey: "organisation",
-      header: "Organisation",
+      header: t.col_organisation ?? "Organisation",
       cell: ({ row }) => (
         <div className="w-[350px]">
           <span className="text-sm text-muted-foreground truncate">{row.original.organisation}</span>
@@ -103,7 +103,7 @@ export function getExpertColumns(): ColumnDef<AdminExpert>[] {
     },
     {
       accessorKey: "category_display",
-      header: "Category",
+      header: t.col_category ?? "Category",
       cell: ({ row }) => {
         const color = CATEGORY_BADGE_COLORS[row.original.category] ?? "bg-muted text-muted-foreground";
         return (
@@ -115,7 +115,7 @@ export function getExpertColumns(): ColumnDef<AdminExpert>[] {
     },
     {
       accessorKey: "district",
-      header: "District",
+      header: t.col_district ?? "District",
       cell: ({ row }) => {
         const label = DISTRICT_OPTIONS.find((d) => d.value === row.original.district)?.label ?? row.original.district;
         return <span className="text-sm text-muted-foreground">{label || "—"}</span>;
@@ -123,7 +123,7 @@ export function getExpertColumns(): ColumnDef<AdminExpert>[] {
     },
     {
       accessorKey: "is_active",
-      header: "Status",
+      header: t.col_status ?? "Status",
       enableSorting: false,
       cell: ({ row }) => (
         <Badge
@@ -134,7 +134,7 @@ export function getExpertColumns(): ColumnDef<AdminExpert>[] {
               : "bg-muted text-muted-foreground"
           }
         >
-          {row.original.is_active ? "Active" : "Inactive"}
+          {row.original.is_active ? (tCommon.badge_active ?? "Active") : (tCommon.badge_inactive ?? "Inactive")}
         </Badge>
       ),
     },
@@ -143,7 +143,7 @@ export function getExpertColumns(): ColumnDef<AdminExpert>[] {
       header: "",
       enableSorting: false,
       enableHiding: false,
-      cell: ({ row }) => <ExpertActions expert={row.original} />,
+      cell: ({ row }) => <ExpertActions expert={row.original} t={t} tCommon={tCommon} />,
     },
   ];
 }

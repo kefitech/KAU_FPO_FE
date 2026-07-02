@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -21,7 +21,11 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { type AdminSiteBlock, adminSiteContentApi } from "@/app/admin/_api/site-content";
 import { languageApi } from "@/app/admin/_api/language";
+import { translationsApi } from "@/lib/api/translations";
+import { useLocaleStore } from "@/stores/locale-store";
 import type { Language } from "@/types/admin";
+
+type T = Record<string, string>;
 import { DocumentsTab } from "./_components/documents-tab";
 import { GalleryTab } from "./_components/gallery-tab";
 import { TeamTab } from "./_components/team-tab";
@@ -73,9 +77,10 @@ const BLOCK_ORDER = [
 interface BlockEditorProps {
   block: AdminSiteBlock;
   languages: Language[];
+  t: T;
 }
 
-function BlockEditor({ block, languages }: BlockEditorProps) {
+function BlockEditor({ block, languages, t }: BlockEditorProps) {
   const queryClient = useQueryClient();
 
   const sortedLangs = [...languages].sort((a, b) => (b.is_default ? 1 : 0) - (a.is_default ? 1 : 0));
@@ -118,7 +123,7 @@ function BlockEditor({ block, languages }: BlockEditorProps) {
       queryClient.invalidateQueries({ queryKey: ["site-content-blocks"] });
     },
     onError: (err: Error) => {
-      if (err.message !== "validation") toast.error("Failed to save");
+      if (err.message !== "validation") toast.error(t.toast_save_failed ?? "Failed to save");
     },
   });
 
@@ -130,7 +135,7 @@ function BlockEditor({ block, languages }: BlockEditorProps) {
 
   const LanguageBar = () => (
     <div className="flex items-center gap-3 rounded-md border bg-muted/40 px-4 py-2.5">
-      <span className="text-muted-foreground text-sm shrink-0">Language:</span>
+      <span className="text-muted-foreground text-sm shrink-0">{t.field_language ?? "Language:"}</span>
       <Select value={activeLang} onValueChange={setActiveLang}>
         <SelectTrigger className="h-8 w-48 bg-background text-sm">
           <SelectValue />
@@ -189,17 +194,17 @@ function BlockEditor({ block, languages }: BlockEditorProps) {
           <div className="flex items-center gap-2 shrink-0">
             <Button variant="outline" size="sm" onClick={handleCancel} disabled={mutation.isPending}>
               <X className="mr-1.5 h-3.5 w-3.5" />
-              Cancel
+              {t.btn_cancel ?? "Cancel"}
             </Button>
             <Button size="sm" onClick={() => mutation.mutate()} disabled={mutation.isPending}>
               <Save className="mr-1.5 h-3.5 w-3.5" />
-              {mutation.isPending ? "Saving…" : "Save"}
+              {mutation.isPending ? (t.btn_saving ?? "Saving…") : (t.btn_save ?? "Save")}
             </Button>
           </div>
         ) : (
           <Button variant="outline" size="sm" onClick={() => setIsEditing(true)} className="shrink-0">
             <Pencil className="mr-1.5 h-3.5 w-3.5" />
-            Edit
+            {t.btn_edit ?? "Edit"}
           </Button>
         )}
       </div>
@@ -238,7 +243,7 @@ function BlockEditor({ block, languages }: BlockEditorProps) {
         <div>
           {activeLang !== defaultLang?.code && (
             <p className="mb-2 text-muted-foreground text-xs">
-              Optional — leave blank to show {defaultLang?.name} as fallback.
+              {(t.optional_fallback ?? "Optional — leave blank to show {lang} as fallback.").replace("{lang}", defaultLang?.name ?? "default")}
             </p>
           )}
           {isRichText ? (
@@ -272,7 +277,7 @@ function BlockEditor({ block, languages }: BlockEditorProps) {
 
 // ─── Content Blocks tab ───────────────────────────────────────────────────────
 
-function ContentBlocksTab() {
+function ContentBlocksTab({ t }: { t: T }) {
   const { data: blocks, isLoading: blocksLoading } = useQuery({
     queryKey: ["site-content-blocks"],
     queryFn: adminSiteContentApi.getAll,
@@ -322,7 +327,7 @@ function ContentBlocksTab() {
     <div className="flex gap-6 min-h-0">
       <nav className="w-52 shrink-0 border-r pr-4">
         <p className="mb-2 px-3 text-muted-foreground text-xs font-medium uppercase tracking-wide">
-          Blocks
+          {t.blocks_heading ?? "Blocks"}
         </p>
         <ul className="space-y-0.5">
           {sortedBlocks.map((block) => {
@@ -353,17 +358,17 @@ function ContentBlocksTab() {
         </ul>
         <div className="mt-4 px-3">
           <div className="rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
-            {sortedBlocks.filter(getBlockFillStatus).length} / {sortedBlocks.length} blocks filled
+            {(t.blocks_filled ?? "{filled} / {total} blocks filled").replace("{filled}", String(sortedBlocks.filter(getBlockFillStatus).length)).replace("{total}", String(sortedBlocks.length))}
           </div>
         </div>
       </nav>
 
       <div className="flex-1 min-w-0">
         {activeBlock ? (
-          <BlockEditor key={activeBlock.block_key} block={activeBlock} languages={languages} />
+          <BlockEditor key={activeBlock.block_key} block={activeBlock} languages={languages} t={t} />
         ) : (
           <div className="flex h-64 items-center justify-center text-muted-foreground text-sm">
-            Select a block to edit
+            {t.select_block ?? "Select a block to edit"}
           </div>
         )}
       </div>
@@ -387,10 +392,29 @@ type TabKey = (typeof TABS)[number]["key"];
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+const TAB_LABEL_KEYS: Record<string, string> = {
+  "content-blocks": "tab_content_blocks",
+  documents: "tab_documents",
+  gallery: "tab_gallery",
+  team: "tab_team",
+  "quick-links": "tab_quick_links",
+  "news-sources": "tab_news_sources",
+  feedback: "tab_feedback",
+};
+
 export default function SiteContentPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tab = (searchParams.get("tab") ?? "content-blocks") as TabKey;
+  const locale = useLocaleStore((s) => s.locale);
+  const [t, setT] = useState<T>({});
+
+  useEffect(() => {
+    translationsApi
+      .getPublic(locale, "admin_site_content,common")
+      .then((data) => setT(data.admin_site_content ?? {}))
+      .catch(() => undefined);
+  }, [locale]);
 
   function setTab(key: TabKey) {
     const params = new URLSearchParams(searchParams.toString());
@@ -402,9 +426,9 @@ export default function SiteContentPage() {
     <div className="flex flex-col gap-0 p-6">
       {/* Page header */}
       <div className="mb-6">
-        <h1 className="font-bold text-2xl">Site Content</h1>
+        <h1 className="font-bold text-2xl">{t.page_title ?? "Site Content"}</h1>
         <p className="text-muted-foreground text-sm mt-0.5">
-          Manage the public landing page content, documents, and media.
+          {t.page_description ?? "Manage the public landing page content, documents, and media."}
         </p>
       </div>
 
@@ -423,7 +447,7 @@ export default function SiteContentPage() {
                       : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                   }`}
                 >
-                  {label}
+                  {t[TAB_LABEL_KEYS[key] ?? ""] ?? label}
                 </button>
               </li>
             ))}
@@ -432,13 +456,13 @@ export default function SiteContentPage() {
 
         {/* Right content */}
         <div className="flex-1 min-w-0 pl-8">
-          {tab === "content-blocks" && <ContentBlocksTab />}
-          {tab === "documents" && <DocumentsTab />}
-          {tab === "gallery" && <GalleryTab />}
-          {tab === "team" && <TeamTab />}
-          {tab === "quick-links" && <QuickLinksTab />}
-          {tab === "news-sources" && <NewsSourcesTab />}
-          {tab === "feedback" && <FeedbackTab />}
+          {tab === "content-blocks" && <ContentBlocksTab t={t} />}
+          {tab === "documents" && <DocumentsTab t={t} />}
+          {tab === "gallery" && <GalleryTab t={t} />}
+          {tab === "team" && <TeamTab t={t} />}
+          {tab === "quick-links" && <QuickLinksTab t={t} />}
+          {tab === "news-sources" && <NewsSourcesTab t={t} />}
+          {tab === "feedback" && <FeedbackTab t={t} />}
         </div>
       </div>
     </div>

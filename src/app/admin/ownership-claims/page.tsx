@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useQuery } from "@tanstack/react-query";
 import { ShieldAlert } from "lucide-react";
@@ -10,7 +10,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { translationsApi } from "@/lib/api/translations";
+import { useLocaleStore } from "@/stores/locale-store";
 import type { AdminOwnershipClaim } from "@/types/admin";
+
+type T = Record<string, string>;
 
 import { ClaimReviewDialog } from "./_components/claim-review-dialog";
 
@@ -34,9 +38,18 @@ const STATUS_BADGE: Record<AdminOwnershipClaim["status"], string> = {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function OwnershipClaimsPage() {
+  const locale = useLocaleStore((s) => s.locale);
+  const [t, setT] = useState<T>({});
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [page, setPage] = useState(1);
   const [reviewing, setReviewing] = useState<AdminOwnershipClaim | null>(null);
+
+  useEffect(() => {
+    translationsApi
+      .getPublic(locale, "admin_ownership_claims,common")
+      .then((data) => setT(data.admin_ownership_claims ?? {}))
+      .catch(() => undefined);
+  }, [locale]);
 
   const { data, isLoading, isFetching } = useQuery({
     queryKey: ["admin-ownership-claims", statusFilter, page],
@@ -64,9 +77,9 @@ export default function OwnershipClaimsPage() {
       <div className="flex items-center gap-2">
         <ShieldAlert className="h-5 w-5 text-muted-foreground" />
         <div>
-          <h1 className="font-bold text-2xl">Ownership Claims</h1>
+          <h1 className="font-bold text-2xl">{t.page_title ?? "Ownership Claims"}</h1>
           <p className="text-muted-foreground text-sm">
-            {isLoading ? "Loading…" : `${totalCount} total claim${totalCount !== 1 ? "s" : ""}`}
+            {isLoading ? (t.loading ?? "Loading…") : `${totalCount} ${totalCount !== 1 ? (t.total_claims ?? "total claims") : (t.total_claim ?? "total claim")}`}
           </p>
         </div>
       </div>
@@ -94,13 +107,13 @@ export default function OwnershipClaimsPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Claimant</TableHead>
-              <TableHead className="hidden sm:table-cell">Email</TableHead>
-              <TableHead className="hidden md:table-cell">Phone</TableHead>
-              <TableHead>FPO</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="hidden lg:table-cell">Submitted</TableHead>
-              <TableHead className="w-20 text-right">Action</TableHead>
+              <TableHead>{t.col_claimant ?? "Claimant"}</TableHead>
+              <TableHead className="hidden sm:table-cell">{t.col_email ?? "Email"}</TableHead>
+              <TableHead className="hidden md:table-cell">{t.col_phone ?? "Phone"}</TableHead>
+              <TableHead>{t.col_fpo ?? "FPO"}</TableHead>
+              <TableHead>{t.col_status ?? "Status"}</TableHead>
+              <TableHead className="hidden lg:table-cell">{t.col_submitted ?? "Submitted"}</TableHead>
+              <TableHead className="w-20 text-right">{t.col_action ?? "Action"}</TableHead>
             </TableRow>
           </TableHeader>
 
@@ -132,7 +145,7 @@ export default function OwnershipClaimsPage() {
             ) : claims.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="py-12 text-center text-muted-foreground text-sm">
-                  No {statusFilter !== "all" ? statusFilter : ""} claims found.
+                  {(t.no_claims ?? "No {status}claims found.").replace("{status}", statusFilter !== "all" ? `${statusFilter} ` : "")}
                 </TableCell>
               </TableRow>
             ) : (
@@ -162,7 +175,7 @@ export default function OwnershipClaimsPage() {
                       variant={claim.status === "pending" ? "default" : "outline"}
                       onClick={() => setReviewing(claim)}
                     >
-                      {claim.status === "pending" ? "Review" : "View"}
+                      {claim.status === "pending" ? (t.btn_review ?? "Review") : (t.btn_view ?? "View")}
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -176,7 +189,7 @@ export default function OwnershipClaimsPage() {
       {totalPages > 1 && (
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">
-            Page {page} of {totalPages}
+            {(t.page_of ?? "Page {page} of {total}").replace("{page}", String(page)).replace("{total}", String(totalPages))}
           </span>
           <div className="flex gap-2">
             <Button
@@ -185,7 +198,7 @@ export default function OwnershipClaimsPage() {
               disabled={page <= 1 || isFetching}
               onClick={() => setPage((p) => p - 1)}
             >
-              Previous
+              {t.btn_previous ?? "Previous"}
             </Button>
             <Button
               variant="outline"
@@ -193,7 +206,7 @@ export default function OwnershipClaimsPage() {
               disabled={page >= totalPages || isFetching}
               onClick={() => setPage((p) => p + 1)}
             >
-              Next
+              {t.btn_next ?? "Next"}
             </Button>
           </div>
         </div>

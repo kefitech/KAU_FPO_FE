@@ -1,19 +1,36 @@
 "use client";
 
-import { use } from "react";
+import { use, useEffect, useState } from "react";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { adminExpertsApi } from "@/app/admin/_api/experts";
 import { Skeleton } from "@/components/ui/skeleton";
+import { translationsApi } from "@/lib/api/translations";
+import { useLocaleStore } from "@/stores/locale-store";
 import type { AdminExpert } from "@/types/admin";
 import type { PaginatedResponse } from "@/types/pagination";
 
 import { ExpertForm } from "../../_components/expert-form";
 
+type T = Record<string, string>;
+
 export default function EditExpertPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const queryClient = useQueryClient();
+  const locale = useLocaleStore((s) => s.locale);
+  const [t, setT] = useState<T>({});
+  const [tCommon, setTCommon] = useState<T>({});
+
+  useEffect(() => {
+    translationsApi
+      .getPublic(locale, "admin_experts,common")
+      .then((data) => {
+        setT(data.admin_experts ?? {});
+        setTCommon(data.common ?? {});
+      })
+      .catch(() => undefined);
+  }, [locale]);
 
   const cachedList = queryClient.getQueryData<PaginatedResponse<AdminExpert>>(["experts"]);
   const cachedExpert = cachedList?.data?.find((e) => e.id === Number(id));
@@ -42,10 +59,10 @@ export default function EditExpertPage({ params }: { params: Promise<{ id: strin
   return (
     <div className="flex flex-col gap-6 px-8 py-6">
       <div className="mx-auto w-full max-w-3xl">
-        <h1 className="font-bold text-2xl">Edit Expert</h1>
-        <p className="mt-0.5 text-muted-foreground text-sm">Update the details for this expert.</p>
+        <h1 className="font-bold text-2xl">{t.edit_title ?? "Edit Expert"}</h1>
+        <p className="mt-0.5 text-muted-foreground text-sm">{t.edit_subtitle ?? "Update the details for this expert."}</p>
       </div>
-      <ExpertForm mode="edit" expert={expert} />
+      <ExpertForm mode="edit" expert={expert} t={t} tCommon={tCommon} />
     </div>
   );
 }

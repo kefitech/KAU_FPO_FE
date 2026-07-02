@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import Link from "next/link";
 
@@ -25,8 +25,11 @@ import { adminDashboardApi } from "@/app/admin/_api/dashboard";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { translationsApi } from "@/lib/api/translations";
 import { useAuthStore } from "@/stores/auth-store";
 import { useLocaleStore } from "@/stores/locale-store";
+
+type T = Record<string, string>;
 
 const KeralaDistrictMap = dynamic(
   () => import("./_components/kerala-district-map").then((m) => ({ default: m.KeralaDistrictMap })),
@@ -98,6 +101,14 @@ function ChartSkeleton({ h = "h-56" }: { h?: string }) {
 export default function AdminDashboardPage() {
   const user = useAuthStore((s) => s.user);
   const locale = useLocaleStore((s) => s.locale);
+  const [t, setT] = useState<T>({});
+
+  useEffect(() => {
+    translationsApi
+      .getPublic(locale, "admin_dashboard,common")
+      .then((data) => setT(data.admin_dashboard ?? {}))
+      .catch(() => undefined);
+  }, [locale]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["admin-dashboard-stats"],
@@ -123,7 +134,7 @@ export default function AdminDashboardPage() {
               </AvatarFallback>
             </Avatar>
             <div className="flex flex-col">
-              <p className="font-semibold text-foreground text-sm">Welcome back, {fullName}!</p>
+              <p className="font-semibold text-foreground text-sm">{(t.welcome_msg ?? "Welcome back, {name}!").replace("{name}", fullName)}</p>
               {role && <p className="text-muted-foreground text-xs">{role}</p>}
             </div>
           </div>
@@ -187,32 +198,32 @@ export default function AdminDashboardPage() {
       <div className="flex items-center gap-2">
         <LayoutDashboard className="h-5 w-5 text-muted-foreground" />
         <div>
-          <h1 className="font-bold text-2xl">Admin Dashboard</h1>
-          <p className="text-muted-foreground text-sm">FPO platform overview</p>
+          <h1 className="font-bold text-2xl">{t.page_title ?? "Admin Dashboard"}</h1>
+          <p className="text-muted-foreground text-sm">{t.page_description ?? "FPO platform overview"}</p>
         </div>
       </div>
 
       {/* ── Row 1: Stat Cards ─────────────────────────────────────────────── */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Total Registrations"
+          title={t.stat_total_registrations ?? "Total Registrations"}
           value={stats?.stat_cards.total_registrations}
           icon={Users}
         />
         <StatCard
-          title="Approved FPOs"
+          title={t.stat_approved_fpos ?? "Approved FPOs"}
           value={stats?.stat_cards.approved_fpos}
           icon={CheckCircle}
           valueClass="text-green-600 dark:text-green-400"
         />
         <StatCard
-          title="Pending Applications"
+          title={t.stat_pending_applications ?? "Pending Applications"}
           value={stats?.stat_cards.pending_applications}
           icon={AlertCircle}
           valueClass="text-yellow-600 dark:text-yellow-400"
         />
         <StatCard
-          title="Suspended"
+          title={t.stat_suspended ?? "Suspended"}
           value={stats?.stat_cards.suspended_fpos}
           icon={ShieldOff}
           valueClass={stats?.stat_cards.suspended_fpos ? "text-destructive" : ""}
@@ -224,8 +235,8 @@ export default function AdminDashboardPage() {
         {/* Monthly trend */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Registration Trend</CardTitle>
-            <p className="text-muted-foreground text-xs">Monthly FPO registrations — last 12 months</p>
+            <CardTitle className="text-base">{t.chart_reg_trend ?? "Registration Trend"}</CardTitle>
+            <p className="text-muted-foreground text-xs">{t.chart_reg_trend_subtitle ?? "Monthly FPO registrations — last 12 months"}</p>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -261,8 +272,8 @@ export default function AdminDashboardPage() {
         {/* Status breakdown donut */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Status Breakdown</CardTitle>
-            <p className="text-muted-foreground text-xs">All FPOs by current status</p>
+            <CardTitle className="text-base">{t.chart_status_breakdown ?? "Status Breakdown"}</CardTitle>
+            <p className="text-muted-foreground text-xs">{t.chart_status_subtitle ?? "All FPOs by current status"}</p>
           </CardHeader>
           <CardContent className="flex flex-col items-center gap-4">
             {isLoading ? (
@@ -317,8 +328,8 @@ export default function AdminDashboardPage() {
           {/* Tier bar chart */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">Tier Distribution</CardTitle>
-              <p className="text-muted-foreground text-xs">Approved FPOs by performance tier</p>
+              <CardTitle className="text-base">{t.chart_tier_dist ?? "Tier Distribution"}</CardTitle>
+              <p className="text-muted-foreground text-xs">{t.chart_tier_subtitle ?? "Approved FPOs by performance tier"}</p>
             </CardHeader>
             <CardContent>
               {isLoading ? (
@@ -361,7 +372,7 @@ export default function AdminDashboardPage() {
                 <div className="flex items-center gap-2">
                   <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
                   <CardTitle className="text-base text-yellow-700 dark:text-yellow-400">
-                    Action Required
+                    {t.action_required ?? "Action Required"}
                   </CardTitle>
                 </div>
               </CardHeader>
@@ -389,7 +400,7 @@ export default function AdminDashboardPage() {
           {!isLoading && pa && pendingItems.length === 0 && (
             <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50/50 px-4 py-3 text-green-700 text-sm dark:border-green-800/50 dark:bg-green-900/10 dark:text-green-400">
               <CheckCircle className="h-4 w-4 shrink-0" />
-              No pending actions — everything is up to date.
+              {t.no_pending_actions ?? "No pending actions — everything is up to date."}
             </div>
           )}
         </div>
@@ -397,8 +408,8 @@ export default function AdminDashboardPage() {
         {/* Right column: District distribution map */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">District Distribution</CardTitle>
-            <p className="text-muted-foreground text-xs">FPOs registered per district — hover for details</p>
+            <CardTitle className="text-base">{t.chart_district_dist ?? "District Distribution"}</CardTitle>
+            <p className="text-muted-foreground text-xs">{t.chart_district_subtitle ?? "FPOs registered per district — hover for details"}</p>
           </CardHeader>
           <CardContent className="p-0 pt-0">
             <KeralaDistrictMap

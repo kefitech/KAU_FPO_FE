@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -19,6 +19,10 @@ import {
 import { toast } from "sonner";
 
 import { fpoDashboardApi } from "@/app/fpo/_api/dashboard";
+import { translationsApi } from "@/lib/api/translations";
+import { useLocaleStore } from "@/stores/locale-store";
+
+type T = Record<string, string>;
 
 const LocationMap = dynamic(
   () => import("./_components/location-map").then((m) => ({ default: m.LocationMap })),
@@ -99,6 +103,14 @@ function StatCardSkeleton() {
 
 export default function FpoDashboardPage() {
   const user = useAuthStore((s) => s.user);
+  const locale = useLocaleStore((s) => s.locale);
+  const [t, setT] = useState<T>({});
+
+  useEffect(() => {
+    translationsApi.getPublic(locale, "fpo_dashboard,common")
+      .then((data) => setT(data.fpo_dashboard ?? {}))
+      .catch(() => undefined);
+  }, [locale]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["fpo-dashboard"],
@@ -123,7 +135,9 @@ export default function FpoDashboardPage() {
               </AvatarFallback>
             </Avatar>
             <div className="flex flex-col">
-              <p className="font-semibold text-foreground text-sm">Welcome back, {fullName}!</p>
+              <p className="font-semibold text-foreground text-sm">
+                {(t.welcome_msg ?? "Welcome back, {name}!").replace("{name}", fullName)}
+              </p>
               {role && <p className="text-muted-foreground text-xs">{role}</p>}
             </div>
           </div>
@@ -131,7 +145,7 @@ export default function FpoDashboardPage() {
         { duration: 4000 },
       );
     }
-  }, [user]);
+  }, [user, t]);
 
   if (isLoading || !data) {
     return (
@@ -176,49 +190,49 @@ export default function FpoDashboardPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="font-medium text-sm">Total Members</CardTitle>
+            <CardTitle className="font-medium text-sm">{t.label_total_members ?? "Total Members"}</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="font-bold text-2xl">{profile.total_members}</div>
             <p className="text-muted-foreground text-xs">
-              {team.active} active · {team.total - team.active} inactive
+              {team.active} {t.label_members_active ?? "active"} · {team.total - team.active} {t.label_members_inactive ?? "inactive"}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="font-medium text-sm">Documents</CardTitle>
+            <CardTitle className="font-medium text-sm">{t.label_documents ?? "Documents"}</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="font-bold text-2xl">{documents.uploaded}</div>
-            <p className="text-muted-foreground text-xs">{documents.verified} verified</p>
+            <p className="text-muted-foreground text-xs">{documents.verified} {t.label_documents_verified ?? "verified"}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="font-medium text-sm">Tier</CardTitle>
+            <CardTitle className="font-medium text-sm">{t.card_tier_title ?? "Tier"}</CardTitle>
             <Building2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="font-bold text-2xl">{tier.tier ?? "—"}</div>
             <p className="text-muted-foreground text-xs">
-              {tier.financial_year ?? "Not assigned yet"}
+              {tier.financial_year ?? (t.tier_not_assessed ?? "Not assigned yet")}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="font-medium text-sm">Notifications</CardTitle>
+            <CardTitle className="font-medium text-sm">{t.card_notifications_title ?? "Notifications"}</CardTitle>
             <Bell className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="font-bold text-2xl">{notifications.unread_count}</div>
-            <p className="text-muted-foreground text-xs">unread</p>
+            <p className="text-muted-foreground text-xs">{t.label_unread ?? "unread"}</p>
           </CardContent>
         </Card>
       </div>
@@ -232,35 +246,35 @@ export default function FpoDashboardPage() {
           {/* FPO Details */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">FPO Details</CardTitle>
+              <CardTitle className="text-base">{t.card_profile_title ?? "FPO Details"}</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-3 sm:grid-cols-2">
               <div className="flex flex-col gap-0.5">
-                <span className="text-muted-foreground text-xs">Registration Date</span>
+                <span className="text-muted-foreground text-xs">{t.label_registered ?? "Registration Date"}</span>
                 <span className="flex items-center gap-1.5 font-medium text-sm">
                   <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
                   {formatDate(profile.date_of_registration)}
                 </span>
               </div>
               <div className="flex flex-col gap-0.5">
-                <span className="text-muted-foreground text-xs">PAN Number</span>
+                <span className="text-muted-foreground text-xs">{t.label_pan_number ?? "PAN Number"}</span>
                 <span className="font-mono font-medium text-sm">{profile.pan_number}</span>
               </div>
               <div className="flex flex-col gap-0.5">
-                <span className="text-muted-foreground text-xs">Documents Status</span>
+                <span className="text-muted-foreground text-xs">{t.label_documents_status ?? "Documents Status"}</span>
                 <span className="flex items-center gap-1.5 font-medium text-sm">
                   <FileCheck className="h-3.5 w-3.5 text-muted-foreground" />
                   {documents.ready_to_submit ? (
-                    <span className="text-green-600">Ready to submit</span>
+                    <span className="text-green-600">{t.label_docs_ready ?? "Ready to submit"}</span>
                   ) : (
                     <span className="text-amber-600">
-                      {documents.required_missing.length} required missing
+                      {documents.required_missing.length} {t.label_docs_missing ?? "required missing"}
                     </span>
                   )}
                 </span>
               </div>
               <div className="flex flex-col gap-0.5">
-                <span className="text-muted-foreground text-xs">Location</span>
+                <span className="text-muted-foreground text-xs">{t.label_location ?? "Location"}</span>
                 <span className="flex items-center gap-1.5 font-medium text-sm">
                   <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
                   {districtLabel}, {location.pincode}
@@ -272,7 +286,7 @@ export default function FpoDashboardPage() {
           {/* Primary Commodities */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Primary Commodities</CardTitle>
+              <CardTitle className="text-base">{t.label_commodity ?? "Primary Commodities"}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
@@ -291,14 +305,14 @@ export default function FpoDashboardPage() {
           {/* Location */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Office Location</CardTitle>
+              <CardTitle className="text-base">{t.map_title ?? "Office Location"}</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
               {location.latitude != null && location.longitude != null ? (
                 <LocationMap lat={location.latitude} lng={location.longitude} />
               ) : (
                 <div className="flex h-52 items-center justify-center rounded-lg bg-muted">
-                  <p className="text-muted-foreground text-sm">No location set</p>
+                  <p className="text-muted-foreground text-sm">{t.label_no_location ?? "No location set"}</p>
                 </div>
               )}
               <div className="flex flex-col gap-0.5 text-sm">
@@ -324,7 +338,7 @@ export default function FpoDashboardPage() {
           {/* Quick Links */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Quick Links</CardTitle>
+              <CardTitle className="text-base">{t.card_quick_actions ?? "Quick Links"}</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-1 p-0 pb-2">
               {quick_links.map((link, i) => (
@@ -343,15 +357,15 @@ export default function FpoDashboardPage() {
           {/* Recent Notifications */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Recent Notifications</CardTitle>
+              <CardTitle className="text-base">{t.card_notifications_title ?? "Recent Notifications"}</CardTitle>
             </CardHeader>
             <CardContent>
               {notifications.recent.length === 0 ? (
                 <div className="flex flex-col items-center gap-2 py-6 text-center">
                   <Bell className="h-8 w-8 text-muted-foreground/40" />
-                  <p className="text-muted-foreground text-sm">No notifications yet</p>
+                  <p className="text-muted-foreground text-sm">{t.no_notifications ?? "No notifications yet"}</p>
                   <p className="text-muted-foreground text-xs">
-                    Updates on your application will appear here
+                    {t.no_notifications_hint ?? "Updates on your application will appear here"}
                   </p>
                 </div>
               ) : (

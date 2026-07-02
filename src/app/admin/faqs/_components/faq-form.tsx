@@ -36,12 +36,16 @@ const settingsSchema = z.object({
 });
 type SettingsValues = z.infer<typeof settingsSchema>;
 
+type T = Record<string, string>;
+
 interface Props {
   mode: "create" | "edit";
   id?: number;
+  t?: T;
+  tCommon?: T;
 }
 
-export function FaqForm({ mode, id }: Props) {
+export function FaqForm({ mode, id, t = {}, tCommon = {} }: Props) {
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -107,13 +111,13 @@ export function FaqForm({ mode, id }: Props) {
         : adminFaqsApi.update(id!, payload);
     },
     onSuccess: () => {
-      toast.success(mode === "create" ? "FAQ created" : "FAQ updated");
+      toast.success(mode === "create" ? (t.toast_created ?? "FAQ created") : (t.toast_updated ?? "FAQ updated"));
       queryClient.invalidateQueries({ queryKey: ["faqs"] });
       router.push("/admin/faqs");
     },
     onError: (err: unknown) => {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      toast.error(msg || "Failed to save FAQ");
+      toast.error(msg || (t.toast_save_failed ?? "Failed to save FAQ"));
     },
   });
 
@@ -122,14 +126,14 @@ export function FaqForm({ mode, id }: Props) {
     const defCode = defaultLang?.code ?? "";
     const defName = defaultLang?.name ?? "default language";
     if (!questionValues[defCode] || !questionValues[defCode].trim()) {
-      setQuestionError(`Question in ${defName} is required`);
+      setQuestionError((t.validation_question_required ?? "Question in {lang} is required").replace("{lang}", defName));
       setActiveLang(defCode || activeLang);
       hasError = true;
     } else {
       setQuestionError("");
     }
     if (!answerValues[defCode] || !answerValues[defCode].trim()) {
-      setAnswerError(`Answer in ${defName} is required`);
+      setAnswerError((t.validation_answer_required ?? "Answer in {lang} is required").replace("{lang}", defName));
       setActiveLang(defCode || activeLang);
       hasError = true;
     } else {
@@ -155,7 +159,7 @@ export function FaqForm({ mode, id }: Props) {
       <div className="rounded-lg border p-5 space-y-4">
         {/* Language selector row */}
         <div className="flex items-center gap-3">
-          <Label className="text-sm shrink-0">Language:</Label>
+          <Label className="text-sm shrink-0">{t.field_language ?? "Language:"}</Label>
           <Select value={activeLang} onValueChange={setActiveLang}>
             <SelectTrigger className="h-8 w-44 text-sm">
               <SelectValue />
@@ -176,14 +180,14 @@ export function FaqForm({ mode, id }: Props) {
             </SelectContent>
           </Select>
           {activeLang && activeLang !== defaultLang?.code && (
-            <span className="text-muted-foreground text-xs">Optional</span>
+            <span className="text-muted-foreground text-xs">{t.optional_lang ?? "Optional"}</span>
           )}
         </div>
 
-        {/* Question — plain textarea (can be long but not rich text) */}
+        {/* Question */}
         <div>
           <Label>
-            Question
+            {t.field_question ?? "Question"}
             {activeLang === defaultLang?.code && <span className="ml-0.5 text-destructive">*</span>}
           </Label>
           <Textarea
@@ -203,7 +207,7 @@ export function FaqForm({ mode, id }: Props) {
         {/* Answer — rich text */}
         <div>
           <Label>
-            Answer
+            {t.field_answer ?? "Answer"}
             {activeLang === defaultLang?.code && <span className="ml-0.5 text-destructive">*</span>}
           </Label>
           <div className="mt-1.5">
@@ -213,7 +217,7 @@ export function FaqForm({ mode, id }: Props) {
                 setAnswerValues((prev) => ({ ...prev, [activeLang]: html }));
                 if (activeLang === defaultLang?.code) setAnswerError("");
               }}
-              placeholder="Write the FAQ answer…"
+              placeholder={t.placeholder_answer ?? "Write the FAQ answer…"}
             />
           </div>
           {activeLang === defaultLang?.code && answerError && (
@@ -223,17 +227,17 @@ export function FaqForm({ mode, id }: Props) {
 
         {activeLang && activeLang !== defaultLang?.code && (
           <p className="text-muted-foreground text-xs">
-            Optional — leave blank to use the {defaultLang?.name} version as fallback.
+            {(t.optional_fallback ?? "Optional — leave blank to use the {lang} version as fallback.").replace("{lang}", defaultLang?.name ?? "default")}
           </p>
         )}
       </div>
 
       {/* Settings */}
       <div className="rounded-lg border p-5 space-y-4">
-        <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Settings</h3>
+        <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">{t.settings_heading ?? "Settings"}</h3>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <Label>Category</Label>
+            <Label>{t.field_category ?? "Category"}</Label>
             <Controller
               name="category"
               control={control}
@@ -243,16 +247,16 @@ export function FaqForm({ mode, id }: Props) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="fpo_general">FPO General</SelectItem>
-                    <SelectItem value="schemes">Schemes & Support</SelectItem>
-                    <SelectItem value="platform_usage">Platform Usage</SelectItem>
+                    <SelectItem value="fpo_general">{t.cat_fpo_general ?? "FPO General"}</SelectItem>
+                    <SelectItem value="schemes">{t.cat_schemes ?? "Schemes & Support"}</SelectItem>
+                    <SelectItem value="platform_usage">{t.cat_platform_usage ?? "Platform Usage"}</SelectItem>
                   </SelectContent>
                 </Select>
               )}
             />
           </div>
           <div>
-            <Label>Order</Label>
+            <Label>{t.field_order ?? "Order"}</Label>
             <Controller
               name="order"
               control={control}
@@ -276,17 +280,17 @@ export function FaqForm({ mode, id }: Props) {
                 <Switch checked={field.value} onCheckedChange={field.onChange} />
               )}
             />
-            <Label>Active</Label>
+            <Label>{t.field_is_active ?? "Active"}</Label>
           </div>
         </div>
       </div>
 
       <div className="flex items-center justify-end gap-3">
         <Button type="button" variant="outline" onClick={() => router.push("/admin/faqs")}>
-          Cancel
+          {tCommon.cancel ?? "Cancel"}
         </Button>
         <Button type="submit" disabled={mutation.isPending}>
-          {mutation.isPending ? "Saving…" : mode === "create" ? "Create" : "Save Changes"}
+          {mutation.isPending ? (t.btn_saving ?? "Saving…") : mode === "create" ? (t.btn_create ?? "Create") : (t.btn_save ?? "Save Changes")}
         </Button>
       </div>
     </form>

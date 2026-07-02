@@ -20,6 +20,8 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import type { AdminExpert } from "@/types/admin";
 import { DISTRICT_OPTIONS } from "@/types/fpo";
 
+type T = Record<string, string>;
+
 const EXPERT_CATEGORIES = [
   { value: "scientist", label: "Scientist / Researcher" },
   { value: "trainer", label: "Trainer / Extension Worker" },
@@ -48,6 +50,8 @@ type FormValues = z.infer<typeof schema>;
 interface ExpertFormProps {
   mode: "create" | "edit";
   expert?: AdminExpert;
+  t?: T;
+  tCommon?: T;
 }
 
 const defaultValues: FormValues = {
@@ -80,7 +84,7 @@ function expertToForm(e: AdminExpert): FormValues {
   };
 }
 
-export function ExpertForm({ mode, expert }: ExpertFormProps) {
+export function ExpertForm({ mode, expert, t = {}, tCommon = {} }: ExpertFormProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const isEdit = mode === "edit";
@@ -111,13 +115,13 @@ export function ExpertForm({ mode, expert }: ExpertFormProps) {
       return isEdit ? adminExpertsApi.update(expert!.id, payload) : adminExpertsApi.create(payload);
     },
     onSuccess: () => {
-      toast.success(isEdit ? "Expert updated successfully" : "Expert created successfully");
+      toast.success(isEdit ? (t.toast_updated ?? "Expert updated successfully") : (t.toast_created ?? "Expert created successfully"));
       queryClient.invalidateQueries({ queryKey: ["experts"] });
       router.push("/admin/experts");
     },
     onError: (error: unknown) => {
       const msg = (error as { message?: string })?.message;
-      toast.error(msg ?? (isEdit ? "Failed to update expert" : "Failed to create expert"));
+      toast.error(msg ?? (isEdit ? (t.toast_update_failed ?? "Failed to update expert") : (t.toast_create_failed ?? "Failed to create expert")));
     },
   });
 
@@ -125,14 +129,14 @@ export function ExpertForm({ mode, expert }: ExpertFormProps) {
     <div className="mx-auto w-full max-w-3xl flex flex-col gap-4">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Expert Details</CardTitle>
+          <CardTitle className="text-base">{t.card_title ?? "Expert Details"}</CardTitle>
         </CardHeader>
         <CardContent>
           <form id="expert-form" onSubmit={handleSubmit((v) => mutation.mutate(v))} className="flex flex-col gap-5">
             <FieldGroup>
               <Field>
                 <FieldLabel htmlFor="name_en">
-                  Name (English) <span className="text-destructive">*</span>
+                  {t.field_name_en ?? "Name (English)"} <span className="text-destructive">*</span>
                 </FieldLabel>
                 <Controller
                   control={control}
@@ -145,7 +149,7 @@ export function ExpertForm({ mode, expert }: ExpertFormProps) {
               </Field>
 
               <Field>
-                <FieldLabel htmlFor="name_ml">Name (Malayalam)</FieldLabel>
+                <FieldLabel htmlFor="name_ml">{t.field_name_ml ?? "Name (Malayalam)"}</FieldLabel>
                 <Controller
                   control={control}
                   name="name_ml"
@@ -158,7 +162,7 @@ export function ExpertForm({ mode, expert }: ExpertFormProps) {
               <div className="grid grid-cols-2 gap-4">
                 <Field>
                   <FieldLabel htmlFor="designation">
-                    Designation <span className="text-destructive">*</span>
+                    {t.field_designation ?? "Designation"} <span className="text-destructive">*</span>
                   </FieldLabel>
                   <Controller
                     control={control}
@@ -172,7 +176,7 @@ export function ExpertForm({ mode, expert }: ExpertFormProps) {
 
                 <Field>
                   <FieldLabel htmlFor="organisation">
-                    Organisation <span className="text-destructive">*</span>
+                    {t.field_organisation ?? "Organisation"} <span className="text-destructive">*</span>
                   </FieldLabel>
                   <Controller
                     control={control}
@@ -187,7 +191,7 @@ export function ExpertForm({ mode, expert }: ExpertFormProps) {
 
               <Field>
                 <FieldLabel htmlFor="category">
-                  Category <span className="text-destructive">*</span>
+                  {t.field_category ?? "Category"} <span className="text-destructive">*</span>
                 </FieldLabel>
                 <Controller
                   control={control}
@@ -197,7 +201,7 @@ export function ExpertForm({ mode, expert }: ExpertFormProps) {
                       value={field.value}
                       onChange={field.onChange}
                       options={EXPERT_CATEGORIES}
-                      placeholder="Select category…"
+                      placeholder={t.placeholder_category ?? "Select category…"}
                     />
                   )}
                 />
@@ -207,7 +211,7 @@ export function ExpertForm({ mode, expert }: ExpertFormProps) {
               <div className="grid grid-cols-2 gap-4">
                 <Field>
                   <FieldLabel htmlFor="primary_expertise">
-                    Primary Expertise <span className="text-destructive">*</span>
+                    {t.field_primary_expertise ?? "Primary Expertise"} <span className="text-destructive">*</span>
                   </FieldLabel>
                   <Controller
                     control={control}
@@ -220,7 +224,7 @@ export function ExpertForm({ mode, expert }: ExpertFormProps) {
                 </Field>
 
                 <Field>
-                  <FieldLabel htmlFor="secondary_expertise">Secondary Expertise</FieldLabel>
+                  <FieldLabel htmlFor="secondary_expertise">{t.field_secondary_expertise ?? "Secondary Expertise"}</FieldLabel>
                   <Controller
                     control={control}
                     name="secondary_expertise"
@@ -235,7 +239,7 @@ export function ExpertForm({ mode, expert }: ExpertFormProps) {
             <div className="border-t pt-4">
               <FieldGroup>
                 <Field>
-                  <FieldLabel htmlFor="district">District</FieldLabel>
+                  <FieldLabel htmlFor="district">{t.field_district ?? "District"}</FieldLabel>
                   <Controller
                     control={control}
                     name="district"
@@ -244,7 +248,7 @@ export function ExpertForm({ mode, expert }: ExpertFormProps) {
                         value={field.value ?? ""}
                         onChange={field.onChange}
                         options={DISTRICT_SELECT_OPTIONS}
-                        placeholder="Select district…"
+                        placeholder={t.placeholder_district ?? "Select district…"}
                       />
                     )}
                   />
@@ -253,7 +257,7 @@ export function ExpertForm({ mode, expert }: ExpertFormProps) {
                 <div className="grid grid-cols-2 gap-4">
                   <Field>
                     <FieldLabel htmlFor="email">
-                      Email <span className="text-destructive">*</span>
+                      {t.field_email ?? "Email"} <span className="text-destructive">*</span>
                     </FieldLabel>
                     <Controller
                       control={control}
@@ -266,7 +270,7 @@ export function ExpertForm({ mode, expert }: ExpertFormProps) {
                   </Field>
 
                   <Field>
-                    <FieldLabel htmlFor="phone">Phone</FieldLabel>
+                    <FieldLabel htmlFor="phone">{t.field_phone ?? "Phone"}</FieldLabel>
                     <Controller
                       control={control}
                       name="phone"
@@ -290,7 +294,7 @@ export function ExpertForm({ mode, expert }: ExpertFormProps) {
                     )}
                   />
                   <label htmlFor="is_active" className="text-sm font-medium cursor-pointer">
-                    Active (visible in Expert Directory)
+                    {t.field_is_active ?? "Active (visible in Expert Directory)"}
                   </label>
                 </div>
               </FieldGroup>
@@ -301,13 +305,13 @@ export function ExpertForm({ mode, expert }: ExpertFormProps) {
 
       <div className="flex items-center justify-end gap-3">
         <Button type="button" variant="outline" onClick={() => router.push("/admin/experts")}>
-          Cancel
+          {tCommon.cancel ?? "Cancel"}
         </Button>
         <Button type="button" variant="ghost" onClick={() => reset(expert ? expertToForm(expert) : defaultValues)}>
-          Reset
+          {tCommon.reset ?? "Reset"}
         </Button>
         <Button type="submit" form="expert-form" disabled={mutation.isPending}>
-          {mutation.isPending ? "Saving…" : "Save"}
+          {mutation.isPending ? (t.btn_saving ?? "Saving…") : (t.btn_save ?? "Save")}
         </Button>
       </div>
     </div>

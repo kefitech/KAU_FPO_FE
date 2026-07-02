@@ -11,16 +11,20 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { AdminFaq } from "@/app/admin/_api/faqs";
 
+type T = Record<string, string>;
+
 interface ColumnActions {
   onEdit: (item: AdminFaq) => void;
   onDelete: (item: AdminFaq) => void;
+  t: T;
+  tCommon: T;
 }
 
-export function getFaqColumns({ onEdit, onDelete }: ColumnActions): ColumnDef<AdminFaq>[] {
+export function getFaqColumns({ onEdit, onDelete, t, tCommon }: ColumnActions): ColumnDef<AdminFaq>[] {
   return [
     {
       accessorKey: "question",
-      header: "Question",
+      header: t.col_question ?? "Question",
       cell: ({ row }) => {
         const question = row.original.question;
         const text = typeof question === "string" ? question : (Object.values(question)[0] ?? "—");
@@ -29,23 +33,23 @@ export function getFaqColumns({ onEdit, onDelete }: ColumnActions): ColumnDef<Ad
     },
     {
       accessorKey: "category",
-      header: "Category",
+      header: t.col_category ?? "Category",
       cell: ({ row }) => (
         <Badge variant="outline">{row.original.category_display ?? row.original.category}</Badge>
       ),
     },
     {
       accessorKey: "order",
-      header: "Order",
+      header: t.col_order ?? "Order",
     },
     {
       accessorKey: "is_active",
-      header: "Status",
+      header: t.col_status ?? "Status",
       cell: ({ row }) =>
         row.original.is_active ? (
-          <Badge className="bg-green-100 text-green-700 hover:bg-green-100">Active</Badge>
+          <Badge className="bg-green-100 text-green-700 hover:bg-green-100">{tCommon.badge_active ?? "Active"}</Badge>
         ) : (
-          <Badge variant="outline" className="text-muted-foreground">Inactive</Badge>
+          <Badge variant="outline" className="text-muted-foreground">{tCommon.badge_inactive ?? "Inactive"}</Badge>
         ),
     },
     {
@@ -62,14 +66,14 @@ export function getFaqColumns({ onEdit, onDelete }: ColumnActions): ColumnDef<Ad
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => onEdit(row.original)}>
               <Pencil className="mr-2 h-4 w-4" />
-              Edit
+              {t.action_edit ?? "Edit"}
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => onDelete(row.original)}
               className="text-destructive focus:text-destructive"
             >
               <Trash2 className="mr-2 h-4 w-4" />
-              Delete
+              {t.action_delete ?? "Delete"}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

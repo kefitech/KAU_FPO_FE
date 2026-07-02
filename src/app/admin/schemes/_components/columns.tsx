@@ -12,7 +12,9 @@ import { Badge } from "@/components/ui/badge";
 import { useConfirmStore } from "@/stores/confirm-store";
 import type { AdminScheme } from "@/types/admin";
 
-function SchemeActions({ scheme }: { scheme: AdminScheme }) {
+type T = Record<string, string>;
+
+function SchemeActions({ scheme, t, tCommon }: { scheme: AdminScheme; t: T; tCommon: T }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const confirm = useConfirmStore((s) => s.confirm);
@@ -21,31 +23,31 @@ function SchemeActions({ scheme }: { scheme: AdminScheme }) {
     mutationFn: () =>
       scheme.is_active ? adminSchemesApi.deactivate(scheme.id) : adminSchemesApi.activate(scheme.id),
     onSuccess: () => {
-      toast.success(scheme.is_active ? "Scheme deactivated" : "Scheme activated");
+      toast.success(scheme.is_active ? (t.toast_deactivated ?? "Scheme deactivated") : (t.toast_activated ?? "Scheme activated"));
       queryClient.invalidateQueries({ queryKey: ["schemes"] });
     },
     onError: (error: unknown) => {
       const msg = (error as { message?: string })?.message;
-      toast.error(msg ?? "Failed to update scheme status");
+      toast.error(msg ?? (tCommon.update_failed ?? "Failed to update scheme status"));
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: () => adminSchemesApi.delete(scheme.id),
     onSuccess: () => {
-      toast.success("Scheme deleted successfully");
+      toast.success(t.toast_deleted ?? "Scheme deleted successfully");
       queryClient.invalidateQueries({ queryKey: ["schemes"] });
     },
     onError: (error: unknown) => {
       const msg = (error as { message?: string })?.message;
-      toast.error(msg ?? "Failed to delete scheme");
+      toast.error(msg ?? (tCommon.delete_failed ?? "Failed to delete scheme"));
     },
   });
 
   function handleDelete() {
     confirm({
-      title: "Delete Scheme",
-      description: `Are you sure you want to delete "${scheme.name_en}"? This action cannot be undone.`,
+      title: t.delete_title ?? "Delete Scheme",
+      description: (t.delete_description ?? 'Are you sure you want to delete "{name}"? This action cannot be undone.').replace("{name}", scheme.name_en ?? ""),
       onConfirm: () => deleteMutation.mutateAsync(),
     });
   }
@@ -53,13 +55,13 @@ function SchemeActions({ scheme }: { scheme: AdminScheme }) {
   return (
     <RowActions
       actions={[
-        { label: "Edit", onClick: () => router.push(`/admin/schemes/${scheme.id}/edit`) },
+        { label: t.action_edit ?? "Edit", onClick: () => router.push(`/admin/schemes/${scheme.id}/edit`) },
         {
-          label: scheme.is_active ? "Deactivate" : "Activate",
+          label: scheme.is_active ? (t.action_deactivate ?? "Deactivate") : (t.action_activate ?? "Activate"),
           onClick: () => activateMutation.mutate(),
           separator: true,
         },
-        { label: "Delete", onClick: handleDelete, destructive: true, separator: true },
+        { label: t.action_delete ?? "Delete", onClick: handleDelete, destructive: true, separator: true },
       ]}
     />
   );
@@ -73,18 +75,18 @@ const CATEGORY_BADGE_COLORS: Record<string, string> = {
   capacity_building: "bg-yellow-100 text-yellow-700",
 };
 
-export function getSchemeColumns(): ColumnDef<AdminScheme>[] {
+export function getSchemeColumns(t: T = {}, tCommon: T = {}): ColumnDef<AdminScheme>[] {
   return [
     {
       accessorKey: "name_en",
-      header: "Name",
+      header: t.col_name ?? "Name",
       cell: ({ row }) => (
         <span className="font-medium max-w-[280px] block truncate">{row.original.name_en}</span>
       ),
     },
     {
       accessorKey: "administering_body",
-      header: "Administering Body",
+      header: t.col_administering_body ?? "Administering Body",
       cell: ({ row }) => (
         <span className="text-sm text-muted-foreground max-w-[200px] block truncate">
           {row.original.administering_body}
@@ -93,7 +95,7 @@ export function getSchemeColumns(): ColumnDef<AdminScheme>[] {
     },
     {
       accessorKey: "category_display",
-      header: "Category",
+      header: t.col_category ?? "Category",
       cell: ({ row }) => {
         const color = CATEGORY_BADGE_COLORS[row.original.category] ?? "bg-muted text-muted-foreground";
         return (
@@ -105,7 +107,7 @@ export function getSchemeColumns(): ColumnDef<AdminScheme>[] {
     },
     {
       accessorKey: "is_active",
-      header: "Status",
+      header: t.col_status ?? "Status",
       enableSorting: false,
       cell: ({ row }) => (
         <Badge
@@ -116,7 +118,7 @@ export function getSchemeColumns(): ColumnDef<AdminScheme>[] {
               : "bg-muted text-muted-foreground"
           }
         >
-          {row.original.is_active ? "Active" : "Inactive"}
+          {row.original.is_active ? (tCommon.badge_active ?? "Active") : (tCommon.badge_inactive ?? "Inactive")}
         </Badge>
       ),
     },
@@ -125,7 +127,7 @@ export function getSchemeColumns(): ColumnDef<AdminScheme>[] {
       header: "",
       enableSorting: false,
       enableHiding: false,
-      cell: ({ row }) => <SchemeActions scheme={row.original} />,
+      cell: ({ row }) => <SchemeActions scheme={row.original} t={t} tCommon={tCommon} />,
     },
   ];
 }

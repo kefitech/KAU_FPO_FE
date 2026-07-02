@@ -25,6 +25,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
+type T = Record<string, string>;
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<
@@ -140,7 +142,7 @@ function FeedbackDetailDialog({
 
 // ─── Feedback Tab ─────────────────────────────────────────────────────────────
 
-export function FeedbackTab() {
+export function FeedbackTab({ t = {} }: { t?: T }) {
   const queryClient = useQueryClient();
   const [viewing, setViewing] = useState<AdminFeedback | null>(null);
 
@@ -159,7 +161,7 @@ export function FeedbackTab() {
       // Update the viewing dialog if it's the same item
       setViewing((prev) => (prev?.id === updated.id ? updated : prev));
     },
-    onError: () => toast.error("Failed to update status."),
+    onError: () => toast.error(t.toast_status_failed ?? "Failed to update status."),
   });
 
   const unreadCount = feedbacks.filter((f) => f.status === "unread").length;
@@ -169,7 +171,7 @@ export function FeedbackTab() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h2 className="text-base font-semibold">Feedback</h2>
+          <h2 className="text-base font-semibold">{t.feedback_section_title ?? "Feedback"}</h2>
           {unreadCount > 0 && (
             <Badge className="bg-blue-600 text-white text-xs">{unreadCount} unread</Badge>
           )}

@@ -36,6 +36,8 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 
+type T = Record<string, string>;
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface PublicLanguage {
@@ -282,7 +284,7 @@ function GalleryDialog({
 
 // ─── Gallery Tab ──────────────────────────────────────────────────────────────
 
-export function GalleryTab() {
+export function GalleryTab({ t = {} }: { t?: T }) {
   const queryClient = useQueryClient();
   const confirm = useConfirmStore((s) => s.confirm);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -299,25 +301,25 @@ export function GalleryTab() {
     mutationFn: ({ id, active }: { id: number; active: boolean }) =>
       active ? galleryApi.activate(id) : galleryApi.deactivate(id),
     onSuccess: () => {
-      toast.success("Photo updated.");
+      toast.success(t.toast_photo_updated ?? "Photo updated.");
       queryClient.invalidateQueries({ queryKey: ["admin-gallery"] });
     },
-    onError: () => toast.error("Failed to update photo."),
+    onError: () => toast.error(t.toast_photo_update_failed ?? "Failed to update photo."),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => galleryApi.remove(id),
     onSuccess: () => {
-      toast.success("Photo deleted.");
+      toast.success(t.toast_photo_deleted ?? "Photo deleted.");
       queryClient.invalidateQueries({ queryKey: ["admin-gallery"] });
     },
-    onError: () => toast.error("Failed to delete photo."),
+    onError: () => toast.error(t.toast_photo_delete_failed ?? "Failed to delete photo."),
   });
 
   function handleDelete(photo: AdminGalleryPhoto) {
     confirm({
-      title: "Delete Photo",
-      description: "Are you sure you want to delete this photo? This cannot be undone.",
+      title: t.photo_delete_title ?? "Delete Photo",
+      description: t.photo_delete_description ?? "Are you sure you want to delete this photo? This cannot be undone.",
       onConfirm: () => deleteMutation.mutateAsync(photo.id),
     });
   }
@@ -336,14 +338,14 @@ export function GalleryTab() {
     <div className="flex flex-col gap-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold">Gallery</h2>
+        <h2 className="text-base font-semibold">{t.gallery_section_title ?? "Gallery"}</h2>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
             <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
           </Button>
           <Button size="sm" onClick={openAdd}>
             <Plus className="mr-1.5 h-4 w-4" />
-            Add Photo
+            {t.btn_add_photo ?? "Add Photo"}
           </Button>
         </div>
       </div>

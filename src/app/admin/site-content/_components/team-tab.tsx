@@ -28,6 +28,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 
+type T = Record<string, string>;
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatFileSize(bytes: number): string {
@@ -243,7 +245,7 @@ function TeamDialog({
 
 // ─── Team Tab ─────────────────────────────────────────────────────────────────
 
-export function TeamTab() {
+export function TeamTab({ t = {} }: { t?: T }) {
   const queryClient = useQueryClient();
   const confirm = useConfirmStore((s) => s.confirm);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -259,25 +261,25 @@ export function TeamTab() {
     mutationFn: ({ id, active }: { id: number; active: boolean }) =>
       active ? teamApi.activate(id) : teamApi.deactivate(id),
     onSuccess: () => {
-      toast.success("Member updated.");
+      toast.success(t.toast_member_updated ?? "Member updated.");
       queryClient.invalidateQueries({ queryKey: ["admin-team"] });
     },
-    onError: () => toast.error("Failed to update member."),
+    onError: () => toast.error(t.toast_member_update_failed ?? "Failed to update member."),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => teamApi.remove(id),
     onSuccess: () => {
-      toast.success("Member deleted.");
+      toast.success(t.toast_member_deleted ?? "Member deleted.");
       queryClient.invalidateQueries({ queryKey: ["admin-team"] });
     },
-    onError: () => toast.error("Failed to delete member."),
+    onError: () => toast.error(t.toast_member_delete_failed ?? "Failed to delete member."),
   });
 
   function handleDelete(member: AdminTeamMember) {
     confirm({
-      title: "Delete Team Member",
-      description: `Are you sure you want to delete "${member.name}"? This cannot be undone.`,
+      title: t.member_delete_title ?? "Delete Team Member",
+      description: (t.member_delete_description ?? 'Are you sure you want to delete "{name}"? This cannot be undone.').replace("{name}", member.name),
       onConfirm: () => deleteMutation.mutateAsync(member.id),
     });
   }
@@ -286,14 +288,14 @@ export function TeamTab() {
     <div className="flex flex-col gap-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold">Team</h2>
+        <h2 className="text-base font-semibold">{t.team_section_title ?? "Team"}</h2>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
             <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
           </Button>
           <Button size="sm" onClick={() => { setEditing(null); setDialogOpen(true); }}>
             <Plus className="mr-1.5 h-4 w-4" />
-            Add Member
+            {t.btn_add_member ?? "Add Member"}
           </Button>
         </div>
       </div>

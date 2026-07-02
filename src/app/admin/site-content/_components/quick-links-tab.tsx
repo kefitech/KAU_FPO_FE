@@ -29,6 +29,8 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
+type T = Record<string, string>;
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatFileSize(bytes: number): string {
@@ -236,7 +238,7 @@ function QuickLinkDialog({
 
 // ─── Quick Links Tab ──────────────────────────────────────────────────────────
 
-export function QuickLinksTab() {
+export function QuickLinksTab({ t = {} }: { t?: T }) {
   const queryClient = useQueryClient();
   const confirm = useConfirmStore((s) => s.confirm);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -252,25 +254,25 @@ export function QuickLinksTab() {
     mutationFn: ({ id, active }: { id: number; active: boolean }) =>
       active ? quickLinksApi.activate(id) : quickLinksApi.deactivate(id),
     onSuccess: () => {
-      toast.success("Quick link updated.");
+      toast.success(t.toast_link_updated ?? "Quick link updated.");
       queryClient.invalidateQueries({ queryKey: ["admin-quick-links"] });
     },
-    onError: () => toast.error("Failed to update quick link."),
+    onError: () => toast.error(t.toast_link_update_failed ?? "Failed to update quick link."),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => quickLinksApi.remove(id),
     onSuccess: () => {
-      toast.success("Quick link deleted.");
+      toast.success(t.toast_link_deleted ?? "Quick link deleted.");
       queryClient.invalidateQueries({ queryKey: ["admin-quick-links"] });
     },
-    onError: () => toast.error("Failed to delete quick link."),
+    onError: () => toast.error(t.toast_link_delete_failed ?? "Failed to delete quick link."),
   });
 
   function handleDelete(link: AdminQuickLink) {
     confirm({
-      title: "Delete Quick Link",
-      description: `Are you sure you want to delete "${link.name}"? This cannot be undone.`,
+      title: t.link_delete_title ?? "Delete Quick Link",
+      description: (t.link_delete_description ?? 'Are you sure you want to delete "{name}"? This cannot be undone.').replace("{name}", link.name),
       onConfirm: () => deleteMutation.mutateAsync(link.id),
     });
   }
@@ -279,14 +281,14 @@ export function QuickLinksTab() {
     <div className="flex flex-col gap-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold">Quick Links</h2>
+        <h2 className="text-base font-semibold">{t.links_section_title ?? "Quick Links"}</h2>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
             <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
           </Button>
           <Button size="sm" onClick={() => { setEditing(null); setDialogOpen(true); }}>
             <Plus className="mr-1.5 h-4 w-4" />
-            Add Link
+            {t.btn_add_link ?? "Add Link"}
           </Button>
         </div>
       </div>
