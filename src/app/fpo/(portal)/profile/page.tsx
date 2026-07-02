@@ -1,5 +1,5 @@
-import { ComingSoon } from "@/components/ui/coming-soon";
+import { redirect } from "next/navigation";
 
 export default function FpoProfilePage() {
-  return <ComingSoon title="My Profile" description="Manage your FPO profile details, documents, and contact information." />;
+  redirect("/fpo/settings/profile");
 }

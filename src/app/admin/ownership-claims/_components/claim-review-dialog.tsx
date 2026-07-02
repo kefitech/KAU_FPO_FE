@@ -77,6 +77,9 @@ export function ClaimReviewDialog({ claim, onOpenChange }: ClaimReviewDialogProp
     confirm({
       title: "Approve Ownership Claim",
       description: `This will transfer ownership of "${claim!.fpo_name}" to ${claim!.claimant_name}. The previous primary user's access will be deactivated. This cannot be undone.`,
+      confirmLabel: "Approve",
+      confirmingLabel: "Approving...",
+      variant: "default",
       onConfirm: () => approveMutation.mutateAsync(),
     });
   }

@@ -1,102 +1,102 @@
-Public - CMS
-
-
-GET
-/api/public/announcements/
-Get announcements & news
-
-
-Returns active announcements. Results are paginated (default 20/page).
-
-Filter: ?category=announcement or ?category=news
-
-Pagination: ?page=1&page_size=20 (max 100)
-
-Send X-Language: ml to get Malayalam text where available.
-
-Results are Redis-cached (24h). Cache is cleared automatically on admin writes.
-
-Parameters
-Cancel
-No parameters
-
-Execute
-Clear
-Responses
-Curl
-
-curl -X 'GET' \
-  'http://localhost:8000/api/public/announcements/' \
-  -H 'accept: */*' \
-  -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzgyODA1NzM3LCJpYXQiOjE3ODI4MDIxMzcsImp0aSI6ImZhNjUyMmZmNGU4ZTQ3YjBhMzhjODllZTI3NzgzZDdjIiwidXNlcl9pZCI6IjMifQ.QeXH7rViioWspmScRykg2hWiSQKipWJ_JNaNO6c2EPc'
-Request URL
-http://localhost:8000/api/public/announcements/
-Server response
-Code	Details
-200	
-Response body
-Download
 {
-  "status": "success",
-  "message": "Success",
-  "data": [
-    {
-      "id": 1,
-      "title": "KAU–FPO Linkage Platform Launched",
-      "body": "Kerala Agricultural University welcomes Farmer Producer Organizations, stakeholders, and institutions to the KAU–FPO Linkage Platform. The platform aims to strengthen FPOs through digital services, expert support, knowledge resources, and institutional networking.",
-      "category": "announcement",
-      "published_date": "2026-06-17"
-    },
-    {
-      "id": 2,
-      "title": "FPO Registration Portal Now Open",
-      "body": "Eligible Farmer Producer Organizations can now register on the platform and access various services, resources, scheme information, and institutional support opportunities.",
-      "category": "announcement",
-      "published_date": "2026-06-17"
-    },
-    {
-      "id": 3,
-      "title": "Expert Directory Introduced for FPO Support",
-      "body": "The platform now provides access to a curated directory of experts covering governance, agribusiness, finance, marketing, value addition, digital agriculture, and institutional development.",
-      "category": "news",
-      "published_date": "2026-06-17"
-    },
-    {
-      "id": 4,
-      "title": "Schemes and Subsidies Information Repository Available",
-      "body": "FPOs can access updated information on government schemes, subsidies, credit facilities, insurance programmes, and infrastructure support initiatives through the platform.",
-      "category": "news",
-      "published_date": "2026-06-17"
+    "status": "success",
+    "message": "Profile retrieved successfully",
+    "data": {
+        "user": {
+            "id": 3,
+            "email": "athul.gopan@kefitech.com",
+            "first_name": "athul",
+            "last_name": "gopan",
+            "phone": "8138882692",
+            "preferred_language": "ml",
+            "role": "super_admin",
+            "permissions": [
+                "*"
+            ]
+        },
+        "menu": [
+            {
+                "label": "Dashboard",
+                "path": "/admin/dashboard",
+                "icon": "personStanding"
+            },
+            {
+                "label": "Notifications",
+                "path": "/admin/notifications",
+                "icon": "bell"
+            },
+            {
+                "label": "Roles",
+                "path": "/admin/roles",
+                "icon": "shield"
+            },
+            {
+                "label": "Sub-Admins",
+                "path": "/admin/sub-admins",
+                "icon": "shieldUserIcon"
+            },
+            {
+                "label": "FPO Permissions",
+                "path": "/admin/fpo-permissions",
+                "icon": "shield-check"
+            },
+            {
+                "label": "FPO Applications",
+                "path": "/admin/applications",
+                "icon": "contrast"
+            },
+            {
+                "label": "External APIs",
+                "path": "/admin/external-apis",
+                "icon": "plug"
+            },
+            {
+                "label": "menu.site_content",
+                "path": "/admin/site-content",
+                "icon": "layout"
+            },
+            {
+                "label": "menu.announcements",
+                "path": "/admin/announcements",
+                "icon": "megaphone"
+            },
+            {
+                "label": "menu.faqs",
+                "path": "/admin/faqs",
+                "icon": "help-circle"
+            },
+            {
+                "label": "menu.ownership_claims",
+                "path": "/admin/ownership-claims",
+                "icon": "briefcase"
+            },
+            {
+                "label": "menu.audit_logs",
+                "path": "/admin/audit-logs",
+                "icon": "clipboard-list"
+            },
+            {
+                "label": "Languages & Translations",
+                "path": "/admin/languages",
+                "icon": "globe"
+            },
+            {
+                "label": "menu.experts",
+                "path": "/admin/experts",
+                "icon": "user-check"
+            },
+            {
+                "label": "menu.schemes",
+                "path": "/admin/schemes",
+                "icon": "book-open"
+            }
+        ],
+        "redirect": null
     }
-  ],
-  "meta": {
-    "pagination": {
-      "page": 1,
-      "page_size": 20,
-      "total_count": 4,
-      "total_pages": 1,
-      "has_next": false,
-      "has_previous": false
-    }
-  }
 }
-Response headers
- allow: GET,HEAD,OPTIONS 
- content-language: en 
- content-length: 1457 
- content-type: application/json 
- cross-origin-opener-policy: same-origin 
- date: Tue,30 Jun 2026 16:52:19 GMT 
- djdt-store-id: 239e96df9ea0422fac32b2a81fe3f4ee 
- referrer-policy: same-origin 
- server: WSGIServer/0.2 CPython/3.10.12 
- server-timing: TimerPanel_utime;dur=69.76900000000796;desc="User CPU time",TimerPanel_stime;dur=0.0;desc="System CPU time",TimerPanel_total;dur=69.76900000000796;desc="Total CPU time",TimerPanel_total_time;dur=94.11788400029764;desc="Elapsed time",SQLPanel_sql_time;dur=17.102623940445483;desc="SQL 2 queries",CachePanel_total_time;dur=9.387348021846265;desc="Cache 3 Calls" 
- vary: Accept,Accept-Language,origin 
- x-content-type-options: nosniff 
- x-frame-options: DENY 
-Responses
-Code	Description	Links
-200	
-No response body
 
-No links
+
+
+admin
+
+

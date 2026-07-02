@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/use-auth";
 import { getIcon } from "@/lib/utils/icon-map";
+import { useAuthStore } from "@/stores/auth-store";
 import type { MenuItem, NavigationConfig } from "@/types/navigation";
 
 interface DynamicSidebarProps {
@@ -116,6 +117,8 @@ function MenuItemComponent({
 
 export function DynamicSidebar({ config, locale = "en" }: DynamicSidebarProps) {
   const pathname = usePathname();
+  const user = useAuthStore((s) => s.user);
+  const isSuperAdmin = user?.role === "super_admin";
   const LogoIcon = getIcon(config.logo.icon);
 
   return (
@@ -155,9 +158,11 @@ export function DynamicSidebar({ config, locale = "en" }: DynamicSidebarProps) {
 
       <SidebarFooter className="border-border/50 border-t pt-2">
         <SidebarMenu>
-          {config.footerItems.map((item) => (
-            <MenuItemComponent key={item.id} item={item} pathname={pathname} locale={locale} />
-          ))}
+          {config.footerItems
+            .filter((item) => item.id !== "settings" || isSuperAdmin)
+            .map((item) => (
+              <MenuItemComponent key={item.id} item={item} pathname={pathname} locale={locale} />
+            ))}
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
