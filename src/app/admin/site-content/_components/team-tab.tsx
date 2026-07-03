@@ -7,17 +7,9 @@ import { Eye, EyeOff, MoreHorizontal, Pencil, Plus, RefreshCw, Trash2, UserRound
 import { toast } from "sonner";
 
 import { teamApi } from "@/app/admin/_api/team";
-import { useConfirmStore } from "@/stores/confirm-store";
-import type { AdminTeamMember } from "@/types/admin";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +19,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useConfirmStore } from "@/stores/confirm-store";
+import type { AdminTeamMember } from "@/types/admin";
 
 type T = Record<string, string>;
 
@@ -38,19 +32,27 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function MemberAvatar({ photo_url, name, size = "lg" }: { photo_url: string | null; name: string; size?: "sm" | "lg" }) {
+function MemberAvatar({
+  photo_url,
+  name,
+  size = "lg",
+}: {
+  photo_url: string | null;
+  name: string;
+  size?: "sm" | "lg";
+}) {
   const dim = size === "lg" ? "h-20 w-20" : "h-14 w-14";
   const text = size === "lg" ? "text-xl" : "text-base";
-  const initials = name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+  const initials = name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
 
   if (photo_url) {
-    return (
-      <img
-        src={photo_url}
-        alt={name}
-        className={`${dim} rounded-full object-cover ring-2 ring-border`}
-      />
-    );
+    return <img src={photo_url} alt={name} className={`${dim} rounded-full object-cover ring-2 ring-border`} />;
   }
   return (
     <div className={`${dim} rounded-full bg-muted flex items-center justify-center ring-2 ring-border`}>
@@ -111,7 +113,7 @@ function TeamDialog({
     onError: () => toast.error("Failed to save member."),
   });
 
-  const canSubmit = !!name.trim() && (editing ? true : !!photo);
+  const canSubmit = !!name.trim() && !!designation.trim() && (editing ? true : !!photo);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -123,9 +125,7 @@ function TeamDialog({
         <div className="flex flex-col gap-4 py-2">
           {/* Photo */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium">
-              Photo {!editing && <span className="text-destructive">*</span>}
-            </label>
+            <p className="text-sm font-medium">Photo {!editing && <span className="text-destructive">*</span>}</p>
 
             {/* Existing photo (edit, no replacement yet) */}
             {editing && !photo && (
@@ -195,33 +195,40 @@ function TeamDialog({
 
           {/* Name */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium">
+            <label htmlFor="member-name" className="text-sm font-medium">
               Name <span className="text-destructive">*</span>
             </label>
             <Input
+              id="member-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Full name"
+              maxLength={20}
             />
           </div>
 
           {/* Designation */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium">
-              Designation <span className="text-muted-foreground text-xs">(optional)</span>
+            <label htmlFor="member-designation" className="text-sm font-medium">
+              Designation <span className="text-destructive">*</span>
             </label>
             <Input
+              id="member-designation"
               value={designation}
               onChange={(e) => setDesignation(e.target.value)}
               placeholder="e.g. Vice Chancellor, KAU"
+              maxLength={50}
             />
           </div>
 
           {/* Order */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium">Display Order</label>
+            <label htmlFor="member-order" className="text-sm font-medium">
+              Display Order
+            </label>
             <Input
-              type="number"
+              id="member-order"
+              type="number-order"
               min={1}
               value={order}
               onChange={(e) => setOrder(Number(e.target.value))}
@@ -251,7 +258,12 @@ export function TeamTab({ t = {} }: { t?: T }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<AdminTeamMember | null>(null);
 
-  const { data: members = [], isLoading, isFetching, refetch } = useQuery({
+  const {
+    data: members = [],
+    isLoading,
+    isFetching,
+    refetch,
+  } = useQuery({
     queryKey: ["admin-team"],
     queryFn: teamApi.getAll,
     staleTime: 30_000,
@@ -279,7 +291,9 @@ export function TeamTab({ t = {} }: { t?: T }) {
   function handleDelete(member: AdminTeamMember) {
     confirm({
       title: t.member_delete_title ?? "Delete Team Member",
-      description: (t.member_delete_description ?? 'Are you sure you want to delete "{name}"? This cannot be undone.').replace("{name}", member.name),
+      description: (
+        t.member_delete_description ?? 'Are you sure you want to delete "{name}"? This cannot be undone.'
+      ).replace("{name}", member.name),
       onConfirm: () => deleteMutation.mutateAsync(member.id),
     });
   }
@@ -293,7 +307,13 @@ export function TeamTab({ t = {} }: { t?: T }) {
           <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
             <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
           </Button>
-          <Button size="sm" onClick={() => { setEditing(null); setDialogOpen(true); }}>
+          <Button
+            size="sm"
+            onClick={() => {
+              setEditing(null);
+              setDialogOpen(true);
+            }}
+          >
             <Plus className="mr-1.5 h-4 w-4" />
             {t.btn_add_member ?? "Add Member"}
           </Button>
@@ -318,7 +338,9 @@ export function TeamTab({ t = {} }: { t?: T }) {
           <p className="text-sm">No team members added yet.</p>
         </div>
       ) : (
-        <div className={`grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 transition-opacity ${isFetching ? "opacity-60" : ""}`}>
+        <div
+          className={`grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 transition-opacity ${isFetching ? "opacity-60" : ""}`}
+        >
           {members.map((member) => (
             <div
               key={member.id}
@@ -361,7 +383,12 @@ export function TeamTab({ t = {} }: { t?: T }) {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => { setEditing(member); setDialogOpen(true); }}>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setEditing(member);
+                        setDialogOpen(true);
+                      }}
+                    >
                       <Pencil className="mr-2 h-4 w-4" />
                       Edit
                     </DropdownMenuItem>
@@ -381,10 +408,7 @@ export function TeamTab({ t = {} }: { t?: T }) {
                       )}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      className="text-destructive"
-                      onClick={() => handleDelete(member)}
-                    >
+                    <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(member)}>
                       <Trash2 className="mr-2 h-4 w-4" />
                       Delete
                     </DropdownMenuItem>
