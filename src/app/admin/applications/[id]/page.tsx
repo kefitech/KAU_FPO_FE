@@ -968,7 +968,7 @@ function ApplicationDetailContent() {
         <div className="flex flex-col gap-5">
           <div className="grid gap-5 lg:grid-cols-2">
             <SectionCard icon={Building2} title={t.section_basic_info ?? "Basic Information"}>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 ">
                 <InfoRow label={t.field_name_en ?? "FPO Name (English)"} value={app.name} />
                 <InfoRow label={t.field_name_ml ?? "FPO Name (Malayalam)"} value={app.name_ml} />
                 <InfoRow

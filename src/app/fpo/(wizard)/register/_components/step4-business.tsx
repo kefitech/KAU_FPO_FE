@@ -345,7 +345,7 @@ export function Step4Business({ profile, onSave, onSuccess, onBack }: Step4Props
             <FieldLabel htmlFor="bank_branch">
               Branch <span className="text-destructive">*</span>
             </FieldLabel>
-            <Input id="bank_branch" placeholder="e.g. Irinjalakuda" {...register("bank_branch")} />
+            <Input id="bank_branch" placeholder="e.g. Irinjalakuda" maxLength={60} {...register("bank_branch")} />
             {errors.bank_branch && <FieldError errors={[errors.bank_branch]} />}
           </Field>
         </div>

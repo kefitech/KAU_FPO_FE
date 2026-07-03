@@ -380,6 +380,7 @@ export function Step3Signatory({ profile, onSave, onSuccess, onBack }: Step3Prop
             <Input
               id="facilitating_agency_name"
               placeholder="e.g. NABARD Kerala"
+              maxLength={60}
               {...register("facilitating_agency_name")}
             />
             {errors.facilitating_agency_name && <FieldError errors={[errors.facilitating_agency_name]} />}
