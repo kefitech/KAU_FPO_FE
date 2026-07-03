@@ -7,6 +7,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
 
 import { adminSchemesApi } from "@/app/admin/_api/schemes";
+import { TextCell } from "@/components/data-table/cell-helpers";
 import { RowActions } from "@/components/data-table/row-actions";
 import { Badge } from "@/components/ui/badge";
 import { useConfirmStore } from "@/stores/confirm-store";
@@ -80,18 +81,12 @@ export function getSchemeColumns(t: T = {}, tCommon: T = {}): ColumnDef<AdminSch
     {
       accessorKey: "name_en",
       header: t.col_name ?? "Name",
-      cell: ({ row }) => (
-        <span className="font-medium max-w-[280px] block truncate">{row.original.name_en}</span>
-      ),
+      cell: ({ row }) => <TextCell value={row.original.name_en} maxWidth="max-w-[280px]" />,
     },
     {
       accessorKey: "administering_body",
       header: t.col_administering_body ?? "Administering Body",
-      cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground max-w-[200px] block truncate">
-          {row.original.administering_body}
-        </span>
-      ),
+      cell: ({ row }) => <TextCell value={row.original.administering_body} maxWidth="max-w-[200px]" muted />,
     },
     {
       accessorKey: "category_display",

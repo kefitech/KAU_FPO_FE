@@ -4,15 +4,18 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
+import { adminFaqsApi, type AdminFaq } from "@/app/admin/_api/faqs";
 import { DataTable } from "@/components/data-table/data-table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ViewSheet } from "@/components/ui/view-sheet";
 import { translationsApi } from "@/lib/api/translations";
 import { useConfirmStore } from "@/stores/confirm-store";
 import { useLocaleStore } from "@/stores/locale-store";
-import { adminFaqsApi, type AdminFaq } from "@/app/admin/_api/faqs";
+
 import { getFaqColumns } from "./_components/columns";
 
 type T = Record<string, string>;
@@ -24,6 +27,7 @@ export default function FaqsPage() {
   const locale = useLocaleStore((s) => s.locale);
   const [t, setT] = useState<T>({});
   const [tCommon, setTCommon] = useState<T>({});
+  const [sheet, setSheet] = useState<{ open: boolean; item: AdminFaq | null }>({ open: false, item: null });
 
   useEffect(() => {
     translationsApi
@@ -86,7 +90,51 @@ export default function FaqsPage() {
             ],
           },
         ]}
+        onRowClick={(row) => setSheet({ open: true, item: row })}
       />
+
+      {sheet.item && (
+        <ViewSheet
+          open={sheet.open}
+          onOpenChange={(open) => setSheet((prev) => ({ ...prev, open }))}
+          title={sheet.item.question?.en ?? Object.values(sheet.item.question ?? {})[0] ?? "FAQ"}
+          actions={[
+            {
+              label: t.btn_edit ?? "Edit",
+              icon: Pencil,
+              onClick: () => {
+                setSheet((prev) => ({ ...prev, open: false }));
+                router.push(`/admin/faqs/${sheet.item!.id}/edit`);
+              },
+            },
+          ]}
+          fields={[
+            { type: "section", label: "Details" },
+            {
+              label: "Category",
+              type: "node",
+              node: (
+                <Badge variant="secondary" className="text-xs font-medium">
+                  {sheet.item.category_display}
+                </Badge>
+              ),
+            },
+            { label: "Status", type: "status", active: sheet.item.is_active, activeLabel: tCommon.badge_active ?? "Active", inactiveLabel: tCommon.badge_inactive ?? "Inactive" },
+            { label: "Order", value: String(sheet.item.order) },
+            { label: "Created", type: "date", value: sheet.item.created_at },
+            { type: "section", label: "Content (English)" },
+            { label: "Question (EN)", value: sheet.item.question?.en ?? Object.values(sheet.item.question ?? {})[0] },
+            { label: "Answer (EN)", value: sheet.item.answer?.en ?? Object.values(sheet.item.answer ?? {})[0] },
+            ...(sheet.item.question?.ml
+              ? [
+                  { type: "section" as const, label: "Content (Malayalam)" },
+                  { label: "Question (ML)", value: sheet.item.question.ml },
+                  { label: "Answer (ML)", value: sheet.item.answer?.ml },
+                ]
+              : []),
+          ]}
+        />
+      )}
     </div>
   );
 }

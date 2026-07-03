@@ -1,23 +1,10 @@
 import { api } from "@/lib/api/client";
+import type { DataTableParams, PaginatedResponse } from "@/types/pagination";
 import type { AdminOwnershipClaim } from "@/types/admin";
 
-export interface ClaimsListResponse {
-  data: AdminOwnershipClaim[];
-  meta: {
-    pagination: {
-      page: number;
-      page_size: number;
-      total_count: number;
-      total_pages: number;
-      has_next: boolean;
-      has_previous: boolean;
-    };
-  };
-}
-
 export const adminOwnershipClaimsApi = {
-  list: (params?: { status?: string; page?: number }): Promise<ClaimsListResponse> =>
-    api.get("/admin/ownership-claims/", { params }).then((r) => r.data as ClaimsListResponse),
+  list: (params?: DataTableParams): Promise<PaginatedResponse<AdminOwnershipClaim>> =>
+    api.get("/admin/ownership-claims/", { params }).then((r) => r.data as PaginatedResponse<AdminOwnershipClaim>),
 
   get: (id: number): Promise<AdminOwnershipClaim> =>
     api.get(`/admin/ownership-claims/${id}/`).then((r) => {

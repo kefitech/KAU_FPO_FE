@@ -7,6 +7,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
 
 import { channelSettingsApi } from "@/app/admin/_api/notification-channel-settings";
+import { TextCell } from "@/components/data-table/cell-helpers";
 import { RowActions } from "@/components/data-table/row-actions";
 import { Badge } from "@/components/ui/badge";
 import { useConfirmStore } from "@/stores/confirm-store";
@@ -116,10 +117,9 @@ export function getChannelSettingsColumns(
     {
       accessorKey: "config",
       header: t.col_config ?? "Configuration",
-      cell: ({ row }) => {
-        const preview = getConfigPreview(row.original.config);
-        return <span className="font-mono text-muted-foreground text-xs">{preview}</span>;
-      },
+      cell: ({ row }) => (
+        <TextCell value={getConfigPreview(row.original.config)} maxWidth="max-w-[200px]" muted mono />
+      ),
     },
     {
       accessorKey: "is_active",

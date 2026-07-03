@@ -79,6 +79,7 @@ function StatusBadge({ status }: { status: ApplicationStatus }) {
     rejected: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
     info_required: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300",
     suspended: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
+    claimed: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
   };
   return (
     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 font-medium text-xs ${cls[status]}`}>

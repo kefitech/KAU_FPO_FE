@@ -4,12 +4,14 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { type AdminAnnouncement, adminAnnouncementsApi } from "@/app/admin/_api/announcements";
 import { DataTable } from "@/components/data-table/data-table";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ViewSheet } from "@/components/ui/view-sheet";
 import { translationsApi } from "@/lib/api/translations";
 import { useConfirmStore } from "@/stores/confirm-store";
 import { useLocaleStore } from "@/stores/locale-store";
@@ -25,6 +27,7 @@ export default function AnnouncementsPage() {
   const locale = useLocaleStore((s) => s.locale);
   const [t, setT] = useState<T>({});
   const [tCommon, setTCommon] = useState<T>({});
+  const [sheet, setSheet] = useState<{ open: boolean; item: AdminAnnouncement | null }>({ open: false, item: null });
 
   useEffect(() => {
     translationsApi
@@ -88,7 +91,51 @@ export default function AnnouncementsPage() {
             ],
           },
         ]}
+        onRowClick={(row) => setSheet({ open: true, item: row })}
       />
+
+      {sheet.item && (
+        <ViewSheet
+          open={sheet.open}
+          onOpenChange={(open) => setSheet((prev) => ({ ...prev, open }))}
+          title={sheet.item.title?.en ?? Object.values(sheet.item.title ?? {})[0] ?? "Announcement"}
+          actions={[
+            {
+              label: t.btn_edit ?? "Edit",
+              icon: Pencil,
+              onClick: () => {
+                setSheet((prev) => ({ ...prev, open: false }));
+                router.push(`/admin/announcements/${sheet.item!.id}/edit`);
+              },
+            },
+          ]}
+          fields={[
+            { type: "section", label: "Details" },
+            {
+              label: "Category",
+              type: "node",
+              node: (
+                <Badge variant="secondary" className="text-xs font-medium">
+                  {sheet.item.category_display}
+                </Badge>
+              ),
+            },
+            { label: "Status", type: "status", active: sheet.item.is_active, activeLabel: tCommon.badge_active ?? "Active", inactiveLabel: tCommon.badge_inactive ?? "Inactive" },
+            { label: "Published Date", type: "date", value: sheet.item.published_date },
+            { label: "Created", type: "date", value: sheet.item.created_at },
+            { type: "section", label: "Content (English)" },
+            { label: "Title (EN)", value: sheet.item.title?.en ?? Object.values(sheet.item.title ?? {})[0] },
+            { label: "Body (EN)", value: sheet.item.body?.en ?? Object.values(sheet.item.body ?? {})[0] },
+            ...(sheet.item.title?.ml
+              ? [
+                  { type: "section" as const, label: "Content (Malayalam)" },
+                  { label: "Title (ML)", value: sheet.item.title.ml },
+                  { label: "Body (ML)", value: sheet.item.body?.ml },
+                ]
+              : []),
+          ]}
+        />
+      )}
     </div>
   );
 }

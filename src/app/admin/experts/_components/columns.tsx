@@ -7,6 +7,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
 
 import { adminExpertsApi } from "@/app/admin/_api/experts";
+import { TextCell } from "@/components/data-table/cell-helpers";
 import { RowActions } from "@/components/data-table/row-actions";
 import { Badge } from "@/components/ui/badge";
 import { useConfirmStore } from "@/stores/confirm-store";
@@ -80,26 +81,16 @@ export function getExpertColumns(t: T = {}, tCommon: T = {}): ColumnDef<AdminExp
       accessorKey: "name_en",
       header: t.col_name ?? "Name",
       cell: ({ row }) => (
-        <div className="w-[300px]">
-          <p className="font-medium truncate" title={row.original.name_en}>
-            {row.original.name_en}
-          </p>
-          {row.original.designation && (
-            <p className="text-xs text-muted-foreground truncate" title={row.original.designation}>
-              {row.original.designation}
-            </p>
-          )}
+        <div className="flex flex-col">
+          <TextCell value={row.original.name_en} maxWidth="max-w-[200px]" />
+          <TextCell value={row.original.designation} maxWidth="max-w-[200px]" muted />
         </div>
       ),
     },
     {
       accessorKey: "organisation",
       header: t.col_organisation ?? "Organisation",
-      cell: ({ row }) => (
-        <div className="w-[350px]">
-          <span className="text-sm text-muted-foreground truncate">{row.original.organisation}</span>
-        </div>
-      ),
+      cell: ({ row }) => <TextCell value={row.original.organisation} maxWidth="max-w-[220px]" muted />,
     },
     {
       accessorKey: "category_display",

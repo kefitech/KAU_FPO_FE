@@ -81,7 +81,7 @@ export function getTranslationColumns(t: T = {}, tCommon: T = {}): ColumnDef<Tra
       header: t.col_language ?? "Language",
       cell: ({ row }) => (
         <div className="flex min-w-0 items-center gap-1.5">
-          <span className="truncate text-sm">{row.original.language_name}</span>
+          <TextCell value={row.original.language_name} maxWidth="max-w-[100px]" />
           <Badge variant="outline" className="shrink-0 px-1 py-0 font-mono text-xs">
             {row.original.language_code}
           </Badge>
@@ -98,9 +98,7 @@ export function getTranslationColumns(t: T = {}, tCommon: T = {}): ColumnDef<Tra
       accessorKey: "value",
       meta: { width: "35%" },
       header: t.col_value ?? "Value",
-      cell: ({ row }) => (
-        <span className="whitespace-normal break-words text-sm leading-relaxed">{row.original.value || "—"}</span>
-      ),
+      cell: ({ row }) => <TextCell value={row.original.value} maxWidth="max-w-[300px]" />,
     },
     {
       accessorKey: "is_verified",

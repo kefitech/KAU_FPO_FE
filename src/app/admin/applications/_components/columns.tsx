@@ -8,6 +8,7 @@ import { ArrowRightCircle, Eye, MoreHorizontal } from "lucide-react";
 import { toast } from "sonner";
 
 import { type ApplicationListItem, type ApplicationStatus, adminApplicationsApi } from "@/app/admin/_api/applications";
+import { TextCell } from "@/components/data-table/cell-helpers";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +29,7 @@ function StatusBadge({ status, label }: { status: ApplicationStatus; label: stri
     rejected: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
     info_required: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300",
     suspended: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
+    claimed: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
   };
   return (
     <span className={`inline-flex items-center rounded-full px-2 py-0.5 font-medium text-xs ${variants[status]}`}>
@@ -80,16 +82,12 @@ export function getApplicationColumns(t: T, tCommon: T): ColumnDef<ApplicationLi
     {
       accessorKey: "application_id",
       header: t.col_application_id ?? "Application ID",
-      cell: ({ row }) => (
-        <span className="font-mono text-xs">
-          {row.original.application_id || <span className="text-muted-foreground">—</span>}
-        </span>
-      ),
+      cell: ({ row }) => <TextCell value={row.original.application_id} mono maxWidth="max-w-[160px]" />,
     },
     {
       accessorKey: "name",
       header: t.col_fpo_name ?? "FPO Name",
-      cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
+      cell: ({ row }) => <TextCell value={row.original.name} maxWidth="max-w-[220px]" />,
     },
     {
       accessorKey: "district_display",
@@ -106,10 +104,8 @@ export function getApplicationColumns(t: T, tCommon: T): ColumnDef<ApplicationLi
       enableSorting: false,
       cell: ({ row }) => (
         <div className="flex flex-col">
-          <span className="font-medium text-sm">{row.original.primary_user_name ?? "—"}</span>
-          {row.original.primary_user_email && (
-            <span className="text-muted-foreground text-xs">{row.original.primary_user_email}</span>
-          )}
+          <TextCell value={row.original.primary_user_name} maxWidth="max-w-[180px]" />
+          <TextCell value={row.original.primary_user_email} maxWidth="max-w-[180px]" muted />
         </div>
       ),
     },

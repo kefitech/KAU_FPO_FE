@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import dynamic from "next/dynamic";
 
 import { adminDashboardApi } from "@/app/admin/_api/dashboard";
+import { FpoReportCard } from "./_components/fpo-report-card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -419,6 +420,9 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* ── Row 4: Reports ───────────────────────────────────────────────────── */}
+      <FpoReportCard />
     </div>
   );
 }

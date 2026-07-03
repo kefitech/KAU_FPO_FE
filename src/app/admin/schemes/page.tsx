@@ -4,13 +4,16 @@ import { Suspense, useEffect, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
-import { Plus } from "lucide-react";
+import { ExternalLink, Pencil, Plus } from "lucide-react";
 
 import { adminSchemesApi } from "@/app/admin/_api/schemes";
 import { DataTable } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ViewSheet } from "@/components/ui/view-sheet";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
+import type { AdminScheme } from "@/types/admin";
 
 import { getSchemeColumns } from "./_components/columns";
 
@@ -30,11 +33,23 @@ const FILTERS = [
   },
 ];
 
+const CATEGORY_BADGE_COLORS: Record<string, string> = {
+  credit: "bg-blue-100 text-blue-700",
+  insurance: "bg-purple-100 text-purple-700",
+  marketing: "bg-green-100 text-green-700",
+  infrastructure: "bg-orange-100 text-orange-700",
+  capacity_building: "bg-yellow-100 text-yellow-700",
+};
+
 export default function SchemesPage() {
   const router = useRouter();
   const locale = useLocaleStore((s) => s.locale);
   const [t, setT] = useState<T>({});
   const [tCommon, setTCommon] = useState<T>({});
+  const [sheet, setSheet] = useState<{ open: boolean; scheme: AdminScheme | null }>({
+    open: false,
+    scheme: null,
+  });
 
   useEffect(() => {
     translationsApi
@@ -45,6 +60,8 @@ export default function SchemesPage() {
       })
       .catch(() => undefined);
   }, [locale]);
+
+  const s = sheet.scheme;
 
   return (
     <div className="flex flex-col gap-6 px-8 py-6">
@@ -67,8 +84,56 @@ export default function SchemesPage() {
           queryFn={adminSchemesApi.getAll}
           columns={getSchemeColumns(t, tCommon)}
           filters={FILTERS}
+          onRowClick={(row) => setSheet({ open: true, scheme: row })}
         />
       </Suspense>
+
+      {s && (
+        <ViewSheet
+          open={sheet.open}
+          onOpenChange={(open) => setSheet((prev) => ({ ...prev, open }))}
+          title={s.name_en}
+          actions={[
+            {
+              label: "Edit",
+              icon: Pencil,
+              onClick: () => router.push(`/admin/schemes/${s.id}/edit`),
+            },
+            ...(s.official_link
+              ? [
+                  {
+                    label: "Official Link",
+                    icon: ExternalLink,
+                    onClick: () => window.open(s.official_link, "_blank"),
+                  },
+                ]
+              : []),
+          ]}
+          fields={[
+            { type: "section", label: "Overview" },
+            {
+              label: "Category",
+              type: "node",
+              node: (
+                <Badge
+                  className={`text-xs font-medium ${CATEGORY_BADGE_COLORS[s.category] ?? "bg-muted text-muted-foreground"}`}
+                  variant="secondary"
+                >
+                  {s.category_display}
+                </Badge>
+              ),
+            },
+            { label: "Administering Body", value: s.administering_body },
+            { label: "Status", type: "status", active: s.is_active, activeLabel: tCommon.badge_active ?? "Active", inactiveLabel: tCommon.badge_inactive ?? "Inactive" },
+            { label: "Last Updated", type: "date", value: s.last_updated },
+            ...(s.objective ? [{ label: "Objective", value: s.objective }] : []),
+            { type: "section" as const, label: "Details" },
+            { label: "Eligibility", value: s.eligibility },
+            { label: "Benefit Details", value: s.benefit_details },
+            { label: "Application Process", value: s.application_process },
+          ]}
+        />
+      )}
     </div>
   );
 }

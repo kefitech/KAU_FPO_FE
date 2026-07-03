@@ -1,9 +1,10 @@
 "use client";
 
+import { useCallback, useEffect, useRef, useState } from "react";
+
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 
 // ─── Actions ─────────────────────────────────────────────────────────────────
 
@@ -23,13 +24,10 @@ export interface SheetField {
   label: string;
   type?: SheetFieldType;
   value?: string | number | null;
-  // status
   active?: boolean;
   activeLabel?: string;
   inactiveLabel?: string;
-  // tags
   tags?: string[];
-  // arbitrary JSX
   node?: React.ReactNode;
 }
 
@@ -130,6 +128,10 @@ function renderField(field: SheetField) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
+const MIN_WIDTH = 320;
+const MAX_WIDTH = 800;
+const DEFAULT_WIDTH = 480;
+
 interface ViewSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -139,9 +141,62 @@ interface ViewSheetProps {
 }
 
 export function ViewSheet({ open, onOpenChange, title, fields, actions }: ViewSheetProps) {
+  const [width, setWidth] = useState(DEFAULT_WIDTH);
+  const dragging = useRef(false);
+  const startX = useRef(0);
+  const startWidth = useRef(DEFAULT_WIDTH);
+
+  const onMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      dragging.current = true;
+      startX.current = e.clientX;
+      startWidth.current = width;
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    },
+    [width],
+  );
+
+  useEffect(() => {
+    function onMouseMove(e: MouseEvent) {
+      if (!dragging.current) return;
+      // sheet opens from the right, so dragging left = bigger width
+      const delta = startX.current - e.clientX;
+      setWidth(Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth.current + delta)));
+    }
+    function onMouseUp() {
+      if (!dragging.current) return;
+      dragging.current = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    }
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, []);
+
+  // reset width when sheet closes
+  useEffect(() => {
+    if (!open) setWidth(DEFAULT_WIDTH);
+  }, [open]);
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-[480px] flex flex-col gap-0 p-0 overflow-hidden">
+      <SheetContent
+        style={{ width, maxWidth: MAX_WIDTH }}
+        className="flex flex-col gap-0 p-0 overflow-hidden"
+      >
+        {/* Drag handle on the left edge */}
+        <div
+          onMouseDown={onMouseDown}
+          style={{ cursor: "col-resize", position: "absolute", left: 0, top: 0, bottom: 0, width: 6, zIndex: 50 }}
+          className="hover:bg-primary/20 active:bg-primary/30 transition-colors"
+        />
+
         {/* Header */}
         <SheetHeader className="px-6 py-5 border-b bg-muted/20">
           <SheetTitle className="text-base font-semibold tracking-tight">{title}</SheetTitle>
@@ -175,9 +230,9 @@ export function ViewSheet({ open, onOpenChange, title, fields, actions }: ViewSh
           <div className="px-6 pb-8">
             {fields.map((field, i) =>
               field.type === "section" ? (
-                <SectionDivider key={`section-${i}`} label={field.label} />
+                <SectionDivider key={i} label={field.label} />
               ) : (
-                <DetailRow key={field.label} label={field.label}>
+                <DetailRow key={i} label={field.label}>
                   {renderField(field)}
                 </DetailRow>
               )

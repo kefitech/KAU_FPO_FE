@@ -32,7 +32,8 @@ export type ApplicationStatus =
   | "approved"
   | "rejected"
   | "info_required"
-  | "suspended";
+  | "suspended"
+  | "claimed";
 
 export interface ApplicationListItem {
   id: number;

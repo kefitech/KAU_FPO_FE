@@ -5,9 +5,22 @@
 
 import { Badge } from "@/components/ui/badge";
 
-export function TextCell({ value, muted }: { value: string; muted?: boolean }) {
+export function TextCell({
+  value,
+  muted,
+  maxWidth = "max-w-[200px]",
+  mono,
+}: {
+  value?: string | null;
+  muted?: boolean;
+  maxWidth?: string;
+  mono?: boolean;
+}) {
   return (
-    <span className={`truncate${muted ? "text-muted-foreground text-sm" : ""}`} title={value || undefined}>
+    <span
+      className={`block truncate ${maxWidth} ${muted ? "text-muted-foreground text-sm" : ""} ${mono ? "font-mono text-xs" : ""}`}
+      title={value ?? undefined}
+    >
       {value || "—"}
     </span>
   );
