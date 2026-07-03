@@ -6,7 +6,6 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { da } from "date-fns/locale";
 import {
   AlertCircle,
   ArrowLeft,
@@ -358,8 +357,6 @@ function tierBadgeClass(tier: string) {
   );
 }
 
-const currentYear = new Date().getFullYear();
-
 const assignTierSchema = z.object({
   tier: z.string().min(1),
   financial_year: z
@@ -647,7 +644,7 @@ function TeamTab({ fpoId }: { fpoId: number }) {
     staleTime: 30_000,
   });
 
-  const users = data?.data ?? [];
+  const users = Array.from(new Map((data?.data ?? []).map((u) => [u.id, u])).values());
 
   if (isLoading)
     return (

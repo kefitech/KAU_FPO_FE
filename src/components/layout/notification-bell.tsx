@@ -119,7 +119,9 @@ export function NotificationBell() {
   };
 
   const unreadCount = countData?.unread_count ?? 0;
-  const notifications: InboxNotification[] = listData?.data ?? [];
+  const notifications: InboxNotification[] = Array.from(
+    new Map((listData?.data ?? []).map((n) => [n.id, n])).values(),
+  );
   const hasUnread = notifications.some((n) => !n.is_read);
 
   return (
