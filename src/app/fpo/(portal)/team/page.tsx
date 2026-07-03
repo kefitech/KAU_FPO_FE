@@ -7,16 +7,16 @@ import { CheckSquare, UploadCloud, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 import { fpoTeamApi } from "@/app/fpo/_api/team";
-import { translationsApi } from "@/lib/api/translations";
-import { useLocaleStore } from "@/stores/locale-store";
 import { RowActions } from "@/components/data-table/row-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { translationsApi } from "@/lib/api/translations";
 import { useAuthStore } from "@/stores/auth-store";
 import { useConfirmStore } from "@/stores/confirm-store";
+import { useLocaleStore } from "@/stores/locale-store";
 import type { FpoTeamMember } from "@/types/fpo";
 
 type T = Record<string, string>;
@@ -45,7 +45,8 @@ export default function FpoTeamPage() {
   const [t, setT] = useState<T>({});
 
   useEffect(() => {
-    translationsApi.getPublic(locale, "fpo_team,common")
+    translationsApi
+      .getPublic(locale, "fpo_team,common")
       .then((data) => setT(data.fpo_team ?? {}))
       .catch(() => undefined);
   }, [locale]);
@@ -216,7 +217,8 @@ export default function FpoTeamPage() {
             ) : members.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={isPrimary ? 8 : 6} className="py-12 text-center text-muted-foreground text-sm">
-                  {t.empty_state ?? "No team members yet."}{isPrimary && ` ${t.empty_state_description ?? 'Use "Invite Member" to add someone.'}`}
+                  {t.empty_state ?? "No team members yet."}
+                  {isPrimary && ` ${t.empty_state_description ?? 'Use "Invite Member" to add someone.'}`}
                 </TableCell>
               </TableRow>
             ) : (
@@ -257,7 +259,9 @@ export default function FpoTeamPage() {
                       <RowActions
                         actions={[
                           {
-                            label: member.is_active ? (t.action_deactivate ?? "Deactivate") : (t.action_reactivate ?? "Activate"),
+                            label: member.is_active
+                              ? (t.action_deactivate ?? "Deactivate")
+                              : (t.action_reactivate ?? "Activate"),
                             onClick: () => {
                               if (member.is_active) {
                                 deactivateMutation.mutate(member.id);
@@ -265,10 +269,10 @@ export default function FpoTeamPage() {
                                 fpoTeamApi
                                   .bulkActivate([member.id])
                                   .then(() => {
-                                    toast.success(t.toast_deactivated ?? "Member reactivated");
+                                    toast.success(t.toast_activated ?? "Member reactivated");
                                     queryClient.invalidateQueries({ queryKey: ["fpo-team"] });
                                   })
-                                  .catch(() => toast.error(t.toast_deactivate_failed ?? "Failed to reactivate"));
+                                  .catch(() => toast.error(t.toast_activate_failed ?? "Failed to reactivate"));
                               }
                             },
                             disabled: deactivateMutation.isPending,
@@ -280,7 +284,10 @@ export default function FpoTeamPage() {
                             onClick: () =>
                               confirm({
                                 title: t.reset_password_title ?? "Reset Password",
-                                description: (t.reset_password_description ?? "A temporary password will be sent to {name}'s email. They must change it on next login.").replace("{name}", member.email),
+                                description: (
+                                  t.reset_password_description ??
+                                  "A temporary password will be sent to {name}'s email. They must change it on next login."
+                                ).replace("{name}", member.email),
                                 onConfirm: () => resetPasswordMutation.mutateAsync(member.id),
                                 confirmLabel: t.action_reset_password ?? "Reset Password",
                                 variant: "default",
