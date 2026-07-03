@@ -88,7 +88,7 @@ function LogoBox({ source }: { source: NewsSource }) {
 const NewsSourcesStrip = () => {
   const [sources, setSources] = useState<NewsSource[]>([]);
   const [loading, setLoading] = useState(true);
-  const locale = useLocaleStore((s) => s.locale);
+  //const locale = useLocaleStore((s) => s.locale);
 
   useEffect(() => {
     publicFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/public/news-sources/`)
