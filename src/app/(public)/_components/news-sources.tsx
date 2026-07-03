@@ -1,11 +1,15 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useLocaleStore } from "@/stores/locale-store";
-import { publicFetch } from "../_lib/public-fetch";
+
+import Link from "next/link";
+
+import { Autoplay, Navigation } from "swiper/modules";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { Navigation, Autoplay } from "swiper/modules";
+
+import { useLocaleStore } from "@/stores/locale-store";
+
+import { publicFetch } from "../_lib/public-fetch";
 
 interface NewsSource {
   id: number;
@@ -27,6 +31,7 @@ function LogoBox({ source }: { source: NewsSource }) {
       href={source.url}
       target="_blank"
       rel="noopener noreferrer"
+      title={source.name}
       style={{
         display: "flex",
         alignItems: "center",
@@ -64,6 +69,11 @@ function LogoBox({ source }: { source: NewsSource }) {
             color: "#444",
             textAlign: "center",
             lineHeight: 1.4,
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
           }}
         >
           {source.name}
@@ -90,7 +100,7 @@ const NewsSourcesStrip = () => {
       })
       .catch(() => setSources([]))
       .finally(() => setLoading(false));
-  }, [locale]);
+  });
 
   if (!loading && sources.length === 0) return null;
 
@@ -102,7 +112,7 @@ const NewsSourcesStrip = () => {
       <div className="container">
         {/* Heading */}
         <div className="row">
-          <div className="col-lg-8 offset-lg-2">
+          <div className="offset-lg-2.col-lg-8">
             <div className="site-heading text-center">
               <h5 className="sub-heading">Media Coverage</h5>
               <h2 className="title">In the News</h2>
@@ -116,7 +126,16 @@ const NewsSourcesStrip = () => {
           {loading ? (
             <div style={{ display: "flex", gap: 24 }}>
               {[0, 1, 2, 3].map((i) => (
-                <div key={i} style={{ flex: 1, height: 130, borderRadius: 8, background: "#e8e8e8", animation: "pulse 1.5s ease-in-out infinite" }} />
+                <div
+                  key={i}
+                  style={{
+                    flex: 1,
+                    height: 130,
+                    borderRadius: 8,
+                    background: "#e8e8e8",
+                    animation: "pulse 1.5s ease-in-out infinite",
+                  }}
+                />
               ))}
             </div>
           ) : preview.length > 3 ? (
@@ -131,13 +150,57 @@ const NewsSourcesStrip = () => {
                 breakpoints={{ 576: { slidesPerView: 2 }, 992: { slidesPerView: 3 }, 1200: { slidesPerView: 4 } }}
               >
                 {preview.map((s) => (
-                  <SwiperSlide key={s.id}><LogoBox source={s} /></SwiperSlide>
+                  <SwiperSlide key={s.id}>
+                    <LogoBox source={s} />
+                  </SwiperSlide>
                 ))}
               </Swiper>
-              <button type="button" className="news-swiper-prev" style={{ position: "absolute", left: 0, top: "50%", transform: "translateY(-50%)", zIndex: 10, width: 40, height: 40, borderRadius: "50%", border: "2px solid var(--color-primary)", background: "#fff", color: "var(--color-primary)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>
+              <button
+                type="button"
+                className="news-swiper-prev"
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  zIndex: 10,
+                  width: 40,
+                  height: 40,
+                  borderRadius: "50%",
+                  border: "2px solid var(--color-primary)",
+                  background: "#fff",
+                  color: "var(--color-primary)",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 14,
+                }}
+              >
                 <i className="fas fa-chevron-left" />
               </button>
-              <button type="button" className="news-swiper-next" style={{ position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)", zIndex: 10, width: 40, height: 40, borderRadius: "50%", border: "2px solid var(--color-primary)", background: "#fff", color: "var(--color-primary)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>
+              <button
+                type="button"
+                className="news-swiper-next"
+                style={{
+                  position: "absolute",
+                  right: 0,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  zIndex: 10,
+                  width: 40,
+                  height: 40,
+                  borderRadius: "50%",
+                  border: "2px solid var(--color-primary)",
+                  background: "#fff",
+                  color: "var(--color-primary)",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 14,
+                }}
+              >
                 <i className="fas fa-chevron-right" />
               </button>
             </div>
@@ -165,6 +228,6 @@ const NewsSourcesStrip = () => {
   );
 };
 
-export { LogoBox, NewsSourcesStrip };
 export type { NewsSource, NewsSourcesData };
+export { LogoBox, NewsSourcesStrip };
 export default NewsSourcesStrip;
