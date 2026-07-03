@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import Image from "next/image";
 import Link from "next/link";
 
 import { Autoplay, Navigation } from "swiper/modules";
@@ -31,7 +32,6 @@ function LogoBox({ source }: { source: NewsSource }) {
       href={source.url}
       target="_blank"
       rel="noopener noreferrer"
-      title={source.name}
       style={{
         display: "flex",
         alignItems: "center",
@@ -55,7 +55,7 @@ function LogoBox({ source }: { source: NewsSource }) {
       }}
     >
       {source.logo_url ? (
-        <img
+        <Image
           src={source.logo_url}
           alt={source.name}
           style={{ maxHeight: 80, maxWidth: "100%", objectFit: "contain" }}
@@ -70,11 +70,13 @@ function LogoBox({ source }: { source: NewsSource }) {
             textAlign: "center",
             lineHeight: 1.4,
             display: "-webkit-box",
-            WebkitLineClamp: 2,
             WebkitBoxOrient: "vertical",
+            WebkitLineClamp: 2,
             overflow: "hidden",
             textOverflow: "ellipsis",
+            width: "100%",
           }}
+          title={source.name}
         >
           {source.name}
         </span>
@@ -88,7 +90,7 @@ function LogoBox({ source }: { source: NewsSource }) {
 const NewsSourcesStrip = () => {
   const [sources, setSources] = useState<NewsSource[]>([]);
   const [loading, setLoading] = useState(true);
-  //const locale = useLocaleStore((s) => s.locale);
+  const locale = useLocaleStore((s) => s.locale);
 
   useEffect(() => {
     publicFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/public/news-sources/`)
@@ -100,7 +102,7 @@ const NewsSourcesStrip = () => {
       })
       .catch(() => setSources([]))
       .finally(() => setLoading(false));
-  });
+  }, []);
 
   if (!loading && sources.length === 0) return null;
 
@@ -112,7 +114,7 @@ const NewsSourcesStrip = () => {
       <div className="container">
         {/* Heading */}
         <div className="row">
-          <div className="offset-lg-2.col-lg-8">
+          <div className="offset-lg-2 col-lg-8">
             <div className="site-heading text-center">
               <h5 className="sub-heading">Media Coverage</h5>
               <h2 className="title">In the News</h2>
