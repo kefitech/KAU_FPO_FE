@@ -1,18 +1,18 @@
+import About from "./_components/about";
 import AgrulLayout from "./_components/agrul-layout";
 import Banner from "./_components/banner";
-import About from "./_components/about";
-import Services from "./_components/services";
-import ProductList from "./_components/product-list";
-import WhyChoose from "./_components/why-choose";
-import Testimonial from "./_components/testimonial";
+import Blog from "./_components/blog";
+import Contact from "./_components/contact";
+import Documents from "./_components/documents";
+import Facts from "./_components/facts";
 import FarmersSection from "./_components/farmers";
 import Gallery from "./_components/gallery";
-import Facts from "./_components/facts";
-import Contact from "./_components/contact";
-import Blog from "./_components/blog";
 import NewsSourcesStrip from "./_components/news-sources";
-import Documents from "./_components/documents";
+import ProductList from "./_components/product-list";
+import Services from "./_components/services";
+import Testimonial from "./_components/testimonial";
 import VisitorTracker from "./_components/visitor-tracker";
+import WhyChoose from "./_components/why-choose";
 
 export default function HomePage() {
   return (
@@ -24,7 +24,7 @@ export default function HomePage() {
       <ProductList />
       <WhyChoose />
       <Testimonial />
-      <FarmersSection />
+      <FarmersSection showAll={true} />
       <Gallery />
       <Facts />
       <Contact />
