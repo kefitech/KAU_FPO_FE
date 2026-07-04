@@ -86,7 +86,14 @@ function formatFileSize(bytes: number): string {
 
 function LogoThumb({ logo_url, name }: { logo_url: string | null; name: string }) {
   if (logo_url) {
-    return <Image src={logo_url} alt={name} className="h-8 w-8 rounded bg-muted object-contain" />;
+    return (
+      <Image
+        src={logo_url}
+        alt={name}
+        style={{ objectFit: "contain" }}
+        className="h-8 w-8 rounded bg-muted object-contain"
+      />
+    );
   }
   return (
     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-muted">
@@ -240,6 +247,7 @@ function NewsSourceDialog({
                     src={editing.logo_url}
                     alt="logo"
                     className="h-10 w-10 rounded object-contain bg-muted shrink-0"
+                    style={{ objectFit: "contain" }}
                   />
                 ) : (
                   <div className="h-10 w-10 rounded bg-muted flex items-center justify-center shrink-0">
@@ -273,6 +281,7 @@ function NewsSourceDialog({
                     src={URL.createObjectURL(logo)}
                     alt="preview"
                     className="h-10 w-10 rounded object-contain bg-muted shrink-0"
+                    style={{ objectFit: "contain" }}
                   />
                   <div className="flex flex-col gap-1 w-0 flex-1">
                     <span className="text-sm text-foreground truncate">{logo.name}</span>
