@@ -19,10 +19,25 @@ interface ClaimReviewDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const STATUS_BADGE: Record<AdminOwnershipClaim["status"], { label: string; className: string; icon: React.ElementType }> = {
-  pending:  { label: "Pending",  icon: Clock,        className: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" },
-  approved: { label: "Approved", icon: CheckCircle2, className: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"  },
-  rejected: { label: "Rejected", icon: XCircle,      className: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"          },
+const STATUS_BADGE: Record<
+  AdminOwnershipClaim["status"],
+  { label: string; className: string; icon: React.ElementType }
+> = {
+  pending: {
+    label: "Pending",
+    icon: Clock,
+    className: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+  },
+  approved: {
+    label: "Approved",
+    icon: CheckCircle2,
+    className: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+  },
+  rejected: {
+    label: "Rejected",
+    icon: XCircle,
+    className: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+  },
 };
 
 function InfoRow({ label, value }: { label: string; value: string | null | undefined }) {
@@ -30,7 +45,7 @@ function InfoRow({ label, value }: { label: string; value: string | null | undef
   return (
     <div className="flex flex-col gap-0.5">
       <span className="text-muted-foreground text-xs">{label}</span>
-      <span className="text-sm">{value}</span>
+      <span className="text-sm break-all">{value}</span>
     </div>
   );
 }
@@ -104,7 +119,12 @@ export function ClaimReviewDialog({ claim, onOpenChange }: ClaimReviewDialogProp
               {statusCfg.label}
             </Badge>
             <span className="text-muted-foreground text-xs">
-              Submitted {new Date(claim.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}
+              Submitted{" "}
+              {new Date(claim.created_at).toLocaleDateString("en-IN", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              })}
             </span>
           </div>
 
@@ -138,9 +158,7 @@ export function ClaimReviewDialog({ claim, onOpenChange }: ClaimReviewDialogProp
             <div>
               <p className="mb-1.5 font-medium text-xs text-muted-foreground uppercase tracking-wide">Review Notes</p>
               <p className="rounded-lg border bg-muted/20 p-3 text-sm">{claim.review_notes}</p>
-              {claim.reviewed_by && (
-                <p className="mt-1 text-muted-foreground text-xs">By {claim.reviewed_by}</p>
-              )}
+              {claim.reviewed_by && <p className="mt-1 text-muted-foreground text-xs">By {claim.reviewed_by}</p>}
             </div>
           )}
 
@@ -175,20 +193,14 @@ export function ClaimReviewDialog({ claim, onOpenChange }: ClaimReviewDialogProp
                   {rejectMutation.isPending ? "Rejecting…" : "Reject"}
                 </Button>
                 {isSuperAdmin && (
-                  <Button
-                    className="flex-1"
-                    disabled={!notesValid || isPending}
-                    onClick={handleApprove}
-                  >
+                  <Button className="flex-1" disabled={!notesValid || isPending} onClick={handleApprove}>
                     {approveMutation.isPending ? "Approving…" : "Approve"}
                   </Button>
                 )}
               </div>
 
               {!isSuperAdmin && (
-                <p className="text-center text-muted-foreground text-xs">
-                  Only super admins can approve claims.
-                </p>
+                <p className="text-center text-muted-foreground text-xs">Only super admins can approve claims.</p>
               )}
             </div>
           )}
