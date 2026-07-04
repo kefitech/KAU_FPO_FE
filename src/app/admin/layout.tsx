@@ -1,7 +1,8 @@
 "use client";
 
 import "@/app/globals.css";
-import { useRouter } from "next/navigation";
+
+import { usePathname, useRouter } from "next/navigation";
 
 import { ChevronLeft } from "lucide-react";
 
@@ -23,6 +24,7 @@ import { useSessionTimeout } from "@/hooks/use-session-timeout";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { logout } = useAuth();
 
   const { showWarning, secondsLeft, extendSession } = useSessionTimeout({
@@ -55,17 +57,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <ThemeToggle />
           </div>
         </header>
-        <div className="mx-auto w-full max-w-[1440px] px-8 pt-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="-ml-2 gap-1 text-muted-foreground hover:text-foreground"
-            onClick={() => router.back()}
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Back
-          </Button>
-        </div>
+
+        {pathname !== "/admin/dashboard" && (
+          <div className="mx-auto w-full max-w-[1440px] px-8 pt-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="-ml-2 gap-1 text-muted-foreground hover:text-foreground"
+              onClick={() => router.back()}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Back
+            </Button>
+          </div>
+        )}
+
         <div className="mx-auto w-full max-w-[1440px]">{children}</div>
       </SidebarInset>
       <ConfirmDialog />
