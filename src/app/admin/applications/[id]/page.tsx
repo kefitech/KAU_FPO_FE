@@ -906,9 +906,9 @@ function ApplicationDetailContent() {
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <Button variant="outline" size="sm" onClick={() => setUserLimitOpen(true)}>
+          {/* <Button variant="outline" size="sm" onClick={() => setUserLimitOpen(true)}>
             {t.btn_user_limit ?? "User Limit"} ({app.max_secondary_users})
-          </Button>
+          </Button> */}
           {app.status === "submitted" && (
             <Button
               size="sm"
