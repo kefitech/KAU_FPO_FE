@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 
-import Image from "next/image";
 import Link from "next/link";
 
 import { Autoplay, Navigation } from "swiper/modules";
@@ -55,7 +54,7 @@ function LogoBox({ source }: { source: NewsSource }) {
       }}
     >
       {source.logo_url ? (
-        <Image
+        <img
           src={source.logo_url}
           alt={source.name}
           style={{ maxHeight: 80, maxWidth: "100%", objectFit: "contain" }}
