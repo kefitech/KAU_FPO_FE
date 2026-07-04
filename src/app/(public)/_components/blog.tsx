@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+
+import DOMPurify from "isomorphic-dompurify";
+
 import { useLocaleStore } from "@/stores/locale-store";
+
 import { publicFetch } from "../_lib/public-fetch";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -32,7 +36,9 @@ function AnnouncementModal({ item, onClose }: { item: Announcement | null; onClo
   useEffect(() => {
     if (item) document.body.style.overflow = "hidden";
     else document.body.style.overflow = "";
-    return () => { document.body.style.overflow = ""; };
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [item]);
 
   if (!item) return null;
@@ -40,9 +46,17 @@ function AnnouncementModal({ item, onClose }: { item: Announcement | null; onClo
   const isAnnouncement = item.category === "announcement";
 
   return (
+    // biome-ignore lint/a11y/useSemanticElements: overlay backdrop can't be a <button> since it wraps other interactive content (close button, modal body)
     <div
       ref={overlayRef}
-      onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
+      role="button"
+      tabIndex={0}
+      onClick={(e) => {
+        if (e.target === overlayRef.current) onClose();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") onClose();
+      }}
       style={{
         position: "fixed",
         inset: 0,
@@ -136,8 +150,10 @@ function AnnouncementModal({ item, onClose }: { item: Announcement | null; onClo
 
         {/* Body */}
         <div style={{ padding: "24px 28px", overflowY: "auto" }}>
-          <div style={{ width: 40, height: 3, background: "var(--color-secondary)", borderRadius: 2, marginBottom: 18 }} />
-          <p
+          <div
+            style={{ width: 40, height: 3, background: "var(--color-secondary)", borderRadius: 2, marginBottom: 18 }}
+          />
+          <div
             style={{
               fontSize: 15,
               color: "#555",
@@ -145,9 +161,9 @@ function AnnouncementModal({ item, onClose }: { item: Announcement | null; onClo
               margin: 0,
               fontFamily: "var(--font-default)",
             }}
-          >
-            {item.body}
-          </p>
+            // biome-ignore lint/security/noDangerouslySetInnerHtml: content is sanitized with DOMPurify
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(item.body) }}
+          />
         </div>
       </div>
     </div>
@@ -220,7 +236,7 @@ function AnnouncementCard({ item, onReadMore }: { item: Announcement; onReadMore
       <div style={{ width: 40, height: 3, background: "var(--color-secondary)", borderRadius: 2 }} />
 
       {/* Body */}
-      <p
+      <div
         style={{
           fontSize: 14,
           color: "#666",
@@ -233,9 +249,9 @@ function AnnouncementCard({ item, onReadMore }: { item: Announcement; onReadMore
           overflow: "hidden",
           flexGrow: 1,
         }}
-      >
-        {item.body}
-      </p>
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: content is sanitized with DOMPurify
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(item.body) }}
+      />
 
       {/* Read More */}
       <button
@@ -279,8 +295,17 @@ function CardSkeleton() {
       }}
     >
       {[40, 80, 100, 90, 65].map((w, i) => (
-        // biome-ignore lint/suspicious/noArrayIndexKey: skeleton
-        <div key={i} style={{ height: i === 0 ? 20 : i === 1 ? 22 : 14, borderRadius: 4, background: "#f0f0f0", width: `${w}%`, animation: "pulse 1.5s ease-in-out infinite" }} />
+        <div
+          // biome-ignore lint/suspicious/noArrayIndexKey: skeleton
+          key={i}
+          style={{
+            height: i === 0 ? 20 : i === 1 ? 22 : 14,
+            borderRadius: 4,
+            background: "#f0f0f0",
+            width: `${w}%`,
+            animation: "pulse 1.5s ease-in-out infinite",
+          }}
+        />
       ))}
     </div>
   );
@@ -292,7 +317,7 @@ type TabKey = "announcement" | "news";
 
 const TABS: { key: TabKey; label: string; icon: string }[] = [
   { key: "announcement", label: "Announcements", icon: "fas fa-bullhorn" },
-  { key: "news",         label: "News",          icon: "fas fa-newspaper" },
+  { key: "news", label: "News", icon: "fas fa-newspaper" },
 ];
 
 const Blog = () => {
@@ -302,7 +327,7 @@ const Blog = () => {
   const [selected, setSelected] = useState<Announcement | null>(null);
 
   const locale = useLocaleStore((s) => s.locale);
-
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refetch intentionally triggered on locale change
   useEffect(() => {
     publicFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/public/announcements/?page_size=20`)
       .then((r) => r.json())
@@ -314,17 +339,18 @@ const Blog = () => {
   const filtered = items.filter((i) => i.category === activeTab);
 
   const colClass =
-    filtered.length === 1 ? "col-lg-6 offset-lg-3 col-md-12" :
-    filtered.length === 2 ? "col-lg-6 col-md-6" :
-    "col-lg-4 col-md-6";
+    filtered.length === 1
+      ? "col-lg-6 offset-lg-3 col-md-12"
+      : filtered.length === 2
+        ? "col-lg-6 col-md-6"
+        : "col-lg-4 col-md-6";
 
   return (
     <div className="blog-area home-blog default-padding bottom-less">
       <div className="container">
-
         {/* Section heading */}
         <div className="row">
-          <div className="col-lg-8 offset-lg-2">
+          <div className="offset-lg-2 col-lg-8">
             <div className="site-heading text-center">
               <h5 className="sub-heading">Latest Updates</h5>
               <h2 className="title">News &amp; Announcements</h2>
@@ -392,7 +418,10 @@ const Blog = () => {
               </div>
             ))
           ) : filtered.length === 0 ? (
-            <div className="col-12 text-center" style={{ padding: "48px 0", color: "#888", fontFamily: "var(--font-default)", fontSize: 15 }}>
+            <div
+              className="col-12 text-center"
+              style={{ padding: "48px 0", color: "#888", fontFamily: "var(--font-default)", fontSize: 15 }}
+            >
               No {activeTab === "announcement" ? "announcements" : "news"} available at the moment.
             </div>
           ) : (
