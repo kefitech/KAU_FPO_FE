@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+
 import { useRouter } from "next/navigation";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,24 +11,26 @@ import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
+import { type AnnouncementPayload, adminAnnouncementsApi } from "@/app/admin/_api/announcements";
+import { languageApi } from "@/app/admin/_api/language";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import { type AnnouncementPayload, adminAnnouncementsApi } from "@/app/admin/_api/announcements";
-import { languageApi } from "@/app/admin/_api/language";
 
 const ANNOUNCEMENT_CATEGORIES = ["announcement", "news"] as const;
 
+function isBodyEmpty(html: string | undefined): boolean {
+  if (!html) return true;
+  const text = html
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .trim();
+  return text.length === 0;
+}
 const settingsSchema = z.object({
   category: z.enum(ANNOUNCEMENT_CATEGORIES),
   published_date: z.string().optional(),
@@ -116,12 +119,12 @@ export function AnnouncementForm({ mode, id, t = {}, tCommon = {} }: Props) {
         is_active: settings.is_active,
         order: settings.order ?? 0,
       };
-      return mode === "create"
-        ? adminAnnouncementsApi.create(payload)
-        : adminAnnouncementsApi.update(id!, payload);
+      return mode === "create" ? adminAnnouncementsApi.create(payload) : adminAnnouncementsApi.update(id!, payload);
     },
     onSuccess: () => {
-      toast.success(mode === "create" ? (t.toast_created ?? "Announcement created") : (t.toast_updated ?? "Announcement updated"));
+      toast.success(
+        mode === "create" ? (t.toast_created ?? "Announcement created") : (t.toast_updated ?? "Announcement updated"),
+      );
       queryClient.invalidateQueries({ queryKey: ["announcements"] });
       router.push("/admin/announcements");
     },
@@ -166,7 +169,10 @@ export function AnnouncementForm({ mode, id, t = {}, tCommon = {} }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit, (errs) => console.error("Form validation errors:", errs))} className="mx-auto max-w-3xl space-y-4">
+    <form
+      onSubmit={handleSubmit(onSubmit, (errs) => console.error("Form validation errors:", errs))}
+      className="mx-auto max-w-3xl space-y-4"
+    >
       {/* Multilingual content card */}
       <div className="rounded-lg border p-5 space-y-4">
         {/* Language selector row */}
@@ -178,7 +184,7 @@ export function AnnouncementForm({ mode, id, t = {}, tCommon = {} }: Props) {
             </SelectTrigger>
             <SelectContent>
               {sortedLangs.map((lang) => {
-                const isFilled = !!(titleValues[lang.code]?.trim() && bodyValues[lang.code]?.trim());
+                const isFilled = !!(titleValues[lang.code]?.trim() && !isBodyEmpty(bodyValues[lang.code]));
                 return (
                   <SelectItem key={lang.code} value={lang.code}>
                     <span className="flex items-center gap-1.5">
@@ -238,14 +244,19 @@ export function AnnouncementForm({ mode, id, t = {}, tCommon = {} }: Props) {
 
         {activeLang && activeLang !== defaultLang?.code && (
           <p className="text-muted-foreground text-xs">
-            {(t.optional_fallback ?? "Optional — leave blank to use the {lang} version as fallback.").replace("{lang}", defaultLang?.name ?? "default")}
+            {(t.optional_fallback ?? "Optional — leave blank to use the {lang} version as fallback.").replace(
+              "{lang}",
+              defaultLang?.name ?? "default",
+            )}
           </p>
         )}
       </div>
 
       {/* Settings */}
       <div className="rounded-lg border p-5 space-y-4">
-        <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">{t.settings_heading ?? "Settings"}</h3>
+        <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+          {t.settings_heading ?? "Settings"}
+        </h3>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <Label>{t.field_category ?? "Category"}</Label>
@@ -297,9 +308,7 @@ export function AnnouncementForm({ mode, id, t = {}, tCommon = {} }: Props) {
             <Controller
               name="is_active"
               control={control}
-              render={({ field }) => (
-                <Switch checked={field.value} onCheckedChange={field.onChange} />
-              )}
+              render={({ field }) => <Switch checked={field.value} onCheckedChange={field.onChange} />}
             />
             <Label>{t.field_is_active ?? "Active"}</Label>
           </div>
@@ -311,7 +320,11 @@ export function AnnouncementForm({ mode, id, t = {}, tCommon = {} }: Props) {
           {tCommon.cancel ?? "Cancel"}
         </Button>
         <Button type="submit" disabled={mutation.isPending}>
-          {mutation.isPending ? (t.btn_saving ?? "Saving…") : mode === "create" ? (t.btn_create ?? "Create") : (t.btn_save ?? "Save Changes")}
+          {mutation.isPending
+            ? (t.btn_saving ?? "Saving…")
+            : mode === "create"
+              ? (t.btn_create ?? "Create")
+              : (t.btn_save ?? "Save Changes")}
         </Button>
       </div>
     </form>
