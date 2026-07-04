@@ -115,7 +115,7 @@ export function AnnouncementForm({ mode, id, t = {}, tCommon = {} }: Props) {
         title,
         body,
         category: settings.category,
-        published_date: settings.published_date || null,
+        published_date: settings.published_date || new Date().toLocaleDateString("en-CA"),
         is_active: settings.is_active,
         order: settings.order ?? 0,
       };
@@ -281,7 +281,15 @@ export function AnnouncementForm({ mode, id, t = {}, tCommon = {} }: Props) {
             <Controller
               name="published_date"
               control={control}
-              render={({ field }) => <Input type="date" {...field} className="mt-1.5" />}
+              render={({ field }) => (
+                <Input
+                  type="date"
+                  // en-CA locale formats as yyyy-MM-dd, matching what <input type="date"> expects
+                  value={field.value || new Date().toLocaleDateString("en-CA")}
+                  onChange={(e) => field.onChange(e.target.value)}
+                  className="mt-1.5"
+                />
+              )}
             />
           </div>
           <div>
