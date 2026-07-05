@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+
 import { useRouter } from "next/navigation";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -9,8 +10,8 @@ import { toast } from "sonner";
 
 import { type AdminAnnouncement, adminAnnouncementsApi } from "@/app/admin/_api/announcements";
 import { DataTable } from "@/components/data-table/data-table";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ViewSheet } from "@/components/ui/view-sheet";
 import { translationsApi } from "@/lib/api/translations";
 import { useConfirmStore } from "@/stores/confirm-store";
@@ -48,6 +49,15 @@ export default function AnnouncementsPage() {
     onError: () => toast.error(tCommon.delete_failed ?? "Failed to delete"),
   });
 
+  const toggleStatusMutation = useMutation({
+    mutationFn: (item: AdminAnnouncement) => adminAnnouncementsApi.update(item.id, { is_active: !item.is_active }),
+    onSuccess: () => {
+      toast.success(t.toast_status_updated ?? "Status updated");
+      queryClient.invalidateQueries({ queryKey: ["announcements"] });
+    },
+    onError: () => toast.error(tCommon.update_failed ?? "Failed to update status"),
+  });
+
   const columns = getAnnouncementColumns({
     t,
     tCommon,
@@ -59,6 +69,9 @@ export default function AnnouncementsPage() {
         description: (t.delete_description ?? 'Are you sure you want to delete "{name}"?').replace("{name}", name),
         onConfirm: () => deleteMutation.mutateAsync(item.id),
       });
+    },
+    onToggleStatus: (item: AdminAnnouncement) => {
+      toggleStatusMutation.mutate(item);
     },
   });
 
@@ -120,7 +133,13 @@ export default function AnnouncementsPage() {
                 </Badge>
               ),
             },
-            { label: "Status", type: "status", active: sheet.item.is_active, activeLabel: tCommon.badge_active ?? "Active", inactiveLabel: tCommon.badge_inactive ?? "Inactive" },
+            {
+              label: "Status",
+              type: "status",
+              active: sheet.item.is_active,
+              activeLabel: tCommon.badge_active ?? "Active",
+              inactiveLabel: tCommon.badge_inactive ?? "Inactive",
+            },
             { label: "Published Date", type: "date", value: sheet.item.published_date },
             { label: "Created", type: "date", value: sheet.item.created_at },
             { type: "section", label: "Content (English)" },

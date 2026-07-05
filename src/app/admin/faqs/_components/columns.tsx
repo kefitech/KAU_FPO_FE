@@ -1,6 +1,7 @@
 import type { ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Eye, EyeOff, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 
+import type { AdminFaq } from "@/app/admin/_api/faqs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,18 +10,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { AdminFaq } from "@/app/admin/_api/faqs";
 
 type T = Record<string, string>;
 
 interface ColumnActions {
   onEdit: (item: AdminFaq) => void;
   onDelete: (item: AdminFaq) => void;
+  onToggleStatus: (item: AdminFaq) => void;
   t: T;
   tCommon: T;
 }
 
-export function getFaqColumns({ onEdit, onDelete, t, tCommon }: ColumnActions): ColumnDef<AdminFaq>[] {
+export function getFaqColumns({ onEdit, onDelete, onToggleStatus, t, tCommon }: ColumnActions): ColumnDef<AdminFaq>[] {
   return [
     {
       accessorKey: "question",
@@ -34,9 +35,7 @@ export function getFaqColumns({ onEdit, onDelete, t, tCommon }: ColumnActions): 
     {
       accessorKey: "category",
       header: t.col_category ?? "Category",
-      cell: ({ row }) => (
-        <Badge variant="outline">{row.original.category_display ?? row.original.category}</Badge>
-      ),
+      cell: ({ row }) => <Badge variant="outline">{row.original.category_display ?? row.original.category}</Badge>,
     },
     {
       accessorKey: "order",
@@ -49,7 +48,9 @@ export function getFaqColumns({ onEdit, onDelete, t, tCommon }: ColumnActions): 
         row.original.is_active ? (
           <Badge className="bg-green-100 text-green-700 hover:bg-green-100">{tCommon.badge_active ?? "Active"}</Badge>
         ) : (
-          <Badge variant="outline" className="text-muted-foreground">{tCommon.badge_inactive ?? "Inactive"}</Badge>
+          <Badge variant="outline" className="text-muted-foreground">
+            {tCommon.badge_inactive ?? "Inactive"}
+          </Badge>
         ),
     },
     {
@@ -68,6 +69,20 @@ export function getFaqColumns({ onEdit, onDelete, t, tCommon }: ColumnActions): 
               <Pencil className="mr-2 h-4 w-4" />
               {t.action_edit ?? "Edit"}
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onToggleStatus(row.original)}>
+              {row.original.is_active ? (
+                <>
+                  <EyeOff className="mr-2 h-4 w-4" />
+                  {t.action_deactivate ?? "Deactivate"}
+                </>
+              ) : (
+                <>
+                  <Eye className="mr-2 h-4 w-4" />
+                  {t.action_activate ?? "Activate"}
+                </>
+              )}
+            </DropdownMenuItem>
+
             <DropdownMenuItem
               onClick={() => onDelete(row.original)}
               className="text-destructive focus:text-destructive"
