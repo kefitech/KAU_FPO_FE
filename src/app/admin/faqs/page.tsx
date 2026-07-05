@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import DOMPurify from "dompurify";
 import { Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 
@@ -30,6 +31,10 @@ export default function FaqsPage() {
   const [tCommon, setTCommon] = useState<T>({});
   const [sheet, setSheet] = useState<{ open: boolean; item: AdminFaq | null }>({ open: false, item: null });
 
+  function stripHtml(html?: string) {
+    if (!html) return "";
+    return DOMPurify.sanitize(html, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
+  }
   useEffect(() => {
     translationsApi
       .getPublic(locale, "admin_faqs,common")
@@ -143,12 +148,15 @@ export default function FaqsPage() {
             { label: "Created", type: "date", value: sheet.item.created_at },
             { type: "section", label: "Content (English)" },
             { label: "Question (EN)", value: sheet.item.question?.en ?? Object.values(sheet.item.question ?? {})[0] },
-            { label: "Answer (EN)", value: sheet.item.answer?.en ?? Object.values(sheet.item.answer ?? {})[0] },
+            {
+              label: "Answer (EN)",
+              value: stripHtml(sheet.item.answer?.en ?? Object.values(sheet.item.answer ?? {})[0]),
+            },
             ...(sheet.item.question?.ml
               ? [
                   { type: "section" as const, label: "Content (Malayalam)" },
                   { label: "Question (ML)", value: sheet.item.question.ml },
-                  { label: "Answer (ML)", value: sheet.item.answer?.ml },
+                  { label: "Answer (ML)", value: stripHtml(sheet.item.answer?.ml) },
                 ]
               : []),
           ]}
