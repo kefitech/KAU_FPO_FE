@@ -121,6 +121,7 @@ function AnnouncementModal({ item, onClose }: { item: Announcement | null; onClo
                 lineHeight: 1.4,
                 margin: 0,
                 fontFamily: "var(--font-default)",
+                wordBreak: "break-word",
               }}
             >
               {item.title}
@@ -160,6 +161,7 @@ function AnnouncementModal({ item, onClose }: { item: Announcement | null; onClo
               lineHeight: 1.9,
               margin: 0,
               fontFamily: "var(--font-default)",
+              wordBreak: "break-word",
             }}
             // biome-ignore lint/security/noDangerouslySetInnerHtml: content is sanitized with DOMPurify
             dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(item.body) }}
@@ -227,6 +229,11 @@ function AnnouncementCard({ item, onReadMore }: { item: Announcement; onReadMore
           lineHeight: 1.45,
           margin: 0,
           fontFamily: "var(--font-default)",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          display: "-webkit-box",
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: "vertical",
         }}
       >
         {item.title}
@@ -248,6 +255,10 @@ function AnnouncementCard({ item, onReadMore }: { item: Announcement; onReadMore
           WebkitBoxOrient: "vertical",
           overflow: "hidden",
           flexGrow: 1,
+          width: "100%", // 👈 force it, don't rely on stretch
+          minWidth: 0, // 👈 safety net
+          overflowWrap: "break-word",
+          wordBreak: "break-word",
         }}
         // biome-ignore lint/security/noDangerouslySetInnerHtml: content is sanitized with DOMPurify
         dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(item.body) }}

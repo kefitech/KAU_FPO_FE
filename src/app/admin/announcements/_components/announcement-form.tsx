@@ -209,7 +209,7 @@ export function AnnouncementForm({ mode, id, t = {}, tCommon = {} }: Props) {
             {activeLang === defaultLang?.code && <span className="ml-0.5 text-destructive">*</span>}
           </Label>
           <Input
-            className="mt-1.5"
+            className="mt-1.5 maxLength={100}"
             value={titleValues[activeLang] ?? ""}
             onChange={(e) => {
               setTitleValues((prev) => ({ ...prev, [activeLang]: e.target.value }));
