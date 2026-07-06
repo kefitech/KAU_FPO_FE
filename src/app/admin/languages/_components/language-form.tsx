@@ -108,11 +108,11 @@ export function LanguageForm({ mode, language, t = {}, tCommon = {} }: LanguageF
       if (!isEdit) router.push("/admin/languages?tab=languages");
     },
     onError: (err: unknown) => {
-      console.log("err:", JSON.stringify(err));
+      // console.log("err:", JSON.stringify(err));
       const apiErr = err as
         | { data?: { message?: string; errors?: Record<string, string[]> }; message?: string }
         | undefined;
-      console.log("serverErrors:", apiErr?.data?.errors);
+      // console.log("serverErrors:", apiErr?.data?.errors);
       const serverErrors = apiErr?.data?.errors;
       if (serverErrors && Object.keys(serverErrors).length > 0) {
         Object.entries(serverErrors).forEach(([field, messages]) => {
