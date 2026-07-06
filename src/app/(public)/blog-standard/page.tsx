@@ -390,6 +390,7 @@ export default function BlogStandardPage() {
                               WebkitLineClamp: 2,
                               WebkitBoxOrient: "vertical",
                               overflow: "hidden",
+                              wordWrap: "break-word",
                             }}
                           >
                             {item.title}
