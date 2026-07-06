@@ -1,13 +1,15 @@
+// biome-ignore-all lint/suspicious/noArrayIndexKey: intentional across this file
+
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { CheckCircle2, ChevronRight, Eye, EyeOff, Smartphone, XCircle } from "lucide-react";
-import { Controller, type Resolver, useForm } from "react-hook-form";
+import { Controller, type Resolver, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -47,6 +49,7 @@ function EligibilityStep({ onPass }: { onPass: (token: string) => void }) {
   const [districtQuery, setDistrictQuery] = useState("");
   const skipNextInputChange = useRef(false);
   const filteredDistricts = DISTRICT_OPTIONS.filter((o) => o.label.toLowerCase().includes(districtQuery.toLowerCase()));
+
   const { register, handleSubmit, control, formState, setValue } = useForm<EligibilityValues>({
     resolver: zodResolver(eligibilitySchema) as unknown as Resolver<EligibilityValues>,
     mode: "onTouched",
@@ -58,6 +61,17 @@ function EligibilityStep({ onPass }: { onPass: (token: string) => void }) {
       has_bank_account: false,
     },
   });
+
+  // hook is now top-level, unconditional
+  const districtValue = useWatch({ control, name: "district" });
+
+  useEffect(() => {
+    const label = DISTRICT_OPTIONS.find((o) => o.value === districtValue)?.label ?? "";
+    skipNextInputChange.current = true;
+    setDistrictQuery(label);
+  }, [districtValue]);
+
+  // ... rest of component
 
   const checkMutation = useMutation({
     mutationFn: (values: EligibilityValues) => fpoRegistrationApi.checkEligibility(values),
@@ -114,12 +128,7 @@ function EligibilityStep({ onPass }: { onPass: (token: string) => void }) {
           render={({ field }) => (
             <Combobox
               value={field.value}
-              onValueChange={(v) => {
-                field.onChange(v);
-                const label = DISTRICT_OPTIONS.find((o) => o.value === v)?.label ?? "";
-                skipNextInputChange.current = true;
-                setDistrictQuery(label);
-              }}
+              onValueChange={field.onChange}
               inputValue={districtQuery}
               onInputValueChange={(v) => {
                 if (skipNextInputChange.current) {
