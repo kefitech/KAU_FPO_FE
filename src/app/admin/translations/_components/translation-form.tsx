@@ -108,6 +108,7 @@ export function TranslationForm({ mode, translation, t = {}, tCommon = {} }: Tra
 
   const selectClass =
     "h-9 w-full rounded-md border bg-background px-3 text-sm text-foreground shadow-xs focus:outline-none focus:ring-1 focus:ring-ring";
+  const activeLanguages = languages.filter((l) => l.is_active);
 
   return (
     <div className="mx-auto w-full max-w-xl">
@@ -129,7 +130,7 @@ export function TranslationForm({ mode, translation, t = {}, tCommon = {} }: Tra
                       </FieldLabel>
                       <select id="tr-language" {...field} className={selectClass}>
                         <option value="">Select language</option>
-                        {languages.map((l) => (
+                        {activeLanguages.map((l) => (
                           <option key={l.id} value={String(l.id)}>
                             {l.name} ({l.code})
                           </option>
