@@ -56,7 +56,7 @@ const Blog = () => {
             gap: 16,
           }}
         >
-          <h3 style={{ fontSize: 32, fontWeight: 700, color: "#1a1a1a", margin: 0 }}>News and Eventszzzzzz</h3>
+          <h3 style={{ fontSize: 32, fontWeight: 700, color: "#1a1a1a", margin: 0 }}>News and Announcements</h3>
           <Link
             href="/blog-standard"
             style={{
@@ -81,7 +81,7 @@ const Blog = () => {
             <div style={{ width: "100%", height: "100%", minHeight: 480, borderRadius: 16, overflow: "hidden" }}>
               <img
                 src="/images/news-feature.jpg"
-                alt="News and events"
+                alt="News and Announcements"
                 style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
               />
             </div>
