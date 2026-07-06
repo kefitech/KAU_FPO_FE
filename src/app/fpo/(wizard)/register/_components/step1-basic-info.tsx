@@ -172,18 +172,7 @@ export function Step1BasicInfo({ profile, onSave, onSuccess }: Step1Props) {
     },
     onSettled: () => setSaveMode(null),
     onError: (err: unknown) => {
-      const apiErr = err as
-        | {
-            data?: {
-              duplicate_detected?: boolean;
-              duplicate_field?: string;
-              existing_fpo_id?: number | null;
-              fpo_name?: string;
-              errors?: Record<string, string[]>;
-            };
-            message?: string;
-          }
-        | undefined;
+      const apiErr = err as { data?: { duplicate_detected?: boolean; duplicate_field?: string; existing_fpo_id?: number | null; fpo_name?: string; errors?: Record<string, string[]> }; message?: string } | undefined;
       if (apiErr?.data?.duplicate_detected) {
         setFieldErrors((prev) => ({
           ...prev,
