@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import DOMPurify from "isomorphic-dompurify";
 import { Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 
@@ -48,6 +49,11 @@ export default function AnnouncementsPage() {
     },
     onError: () => toast.error(tCommon.delete_failed ?? "Failed to delete"),
   });
+
+  function stripHtml(html?: string) {
+    if (!html) return "";
+    return DOMPurify.sanitize(html, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
+  }
 
   const toggleStatusMutation = useMutation({
     mutationFn: (item: AdminAnnouncement) => adminAnnouncementsApi.update(item.id, { is_active: !item.is_active }),
@@ -129,7 +135,7 @@ export default function AnnouncementsPage() {
               type: "node",
               node: (
                 <Badge variant="secondary" className="text-xs font-medium">
-                  {sheet.item.category_display}
+                  {sheet.item.category}
                 </Badge>
               ),
             },
@@ -144,7 +150,7 @@ export default function AnnouncementsPage() {
             { label: "Created", type: "date", value: sheet.item.created_at },
             { type: "section", label: "Content (English)" },
             { label: "Title (EN)", value: sheet.item.title?.en ?? Object.values(sheet.item.title ?? {})[0] },
-            { label: "Body (EN)", value: sheet.item.body?.en ?? Object.values(sheet.item.body ?? {})[0] },
+            { label: "Body (EN)", value: stripHtml(sheet.item.body?.en ?? Object.values(sheet.item.body ?? {})[0]) },
             ...(sheet.item.title?.ml
               ? [
                   { type: "section" as const, label: "Content (Malayalam)" },
