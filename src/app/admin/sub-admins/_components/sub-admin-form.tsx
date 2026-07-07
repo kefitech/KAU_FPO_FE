@@ -23,7 +23,7 @@ type T = Record<string, string>;
 const NOTIFICATION_CHANNELS: { value: NotificationChannelType; label: string }[] = [
   { value: "email", label: "Email" },
   { value: "sms", label: "SMS" },
-  { value: "in_app", label: "In-App" },
+  // { value: "in_app", label: "In-App" },
 ];
 
 const createSchema = z.object({
@@ -106,6 +106,7 @@ export function SubAdminForm({ mode, subAdmin, t = {}, tCommon = {} }: SubAdminF
     handleSubmit,
     reset,
     setFocus,
+    setError,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema) as unknown as Resolver<FormValues>,
@@ -159,8 +160,29 @@ export function SubAdminForm({ mode, subAdmin, t = {}, tCommon = {} }: SubAdminF
       }
     },
     onError: (error: unknown) => {
-      const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      toast.error(msg ?? (isEdit ? "Failed to update sub-admin" : "Failed to create sub-admin"));
+      const response = (error as { data?: { message?: string; errors?: Record<string, string[]> } })?.data;
+
+      const fieldErrors = response?.errors;
+
+      if (fieldErrors) {
+        // Map API field names to form field names if they ever differ
+        Object.entries(fieldErrors).forEach(([field, messages]) => {
+          if (field in defaultValues) {
+            setError(field as keyof FormValues, {
+              type: "server",
+              message: messages[0],
+            });
+          }
+        });
+
+        // Focus the first field that has an error
+        const firstField = Object.keys(fieldErrors)[0];
+        if (firstField && firstField in defaultValues) {
+          setFocus(firstField as keyof FormValues);
+        }
+      } else {
+        toast.error(response?.message ?? (isEdit ? "Failed to update sub-admin" : "Failed to create sub-admin"));
+      }
     },
   });
 

@@ -102,19 +102,17 @@ export function DataTableToolbar<TData>({
       {/* Dynamic filters */}
       {filters.map((filter) =>
         filter.type === "date" ? (
-          <div key={filter.key} className="relative">
+          <div
+            key={filter.key}
+            className="flex h-9 min-w-[210px] items-center gap-2 rounded-md border bg-background px-3 text-sm shadow-xs focus-within:ring-1 focus-within:ring-ring"
+          >
+            <span className="whitespace-nowrap text-muted-foreground text-sm">{filter.label}</span>
             <input
               type="date"
               value={activeFilters[filter.key] ?? ""}
               onChange={(e) => onFilter?.(filter.key, e.target.value)}
-              title={filter.label}
-              className="h-9 min-w-[140px] rounded-md border bg-background px-3 text-foreground text-sm shadow-xs focus:outline-none focus:ring-1 focus:ring-ring"
+              className="h-full flex-1 bg-transparent text-foreground text-sm outline-none"
             />
-            {!activeFilters[filter.key] && (
-              <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground text-sm">
-                {filter.label}
-              </span>
-            )}
           </div>
         ) : (
           <select

@@ -214,13 +214,13 @@ export function Step1BasicInfo({ profile, onSave, onSuccess }: Step1Props) {
           <FieldLabel htmlFor="name">
             FPO Name (English) <span className="text-destructive">*</span>
           </FieldLabel>
-          <Input id="name" placeholder="e.g. Kerala Farmers FPO" maxLength={250} {...register("name")} />
+          <Input id="name" placeholder="e.g. Kerala Farmers FPO" maxLength={80} {...register("name")} />
           {errors.name && <FieldError errors={[errors.name]} />}
         </Field>
 
         <Field>
           <FieldLabel htmlFor="name_ml">FPO Name (Malayalam)</FieldLabel>
-          <Input id="name_ml" placeholder="e.g. കേരള കർഷകർ FPO" maxLength={250} {...register("name_ml")} />
+          <Input id="name_ml" placeholder="e.g. കേരള കർഷകർ FPO" maxLength={80} {...register("name_ml")} />
         </Field>
       </div>
 

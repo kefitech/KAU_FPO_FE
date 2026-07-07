@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+
 import { useLocaleStore } from "@/stores/locale-store";
+
 import { publicFetch } from "../_lib/public-fetch";
 
 interface TeamMember {
@@ -13,21 +15,51 @@ interface TeamMember {
 }
 
 function getInitials(name: string): string {
-  return name.split(" ").filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+}
+
+function useItemsPerRow() {
+  const [itemsPerRow, setItemsPerRow] = useState(3); // default: lg
+
+  useEffect(() => {
+    function calculate() {
+      const w = window.innerWidth;
+      if (w >= 992)
+        setItemsPerRow(3); // lg: col-lg-4 -> 3 per row
+      else if (w >= 768)
+        setItemsPerRow(2); // md: col-md-6 -> 2 per row
+      else setItemsPerRow(1); // sm/xs: full width -> 1 per row
+    }
+    calculate();
+    window.addEventListener("resize", calculate);
+    return () => window.removeEventListener("resize", calculate);
+  }, []);
+
+  return itemsPerRow;
 }
 
 function MemberCard({ member }: { member: TeamMember }) {
   return (
     <div className="farmer-style-one-item">
-      <div
-        className="thumb"
-        style={{ width: "100%", height: 280, overflow: "hidden", borderRadius: 0, flexShrink: 0 }}
-      >
+      <div className="thumb" style={{ width: "100%", height: 280, overflow: "hidden", borderRadius: 0, flexShrink: 0 }}>
         {member.photo_url ? (
           <img
             src={member.photo_url}
             alt={member.name}
-            style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", borderRadius: 0, display: "block" }}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: "top",
+              borderRadius: 0,
+              display: "block",
+            }}
           />
         ) : (
           <div
@@ -49,7 +81,7 @@ function MemberCard({ member }: { member: TeamMember }) {
         )}
       </div>
       <div
-        className="info"
+        className="info break-words"
         style={{
           float: "none",
           textAlign: "center",
@@ -77,10 +109,29 @@ function MemberCard({ member }: { member: TeamMember }) {
 function SkeletonCard() {
   return (
     <div className="farmer-style-one-item">
-      <div className="thumb" style={{ background: "#f0f0f0", aspectRatio: "1", animation: "pulse 1.5s ease-in-out infinite" }} />
+      <div
+        className="thumb"
+        style={{ background: "#f0f0f0", aspectRatio: "1", animation: "pulse 1.5s ease-in-out infinite" }}
+      />
       <div className="info" style={{ padding: "16px 0", display: "flex", flexDirection: "column", gap: 8 }}>
-        <div style={{ height: 12, width: "60%", background: "#f0f0f0", borderRadius: 4, animation: "pulse 1.5s ease-in-out infinite" }} />
-        <div style={{ height: 16, width: "80%", background: "#f0f0f0", borderRadius: 4, animation: "pulse 1.5s ease-in-out infinite" }} />
+        <div
+          style={{
+            height: 12,
+            width: "60%",
+            background: "#f0f0f0",
+            borderRadius: 4,
+            animation: "pulse 1.5s ease-in-out infinite",
+          }}
+        />
+        <div
+          style={{
+            height: 16,
+            width: "80%",
+            background: "#f0f0f0",
+            borderRadius: 4,
+            animation: "pulse 1.5s ease-in-out infinite",
+          }}
+        />
       </div>
     </div>
   );
@@ -94,7 +145,8 @@ const FarmersSection = ({ showAll = false }: Props) => {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const locale = useLocaleStore((s) => s.locale);
-
+  const itemsPerRow = useItemsPerRow();
+  // biome-ignore lint/correctness/useExhaustiveDependencies: locale intentionally triggers a refetch even though it isn't referenced in the body
   useEffect(() => {
     publicFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/public/team/`)
       .then((r) => r.json())
@@ -104,6 +156,7 @@ const FarmersSection = ({ showAll = false }: Props) => {
   }, [locale]);
 
   const displayed = showAll ? members : members.slice(0, 3);
+  const shouldCenter = !loading && displayed.length > 0 && displayed.length < itemsPerRow;
 
   if (showAll) {
     return (
@@ -111,24 +164,24 @@ const FarmersSection = ({ showAll = false }: Props) => {
         <div className="container">
           <div className="row">
             <div className="col-lg-10 offset-lg-1">
-              <div className="row">
-                {loading
-                  ? [0, 1, 2, 3, 4, 5].map((i) => (
-                      <div className="col-lg-4 col-md-6 farmer-stye-one" style={{ marginBottom: 30 }} key={i}>
-                        <SkeletonCard />
-                      </div>
-                    ))
-                  : displayed.length === 0
-                  ? (
-                    <div className="col-12 text-center" style={{ padding: "48px 0", color: "#888" }}>
-                      No team members available.
+              <div className={`row${shouldCenter ? " justify-content-center" : ""}`}>
+                {loading ? (
+                  [0, 1, 2, 3, 4, 5].map((i) => (
+                    <div className="col-lg-4 col-md-6 farmer-stye-one" style={{ marginBottom: 30 }} key={i}>
+                      <SkeletonCard />
                     </div>
-                  )
-                  : displayed.map((member) => (
-                      <div className="col-lg-4 col-md-6 farmer-stye-one" style={{ marginBottom: 30 }} key={member.id}>
-                        <MemberCard member={member} />
-                      </div>
-                    ))}
+                  ))
+                ) : displayed.length === 0 ? (
+                  <div className="col-12 text-center" style={{ padding: "48px 0", color: "#888" }}>
+                    No team members available.
+                  </div>
+                ) : (
+                  displayed.map((member) => (
+                    <div className="col-lg-4 col-md-6 farmer-stye-one" style={{ marginBottom: 30 }} key={member.id}>
+                      <MemberCard member={member} />
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
@@ -140,7 +193,10 @@ const FarmersSection = ({ showAll = false }: Props) => {
   if (!loading && members.length === 0) return null;
 
   return (
-    <div className="farmer-area default-padding bottom-less bg-gray" style={{ backgroundImage: "url(/assets/img/shape/36.png)" }}>
+    <div
+      className="farmer-area default-padding bottom-less bg-gray"
+      style={{ backgroundImage: "url(/assets/img/shape/36.png)" }}
+    >
       <div className="container">
         <div className="row">
           <div className="col-lg-8 offset-lg-2">

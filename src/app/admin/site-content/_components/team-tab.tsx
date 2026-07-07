@@ -203,7 +203,7 @@ function TeamDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Full name"
-              maxLength={20}
+              maxLength={25}
             />
           </div>
 
@@ -217,7 +217,7 @@ function TeamDialog({
               value={designation}
               onChange={(e) => setDesignation(e.target.value)}
               placeholder="e.g. Vice Chancellor, KAU"
-              maxLength={50}
+              maxLength={80}
             />
           </div>
 

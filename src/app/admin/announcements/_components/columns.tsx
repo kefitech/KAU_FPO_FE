@@ -1,6 +1,8 @@
 import type { ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Eye, EyeOff, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 
+import type { AdminAnnouncement } from "@/app/admin/_api/announcements";
+import { TextCell } from "@/components/data-table/cell-helpers";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,13 +11,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { AdminAnnouncement } from "@/app/admin/_api/announcements";
 
 type T = Record<string, string>;
 
 interface ColumnActions {
   onEdit: (item: AdminAnnouncement) => void;
   onDelete: (item: AdminAnnouncement) => void;
+  onToggleStatus: (item: AdminAnnouncement) => void;
   t: T;
   tCommon: T;
 }
@@ -25,7 +27,13 @@ function formatDate(date: string | null): string {
   return new Date(date).toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" });
 }
 
-export function getAnnouncementColumns({ onEdit, onDelete, t, tCommon }: ColumnActions): ColumnDef<AdminAnnouncement>[] {
+export function getAnnouncementColumns({
+  onEdit,
+  onDelete,
+  onToggleStatus,
+  t,
+  tCommon,
+}: ColumnActions): ColumnDef<AdminAnnouncement>[] {
   return [
     {
       accessorKey: "title",
@@ -33,17 +41,13 @@ export function getAnnouncementColumns({ onEdit, onDelete, t, tCommon }: ColumnA
       cell: ({ row }) => {
         const title = row.original.title;
         const text = typeof title === "string" ? title : (Object.values(title)[0] ?? "—");
-        return <span className="line-clamp-1 max-w-xs">{text}</span>;
+        return <TextCell value={text} maxWidth="max-w-xs" />;
       },
     },
     {
       accessorKey: "category",
       header: t.col_category ?? "Category",
-      cell: ({ row }) => (
-        <Badge variant="outline">
-          {row.original.category_display ?? row.original.category}
-        </Badge>
-      ),
+      cell: ({ row }) => <Badge variant="outline">{row.original.category_display ?? row.original.category}</Badge>,
     },
     {
       accessorKey: "published_date",
@@ -61,35 +65,52 @@ export function getAnnouncementColumns({ onEdit, onDelete, t, tCommon }: ColumnA
         row.original.is_active ? (
           <Badge className="bg-green-100 text-green-700 hover:bg-green-100">{tCommon.badge_active ?? "Active"}</Badge>
         ) : (
-          <Badge variant="outline" className="text-muted-foreground">{tCommon.badge_inactive ?? "Inactive"}</Badge>
+          <Badge variant="outline" className="text-muted-foreground">
+            {tCommon.badge_inactive ?? "Inactive"}
+          </Badge>
         ),
     },
     {
       id: "actions",
       enableSorting: false,
       enableHiding: false,
-      cell: ({ row }) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onEdit(row.original)}>
-              <Pencil className="mr-2 h-4 w-4" />
-              {t.action_edit ?? "Edit"}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => onDelete(row.original)}
-              className="text-destructive focus:text-destructive"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              {t.action_delete ?? "Delete"}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ),
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onEdit(item)}>
+                <Pencil className="mr-2 h-4 w-4" />
+                {t.action_edit ?? "Edit"}
+              </DropdownMenuItem>
+
+              <DropdownMenuItem onClick={() => onToggleStatus(item)}>
+                {item.is_active ? (
+                  <>
+                    <EyeOff className="mr-2 h-4 w-4" />
+                    {t.action_deactivate ?? "Deactivate"}
+                  </>
+                ) : (
+                  <>
+                    <Eye className="mr-2 h-4 w-4" />
+                    {t.action_activate ?? "Activate"}
+                  </>
+                )}
+              </DropdownMenuItem>
+
+              <DropdownMenuItem onClick={() => onDelete(item)} className="text-destructive focus:text-destructive">
+                <Trash2 className="mr-2 h-4 w-4" />
+                {t.action_delete ?? "Delete"}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
     },
   ];
 }

@@ -3,22 +3,27 @@
 import { useEffect, useRef, useState } from "react";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Circle, ExternalLink, Eye, EyeOff, FileText, MoreHorizontal, Pencil, Plus, RefreshCw, Trash2, X, ZoomIn } from "lucide-react";
+import {
+  CheckCircle2,
+  Circle,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  FileText,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Trash2,
+  X,
+  ZoomIn,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { documentsApi } from "@/app/admin/_api/documents";
-import { api } from "@/lib/api/client";
-import { useConfirmStore } from "@/stores/confirm-store";
-import type { AdminDocument } from "@/types/admin";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,15 +32,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { api } from "@/lib/api/client";
+import { useConfirmStore } from "@/stores/confirm-store";
+import type { AdminDocument } from "@/types/admin";
 
 type T = Record<string, string>;
 
@@ -135,22 +137,21 @@ function DocumentDialog({
     onError: () => toast.error("Failed to save document."),
   });
 
-  const canSubmit =
-    !!titleValues[defaultLang?.code ?? "en"]?.trim() &&
-    (editing ? true : !!file);
+  const canSubmit = !!titleValues[defaultLang?.code ?? "en"]?.trim() && (editing ? true : !!file);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-0 overflow-x-hidden">
         <DialogHeader>
           <DialogTitle>{editing ? "Edit Document" : "Upload Document"}</DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4 py-2">
+        <div className="flex flex-col gap-4 py-2 min-w-0">
           {/* Title with language switcher */}
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium">
+          <div className="flex flex-col gap-1.5 min-w-0">
+            <div className="flex items-center justify-between min-w-0">
+              {/* biome-ignore lint/a11y/noLabelWithoutControl: label is visually associated with dynamically rendered inputs */}
+              <label className="text-sm font-medium shrink-0">
                 Title <span className="text-destructive">*</span>
               </label>
               {langsLoading && <Skeleton className="h-8 w-36" />}
@@ -171,9 +172,7 @@ function DocumentDialog({
                               <Circle className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
                             )}
                             {lang.native_name}
-                            {lang.is_default && (
-                              <span className="text-muted-foreground text-xs">(default)</span>
-                            )}
+                            {lang.is_default && <span className="text-muted-foreground text-xs">(default)</span>}
                           </span>
                         </SelectItem>
                       );
@@ -192,9 +191,7 @@ function DocumentDialog({
             ) : (
               <Input
                 value={titleValues[activeLang] ?? ""}
-                onChange={(e) =>
-                  setTitleValues((prev) => ({ ...prev, [activeLang]: e.target.value }))
-                }
+                onChange={(e) => setTitleValues((prev) => ({ ...prev, [activeLang]: e.target.value }))}
                 placeholder={`Document title in ${languages.find((l) => l.code === activeLang)?.name ?? activeLang}`}
               />
             )}
@@ -202,6 +199,7 @@ function DocumentDialog({
 
           {/* File upload */}
           <div className="flex flex-col gap-1.5">
+            {/* biome-ignore lint/a11y/noLabelWithoutControl: label is visually associated with file input below */}
             <label className="text-sm font-medium">
               PDF File {!editing && <span className="text-destructive">*</span>}
             </label>
@@ -326,7 +324,12 @@ export function DocumentsTab({ t = {} }: { t?: T }) {
   const [editing, setEditing] = useState<AdminDocument | null>(null);
   const [previewDoc, setPreviewDoc] = useState<AdminDocument | null>(null);
 
-  const { data: documents = [], isLoading, isFetching, refetch } = useQuery({
+  const {
+    data: documents = [],
+    isLoading,
+    isFetching,
+    refetch,
+  } = useQuery({
     queryKey: ["admin-documents"],
     queryFn: documentsApi.getAll,
     staleTime: 30_000,
@@ -354,7 +357,9 @@ export function DocumentsTab({ t = {} }: { t?: T }) {
   function handleDelete(doc: AdminDocument) {
     confirm({
       title: t.doc_delete_title ?? "Delete Document",
-      description: (t.doc_delete_description ?? 'Are you sure you want to delete "{name}"? This cannot be undone.').replace("{name}", doc.title_display),
+      description: (
+        t.doc_delete_description ?? 'Are you sure you want to delete "{name}"? This cannot be undone.'
+      ).replace("{name}", doc.title_display),
       onConfirm: () => deleteMutation.mutateAsync(doc.id),
     });
   }
@@ -390,7 +395,7 @@ export function DocumentsTab({ t = {} }: { t?: T }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Title</TableHead>
+              <TableHead className="w-[35%]">Title</TableHead>
               <TableHead>Size</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Status</TableHead>
@@ -430,9 +435,7 @@ export function DocumentsTab({ t = {} }: { t?: T }) {
                       <ExternalLink className="h-3 w-3 text-muted-foreground" />
                     </a>
                   </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
-                    {formatFileSize(doc.file_size)}
-                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm">{formatFileSize(doc.file_size)}</TableCell>
                   <TableCell>
                     <Badge
                       variant="secondary"
@@ -480,9 +483,7 @@ export function DocumentsTab({ t = {} }: { t?: T }) {
                           <Pencil className="mr-2 h-4 w-4" />
                           Edit
                         </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => toggleMutation.mutate({ id: doc.id, active: !doc.is_active })}
-                        >
+                        <DropdownMenuItem onClick={() => toggleMutation.mutate({ id: doc.id, active: !doc.is_active })}>
                           {doc.is_active ? (
                             <>
                               <EyeOff className="mr-2 h-4 w-4" />
@@ -496,10 +497,7 @@ export function DocumentsTab({ t = {} }: { t?: T }) {
                           )}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={() => handleDelete(doc)}
-                        >
+                        <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(doc)}>
                           <Trash2 className="mr-2 h-4 w-4" />
                           Delete
                         </DropdownMenuItem>
@@ -521,7 +519,12 @@ export function DocumentsTab({ t = {} }: { t?: T }) {
       />
 
       {/* PDF Preview Dialog */}
-      <Dialog open={!!previewDoc} onOpenChange={(v) => { if (!v) setPreviewDoc(null); }}>
+      <Dialog
+        open={!!previewDoc}
+        onOpenChange={(v) => {
+          if (!v) setPreviewDoc(null);
+        }}
+      >
         <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0">
           <DialogHeader className="px-6 pt-5 pb-3 border-b shrink-0">
             <DialogTitle className="flex items-center gap-2 text-base">
@@ -531,17 +534,11 @@ export function DocumentsTab({ t = {} }: { t?: T }) {
           </DialogHeader>
           <div className="flex-1 min-h-0">
             {previewDoc && (
-              <iframe
-                src={previewDoc.file_url}
-                className="w-full h-full"
-                title={previewDoc.title_display}
-              />
+              <iframe src={previewDoc.file_url} className="w-full h-full" title={previewDoc.title_display} />
             )}
           </div>
           <div className="px-6 py-3 border-t shrink-0 flex justify-between items-center">
-            <span className="text-xs text-muted-foreground">
-              {previewDoc && formatFileSize(previewDoc.file_size)}
-            </span>
+            <span className="text-xs text-muted-foreground">{previewDoc && formatFileSize(previewDoc.file_size)}</span>
             <div className="flex items-center gap-2">
               {previewDoc && !previewDoc.is_view_only && (
                 <a

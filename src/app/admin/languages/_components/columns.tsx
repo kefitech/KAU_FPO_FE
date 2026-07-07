@@ -62,14 +62,6 @@ function LanguageActions({ language, t, tCommon }: { language: Language; t: T; t
     onError: () => toast.error(tCommon.delete_failed ?? "Failed to delete"),
   });
 
-  function handleDelete() {
-    confirm({
-      title: "Delete Language",
-      description: `Are you sure you want to delete "${language.name}"? All translations for this language will also be removed. This action cannot be undone.`,
-      onConfirm: () => deleteMutation.mutateAsync(),
-    });
-  }
-
   return (
     <RowActions
       actions={[
@@ -82,13 +74,6 @@ function LanguageActions({ language, t, tCommon }: { language: Language; t: T; t
         {
           label: language.is_active ? (t.action_deactivate ?? "Deactivate") : (t.action_activate ?? "Activate"),
           onClick: handleToggle,
-        },
-        {
-          label: tCommon.delete_btn ?? "Delete",
-          onClick: handleDelete,
-          destructive: true,
-          separator: true,
-          disabled: language.is_default,
         },
       ]}
     />

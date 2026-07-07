@@ -3,21 +3,26 @@
 import { useEffect, useRef, useState } from "react";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ExternalLink, Eye, EyeOff, ImageIcon, MoreHorizontal, Newspaper, Pencil, Plus, RefreshCw, Trash2, X } from "lucide-react";
+import {
+  ExternalLink,
+  Eye,
+  EyeOff,
+  ImageIcon,
+  MoreHorizontal,
+  Newspaper,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Trash2,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
+import { z } from "zod";
 
 import { newsSourcesApi } from "@/app/admin/_api/news-sources";
-import { useConfirmStore } from "@/stores/confirm-store";
-import type { AdminNewsSource } from "@/types/admin";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,27 +31,41 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useConfirmStore } from "@/stores/confirm-store";
+import type { AdminNewsSource } from "@/types/admin";
 
 type T = Record<string, string>;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
+export const urlSchema = z
+  .string()
+  .trim()
+  .min(1, "URL is required")
+  .refine(
+    (value) => {
+      try {
+        const parsed = new URL(value);
+        return parsed.protocol === "http:" || parsed.protocol === "https:";
+      } catch {
+        return false;
+      }
+    },
+    {
+      message: "URL must start with http:// or https://",
+    },
+  );
+
 const CATEGORIES = [
-  { value: "newspaper",     label: "Newspaper"     },
-  { value: "magazine",      label: "Magazine"      },
-  { value: "website",       label: "Website"       },
-  { value: "agriculture",   label: "Agriculture"   },
-  { value: "government",    label: "Government"    },
-  { value: "other",         label: "Other"         },
+  { value: "newspaper", label: "Newspaper" },
+  { value: "magazine", label: "Magazine" },
+  { value: "website", label: "Website" },
+  { value: "agriculture", label: "Agriculture" },
+  { value: "government", label: "Government" },
+  { value: "other", label: "Other" },
 ] as const;
 
 type CategoryValue = (typeof CATEGORIES)[number]["value"];
@@ -65,16 +84,10 @@ function formatFileSize(bytes: number): string {
 
 function LogoThumb({ logo_url, name }: { logo_url: string | null; name: string }) {
   if (logo_url) {
-    return (
-      <img
-        src={logo_url}
-        alt={name}
-        className="h-8 w-8 rounded object-contain bg-muted"
-      />
-    );
+    return <img src={logo_url} alt={name} className="h-8 w-8 rounded bg-muted object-contain" />;
   }
   return (
-    <div className="h-8 w-8 rounded bg-muted flex items-center justify-center shrink-0">
+    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-muted">
       <Newspaper className="h-4 w-4 text-muted-foreground" />
     </div>
   );
@@ -95,6 +108,7 @@ function NewsSourceDialog({
 }) {
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
+  const [urlError, setUrlError] = useState<string | null>(null);
   const [category, setCategory] = useState<CategoryValue>("newspaper");
   const [logo, setLogo] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -102,6 +116,7 @@ function NewsSourceDialog({
   useEffect(() => {
     if (!open) return;
     setLogo(null);
+    setUrlError(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
     if (editing) {
       setName(editing.name);
@@ -113,6 +128,11 @@ function NewsSourceDialog({
       setCategory("newspaper");
     }
   }, [open, editing]);
+
+  const validateUrl = (value: string) => {
+    const result = urlSchema.safeParse(value);
+    return result.success ? null : result.error.issues[0].message;
+  };
 
   const mutation = useMutation({
     mutationFn: () => {
@@ -132,7 +152,16 @@ function NewsSourceDialog({
     onError: () => toast.error("Failed to save news source."),
   });
 
-  const canSubmit = !!name.trim() && !!url.trim();
+  const handleSubmit = () => {
+    const error = validateUrl(url);
+    if (error) {
+      setUrlError(error);
+      return;
+    }
+    mutation.mutate();
+  };
+
+  const canSubmit = !!name.trim() && !!url.trim() && !urlError;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -144,10 +173,11 @@ function NewsSourceDialog({
         <div className="flex flex-col gap-4 py-2">
           {/* Name */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium">
+            <label htmlFor="news-source-name" className="font-medium text-sm">
               Name <span className="text-destructive">*</span>
             </label>
             <Input
+              id="news-source-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Mathrubhumi"
@@ -156,20 +186,30 @@ function NewsSourceDialog({
 
           {/* URL */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium">
+            <label htmlFor="news-source-url" className="font-medium text-sm">
               URL <span className="text-destructive">*</span>
             </label>
             <Input
+              id="news-source-url"
               value={url}
-              onChange={(e) => setUrl(e.target.value)}
+              onChange={(e) => {
+                setUrl(e.target.value);
+                if (urlError) setUrlError(null);
+              }}
+              onBlur={() => setUrlError(validateUrl(url))}
               placeholder="https://example.com"
               type="url"
+              aria-invalid={!!urlError}
+              className={urlError ? "border-destructive focus-visible:ring-destructive/20" : ""}
             />
+            {urlError && <p className="text-destructive text-xs">{urlError}</p>}
           </div>
 
           {/* Category */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium">Category</label>
+            <label htmlFor="news-source-category" className="font-medium text-sm">
+              Category
+            </label>
             <Select value={category} onValueChange={(v) => setCategory(v as CategoryValue)}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select a category" />
@@ -186,9 +226,9 @@ function NewsSourceDialog({
 
           {/* Logo */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium">
+            <p className="font-medium text-sm">
               Logo <span className="text-muted-foreground text-xs">(optional)</span>
-            </label>
+            </p>
 
             {/* Existing logo (edit mode, no new file yet) */}
             {editing && !logo && (
@@ -211,6 +251,7 @@ function NewsSourceDialog({
                   <label className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer w-fit">
                     {editing.logo_url ? "Replace" : "Upload logo"}
                     <input
+                      id="news-source-logo"
                       ref={fileInputRef}
                       type="file"
                       accept="image/jpeg,image/png,image/webp,image/svg+xml"
@@ -257,6 +298,7 @@ function NewsSourceDialog({
             {/* File picker (add mode only) */}
             {!editing && !logo && (
               <Input
+                id="news-source-logo"
                 ref={fileInputRef}
                 type="file"
                 accept="image/jpeg,image/png,image/webp,image/svg+xml"
@@ -271,7 +313,8 @@ function NewsSourceDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={mutation.isPending}>
             Cancel
           </Button>
-          <Button onClick={() => mutation.mutate()} disabled={!canSubmit || mutation.isPending}>
+
+          <Button onClick={handleSubmit} disabled={!canSubmit || mutation.isPending}>
             {mutation.isPending ? "Saving…" : editing ? "Save Changes" : "Add Source"}
           </Button>
         </DialogFooter>
@@ -288,7 +331,12 @@ export function NewsSourcesTab({ t = {} }: { t?: T }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<AdminNewsSource | null>(null);
 
-  const { data: sources = [], isLoading, isFetching, refetch } = useQuery({
+  const {
+    data: sources = [],
+    isLoading,
+    isFetching,
+    refetch,
+  } = useQuery({
     queryKey: ["admin-news-sources"],
     queryFn: newsSourcesApi.getAll,
     staleTime: 30_000,
@@ -316,7 +364,9 @@ export function NewsSourcesTab({ t = {} }: { t?: T }) {
   function handleDelete(source: AdminNewsSource) {
     confirm({
       title: t.source_delete_title ?? "Delete News Source",
-      description: (t.source_delete_description ?? 'Are you sure you want to delete "{name}"? This cannot be undone.').replace("{name}", source.name),
+      description: (
+        t.source_delete_description ?? 'Are you sure you want to delete "{name}"? This cannot be undone.'
+      ).replace("{name}", source.name),
       onConfirm: () => deleteMutation.mutateAsync(source.id),
     });
   }
@@ -330,7 +380,13 @@ export function NewsSourcesTab({ t = {} }: { t?: T }) {
           <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
             <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
           </Button>
-          <Button size="sm" onClick={() => { setEditing(null); setDialogOpen(true); }}>
+          <Button
+            size="sm"
+            onClick={() => {
+              setEditing(null);
+              setDialogOpen(true);
+            }}
+          >
             <Plus className="mr-1.5 h-4 w-4" />
             {t.btn_add_source ?? "Add Source"}
           </Button>
@@ -357,7 +413,9 @@ export function NewsSourcesTab({ t = {} }: { t?: T }) {
                 <TableRow key={i}>
                   {Array.from({ length: 6 }).map((_, j) => (
                     // biome-ignore lint/suspicious/noArrayIndexKey: skeleton
-                    <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
+                    <TableCell key={j}>
+                      <Skeleton className="h-4 w-full" />
+                    </TableCell>
                   ))}
                 </TableRow>
               ))
@@ -410,7 +468,12 @@ export function NewsSourcesTab({ t = {} }: { t?: T }) {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => { setEditing(source); setDialogOpen(true); }}>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setEditing(source);
+                            setDialogOpen(true);
+                          }}
+                        >
                           <Pencil className="mr-2 h-4 w-4" />
                           Edit
                         </DropdownMenuItem>
@@ -430,10 +493,7 @@ export function NewsSourcesTab({ t = {} }: { t?: T }) {
                           )}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={() => handleDelete(source)}
-                        >
+                        <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(source)}>
                           <Trash2 className="mr-2 h-4 w-4" />
                           Delete
                         </DropdownMenuItem>

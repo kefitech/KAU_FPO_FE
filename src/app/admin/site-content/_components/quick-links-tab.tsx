@@ -3,21 +3,26 @@
 import { useEffect, useRef, useState } from "react";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ExternalLink, Eye, EyeOff, ImageIcon, Link2, MoreHorizontal, Pencil, Plus, RefreshCw, Trash2, X } from "lucide-react";
+import {
+  ExternalLink,
+  Eye,
+  EyeOff,
+  ImageIcon,
+  Link2,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Trash2,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
+import { z } from "zod";
 
 import { quickLinksApi } from "@/app/admin/_api/quick-links";
-import { useConfirmStore } from "@/stores/confirm-store";
-import type { AdminQuickLink } from "@/types/admin";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +33,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useConfirmStore } from "@/stores/confirm-store";
+import type { AdminQuickLink } from "@/types/admin";
 
 type T = Record<string, string>;
 
@@ -41,13 +48,7 @@ function formatFileSize(bytes: number): string {
 
 function LogoThumb({ logo_url, name }: { logo_url: string | null; name: string }) {
   if (logo_url) {
-    return (
-      <img
-        src={logo_url}
-        alt={name}
-        className="h-8 w-8 rounded object-contain bg-muted"
-      />
-    );
+    return <img src={logo_url} alt={name} className="h-8 w-8 rounded object-contain bg-muted" />;
   }
   return (
     <div className="h-8 w-8 rounded bg-muted flex items-center justify-center">
@@ -55,6 +56,24 @@ function LogoThumb({ logo_url, name }: { logo_url: string | null; name: string }
     </div>
   );
 }
+
+// ─── Link Validation ────────────────────────────────────────────────────────
+
+const urlSchema = z
+  .string()
+  .trim()
+  .min(1, "URL is required")
+  .refine(
+    (value) => {
+      try {
+        const parsed = new URL(value);
+        return ["http:", "https:"].includes(parsed.protocol);
+      } catch {
+        return false;
+      }
+    },
+    { message: "URL must start with http:// or https://" },
+  );
 
 // ─── Quick Link Dialog ────────────────────────────────────────────────────────
 
@@ -71,12 +90,14 @@ function QuickLinkDialog({
 }) {
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
+  const [urlError, setUrlError] = useState<string | null>(null);
   const [logo, setLogo] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) return;
     setLogo(null);
+    setUrlError(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
     if (editing) {
       setName(editing.name);
@@ -86,6 +107,11 @@ function QuickLinkDialog({
       setUrl("");
     }
   }, [open, editing]);
+
+  const validateUrl = (value: string) => {
+    const result = urlSchema.safeParse(value);
+    return result.success ? null : result.error.issues[0].message;
+  };
 
   const mutation = useMutation({
     mutationFn: () => {
@@ -104,7 +130,17 @@ function QuickLinkDialog({
     onError: () => toast.error("Failed to save quick link."),
   });
 
-  const canSubmit = !!name.trim() && !!url.trim();
+  const handleSubmit = () => {
+    const error = validateUrl(url);
+    if (error) {
+      setUrlError(error);
+      return;
+    }
+    mutation.mutate();
+  };
+
+  const hasLogo = !!logo || !!(editing && editing.logo_url);
+  const canSubmit = !!name.trim() && !!url.trim() && !urlError && hasLogo;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -116,10 +152,11 @@ function QuickLinkDialog({
         <div className="flex flex-col gap-4 py-2">
           {/* Name */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium">
+            <p className="text-sm font-medium">
               Name <span className="text-destructive">*</span>
-            </label>
+            </p>
             <Input
+              id="quick-link-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Kerala Agricultural University"
@@ -128,22 +165,30 @@ function QuickLinkDialog({
 
           {/* URL */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium">
+            <p className="text-sm font-medium">
               URL <span className="text-destructive">*</span>
-            </label>
+            </p>
             <Input
+              id="quick-link-url"
               value={url}
-              onChange={(e) => setUrl(e.target.value)}
+              onChange={(e) => {
+                setUrl(e.target.value);
+                if (urlError) setUrlError(null);
+              }}
+              onBlur={() => setUrlError(validateUrl(url))}
               placeholder="https://example.com"
               type="url"
+              aria-invalid={!!urlError}
+              className={urlError ? "border-destructive focus-visible:ring-destructive/20" : ""}
             />
+            {urlError && <p className="text-xs text-destructive">{urlError}</p>}
           </div>
 
           {/* Logo */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium">
-              Logo <span className="text-muted-foreground text-xs">(optional)</span>
-            </label>
+            <p className="font-medium text-sm">
+              Logo <span className="text-destructive">*</span>
+            </p>
 
             {/* Existing logo (edit, no replacement yet) */}
             {editing && !logo && (
@@ -212,6 +257,7 @@ function QuickLinkDialog({
             {/* File picker (add mode only) */}
             {!editing && !logo && (
               <Input
+                id="quick-link-logo"
                 ref={fileInputRef}
                 type="file"
                 accept="image/jpeg,image/png,image/webp,image/svg+xml"
@@ -220,14 +266,13 @@ function QuickLinkDialog({
             )}
             <p className="text-xs text-muted-foreground">JPG, PNG, WebP or SVG</p>
           </div>
-
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={mutation.isPending}>
             Cancel
           </Button>
-          <Button onClick={() => mutation.mutate()} disabled={!canSubmit || mutation.isPending}>
+          <Button onClick={handleSubmit} disabled={!canSubmit || mutation.isPending}>
             {mutation.isPending ? "Saving…" : editing ? "Save Changes" : "Add Link"}
           </Button>
         </DialogFooter>
@@ -244,7 +289,12 @@ export function QuickLinksTab({ t = {} }: { t?: T }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<AdminQuickLink | null>(null);
 
-  const { data: links = [], isLoading, isFetching, refetch } = useQuery({
+  const {
+    data: links = [],
+    isLoading,
+    isFetching,
+    refetch,
+  } = useQuery({
     queryKey: ["admin-quick-links"],
     queryFn: quickLinksApi.getAll,
     staleTime: 30_000,
@@ -272,7 +322,9 @@ export function QuickLinksTab({ t = {} }: { t?: T }) {
   function handleDelete(link: AdminQuickLink) {
     confirm({
       title: t.link_delete_title ?? "Delete Quick Link",
-      description: (t.link_delete_description ?? 'Are you sure you want to delete "{name}"? This cannot be undone.').replace("{name}", link.name),
+      description: (
+        t.link_delete_description ?? 'Are you sure you want to delete "{name}"? This cannot be undone.'
+      ).replace("{name}", link.name),
       onConfirm: () => deleteMutation.mutateAsync(link.id),
     });
   }
@@ -286,7 +338,13 @@ export function QuickLinksTab({ t = {} }: { t?: T }) {
           <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
             <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
           </Button>
-          <Button size="sm" onClick={() => { setEditing(null); setDialogOpen(true); }}>
+          <Button
+            size="sm"
+            onClick={() => {
+              setEditing(null);
+              setDialogOpen(true);
+            }}
+          >
             <Plus className="mr-1.5 h-4 w-4" />
             {t.btn_add_link ?? "Add Link"}
           </Button>
@@ -312,7 +370,9 @@ export function QuickLinksTab({ t = {} }: { t?: T }) {
                 <TableRow key={i}>
                   {Array.from({ length: 5 }).map((_, j) => (
                     // biome-ignore lint/suspicious/noArrayIndexKey: skeleton
-                    <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
+                    <TableCell key={j}>
+                      <Skeleton className="h-4 w-full" />
+                    </TableCell>
                   ))}
                 </TableRow>
               ))
@@ -360,7 +420,12 @@ export function QuickLinksTab({ t = {} }: { t?: T }) {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => { setEditing(link); setDialogOpen(true); }}>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setEditing(link);
+                            setDialogOpen(true);
+                          }}
+                        >
                           <Pencil className="mr-2 h-4 w-4" />
                           Edit
                         </DropdownMenuItem>
@@ -380,10 +445,7 @@ export function QuickLinksTab({ t = {} }: { t?: T }) {
                           )}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={() => handleDelete(link)}
-                        >
+                        <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(link)}>
                           <Trash2 className="mr-2 h-4 w-4" />
                           Delete
                         </DropdownMenuItem>

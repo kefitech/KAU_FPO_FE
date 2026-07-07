@@ -267,10 +267,10 @@ export default function LanguagesPage() {
                 <Upload className="mr-1.5 h-4 w-4" />
                 {tPage.import_btn ?? "Import"}
               </Button>
-              <Button size="sm" onClick={() => router.push("/admin/translations/new")}>
+              {/* <Button size="sm" onClick={() => router.push("/admin/translations/new")}>
                 <Plus className="mr-1.5 h-4 w-4" />
                 {tPage.add_translation_btn ?? "Add Translation"}
-              </Button>
+              </Button> */}
             </div>
           ) : (
             <Button size="sm" onClick={() => router.push("/admin/menu-items/new")}>

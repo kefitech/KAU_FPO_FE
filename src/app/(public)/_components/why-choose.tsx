@@ -1,8 +1,12 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+
 import Link from "next/link";
+
+import DOMPurify from "isomorphic-dompurify";
 import CountUp from "react-countup";
-import { faqApi, type Faq } from "@/lib/api/faq";
+
+import { type Faq, faqApi } from "@/lib/api/faq";
 import { useLocaleStore } from "@/stores/locale-store";
 
 const WhyChoose = () => {
@@ -11,11 +15,17 @@ const WhyChoose = () => {
   const locale = useLocaleStore((s) => s.locale);
   const toggle = (id: number) => setOpenItem(openItem === id ? null : id);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refetch intentionally triggered on locale change
   useEffect(() => {
-    faqApi.getAll({ page: 1, page_size: 3 }).then((res) => {
-      setFaqItems(res.data);
-      if (res.data.length > 0) setOpenItem(res.data[0].id);
-    }).catch(() => {});
+    faqApi
+      .getAll({ page: 1, page_size: 3 })
+      .then((res) => {
+        setFaqItems(res.data);
+        if (res.data.length > 0) setOpenItem(res.data[0].id);
+      })
+      .catch(() => {
+        // silently ignore FAQ fetch errors; section just won't render
+      });
   }, [locale]);
 
   return (
@@ -29,10 +39,14 @@ const WhyChoose = () => {
                 <img src="/assets/img/shape/22.png" alt="shape" data-aos="fade-down" data-aos-delay="100" />
               </div>
               <div className="product-produce">
-                <div className="icon"><i className="flaticon-farmer" /></div>
+                <div className="icon">
+                  <i className="flaticon-farmer" />
+                </div>
                 <div className="fun-fact">
                   <div className="counter">
-                    <div className="timer"><CountUp end={258} enableScrollSpy scrollSpyOnce /></div>
+                    <div className="timer">
+                      <CountUp end={258} enableScrollSpy scrollSpyOnce />
+                    </div>
                     <div className="operator">K</div>
                   </div>
                   <span className="medium">Agriculture, Organic Products</span>
@@ -42,7 +56,9 @@ const WhyChoose = () => {
           </div>
           <div className="col-lg-6 choose-us-style-one">
             <h5 className="sub-title">Get to know us</h5>
-            <h2 className="title">Agriculture matters to <br /> the future of development</h2>
+            <h2 className="title">
+              Agriculture matters to <br /> the future of development
+            </h2>
             <div className="accordion accordion-regular mt-35" id="faqAccordion">
               {faqItems.map((item) => (
                 <div key={item.id} className="accordion-item">
@@ -57,7 +73,12 @@ const WhyChoose = () => {
                     </button>
                   </h2>
                   <div className={`accordion-collapse collapse${openItem === item.id ? " show" : ""}`}>
-                    <div className="accordion-body"><p>{item.answer}</p></div>
+                    <div className="accordion-body">
+                      <div
+                        // biome-ignore lint/security/noDangerouslySetInnerHtml: content is sanitized with DOMPurify
+                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(item.answer) }}
+                      />
+                    </div>
                   </div>
                 </div>
               ))}

@@ -33,7 +33,7 @@ function ClaimPageInner() {
         toast.info("You already have a pending claim for this FPO.");
         router.push("/fpo/claim/status");
       } else {
-        toast.error("Failed to submit claim. Please try again.");
+        toast.error("Failed to submit claim. Pending claim exists.");
       }
     },
   });
@@ -42,7 +42,9 @@ function ClaimPageInner() {
     return (
       <div className="mx-auto flex w-full max-w-lg flex-col gap-4 px-6 py-12 text-center">
         <p className="text-muted-foreground text-sm">Invalid claim link. Please go back and try again.</p>
-        <Button variant="outline" onClick={() => router.back()}>Go Back</Button>
+        <Button variant="outline" onClick={() => router.back()}>
+          Go Back
+        </Button>
       </div>
     );
   }
@@ -65,8 +67,7 @@ function ClaimPageInner() {
         <div className="flex flex-col gap-4">
           <div>
             <label className="mb-1.5 block font-medium text-sm" htmlFor="reason">
-              Why are you the legitimate owner?{" "}
-              <span className="text-destructive">*</span>
+              Why are you the legitimate owner? <span className="text-destructive">*</span>
             </label>
             <textarea
               id="reason"
@@ -77,10 +78,10 @@ function ClaimPageInner() {
               className="w-full resize-none rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
             <div className="mt-1 flex items-center justify-between">
-              <p className="text-muted-foreground text-xs">
-                Minimum 20 characters
-              </p>
-              <p className={`text-xs tabular-nums ${reasonTrimmed.length < 20 ? "text-muted-foreground" : "text-green-600 dark:text-green-400"}`}>
+              <p className="text-muted-foreground text-xs">Minimum 20 characters</p>
+              <p
+                className={`text-xs tabular-nums ${reasonTrimmed.length < 20 ? "text-muted-foreground" : "text-green-600 dark:text-green-400"}`}
+              >
                 {reasonTrimmed.length} / 20
               </p>
             </div>
