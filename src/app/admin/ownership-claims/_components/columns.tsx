@@ -38,18 +38,13 @@ export function getOwnershipClaimColumns(
     {
       accessorKey: "claimant_email",
       header: t.col_email ?? "Email",
-      cell: ({ row }) => <TextCell value={row.original.claimant_email} maxWidth="max-w-[180px]" muted />,
+      cell: ({ row }) => <TextCell value={row.original.claimant_email} maxWidth="max-w-[120px]" muted />,
     },
     {
-      accessorKey: "claimant_phone",
-      header: t.col_phone ?? "Phone",
-      cell: ({ row }) => <TextCell value={row.original.claimant_phone} maxWidth="max-w-[120px]" muted />,
+      accessorKey: "reason",
+      header: t.col_reason ?? "Reason",
+      cell: ({ row }) => <TextCell value={row.original.reason} maxWidth="max-w-[200px]" />,
       enableSorting: false,
-    },
-    {
-      accessorKey: "fpo_name",
-      header: t.col_fpo ?? "FPO",
-      cell: ({ row }) => <TextCell value={row.original.fpo_name} maxWidth="max-w-[200px]" />,
     },
     {
       accessorKey: "status",
@@ -59,6 +54,17 @@ export function getOwnershipClaimColumns(
           {STATUS_LABEL[row.original.status]}
         </Badge>
       ),
+    },
+    {
+      accessorKey: "fpo_name",
+      header: t.col_fpo ?? "FPO",
+      cell: ({ row }) => <TextCell value={row.original.fpo_name} maxWidth="max-w-[140px]" />,
+    },
+
+    {
+      accessorKey: "claimant_phone",
+      header: t.col_phone ?? "Phone",
+      cell: ({ row }) => <TextCell value={row.original.claimant_phone} maxWidth="max-w-[120px]" muted />,
       enableSorting: false,
     },
     {
