@@ -28,6 +28,7 @@ export function QuestionField({ question, value, onChange, readOnly }: QuestionF
         }}
         disabled={readOnly}
         className="max-w-xs"
+        maxLength={12}
       />
     );
   }
