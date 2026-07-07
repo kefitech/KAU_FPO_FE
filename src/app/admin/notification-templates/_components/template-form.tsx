@@ -117,10 +117,16 @@ export function TemplateForm({ mode, template, t = {}, tCommon = {} }: TemplateF
     },
     onError: (error: any) => {
       console.log("raw error:", error);
-      const data = error?.data; // 👈 change error?.response?.data → error?.data
+      const data = error?.data;
 
       if (data?.code === "validation_error" && data?.errors) {
-        Object.entries(data.errors).forEach(([field, messages]) => {
+        const { non_field_errors, ...fieldErrors } = data.errors;
+
+        if (non_field_errors) {
+          toast.error((non_field_errors as string[])[0]);
+        }
+
+        Object.entries(fieldErrors).forEach(([field, messages]) => {
           setError(field as any, {
             type: "server",
             message: (messages as string[])[0],
@@ -128,7 +134,6 @@ export function TemplateForm({ mode, template, t = {}, tCommon = {} }: TemplateF
         });
       } else {
         toast.error(error?.message ?? (isEdit ? "Failed to update template" : "Failed to create template"));
-        //           👆 error.message directly, since interceptor hoisted it up
       }
     },
   });
