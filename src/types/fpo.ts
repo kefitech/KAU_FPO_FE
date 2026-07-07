@@ -81,6 +81,7 @@ export interface FpoProfile {
   required_docs_uploaded: boolean;
   required_docs_verified: boolean;
   submission_errors: string[];
+  origin_claim_id: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -200,7 +201,7 @@ export interface FpoClaim {
   fpo_name: string;
   reason: string;
   supporting_doc_ids: string[];
-  status: "pending" | "approved" | "rejected";
+  status: "pending" | "approved" | "rejected" | "docs_requested" | "docs_submitted";
   review_notes?: string | null;
   created_at: string;
 }

@@ -18,6 +18,7 @@ import {
   FileText,
   Landmark,
   MapPin,
+  Pencil,
   RefreshCw,
   ShieldCheck,
   Star,
@@ -120,6 +121,159 @@ function SectionCard({
 }
 
 // ─── Dialogs ──────────────────────────────────────────────────────────────────
+
+const editFPOSchema = z.object({
+  name:                z.string().optional(),
+  name_ml:             z.string().optional(),
+  office_phone:        z.string().optional(),
+  office_email:        z.string().optional().refine((v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), { message: "Invalid email" }),
+  district:            z.string().optional(),
+  address_line1:       z.string().optional(),
+  address_line2:       z.string().optional(),
+  pincode:             z.string().optional(),
+  pan_number:          z.string().optional(),
+  gst_number:          z.string().optional(),
+  cin_number:          z.string().optional(),
+  registration_number: z.string().optional(),
+  website:             z.string().optional(),
+  description:         z.string().optional(),
+});
+type EditFPOValues = z.infer<typeof editFPOSchema>;
+
+function EditFPODialog({
+  fpoId,
+  defaultValues,
+  open,
+  onOpenChange,
+}: {
+  fpoId: number;
+  defaultValues: Partial<EditFPOValues>;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
+  const queryClient = useQueryClient();
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<EditFPOValues>({
+    resolver: zodResolver(editFPOSchema),
+    defaultValues,
+  });
+
+  const mutation = useMutation({
+    mutationFn: (values: EditFPOValues) => {
+      const payload: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(values)) {
+        if (v !== undefined && v !== "") payload[k] = v;
+      }
+      return adminApplicationsApi.adminEdit(fpoId, payload);
+    },
+    onSuccess: (res) => {
+      toast.success(`Updated: ${res.updated_fields.join(", ") || "no changes"}`);
+      queryClient.invalidateQueries({ queryKey: ["application", fpoId] });
+      queryClient.invalidateQueries({ queryKey: ["applications"] });
+      onOpenChange(false);
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(msg ?? "Failed to update FPO details");
+    },
+  });
+
+  function handleOpen(v: boolean) {
+    if (!v) reset(defaultValues);
+    onOpenChange(v);
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpen}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Edit FPO Details</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="flex flex-col gap-4">
+          <div className="grid grid-cols-2 gap-4">
+            <Field>
+              <FieldLabel>FPO Name (English)</FieldLabel>
+              <Input {...register("name")} placeholder="FPO Name" />
+              <FieldError>{errors.name?.message}</FieldError>
+            </Field>
+            <Field>
+              <FieldLabel>FPO Name (Malayalam)</FieldLabel>
+              <Input {...register("name_ml")} placeholder="FPO Name ML" />
+              <FieldError>{errors.name_ml?.message}</FieldError>
+            </Field>
+            <Field>
+              <FieldLabel>Office Phone</FieldLabel>
+              <Input {...register("office_phone")} placeholder="+91 XXXXX XXXXX" />
+              <FieldError>{errors.office_phone?.message}</FieldError>
+            </Field>
+            <Field>
+              <FieldLabel>Office Email</FieldLabel>
+              <Input {...register("office_email")} placeholder="office@fpo.com" type="email" />
+              <FieldError>{errors.office_email?.message}</FieldError>
+            </Field>
+            <Field>
+              <FieldLabel>District</FieldLabel>
+              <Input {...register("district")} placeholder="e.g. TSR" />
+              <FieldError>{errors.district?.message}</FieldError>
+            </Field>
+            <Field>
+              <FieldLabel>Pincode</FieldLabel>
+              <Input {...register("pincode")} placeholder="6XXXXX" />
+              <FieldError>{errors.pincode?.message}</FieldError>
+            </Field>
+            <Field>
+              <FieldLabel>PAN Number</FieldLabel>
+              <Input {...register("pan_number")} placeholder="ABCDE1234F" className="uppercase" />
+              <FieldError>{errors.pan_number?.message}</FieldError>
+            </Field>
+            <Field>
+              <FieldLabel>GST Number</FieldLabel>
+              <Input {...register("gst_number")} placeholder="GST Number" className="uppercase" />
+              <FieldError>{errors.gst_number?.message}</FieldError>
+            </Field>
+            <Field>
+              <FieldLabel>CIN Number</FieldLabel>
+              <Input {...register("cin_number")} placeholder="CIN Number" className="uppercase" />
+              <FieldError>{errors.cin_number?.message}</FieldError>
+            </Field>
+            <Field>
+              <FieldLabel>Registration Number</FieldLabel>
+              <Input {...register("registration_number")} placeholder="Reg. Number" />
+              <FieldError>{errors.registration_number?.message}</FieldError>
+            </Field>
+            <Field>
+              <FieldLabel>Website</FieldLabel>
+              <Input {...register("website")} placeholder="https://..." />
+              <FieldError>{errors.website?.message}</FieldError>
+            </Field>
+          </div>
+          <Field>
+            <FieldLabel>Address Line 1</FieldLabel>
+            <Input {...register("address_line1")} placeholder="Address Line 1" />
+            <FieldError>{errors.address_line1?.message}</FieldError>
+          </Field>
+          <Field>
+            <FieldLabel>Address Line 2</FieldLabel>
+            <Input {...register("address_line2")} placeholder="Address Line 2" />
+            <FieldError>{errors.address_line2?.message}</FieldError>
+          </Field>
+          <Field>
+            <FieldLabel>Description</FieldLabel>
+            <Textarea {...register("description")} placeholder="About this FPO..." rows={3} />
+            <FieldError>{errors.description?.message}</FieldError>
+          </Field>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => handleOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={mutation.isPending}>
+              {mutation.isPending ? "Saving…" : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 const rejectSchema = z.object({ reason: z.string().min(20, { message: "Reason must be at least 20 characters" }) });
 type RejectValues = z.infer<typeof rejectSchema>;
@@ -259,82 +413,6 @@ function RequestInfoDialog({
             </Button>
             <Button type="submit" disabled={mutation.isPending}>
               {mutation.isPending ? "Sending…" : (t.req_info_btn_submit ?? "Send Request")}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-const userLimitSchema = z.object({ max_secondary_users: z.number().int().min(1).max(500) });
-type UserLimitValues = z.infer<typeof userLimitSchema>;
-
-function UserLimitDialog({
-  fpoId,
-  current,
-  t,
-  tCommon,
-  open,
-  onOpenChange,
-}: {
-  fpoId: number;
-  current: number;
-  t: T;
-  tCommon: T;
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-}) {
-  const queryClient = useQueryClient();
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<UserLimitValues>({
-    resolver: zodResolver(userLimitSchema),
-    defaultValues: { max_secondary_users: current },
-  });
-  const mutation = useMutation({
-    mutationFn: (values: UserLimitValues) => adminApplicationsApi.setUserLimit(fpoId, values.max_secondary_users),
-    onSuccess: () => {
-      toast.success("User limit updated");
-      queryClient.invalidateQueries({ queryKey: ["application", fpoId] });
-      onOpenChange(false);
-    },
-    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : "Failed to update"),
-  });
-  return (
-    <Dialog
-      open={open}
-      onOpenChange={(v) => {
-        if (!v) reset();
-        onOpenChange(v);
-      }}
-    >
-      <DialogContent className="max-w-xs">
-        <DialogHeader>
-          <DialogTitle>{t.user_limit_dialog_title ?? "Set Secondary User Limit"}</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="flex flex-col gap-4">
-          <Field>
-            <FieldLabel htmlFor="max_secondary_users">{t.user_limit_field_label ?? "Max Secondary Users"}</FieldLabel>
-            <Input
-              id="max_secondary_users"
-              type="number"
-              min={1}
-              max={500}
-              className="w-32"
-              {...register("max_secondary_users", { valueAsNumber: true })}
-            />
-            {errors.max_secondary_users && <FieldError errors={[errors.max_secondary_users]} />}
-          </Field>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              {tCommon.cancel ?? "Cancel"}
-            </Button>
-            <Button type="submit" disabled={mutation.isPending}>
-              {tCommon.save ?? "Save"}
             </Button>
           </DialogFooter>
         </form>
@@ -799,10 +877,11 @@ function ApplicationDetailContent() {
 
   const [t, setT] = useState<T>({});
   const [tCommon, setTCommon] = useState<T>({});
-  const [rejectOpen, setRejectOpen] = useState(false);
-  const [requestInfoOpen, setRequestInfoOpen] = useState(false);
-  const [userLimitOpen, setUserLimitOpen] = useState(false);
+  const action = searchParams.get("action");
+  const [rejectOpen, setRejectOpen] = useState(action === "reject");
+  const [requestInfoOpen, setRequestInfoOpen] = useState(action === "request-info");
   const [assignTierOpen, setAssignTierOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   useEffect(() => {
     translationsApi
@@ -827,26 +906,6 @@ function ApplicationDetailContent() {
     staleTime: 30_000,
   });
 
-  const markUnderReviewMutation = useMutation({
-    mutationFn: () => adminApplicationsApi.markUnderReview(fpoId),
-    onSuccess: () => {
-      toast.success("Marked as Under Review");
-      queryClient.invalidateQueries({ queryKey: ["application", fpoId] });
-      queryClient.invalidateQueries({ queryKey: ["applications"] });
-    },
-    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : "Action failed"),
-  });
-
-  const approveMutation = useMutation({
-    mutationFn: () => adminApplicationsApi.approve(fpoId),
-    onSuccess: () => {
-      toast.success(t.btn_approve ?? "Application approved");
-      queryClient.invalidateQueries({ queryKey: ["application", fpoId] });
-      queryClient.invalidateQueries({ queryKey: ["applications"] });
-    },
-    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : "Failed to approve"),
-  });
-
   const verifyDocMutation = useMutation({
     mutationFn: (docId: number) => adminApplicationsApi.verifyDocument(fpoId, docId),
     onSuccess: () => {
@@ -854,6 +913,26 @@ function ApplicationDetailContent() {
       queryClient.invalidateQueries({ queryKey: ["application", fpoId] });
     },
     onError: (err: unknown) => toast.error(err instanceof Error ? err.message : "Failed to verify"),
+  });
+
+  const activateMutation = useMutation({
+    mutationFn: () => adminApplicationsApi.activate(fpoId),
+    onSuccess: () => {
+      toast.success("FPO activated successfully");
+      queryClient.invalidateQueries({ queryKey: ["application", fpoId] });
+      queryClient.invalidateQueries({ queryKey: ["applications"] });
+    },
+    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : "Failed to activate"),
+  });
+
+  const deactivateMutation = useMutation({
+    mutationFn: () => adminApplicationsApi.deactivate(fpoId),
+    onSuccess: () => {
+      toast.success("FPO deactivated (suspended)");
+      queryClient.invalidateQueries({ queryKey: ["application", fpoId] });
+      queryClient.invalidateQueries({ queryKey: ["applications"] });
+    },
+    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : "Failed to deactivate"),
   });
 
   function setTab(key: TabKey) {
@@ -906,40 +985,44 @@ function ApplicationDetailContent() {
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <Button variant="outline" size="sm" onClick={() => setUserLimitOpen(true)}>
-            {t.btn_user_limit ?? "User Limit"} ({app.max_secondary_users})
+          <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
+            <Pencil className="mr-1.5 h-4 w-4" />
+            Edit Details
           </Button>
-          {app.status === "submitted" && (
+          {(app.status === "approved" || app.status === "info_required") && (
+            <Button size="sm" variant="outline" onClick={() => setRequestInfoOpen(true)}>
+              <AlertCircle className="mr-1.5 h-4 w-4" />
+              {t.btn_request_info ?? "Request Info"}
+            </Button>
+          )}
+          {app.status === "approved" && (
+            <Button size="sm" variant="destructive" onClick={() => setRejectOpen(true)}>
+              <XCircle className="mr-1.5 h-4 w-4" />
+              {t.btn_reject ?? "Reject"}
+            </Button>
+          )}
+          {app.status === "approved" && (
             <Button
               size="sm"
               variant="outline"
-              onClick={() => markUnderReviewMutation.mutate()}
-              disabled={markUnderReviewMutation.isPending}
+              className="text-orange-600 border-orange-200 hover:bg-orange-50"
+              onClick={() => confirm("Suspend this FPO?") && deactivateMutation.mutate()}
+              disabled={deactivateMutation.isPending}
             >
-              <ChevronRight className="mr-1.5 h-4 w-4" />
-              {t.btn_start_review ?? "Start Review"}
+              <XCircle className="mr-1.5 h-4 w-4" />
+              {deactivateMutation.isPending ? "Suspending…" : "Suspend"}
             </Button>
           )}
-          {app.status === "under_review" && (
-            <>
-              <Button size="sm" variant="outline" onClick={() => setRequestInfoOpen(true)}>
-                <AlertCircle className="mr-1.5 h-4 w-4" />
-                {t.btn_request_info ?? "Request Info"}
-              </Button>
-              <Button size="sm" variant="destructive" onClick={() => setRejectOpen(true)}>
-                <XCircle className="mr-1.5 h-4 w-4" />
-                {t.btn_reject ?? "Reject"}
-              </Button>
-              <Button
-                size="sm"
-                className="bg-green-600 hover:bg-green-700"
-                onClick={() => approveMutation.mutate()}
-                disabled={approveMutation.isPending}
-              >
-                <CheckCheck className="mr-1.5 h-4 w-4" />
-                {approveMutation.isPending ? "Approving…" : (t.btn_approve ?? "Approve")}
-              </Button>
-            </>
+          {(app.status === "suspended" || app.status === "rejected") && (
+            <Button
+              size="sm"
+              className="bg-green-600 hover:bg-green-700"
+              onClick={() => confirm("Reactivate this FPO?") && activateMutation.mutate()}
+              disabled={activateMutation.isPending}
+            >
+              <CheckCheck className="mr-1.5 h-4 w-4" />
+              {activateMutation.isPending ? "Activating…" : "Activate"}
+            </Button>
           )}
         </div>
       </div>
@@ -980,6 +1063,16 @@ function ApplicationDetailContent() {
                 <InfoRow label={t.field_reg_date ?? "Date of Registration"} value={app.date_of_registration} />
                 <InfoRow label={t.field_pan ?? "PAN Number"} value={app.pan_number} />
                 <InfoRow label={t.field_gst ?? "GST Number"} value={app.gst_number} />
+                {app.claim_origin && (
+                  <div className="col-span-2">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-muted-foreground text-xs">Claimed From</span>
+                      <span className="font-medium text-sm text-purple-700">
+                        {app.claim_origin.original_fpo_name} (FPO #{app.claim_origin.original_fpo_id})
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             </SectionCard>
 
@@ -1259,15 +1352,28 @@ function ApplicationDetailContent() {
         open={requestInfoOpen}
         onOpenChange={setRequestInfoOpen}
       />
-      <UserLimitDialog
-        fpoId={fpoId}
-        current={app.max_secondary_users}
-        t={t}
-        tCommon={tCommon}
-        open={userLimitOpen}
-        onOpenChange={setUserLimitOpen}
-      />
       <AssignTierDialog fpoId={fpoId} open={assignTierOpen} onOpenChange={setAssignTierOpen} />
+      <EditFPODialog
+        fpoId={fpoId}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        defaultValues={{
+          name:                app.name ?? "",
+          name_ml:             app.name_ml ?? "",
+          office_phone:        app.office_phone ?? "",
+          office_email:        app.office_email ?? "",
+          district:            app.district ?? "",
+          address_line1:       app.address_line1 ?? "",
+          address_line2:       app.address_line2 ?? "",
+          pincode:             app.pincode ?? "",
+          pan_number:          app.pan_number ?? "",
+          gst_number:          app.gst_number ?? "",
+          cin_number:          app.cin_number ?? "",
+          registration_number: app.registration_number ?? "",
+          website:             app.website ?? "",
+          description:         app.description ?? "",
+        }}
+      />
     </div>
   );
 }

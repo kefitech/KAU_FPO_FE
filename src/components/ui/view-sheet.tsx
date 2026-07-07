@@ -199,7 +199,10 @@ export function ViewSheet({ open, onOpenChange, title, fields, actions }: ViewSh
 
         {/* Header */}
         <SheetHeader className="px-6 py-5 border-b bg-muted/20">
-          <SheetTitle className="text-base font-semibold tracking-tight">{title}</SheetTitle>
+          <SheetTitle
+            className="text-base font-semibold tracking-tight"
+            dangerouslySetInnerHTML={{ __html: title }}
+          />
         </SheetHeader>
 
         {/* Scrollable body */}

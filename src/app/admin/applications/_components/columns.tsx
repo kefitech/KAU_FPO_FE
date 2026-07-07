@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
-import { ArrowRightCircle, Eye, MoreHorizontal } from "lucide-react";
+import { CheckCheck, Eye, Info, MoreHorizontal, PauseCircle, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import { type ApplicationListItem, type ApplicationStatus, adminApplicationsApi } from "@/app/admin/_api/applications";
@@ -15,6 +15,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -26,7 +27,7 @@ function StatusBadge({ status, label }: { status: ApplicationStatus; label: stri
     submitted: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
     under_review: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
     approved: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
-    rejected: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
+    rejected: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-600",
     info_required: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300",
     suspended: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
     claimed: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
@@ -42,14 +43,33 @@ function ActionsCell({ row, t, tCommon }: { row: ApplicationListItem; t: T; tCom
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const markUnderReviewMutation = useMutation({
-    mutationFn: () => adminApplicationsApi.markUnderReview(row.id),
+  const activateMutation = useMutation({
+    mutationFn: () => adminApplicationsApi.activate(row.id),
     onSuccess: () => {
-      toast.success("Marked as Under Review");
+      toast.success(`${row.name || "FPO"} activated`);
       queryClient.invalidateQueries({ queryKey: ["applications"] });
     },
-    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : "Action failed"),
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(msg ?? "Failed to activate");
+    },
   });
+
+  const deactivateMutation = useMutation({
+    mutationFn: () => adminApplicationsApi.deactivate(row.id),
+    onSuccess: () => {
+      toast.success(`${row.name || "FPO"} suspended`);
+      queryClient.invalidateQueries({ queryKey: ["applications"] });
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(msg ?? "Failed to suspend");
+    },
+  });
+
+  const isApproved = row.status === "approved";
+  const isInfoRequired = row.status === "info_required";
+  const canActivate = row.status === "suspended" || row.status === "rejected";
 
   return (
     <DropdownMenu>
@@ -61,15 +81,41 @@ function ActionsCell({ row, t, tCommon }: { row: ApplicationListItem; t: T; tCom
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={() => router.push(`/admin/applications/${row.id}`)}>
           <Eye className="mr-2 h-4 w-4" />
-          {t.action_view ?? tCommon.view ?? "View"}
+          {t.action_view ?? tCommon.view ?? "View Details"}
         </DropdownMenuItem>
-        {row.status === "submitted" && (
+
+        {(isApproved || isInfoRequired || canActivate) && <DropdownMenuSeparator />}
+
+        {isApproved && (
+          <DropdownMenuItem onClick={() => router.push(`/admin/applications/${row.id}?action=request-info`)}>
+            <Info className="mr-2 h-4 w-4 text-orange-500" />
+            Request Info
+          </DropdownMenuItem>
+        )}
+        {isApproved && (
+          <DropdownMenuItem onClick={() => router.push(`/admin/applications/${row.id}?action=reject`)}>
+            <XCircle className="mr-2 h-4 w-4 text-destructive" />
+            Reject
+          </DropdownMenuItem>
+        )}
+        {isApproved && (
           <DropdownMenuItem
-            onClick={() => markUnderReviewMutation.mutate()}
-            disabled={markUnderReviewMutation.isPending}
+            onClick={() => confirm(`Suspend "${row.name || "this FPO"}"?`) && deactivateMutation.mutate()}
+            disabled={deactivateMutation.isPending}
+            className="text-orange-600 focus:text-orange-600"
           >
-            <ArrowRightCircle className="mr-2 h-4 w-4" />
-            {t.action_mark_under_review ?? "Mark Under Review"}
+            <PauseCircle className="mr-2 h-4 w-4" />
+            {deactivateMutation.isPending ? "Suspending…" : "Suspend"}
+          </DropdownMenuItem>
+        )}
+        {canActivate && (
+          <DropdownMenuItem
+            onClick={() => confirm(`Activate "${row.name || "this FPO"}"?`) && activateMutation.mutate()}
+            disabled={activateMutation.isPending}
+            className="text-green-600 focus:text-green-600"
+          >
+            <CheckCheck className="mr-2 h-4 w-4" />
+            {activateMutation.isPending ? "Activating…" : "Activate"}
           </DropdownMenuItem>
         )}
       </DropdownMenuContent>

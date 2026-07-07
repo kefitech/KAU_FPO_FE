@@ -10,9 +10,19 @@ import type { AdminOwnershipClaim } from "@/types/admin";
 type T = Record<string, string>;
 
 const STATUS_BADGE: Record<AdminOwnershipClaim["status"], string> = {
-  pending: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
-  approved: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-  rejected: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+  pending:        "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+  approved:       "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+  rejected:       "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+  docs_requested: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+  docs_submitted: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
+};
+
+const STATUS_LABEL: Record<AdminOwnershipClaim["status"], string> = {
+  pending:        "Pending",
+  approved:       "Approved",
+  rejected:       "Rejected",
+  docs_requested: "Docs Requested",
+  docs_submitted: "Docs Submitted",
 };
 
 export function getOwnershipClaimColumns(
@@ -46,7 +56,7 @@ export function getOwnershipClaimColumns(
       header: t.col_status ?? "Status",
       cell: ({ row }) => (
         <Badge variant="secondary" className={STATUS_BADGE[row.original.status]}>
-          {row.original.status.charAt(0).toUpperCase() + row.original.status.slice(1)}
+          {STATUS_LABEL[row.original.status]}
         </Badge>
       ),
       enableSorting: false,
@@ -69,10 +79,12 @@ export function getOwnershipClaimColumns(
       cell: ({ row }) => (
         <Button
           size="sm"
-          variant={row.original.status === "pending" ? "default" : "outline"}
+          variant={["pending", "docs_requested", "docs_submitted"].includes(row.original.status) ? "default" : "outline"}
           onClick={() => onReview(row.original)}
         >
-          {row.original.status === "pending" ? (t.btn_review ?? "Review") : (t.btn_view ?? "View")}
+          {["pending", "docs_requested", "docs_submitted"].includes(row.original.status)
+            ? (t.btn_review ?? "Review")
+            : (t.btn_view ?? "View")}
         </Button>
       ),
     },

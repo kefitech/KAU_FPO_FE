@@ -8,7 +8,7 @@ import { LayoutDashboard, MoveLeft } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
-export default function AdminNotFound() {
+export default function FpoNotFound() {
   const router = useRouter();
 
   return (
@@ -17,17 +17,16 @@ export default function AdminNotFound() {
         <span className="select-none font-bold text-8xl text-muted-foreground/20 tracking-tight">404</span>
         <h1 className="font-semibold text-xl">Page not found</h1>
         <p className="max-w-sm text-muted-foreground text-sm">
-          The page you're looking for doesn't exist or you don't have permission to access it.
+          The page you're looking for doesn't exist or you don't have access to it.
         </p>
       </div>
-
       <div className="flex items-center gap-3">
         <Button variant="outline" size="sm" onClick={() => router.back()}>
           <MoveLeft className="mr-1.5 h-4 w-4" />
           Go back
         </Button>
         <Button size="sm" asChild>
-          <Link href="/admin/dashboard">
+          <Link href="/fpo/dashboard">
             <LayoutDashboard className="mr-1.5 h-4 w-4" />
             Dashboard
           </Link>

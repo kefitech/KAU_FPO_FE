@@ -40,6 +40,7 @@ const STATUS_FILTERS = [
       { label: "Info Required", value: "info_required" },
       { label: "Draft", value: "draft" },
       { label: "Suspended", value: "suspended" },
+      { label: "Claimed", value: "claimed" },
     ],
   },
   {

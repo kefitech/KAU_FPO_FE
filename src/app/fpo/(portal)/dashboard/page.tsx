@@ -7,6 +7,7 @@ import Link from "next/link";
 
 import { useQuery } from "@tanstack/react-query";
 import {
+  AlertTriangle,
   Bell,
   Building2,
   CalendarDays,
@@ -19,6 +20,7 @@ import {
 import { toast } from "sonner";
 
 import { fpoDashboardApi } from "@/app/fpo/_api/dashboard";
+import { fpoRegistrationApi } from "@/app/fpo/_api/fpo-registration";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 
@@ -118,6 +120,16 @@ export default function FpoDashboardPage() {
     staleTime: 60_000,
   });
 
+  const { data: appStatus } = useQuery({
+    queryKey: ["fpo-status"],
+    queryFn: fpoRegistrationApi.getStatus,
+    staleTime: 60_000,
+  });
+
+  const infoRequiredNote = appStatus?.status === "info_required"
+    ? appStatus.timeline.findLast((e) => e.to_status === "info_required")?.notes ?? null
+    : null;
+
   useEffect(() => {
     if (sessionStorage.getItem("show_welcome") === "1") {
       sessionStorage.removeItem("show_welcome");
@@ -185,6 +197,20 @@ export default function FpoDashboardPage() {
           {statusCfg.label}
         </span>
       </div>
+
+      {/* ── Info Required Banner ── */}
+      {infoRequiredNote && (
+        <div className="flex items-start gap-3 rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 dark:border-orange-800 dark:bg-orange-900/20">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-orange-600 dark:text-orange-400" />
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-orange-800 text-sm dark:text-orange-300">Additional Information Required</p>
+            <p className="mt-0.5 text-orange-700 text-sm dark:text-orange-400">{infoRequiredNote}</p>
+            <Link href="/fpo/register" className="mt-2 inline-flex items-center gap-1 font-medium text-orange-700 text-xs underline underline-offset-2 dark:text-orange-400">
+              Update my application <ChevronRight className="h-3 w-3" />
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* ── Stat cards ── */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

@@ -67,6 +67,8 @@ const FIELD_LABELS: Partial<Record<keyof FormValues, string>> = {
 
 export function Step1BasicInfo({ profile, onSave, onSuccess }: Step1Props) {
   const isEdit = !!profile;
+  // Fields locked when FPO was created from a claim approval — claimant cannot change identifiers
+  const isClaimedFpo = !!profile?.origin_claim_id;
   const router = useRouter();
   const { speak } = useVoiceGuidance();
   const [fieldErrors, setFieldErrors] = useState<FieldValidationState>({});
@@ -277,12 +279,15 @@ export function Step1BasicInfo({ profile, onSave, onSuccess }: Step1Props) {
         <Field>
           <FieldLabel htmlFor="registration_number">
             Registration Number <span className="text-destructive">*</span>
+            {isClaimedFpo && <span className="ml-1 text-muted-foreground text-xs">(locked)</span>}
           </FieldLabel>
           <Input
             id="registration_number"
             placeholder="e.g. REG/2024/001"
             {...register("registration_number")}
-            onBlur={() => handleBlurValidation("registration_number")}
+            readOnly={isClaimedFpo}
+            className={isClaimedFpo ? "bg-muted cursor-not-allowed opacity-70" : ""}
+            onBlur={() => !isClaimedFpo && handleBlurValidation("registration_number")}
           />
           {errors.registration_number && <FieldError errors={[errors.registration_number]} />}
           {!errors.registration_number && fieldErrors.registration_number?.error && (
@@ -297,12 +302,15 @@ export function Step1BasicInfo({ profile, onSave, onSuccess }: Step1Props) {
           <FieldLabel htmlFor="cin_number">
             CIN Number{" "}
             {CIN_REQUIRED_STRUCTURES.includes(selectedStructure) && <span className="text-destructive">*</span>}
+            {isClaimedFpo && <span className="ml-1 text-muted-foreground text-xs">(locked)</span>}
           </FieldLabel>
           <Input
             id="cin_number"
             placeholder="e.g. U01400KL2024PLC..."
             {...register("cin_number")}
-            onBlur={() => handleBlurValidation("cin_number")}
+            readOnly={isClaimedFpo}
+            className={isClaimedFpo ? "bg-muted cursor-not-allowed opacity-70" : ""}
+            onBlur={() => !isClaimedFpo && handleBlurValidation("cin_number")}
           />
           {errors.cin_number && <FieldError errors={[errors.cin_number]} />}
           {!errors.cin_number && fieldErrors.cin_number?.error && (

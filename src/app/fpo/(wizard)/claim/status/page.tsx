@@ -1,35 +1,154 @@
 "use client";
 
+import { useRef, useState } from "react";
+
 import { useRouter } from "next/navigation";
 
-import { useQuery } from "@tanstack/react-query";
-import { CheckCircle2, Clock, Loader2, XCircle } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { CheckCircle2, Clock, FileSearch, FileUp, Loader2, Paperclip, Trash2, XCircle } from "lucide-react";
+import { toast } from "sonner";
 
 import { fpoClaimApi } from "@/app/fpo/_api/claim";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { FpoClaim } from "@/types/fpo";
 
-const STATUS_CONFIG: Record<FpoClaim["status"], { icon: React.ElementType; color: string; title: string; message: (claim: FpoClaim) => string }> = {
+const STATUS_CONFIG: Record<FpoClaim["status"], { icon: React.ElementType; color: string; title: string; desc: string }> = {
   pending: {
     icon: Clock,
     color: "text-yellow-600 dark:text-yellow-400",
     title: "Under Review",
-    message: () => "Your claim is under review by KAU Admin.",
+    desc: "Your claim is under review by KAU Admin.",
   },
   approved: {
     icon: CheckCircle2,
     color: "text-green-600 dark:text-green-400",
     title: "Claim Approved",
-    message: () => "Claim approved. You now have full access to this FPO.",
+    desc: "Claim approved. You now have full access to this FPO.",
   },
   rejected: {
     icon: XCircle,
     color: "text-destructive",
     title: "Claim Rejected",
-    message: (c) => `Claim rejected.${c.review_notes ? ` Reason: ${c.review_notes}` : ""}`,
+    desc: "",
+  },
+  docs_requested: {
+    icon: FileSearch,
+    color: "text-blue-600 dark:text-blue-400",
+    title: "Documents Requested",
+    desc: "KAU Admin has requested additional supporting documents.",
+  },
+  docs_submitted: {
+    icon: FileUp,
+    color: "text-purple-600 dark:text-purple-400",
+    title: "Documents Submitted",
+    desc: "Your documents have been submitted. KAU Admin will review them shortly.",
   },
 };
+
+function UploadRespondSection({ claim }: { claim: FpoClaim }) {
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadedDocs, setUploadedDocs] = useState<{ id: string; name: string }[]>([]);
+  const [uploading, setUploading] = useState(false);
+
+  const respondMutation = useMutation({
+    mutationFn: () => fpoClaimApi.respond(claim.id, uploadedDocs.map((d) => d.id)),
+    onSuccess: (msg) => {
+      toast.success(msg || "Documents submitted successfully.");
+      queryClient.invalidateQueries({ queryKey: ["fpo-claims"] });
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(msg ?? "Failed to submit documents.");
+    },
+  });
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+
+    setUploading(true);
+    try {
+      const doc = await fpoClaimApi.uploadDocument(claim.id, file);
+      setUploadedDocs((prev) => [...prev, { id: doc.id, name: file.name }]);
+      toast.success("Document uploaded.");
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(msg ?? "Upload failed. Please try again.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function removeDoc(id: string) {
+    try {
+      await fpoClaimApi.deleteDocument(claim.id, id);
+      setUploadedDocs((prev) => prev.filter((d) => d.id !== id));
+    } catch {
+      toast.error("Failed to remove document.");
+    }
+  }
+
+  return (
+    <div className="mt-4 flex flex-col gap-3 border-t pt-4">
+      <p className="font-medium text-sm">Upload Supporting Documents</p>
+
+      {uploadedDocs.length > 0 && (
+        <ul className="flex flex-col gap-1.5">
+          {uploadedDocs.map((doc) => (
+            <li key={doc.id} className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm">
+              <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              <span className="flex-1 truncate">{doc.name}</span>
+              <button
+                type="button"
+                onClick={() => removeDoc(doc.id)}
+                className="text-muted-foreground hover:text-destructive"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf,.jpg,.jpeg,.png"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={uploading}
+        onClick={() => fileInputRef.current?.click()}
+      >
+        {uploading ? (
+          <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Uploading…</>
+        ) : (
+          <><Paperclip className="mr-2 h-4 w-4" /> Add Document</>
+        )}
+      </Button>
+
+      <p className="text-muted-foreground text-xs">Accepted: PDF, JPG, PNG. Max 5 MB per file.</p>
+
+      <Button
+        disabled={uploadedDocs.length === 0 || respondMutation.isPending}
+        onClick={() => respondMutation.mutate()}
+      >
+        {respondMutation.isPending ? (
+          <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting…</>
+        ) : (
+          "Submit Documents to Admin"
+        )}
+      </Button>
+    </div>
+  );
+}
 
 function ClaimCard({ claim }: { claim: FpoClaim }) {
   const router = useRouter();
@@ -45,18 +164,44 @@ function ClaimCard({ claim }: { claim: FpoClaim }) {
             <p className="font-semibold text-sm">{claim.fpo_name}</p>
             <span className={`shrink-0 text-xs font-medium ${cfg.color}`}>{cfg.title}</span>
           </div>
-          <p className="mt-1 text-muted-foreground text-sm">{cfg.message(claim)}</p>
+
+          {/* Status description */}
+          {claim.status === "rejected" ? (
+            <p className="mt-1 text-muted-foreground text-sm">
+              Claim rejected.{claim.review_notes ? ` Reason: ${claim.review_notes}` : ""}
+            </p>
+          ) : (
+            <p className="mt-1 text-muted-foreground text-sm">{cfg.desc}</p>
+          )}
+
+          {/* Admin message for docs_requested and docs_submitted */}
+          {(claim.status === "docs_requested" || claim.status === "docs_submitted") && claim.review_notes && (
+            <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-900/40 dark:bg-blue-950/20">
+              <p className="mb-1 font-medium text-blue-700 dark:text-blue-400 text-xs">Message from KAU Admin</p>
+              <p className="text-sm leading-relaxed">{claim.review_notes}</p>
+            </div>
+          )}
+
           <p className="mt-2 text-muted-foreground text-xs">
             Submitted {new Date(claim.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}
           </p>
+
           {claim.status === "approved" && (
-            <Button
-              size="sm"
-              className="mt-3"
-              onClick={() => router.push("/fpo/dashboard")}
-            >
+            <Button size="sm" className="mt-3" onClick={() => router.push("/fpo/dashboard")}>
               Go to Dashboard →
             </Button>
+          )}
+
+          {/* Upload & respond section — only when docs_requested */}
+          {claim.status === "docs_requested" && (
+            <UploadRespondSection claim={claim} />
+          )}
+
+          {/* Already submitted confirmation */}
+          {claim.status === "docs_submitted" && (
+            <p className="mt-3 text-purple-600 dark:text-purple-400 text-xs font-medium">
+              ✓ You have submitted your documents. Waiting for admin review.
+            </p>
           )}
         </div>
       </div>
@@ -72,8 +217,10 @@ export default function ClaimStatusPage() {
     queryFn: fpoClaimApi.list,
     staleTime: 30_000,
     refetchInterval: (query) => {
-      const hasPending = query.state.data?.some((c) => c.status === "pending");
-      return hasPending ? 60_000 : false;
+      const hasActive = query.state.data?.some(
+        (c) => c.status === "pending" || c.status === "docs_requested" || c.status === "docs_submitted"
+      );
+      return hasActive ? 60_000 : false;
     },
   });
 
@@ -106,7 +253,7 @@ export default function ClaimStatusPage() {
         </div>
       )}
 
-      {claims.some((c) => c.status === "pending") && (
+      {claims.some((c) => c.status === "pending" || c.status === "docs_requested" || c.status === "docs_submitted") && (
         <p className="text-center text-muted-foreground text-xs">
           This page refreshes automatically every minute.
         </p>

@@ -94,6 +94,12 @@ export interface ApplicationDetail {
   tier: string;
   current_step: number;
   max_secondary_users: number;
+  claim_origin: {
+    original_fpo_id: number;
+    original_fpo_name: string;
+    claim_id: number;
+    claimed_at: string;
+  } | null;
   primary_user: ApplicationPrimaryUser | null;
   // Step 1
   name: string;
@@ -173,18 +179,23 @@ export const adminApplicationsApi = {
 
   getById: (id: number) => api.get<Wrapped<ApplicationDetail>>(`/admin/applications/${id}/`).then(unwrap),
 
-  markUnderReview: (id: number) => api.post(`/admin/applications/${id}/mark-under-review/`),
-
-  approve: (id: number) => api.post(`/admin/applications/${id}/approve/`),
-
   reject: (id: number, reason: string) => api.post(`/admin/applications/${id}/reject/`, { reason }),
 
   requestInfo: (id: number, notes: string) => api.post(`/admin/applications/${id}/request-info/`, { notes }),
 
-  setUserLimit: (id: number, max_secondary_users: number) =>
-    api.patch(`/admin/applications/${id}/set-user-limit/`, { max_secondary_users }),
-
   verifyDocument: (fpoId: number, docId: number) => api.post(`/admin/applications/${fpoId}/verify-document/${docId}/`),
+
+  activate: (id: number, notes?: string): Promise<void> =>
+    api.post(`/admin/applications/${id}/activate/`, { notes: notes ?? "" }).then(() => undefined),
+
+  deactivate: (id: number, notes?: string): Promise<void> =>
+    api.post(`/admin/applications/${id}/deactivate/`, { notes: notes ?? "" }).then(() => undefined),
+
+  adminEdit: (id: number, payload: Record<string, unknown>): Promise<{ updated_fields: string[] }> =>
+    api.patch(`/admin/applications/${id}/`, payload).then((r) => {
+      const d = r.data as Record<string, unknown>;
+      return (d.data ?? d) as { updated_fields: string[] };
+    }),
 
   getTierHistory: (fpoId: number): Promise<TierAuditLogEntry[]> =>
     api

@@ -507,6 +507,13 @@ export interface FpoPermissionUpdate {
 
 // ─── Ownership Claims (Admin) ─────────────────────────────────────────────────
 
+export interface AdminOwnershipClaimDoc {
+  id: string;
+  document_type: string;
+  file_url: string;
+  uploaded_at: string;
+}
+
 export interface AdminOwnershipClaim {
   id: number;
   fpo_id: number;
@@ -516,7 +523,8 @@ export interface AdminOwnershipClaim {
   claimant_phone: string;
   reason: string;
   supporting_doc_ids: string[];
-  status: "pending" | "approved" | "rejected";
+  supporting_docs: AdminOwnershipClaimDoc[];
+  status: "pending" | "approved" | "rejected" | "docs_requested" | "docs_submitted";
   review_notes: string | null;
   reviewed_by: string | null;
   reviewed_at: string | null;

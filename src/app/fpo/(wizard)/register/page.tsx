@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Volume2, VolumeX } from "lucide-react";
 
+import { fpoClaimApi } from "@/app/fpo/_api/claim";
 import { fpoRegistrationApi } from "@/app/fpo/_api/fpo-registration";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useVoiceGuidance } from "@/hooks/use-voice-guidance";
@@ -22,6 +23,9 @@ import { Step6Documents } from "./_components/step6-documents";
 import { Step7Submit } from "./_components/step7-submit";
 
 function resolveStep(profile: FpoProfile): number {
+  // Claimed FPO: force step 1 if not yet filled by claimant.
+  // current_step=0 (new flow) OR name still empty (legacy test data) means step 1 not done yet.
+  if (profile.origin_claim_id && (profile.current_step === 0 || !profile.name)) return 1;
   if (profile.current_step <= 1) return 2;
   if (profile.current_step === 2) return 3;
   if (profile.current_step === 3) return 4;
@@ -64,9 +68,17 @@ function FpoRegisterPageInner() {
     retry: false,
   });
 
-  // New user — no FPO record yet. Start at step 1.
+  // No FPO record — check if user has a pending/rejected claim before showing Step 1.
   useEffect(() => {
-    if (isError) setDisplayStep(1);
+    if (!isError) return;
+    fpoClaimApi.list().then((claims) => {
+      const hasActiveClaim = claims.some((c) => c.status === "pending" || c.status === "rejected" || c.status === "docs_requested");
+      if (hasActiveClaim) {
+        router.replace("/fpo/claim/status");
+      } else {
+        setDisplayStep(1);
+      }
+    }).catch(() => setDisplayStep(1));
   }, [isError]);
 
   useEffect(() => {
@@ -85,6 +97,8 @@ function FpoRegisterPageInner() {
     setDisplayStep((prev) => {
       if (prev !== null) return prev;
       const serverStep = resolveStep(fetchedProfile);
+      // URL param must not override a forced step-1 for first-visit claimed FPOs
+      if (serverStep === 1 && fetchedProfile.origin_claim_id) return 1;
       if (urlStepNum && urlStepNum >= 1 && urlStepNum <= 7) return urlStepNum;
       return serverStep;
     });
