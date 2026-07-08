@@ -20,6 +20,7 @@ const MainMenu = ({ toggleSubMenu, navbarPlacement }: Props) => {
         <ul className="dropdown-menu">
           <li><Link href="/about-us">About Us</Link></li>
           <li><Link href="/team">Team</Link></li>
+          <li><Link href="/howtoregister">How To Register</Link></li>
           <li><Link href="/news-sources">In the News</Link></li>
           <li><Link href="/faq">Faq</Link></li>
           <li><Link href="/contact-us">Contact Us</Link></li>

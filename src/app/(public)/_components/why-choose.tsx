@@ -34,7 +34,7 @@ const WhyChoose = () => {
         <div className="row align-center">
           <div className="col-lg-6 choose-us-style-one">
             <div className="thumb">
-              <img src="/assets/img/about/1.jpg" alt="About" />
+              <img src="/assets/img/faq/1.jpeg" alt="About" />
               <div className="shape">
                 <img src="/assets/img/shape/22.png" alt="shape" data-aos="fade-down" data-aos-delay="100" />
               </div>

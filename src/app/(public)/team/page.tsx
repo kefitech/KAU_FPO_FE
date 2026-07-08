@@ -5,7 +5,7 @@ import FarmersSection from "../_components/farmers";
 export default function TeamPage() {
   return (
     <AgrulLayout>
-      <BreadCrumb title="Farm Members" breadCrumb="Team" />
+      <BreadCrumb title="Our Team" breadCrumb="Team" />
       <FarmersSection showAll={true} />
     </AgrulLayout>
   );

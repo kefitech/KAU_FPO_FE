@@ -47,8 +47,19 @@ function useItemsPerRow() {
 function MemberCard({ member }: { member: TeamMember }) {
   return (
     <div className="farmer-style-one-item">
-      <div className="thumb" style={{ width: "100%", height: 280, overflow: "hidden", borderRadius: 0, flexShrink: 0 }}>
+      <div
+        className="thumb"
+        style={{
+          width: 200,
+          height: 200,
+          overflow: "hidden",
+          borderRadius: "50%",
+          flexShrink: 0,
+          margin: "0 auto",
+        }}
+      >
         {member.photo_url ? (
+          // biome-ignore lint/performance/noImgElement: using next/image later
           <img
             src={member.photo_url}
             alt={member.name}
@@ -57,7 +68,7 @@ function MemberCard({ member }: { member: TeamMember }) {
               height: "100%",
               objectFit: "cover",
               objectPosition: "top",
-              borderRadius: 0,
+              borderRadius: "50%",
               display: "block",
             }}
           />
@@ -67,6 +78,7 @@ function MemberCard({ member }: { member: TeamMember }) {
               width: "100%",
               height: "100%",
               background: "var(--color-primary)",
+              borderRadius: "50%",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -81,7 +93,7 @@ function MemberCard({ member }: { member: TeamMember }) {
         )}
       </div>
       <div
-        className="info break-words"
+        className="info"
         style={{
           float: "none",
           textAlign: "center",
@@ -90,17 +102,15 @@ function MemberCard({ member }: { member: TeamMember }) {
           alignItems: "center",
           gap: 4,
           paddingTop: 16,
-          paddingLeft: 0,
-          paddingRight: 0,
           width: "100%",
         }}
       >
+        <h3 style={{ textAlign: "center", margin: 0, fontWeight: 700}}>{member.name}</h3>
         {member.designation && (
-          <span style={{ display: "block", textAlign: "center", width: "100%", paddingLeft: 0 }}>
+          <span style={{ display: "block", textAlign: "center", width: "100%" }}>
             {member.designation}
           </span>
         )}
-        <h4 style={{ textAlign: "center", margin: 0, padding: 0, width: "100%" }}>{member.name}</h4>
       </div>
     </div>
   );
@@ -161,12 +171,17 @@ const FarmersSection = ({ showAll = false }: Props) => {
   if (showAll) {
     return (
       <div className="farmer-area default-padding bottom-less">
-        <div className="container">
+        <div className="container ">
+          <div className="farmer-style-one">
+            <h2 className="heading">Our Team</h2>
+          </div>
           <div className="row">
             <div className="col-lg-10 offset-lg-1">
               <div className={`row${shouldCenter ? " justify-content-center" : ""}`}>
                 {loading ? (
                   [0, 1, 2, 3, 4, 5].map((i) => (
+                    
+
                     <div className="col-lg-4 col-md-6 farmer-stye-one" style={{ marginBottom: 30 }} key={i}>
                       <SkeletonCard />
                     </div>

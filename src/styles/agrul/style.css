@@ -3810,6 +3810,107 @@ nav.navbar.validnavs.inc-shape::after {
 	background-position: center;
 }
 
+.justify-text {
+    text-align: justify;
+    text-justify: inter-word;
+}
+.vision-circle {
+  width: min(420px, 90vw);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 10%;
+  margin-left: auto;
+  position: relative;
+  overflow: hidden;
+
+  box-shadow:
+    0 20px 40px rgba(0, 0, 0, 0.18),
+    inset 0 2px 6px rgba(255, 255, 255, 0.25),
+    inset 0 -10px 25px rgba(0, 0, 0, 0.15);
+
+  /* ✦ rim light: a crisp white border + a soft inner glow to sell the edge */
+  outline: 4.5px solid rgba(255, 255, 255, 0.55);
+  outline-offset: 21px;
+
+  transform-style: preserve-3d;
+  perspective: 800px;
+  transition: transform 0.45s ease, box-shadow 0.45s ease;
+  will-change: transform;
+}
+/* subtle grain/texture overlay so it doesn't look flat */
+.vision-circle::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background-image:
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.25), transparent 40%),
+    repeating-radial-gradient(circle at center, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 3px);
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  transition: opacity 0.45s ease;
+}
+
+/* glossy highlight sweep */
+.vision-circle::after {
+  content: "";
+  position: absolute;
+  top: -60%;
+  left: -60%;
+  width: 220%;
+  height: 220%;
+  background: linear-gradient(
+    115deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.18) 48%,
+    rgba(255, 255, 255, 0.35) 50%,
+    rgba(255, 255, 255, 0.18) 52%,
+    transparent 60%
+  );
+  transform: translateX(-100%) rotate(0deg);
+  transition: transform 0.8s ease;
+  pointer-events: none;
+}
+
+.vision-circle:hover {
+  transform: translateY(-10px) rotateX(6deg) rotateY(-6deg) scale(1.03);
+  box-shadow:
+    0 35px 60px rgba(0, 0, 0, 0.28),
+    0 10px 20px rgba(0, 0, 0, 0.15),
+    inset 0 2px 8px rgba(255, 255, 255, 0.35),
+    inset 0 -14px 30px rgba(0, 0, 0, 0.2);
+}
+
+.vision-circle:hover::after {
+  transform: translateX(100%) rotate(0deg);
+}
+
+.vision-circle h3 {
+  color: #ffd770;
+  margin-bottom: 20px;
+  position: relative;
+  z-index: 2;
+  transition: transform 0.45s ease;
+}
+
+.vision-circle p {
+  color: #fff;
+  font-size: 15px;
+  line-height: 1.6;
+  position: relative;
+  z-index: 2;
+  transition: transform 0.45s ease;
+}
+
+.vision-circle:hover h3,
+.vision-circle:hover p {
+  transform: translateZ(20px);
+}
+
 .shape-right-top {
 	position: absolute;
 	right: 0;
@@ -4881,8 +4982,9 @@ ul.counter-list li:nth-child(2) {
 	background-position: bottom center;
 }
 
-.farmer-stye-one {
+.farmer-style-one {
 	margin-bottom: 30px;
+	text-align: center;
 }
 
 .farmer-style-one-item .thumb {

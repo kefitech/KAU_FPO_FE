@@ -8,11 +8,14 @@ import Facts from "./_components/facts";
 import FarmersSection from "./_components/farmers";
 import Gallery from "./_components/gallery";
 import NewsSourcesStrip from "./_components/news-sources";
-import ProductList from "./_components/product-list";
+
 import Services from "./_components/services";
-import Testimonial from "./_components/testimonial";
+
 import VisitorTracker from "./_components/visitor-tracker";
 import WhyChoose from "./_components/why-choose";
+
+
+import RegistrationProcess from "./howtoregister/page";
 
 export default function HomePage() {
   return (
@@ -20,11 +23,12 @@ export default function HomePage() {
       <VisitorTracker />
       <Banner />
       <About />
-      <Services />
-      <ProductList />
-      <WhyChoose />
-      <Testimonial />
+      <RegistrationProcess />
       <FarmersSection showAll={true} />
+      <Services />
+      {/* <ProductList /> */}
+      <WhyChoose />
+      {/* <Testimonial /> */}
       <Gallery />
       <Facts />
       <Contact />

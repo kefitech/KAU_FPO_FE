@@ -121,16 +121,10 @@ const Footer = () => {
           <div className="row">
             <div className="col-lg-4 col-md-6 item">
               <div className="footer-item about">
-                <img className="logo" src="/assets/img/logo-light.png" alt="Logo" />
-                <p>
-                  Happen active county. Winding morning ambition shyness evident to poor.
-                  Because elderly new to the point to main success.
-                </p>
-                <form onSubmit={handleNewsletter} className="newsletter-form">
-                  <input type="email" placeholder="Your Email" className="form-control"
-                    value={email} onChange={(e) => setEmail(e.target.value)} required />
-                  <button type="submit">Go</button>
-                </form>
+                <img className="logo" src="/assets/img/logo.png" alt="Logo"   style={{ height: '300px' }} 
+ />
+
+                
               </div>
             </div>
 
@@ -183,7 +177,7 @@ const Footer = () => {
                 <ul>
                   <li>
                     <div className="icon"><i className="fas fa-home" /></div>
-                    <div className="content"><strong>Address:</strong> 5919 Trussville Crossings Pkwy, Birmingham</div>
+                    <div className="content"><strong>Address:</strong>Kerala Agricultural University, Mannuthy P.O, Pin- 680651.</div>
                   </li>
                   <li>
                     <div className="icon"><i className="fas fa-envelope" /></div>

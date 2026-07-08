@@ -71,7 +71,7 @@ function ExpertCard({
   const badgeClass = CATEGORY_BADGE_COLORS[expert.category] ?? "bg-muted text-muted-foreground";
 
   return (
-    <div className="rounded-xl border bg-card shadow-sm hover:shadow-md transition-shadow flex flex-col gap-3 p-5">
+    <div className="flex flex-col gap-6 px-6 py-6">
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-col gap-0.5 min-w-0">
           <h3 className="font-semibold text-base leading-snug truncate">{expert.name}</h3>
