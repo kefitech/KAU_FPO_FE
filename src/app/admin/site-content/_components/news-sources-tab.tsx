@@ -62,10 +62,10 @@ export const urlSchema = z
 const CATEGORIES = [
   { value: "newspaper", label: "Newspaper" },
   { value: "magazine", label: "Magazine" },
-  { value: "website", label: "Website" },
-  { value: "agriculture", label: "Agriculture" },
-  { value: "government", label: "Government" },
-  { value: "other", label: "Other" },
+  // { value: "website", label: "Website" },
+  // { value: "agriculture", label: "Agriculture" },
+  // { value: "government", label: "Government" },
+  // { value: "other", label: "Other" },
 ] as const;
 
 type CategoryValue = (typeof CATEGORIES)[number]["value"];
