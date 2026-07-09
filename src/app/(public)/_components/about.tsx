@@ -4,8 +4,6 @@
 import { useEffect, useState, FormEvent } from "react";
 import { publicFetch } from "../_lib/public-fetch";
 import DOMPurify from "dompurify";
-import { string } from "zod";
-import { FontSize } from "@tiptap/extension-text-style";
 
 interface AboutData {
   about_body: string;
@@ -135,7 +133,7 @@ export default function About() {
 
 
               <div className="col-xl-3 col-lg-4 col-md-5 col-md-3 ">
-                <div className="vision-circle bg-theme text-light" >
+                <div className="vision-circle" >
                   <div>
                 <h2 className="banner-style-one" ><strong style={{ color: "var(--color-secondary)" }}>The Vision</strong></h2>
                 

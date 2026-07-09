@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 import { useLocaleStore } from "@/stores/locale-store";
-
+import CountUp from "react-countup";
 import { publicFetch } from "../_lib/public-fetch";
 import { AnnouncementDetailModal } from "../blog-standard/page";
 
@@ -30,12 +30,16 @@ const Blog = () => {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<AnnouncementNews | null>(null);
   const locale = useLocaleStore((s) => s.locale);
+  const [totalCount,setTotalCount]= useState<number>(0);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: refetch intentionally triggered on locale change
   useEffect(() => {
     publicFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/public/announcements/?page_size=4`)
       .then((r) => r.json())
-      .then((json) => setItems((json.data as AnnouncementNews[]) ?? []))
+      .then((json) => {
+        setItems((json.data as AnnouncementNews[]) ?? []);
+        setTotalCount(json?.meta?.pagination?.total_count ?? 0);
+      })
       .catch(() => setItems([]))
       .finally(() => setLoading(false));
   }, [locale]);
@@ -74,16 +78,36 @@ const Blog = () => {
             See More <i className="fas fa-arrow-right" style={{ fontSize: 13 }} />
           </Link>
         </div>
+        <div className="container">
+        <div className="row align-center">
 
-        <div className="row align-items-stretch">
           {/* Left: featured image */}
-          <div className="col-lg-6 mb-30">
+          <div className="col-lg-6 choose-us-style-one">
+            <div className="thumb">
             <div style={{ width: "100%", height: "100%", minHeight: 480, borderRadius: 16, overflow: "hidden" }}>
               <img
-                src="/images/news-feature.jpg"
+                src="/assets/img/announcement/1.jpeg"
                 alt="News and Announcements"
                 style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
               />
+              <div className="shape">
+                <img src="/assets/img/shape/22.png" alt="shape" data-aos="fade-down" data-aos-delay="100" />
+              </div>
+               <div className="product-produce">
+                <div className="icon">
+                  <i className="flaticon-farmer" />
+                </div>
+                <div className="fun-fact">
+                  <div className="counter">
+                    <div className="timer">
+                      <CountUp end={totalCount} enableScrollSpy scrollSpyOnce />
+                    </div>
+                    <div className="operator"></div>
+                  </div>
+                  <span className="medium">News and Announcement</span>
+                </div>
+              </div>
+            </div>
             </div>
           </div>
 
@@ -183,6 +207,7 @@ const Blog = () => {
                   ))}
             </div>
           </div>
+        </div>
         </div>
       </div>
       <AnnouncementDetailModal item={selected} onClose={() => setSelected(null)} />

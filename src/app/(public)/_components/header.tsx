@@ -38,7 +38,7 @@ const Header = () => {
                 <MainMenu navbarPlacement="navbar-right" toggleSubMenu={toggleSubMenu} />
                 <div className="sidebar-info">
                   <ul>
-                    <li><i className="fas fa-map-marker-alt" /> California, TX 70240</li>
+                    <li><i className="fas fa-map-marker-alt" /> Kerala Agriculture University, Mannuthy</li>
                     <li><i className="fas fa-phone-alt" /> +4733378901</li>
                   </ul>
                   <div className="sidebar-social">

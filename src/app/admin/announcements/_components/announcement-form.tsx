@@ -109,7 +109,7 @@ export function AnnouncementForm({ mode, id, t = {}, tCommon = {} }: Props) {
         const t = titleValues[lang.code];
         const b = bodyValues[lang.code];
         if (typeof t === "string" && t.trim()) title[lang.code] = t.trim();
-        if (typeof b === "string" && b.trim()) body[lang.code] = b.trim();
+        if (typeof b === "string" && !isBodyEmpty(b)) body[lang.code] = b.trim();
       }
       const payload: AnnouncementPayload = {
         title,
@@ -147,7 +147,7 @@ export function AnnouncementForm({ mode, id, t = {}, tCommon = {} }: Props) {
     } else {
       setTitleError("");
     }
-    if (!bodyVal || !bodyVal.trim()) {
+    if (isBodyEmpty(bodyVal)) {
       setBodyError((t.validation_body_required ?? "Body in {lang} is required").replace("{lang}", defName));
       setActiveLang(defCode || activeLang);
       hasError = true;

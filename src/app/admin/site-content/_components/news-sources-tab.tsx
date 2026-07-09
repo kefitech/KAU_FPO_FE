@@ -36,6 +36,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useConfirmStore } from "@/stores/confirm-store";
 import type { AdminNewsSource } from "@/types/admin";
+import { TooltipProvider } from "@/components/ui/tooltip";
+
 
 type T = Record<string, string>;
 
@@ -429,9 +431,10 @@ export function NewsSourcesTab({ t = {} }: { t?: T }) {
               sources.map((source) => (
                 <TableRow key={source.id} className={!source.is_active ? "opacity-50" : ""}>
                   <TableCell>
+                    
                     <LogoThumb logo_url={source.logo_url} name={source.name} />
                   </TableCell>
-                  <TableCell className="font-medium text-sm">{source.name}</TableCell>
+                  <TableCell className="font-medium text-sm max-w-[200px] truncate" title={source.name}>{source.name}</TableCell>
                   <TableCell>
                     <a
                       href={source.url}

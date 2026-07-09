@@ -145,7 +145,9 @@ export default function NotificationsPage() {
     {
       key: "language",
       label: "Language",
-      options: (languagesData?.data ?? []).map((l) => ({ label: `${l.name} (${l.code})`, value: String(l.id) })),
+      options: (languagesData?.data ?? [])
+  .filter((l) => l.is_active)
+  .map((l) => ({ label: `${l.name} (${l.code})`, value: String(l.id) })),
     },
     {
       key: "is_active",
@@ -317,7 +319,7 @@ export default function NotificationsPage() {
             ? [
                 {
                   label: tTmplTable.col_template_code ?? "Template Code",
-                  value: tmplView.row.template_code_detail?.name,
+                  value: tmplView.row.template_code_detail?.code,
                 },
                 {
                   label: tTmplTable.col_language ?? "Language",

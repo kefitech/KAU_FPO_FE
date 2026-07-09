@@ -14,6 +14,7 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import type { NotificationTemplate } from "@/types";
+import { getErrorMessage } from "@/lib/get-error-message";
 
 type T = Record<string, string>;
 
@@ -30,19 +31,42 @@ interface TemplateTestRenderDialogProps {
   tCommon: T;
 }
 
+interface TestRenderResponse {
+  status: string;
+  message: string;
+  data: {
+    template: {
+      subject: string;
+    };
+    rendered: {
+      body: string;
+      whatsapp_template_name?: string;
+      whatsapp_template_language?: string;
+    };
+    context_used: Record<string, string>;
+  };
+}
+
 export function TemplateTestRenderDialog({ open, onClose, template, t, tCommon }: TemplateTestRenderDialogProps) {
   const [context, setContext] = useState<Record<string, string>>({});
   const [result, setResult] = useState<TestRenderResult | null>(null);
 
   const variables = template?.variables ?? [];
 
+
+
   const mutation = useMutation({
     mutationFn: () => notificationTemplateApi.testRender(template!.id, context),
-    onSuccess: (data) => {
-      setResult(data as unknown as TestRenderResult);
-    },
-    onError: () => toast.error(t.toast_failed ?? "Failed to render template"),
-  });
+    onSuccess: (response: TestRenderResponse) => {
+    setResult({
+      subject: response.data.template.subject,
+      body: response.data.rendered.body,
+    });
+  },
+  onError: (error) => {
+    toast.error(getErrorMessage(error, t.toast_failed ?? "Failed to render template"));
+  },
+});
 
   function handleClose() {
     setContext({});

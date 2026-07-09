@@ -209,14 +209,16 @@ export function TemplateForm({ mode, template, t = {}, tCommon = {} }: TemplateF
                       className="h-9 w-full rounded-md border bg-background px-3 text-foreground text-sm shadow-xs focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-60"
                     >
                       <option value="">{t.language_placeholder ?? "Select language"}</option>
-                      {languages.map((l) => (
-                        <option key={l.id} value={String(l.id)}>
-                          {l.name} ({l.code})
-                        </option>
-                      ))}
-                    </select>
-                    {errors.language && <FieldError errors={[errors.language]} />}
-                  </Field>
+                        {languages
+                          .filter((l) => l.is_active)
+                          .map((l) => (
+                            <option key={l.id} value={String(l.id)}>
+                              {l.name} ({l.code})
+                            </option>
+                          ))}
+                        </select>
+                        {errors.language && <FieldError errors={[errors.language]} />}
+                        </Field>
                 )}
               />
 

@@ -974,7 +974,7 @@ function ApplicationDetailContent() {
           </Button>
           <div>
             <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="font-bold text-xl">{app.name}</h1>
+              <h1 className="font-bold text-xl max-w-[800px] break-words whitespace-normal">{app.name}</h1>
               <StatusBadge status={app.status} />
               {app.tier && <Badge variant="outline">Tier {app.tier}</Badge>}
             </div>

@@ -114,9 +114,16 @@ function PhoneForm() {
                 {...field}
                 id="fp-phone"
                 type="tel"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 placeholder="e.g. 9876543210"
                 autoComplete="tel"
                 aria-invalid={fieldState.invalid}
+                maxLength={10}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, "").slice(0, 10);
+                  field.onChange(value);
+                }}
               />
               {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
             </Field>

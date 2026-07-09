@@ -17,6 +17,8 @@ import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import type { ChannelSetting, EmailConfig, SmsConfig } from "@/types";
+import { getErrorMessage } from "@/lib/get-error-message";
+
 
 type T = Record<string, string>;
 
@@ -87,6 +89,12 @@ function parseEditingValues(item: ChannelSetting): FormValues {
   return base;
 }
 
+
+
+
+
+
+
 function buildConfig(values: FormValues): Record<string, unknown> {
   if (values.channel === "email") {
     const config: Partial<EmailConfig> = {
@@ -147,7 +155,10 @@ export function ChannelSettingsForm({ mode, channelSetting, t = {}, tCommon = {}
       queryClient.invalidateQueries({ queryKey: ["channel-settings"] });
       if (!isEdit) router.push("/admin/notifications?tab=channels");
     },
-    onError: () => toast.error(isEdit ? "Failed to update channel setting" : "Failed to create channel setting"),
+   onError: (error) => {
+      const fallback = isEdit ? "Failed to update channel setting" : "Failed to create channel setting";
+      toast.error(getErrorMessage(error, fallback));
+    },
   });
 
   return (

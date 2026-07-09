@@ -66,7 +66,7 @@ const HeaderTop = () => {
             <div className="flex-item left">
               <p>That&apos;s right, we only sell 100% organic</p>
               <ul>
-                <li><i className="fas fa-map-marker-alt" /> California, TX 70240</li>
+                <li><i className="fas fa-map-marker-alt" /> Kerala Agricultural University Mannuthy.</li>
                 <li><i className="fas fa-phone-alt" /> +4733378901</li>
               </ul>
             </div>

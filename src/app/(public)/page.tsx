@@ -7,6 +7,7 @@ import Documents from "./_components/documents";
 import Facts from "./_components/facts";
 import FarmersSection from "./_components/farmers";
 import Gallery from "./_components/gallery";
+import HowToRegister from "./_components/how-to-register";
 import NewsSourcesStrip from "./_components/news-sources";
 
 import Services from "./_components/services";
@@ -15,15 +16,13 @@ import VisitorTracker from "./_components/visitor-tracker";
 import WhyChoose from "./_components/why-choose";
 
 
-import RegistrationProcess from "./howtoregister/page";
-
 export default function HomePage() {
   return (
     <AgrulLayout>
       <VisitorTracker />
       <Banner />
       <About />
-      <RegistrationProcess />
+      <HowToRegister />
       <FarmersSection showAll={true} />
       <Services />
       {/* <ProductList /> */}

@@ -66,7 +66,9 @@ const Footer = () => {
     publicFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/public/quick-links/`)
       .then((r) => r.json())
       .then((json) => setQuickLinks((json.data as QuickLink[]) ?? []))
-      .catch(() => {});
+      .catch(() => {
+        // intentionally ignored
+      });
   }, [locale]);
 
   const handleNewsletter = (e: { preventDefault(): void }) => {
@@ -121,8 +123,7 @@ const Footer = () => {
           <div className="row">
             <div className="col-lg-4 col-md-6 item">
               <div className="footer-item about">
-                <img className="logo" src="/assets/img/logo.png" alt="Logo"   style={{ height: '300px' }} 
- />
+                <img className="logo" src="/assets/img/logo.png" alt="Logo"   style={{ height: '300px' }}  />
 
                 
               </div>
@@ -135,13 +136,13 @@ const Footer = () => {
                   <li><Link href="/about-us">About Us</Link></li>
                   <li><Link href="/team">Meet Our Team</Link></li>
                   <li><Link href="/blog-standard">News &amp; Media</Link></li>
-                  <li><Link href="/services">Services</Link></li>
+                  {/* <li><Link href="/services">Services</Link></li> */}
                   <li><Link href="/contact-us">Contact Us</Link></li>
                 </ul>
               </div>
             </div>
 
-            <div className="col-lg-3 col-md-6 item">
+            {/* <div className="col-lg-3 col-md-6 item">
               <div className="footer-item recent-post">
                 <h4 className="widget-title">Recent Posts</h4>
                 <ul>
@@ -169,7 +170,7 @@ const Footer = () => {
                   </li>
                 </ul>
               </div>
-            </div>
+            </div> */}
 
             <div className="col-lg-3 col-md-6 item">
               <div className="footer-item contact">
@@ -197,13 +198,13 @@ const Footer = () => {
           <div className="row">
             <div className="col-lg-6">
               <p>&copy; Copyright {new Date().getFullYear()}. All Rights Reserved by{" "}
-                <a href="https://themeforest.net/user/validthemes" target="_blank" rel="noopener noreferrer">validthemes</a>
+                <a href="https://www.kefitech.com/" target="_blank" rel="noopener noreferrer">Kefitech Solution</a>
               </p>
             </div>
             <div className="col-lg-6 text-end">
               <ul>
-                <li><Link href="/about-us">Terms</Link></li>
-                <li><Link href="/about-us">Privacy</Link></li>
+                {/* <li><Link href="/about-us">Terms</Link></li>
+                <li><Link href="/about-us">Privacy</Link></li> */}
                 <li><Link href="/contact-us">Support</Link></li>
               </ul>
             </div>

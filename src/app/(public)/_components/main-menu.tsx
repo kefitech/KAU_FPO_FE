@@ -26,7 +26,7 @@ const MainMenu = ({ toggleSubMenu, navbarPlacement }: Props) => {
           <li><Link href="/contact-us">Contact Us</Link></li>
         </ul>
       </li>
-      <li className="dropdown">
+      {/* <li className="dropdown">
         <Link href="/project" className="dropdown-toggle" data-toggle="dropdown" onClick={toggleSubMenu}>Projects</Link>
         <ul className="dropdown-menu">
           <li><Link href="/project">Project</Link></li>
@@ -39,7 +39,7 @@ const MainMenu = ({ toggleSubMenu, navbarPlacement }: Props) => {
           <li><Link href="/services">Services</Link></li>
           <li><Link href="/service-details/1">Services Details</Link></li>
         </ul>
-      </li>
+      </li> */}
       <li className="dropdown">
         <Link href="#" className="dropdown-toggle" data-toggle="dropdown" onClick={toggleSubMenu}>Blog</Link>
         <ul className="dropdown-menu">

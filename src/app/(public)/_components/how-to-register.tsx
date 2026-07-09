@@ -47,6 +47,9 @@ export default function HowToRegister() {
   }
 
   return (
+    <div className="devider" />
+    >
+
     <div className="default-padding">
       <div className="container">
         <div className="row">

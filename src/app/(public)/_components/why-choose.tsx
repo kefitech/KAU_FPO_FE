@@ -13,6 +13,7 @@ const WhyChoose = () => {
   const [faqItems, setFaqItems] = useState<Faq[]>([]);
   const [openItem, setOpenItem] = useState<number | null>(null);
   const locale = useLocaleStore((s) => s.locale);
+  const [totalCount, setTotalCount] = useState<number>(0);
   const toggle = (id: number) => setOpenItem(openItem === id ? null : id);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: refetch intentionally triggered on locale change
@@ -22,6 +23,7 @@ const WhyChoose = () => {
       .then((res) => {
         setFaqItems(res.data);
         if (res.data.length > 0) setOpenItem(res.data[0].id);
+        setTotalCount(res?.meta?.pagination?.total_count?? 0);
       })
       .catch(() => {
         // silently ignore FAQ fetch errors; section just won't render
@@ -45,11 +47,11 @@ const WhyChoose = () => {
                 <div className="fun-fact">
                   <div className="counter">
                     <div className="timer">
-                      <CountUp end={258} enableScrollSpy scrollSpyOnce />
+                      <CountUp end={totalCount} enableScrollSpy scrollSpyOnce />
                     </div>
-                    <div className="operator">K</div>
+                    <div className="operator"> FAQs</div>
                   </div>
-                  <span className="medium">Agriculture, Organic Products</span>
+                  <span className="medium">Have query? Check FAQ</span>
                 </div>
               </div>
             </div>
