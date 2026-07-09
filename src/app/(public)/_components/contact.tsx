@@ -29,18 +29,36 @@ const Contact = () => {
   const set = (field: keyof typeof EMPTY) => (e: { target: { value: string } }) =>
     setFormData((prev) => ({ ...prev, [field]: e.target.value }));
 
+  const validate = (): Record<string, string> => {
+    const errs: Record<string, string> = {};
+    if (!formData.name.trim()) errs.name = "Name is required.";
+    if (!formData.email.trim()) {
+      errs.email = "Email is required.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      errs.email = "Enter a valid email address.";
+    }
+    if (formData.phone && formData.phone.length !== 10) {
+      errs.phone = "Phone number must be exactly 10 digits.";
+    }
+    if (!formData.subject.trim()) errs.subject = "Subject is required.";
+    if (!formData.message.trim()) errs.message = "Message is required.";
+    return errs;
+  };
+
   const handleSubmit = async (e: { preventDefault(): void }) => {
     e.preventDefault();
-    setSubmitting(true);
     setError("");
-    setFieldErrors({});
 
-    if (formData.phone && formData.phone.length !== 10) {
-      setFieldErrors({ phone: "Enter a valid 10-digit phone number." });
-      phoneRef.current?.focus();
-      setSubmitting(false);
+    const errs = validate();
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs);
+      const firstField = Object.keys(errs)[0];
+      fieldRefs[firstField]?.current?.focus();
       return;
     }
+
+    setSubmitting(true);
+    setFieldErrors({});
     try {
       const res = await publicFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/public/feedback/`, {
         method: "POST",
@@ -153,7 +171,7 @@ const Contact = () => {
                           ref={emailRef}
                           className="form-control"
                           placeholder="Email *"
-                          type="email"
+                          type="text"
                           value={formData.email}
                           onChange={set("email")}
                           required
@@ -211,6 +229,7 @@ const Contact = () => {
                           placeholder="Your Message *"
                           value={formData.message}
                           onChange={set("message")}
+                          required
                           required
                         />
                         {fieldErrors.message && (
