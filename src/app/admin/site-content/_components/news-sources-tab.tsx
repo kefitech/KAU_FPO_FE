@@ -36,7 +36,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useConfirmStore } from "@/stores/confirm-store";
 import type { AdminNewsSource } from "@/types/admin";
-import { TooltipProvider } from "@/components/ui/tooltip";
 
 
 type T = Record<string, string>;
@@ -109,8 +108,10 @@ function NewsSourceDialog({
   onSuccess: () => void;
 }) {
   const [name, setName] = useState("");
+  const [nameError, setNameError] = useState<string | null>(null);
   const [url, setUrl] = useState("");
   const [urlError, setUrlError] = useState<string | null>(null);
+  const NAME_MAX = 200;
   const [category, setCategory] = useState<CategoryValue>("newspaper");
   const [logo, setLogo] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -118,6 +119,7 @@ function NewsSourceDialog({
   useEffect(() => {
     if (!open) return;
     setLogo(null);
+    setNameError(null);
     setUrlError(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
     if (editing) {
@@ -165,16 +167,22 @@ function NewsSourceDialog({
     },
   });
 
+  const validateName = (value: string) => {
+    if (!value.trim()) return "Name is required.";
+    if (value.trim().length > NAME_MAX) return `Name must be ${NAME_MAX} characters or fewer.`;
+    return null;
+  };
+
   const handleSubmit = () => {
-    const error = validateUrl(url);
-    if (error) {
-      setUrlError(error);
-      return;
-    }
+    const nErr = validateName(name);
+    const uErr = validateUrl(url);
+    if (nErr) setNameError(nErr);
+    if (uErr) setUrlError(uErr);
+    if (nErr || uErr) return;
     mutation.mutate();
   };
 
-  const canSubmit = !!name.trim() && !!url.trim() && !urlError;
+  const canSubmit = !!name.trim() && !!url.trim() && !nameError && !urlError;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -192,9 +200,24 @@ function NewsSourceDialog({
             <Input
               id="news-source-name"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (nameError) setNameError(validateName(e.target.value));
+              }}
+              onBlur={() => setNameError(validateName(name))}
               placeholder="e.g. Mathrubhumi"
+              maxLength={NAME_MAX}
+              aria-invalid={!!nameError}
+              className={nameError ? "border-destructive focus-visible:ring-destructive/20" : ""}
             />
+            <div className="flex items-center justify-between">
+              {nameError
+                ? <p className="text-destructive text-xs">{nameError}</p>
+                : <span />}
+              <span className={`text-xs ml-auto ${name.length > NAME_MAX ? "text-destructive" : "text-muted-foreground"}`}>
+                {name.length}/{NAME_MAX}
+              </span>
+            </div>
           </div>
 
           {/* URL */}
