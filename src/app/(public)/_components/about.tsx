@@ -68,9 +68,9 @@ export default function About() {
         >
           <div className="banner-style-one">
             <h2 style={{ textAlign: "center", paddingTop:55 }}>
-            <strong>{data.hero_headline.split(" ").slice(0, 2).join(" ")}</strong>{" "}
+            <strong>{data.hero_headline?.split(" ").slice(0, 2).join(" ")}</strong>{" "}
             <span style={{ color: "var(--white)" }}>
-              {data.hero_headline.split(" ").slice(2).join(" ")}
+              {data.hero_headline?.split(" ").slice(2).join(" ")}
             </span>
           </h2>
           </div>

@@ -28,8 +28,8 @@ const Banner = () => {
                   <div className="content">
                     <h4>{banner.subtitle}</h4>
                     <h2>
-                      <strong>{banner.title.split(" ").slice(0, 2).join(" ")}</strong>{" "}
-                      {banner.title.split(" ").slice(2).join(" ")}
+                      <strong>{banner.title?.split(" ").slice(0, 2).join(" ")}</strong>{" "}
+                      {banner.title?.split(" ").slice(2).join(" ")}
                     </h2>
                     <p>{banner.description}</p>
                     <div className="button" style={{ display: "flex", gap: "15px", flexWrap: "wrap" }}>

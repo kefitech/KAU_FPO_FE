@@ -60,7 +60,7 @@ export default function HowToRegister() {
             </div>
 
             <div style={{ whiteSpace: "pre-line", lineHeight: 1.9 }}>
-              {data.how_to_register.split("\n").map((line, i) => {
+              {(data.how_to_register ?? "").split("\n").map((line, i) => {
                 // Phase headings like "PHASE I: ..."
                 if (/^PHASE\s+[IVX]+:/i.test(line.trim())) {
                   return (
