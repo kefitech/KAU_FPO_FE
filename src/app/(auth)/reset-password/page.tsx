@@ -59,7 +59,11 @@ function ResetPasswordForm() {
       });
       setSuccess(true);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to reset password. The link may have expired.");
+      const msg =
+        (error as { message?: string })?.message ||
+        (error instanceof Error ? error.message : null) ||
+        "Failed to reset password. The link may have expired.";
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }
