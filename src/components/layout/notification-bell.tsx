@@ -46,10 +46,12 @@ function NotificationItem({
       className="w-full px-4 py-3 text-left transition-colors hover:bg-muted/50"
     >
       <div className="flex items-start gap-2">
-        {!item.is_read && (
-          <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
-        )}
-        <div className={!item.is_read ? "" : "pl-4"}>
+        <span
+          className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
+            item.is_read ? "bg-transparent" : "bg-primary"
+          }`}
+        />
+        <div className="min-w-0 flex-1">
           <p
             className={`text-sm leading-snug ${
               !item.is_read ? "font-semibold" : "font-normal text-muted-foreground"
@@ -160,7 +162,7 @@ export function NotificationBell() {
           </Button>
         </PopoverTrigger>
 
-        <PopoverContent align="end" sideOffset={8} className="w-80 p-0 z-[200] shadow-lg rounded-xl border">
+        <PopoverContent align="end" sideOffset={8} collisionPadding={8} className="w-80 max-w-[calc(100vw-1rem)] p-0 z-[200] shadow-lg rounded-xl border">
           <div className="flex items-center justify-between px-4 py-3">
             <p className="font-semibold text-sm">Notifications</p>
             {hasUnread && (

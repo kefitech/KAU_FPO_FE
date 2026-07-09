@@ -14,6 +14,13 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 
+// Paths with no standalone page — breadcrumb link should point to the real parent
+const HREF_OVERRIDES: Record<string, string> = {
+  "/admin/notification-templates": "/admin/notifications?tab=templates",
+  "/admin/notification-template-codes": "/admin/notifications?tab=codes",
+  "/admin/notification-channel-settings": "/admin/notifications?tab=channels",
+};
+
 const SEGMENT_LABELS: Record<string, string> = {
   dashboard: "Dashboard",
   languages: "Languages",
@@ -76,7 +83,8 @@ export function AdminBreadcrumb() {
 
   const crumbs = segments.map((seg) => {
     const segIndex = rawSegments.lastIndexOf(seg);
-    const href = `/admin/${rawSegments.slice(0, segIndex + 1).join("/")}`;
+    const rawHref = `/admin/${rawSegments.slice(0, segIndex + 1).join("/")}`;
+    const href = HREF_OVERRIDES[rawHref] ?? rawHref;
     return { label: toLabel(seg), href };
   });
 

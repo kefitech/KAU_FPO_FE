@@ -80,7 +80,7 @@ export function LoginForm() {
         const meData = await authApi.me();
         setUser(meData.user);
         sessionStorage.setItem("show_welcome", "1");
-        router.push(resolvePostLoginPath(meData.redirect));
+        router.replace(resolvePostLoginPath(meData.redirect));
       }
     } catch (error) {
       const axiosErr = error as { response?: { data?: { message?: string } }; message?: string } | undefined;

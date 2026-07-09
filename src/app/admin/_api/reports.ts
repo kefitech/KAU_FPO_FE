@@ -21,11 +21,14 @@ export const reportsApi = {
     const disposition = response.headers["content-disposition"] as string | undefined;
     const ext = params.file_format === "pdf" ? "pdf" : "xlsx";
     const filename = disposition?.match(/filename="?([^"]+)"?/)?.[1] ?? `fpo-summary.${ext}`;
-    const url = URL.createObjectURL(new Blob([response.data as BlobPart]));
+    const blob = response.data instanceof Blob ? response.data : new Blob([response.data as BlobPart]);
+    const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
     a.download = filename;
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 150);
   },
 };
