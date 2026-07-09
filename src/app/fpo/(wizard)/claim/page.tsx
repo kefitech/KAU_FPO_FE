@@ -28,12 +28,12 @@ function ClaimPageInner() {
       router.push("/fpo/claim/status");
     },
     onError: (err: unknown) => {
-      const status = (err as { response?: { status?: number } })?.response?.status;
-      if (status === 409) {
-        toast.info("You already have a pending claim for this FPO.");
+      const e = err as { status?: number; message?: string };
+      if (e.status === 409) {
+        toast.info(e.message ?? "You already have a pending claim for this FPO.");
         router.push("/fpo/claim/status");
       } else {
-        toast.error("Failed to submit claim. Pending claim exists.");
+        toast.error(e.message ?? "Failed to submit claim. Please try again.");
       }
     },
   });
