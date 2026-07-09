@@ -24,6 +24,7 @@ export const notificationTemplateApi = {
 
   deactivate: (id: number) => api.post(`${BASE}${id}/deactivate/`),
 
-  testRender: (id: number, context: Record<string, string>) =>
-    api.post<{ subject: string; body: string }>(`${BASE}${id}/test_render/`, { context }).then((r) => r.data),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  testRender: (id: number, context: Record<string, string>): Promise<any> =>
+    api.post(`${BASE}${id}/test_render/`, { context }).then((r) => r.data),
 };

@@ -183,7 +183,7 @@ export function InboxPage() {
   });
 
   const notifications: InboxNotification[] = data?.data ?? [];
-  const totalCount = data?.count ?? 0;
+  const totalCount = data?.meta?.pagination?.total_count ?? 0;
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 

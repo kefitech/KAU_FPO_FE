@@ -132,3 +132,7 @@ export function RoleForm({ mode, role, t = {}, tCommon = {}, onSuccess, onCancel
     </div>
   );
 }
+
+export default function NewRolePage() {
+  return <RoleForm mode="create" />;
+}
