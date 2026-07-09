@@ -140,7 +140,7 @@ export default function FpoDashboardPage() {
         : "U";
       toast.custom(
         () => (
-          <div className="flex w-80 items-center gap-3 rounded-xl border bg-background px-4 py-3 shadow-lg">
+          <div className="flex w-72 sm:w-80 items-center gap-3 rounded-xl border bg-background px-4 py-3 shadow-lg">
             <Avatar className="h-10 w-10 shrink-0">
               <AvatarFallback className="bg-green-100 font-semibold text-green-700 text-sm">
                 {initials}
@@ -161,7 +161,7 @@ export default function FpoDashboardPage() {
 
   if (isLoading || !data) {
     return (
-      <div className="flex flex-col gap-6 p-6">
+      <div className="flex flex-col gap-6 px-3 sm:px-6 py-4 sm:py-6">
         <div className="flex flex-col gap-2">
           <Skeleton className="h-7 w-72" />
           <Skeleton className="h-4 w-48" />
@@ -185,7 +185,7 @@ export default function FpoDashboardPage() {
   const districtLabel = DISTRICT_LABELS[location.district] ?? location.district;
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="flex flex-col gap-6 px-3 sm:px-6 py-4 sm:py-6">
 
       {/* ── Header ── */}
       <div className="flex flex-wrap items-start justify-between gap-3">

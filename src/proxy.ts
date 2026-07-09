@@ -16,30 +16,29 @@ const AUTH_ROUTE_PREFIXES = [
   "/reset-password",
 ];
 
+// Protected route prefixes — unauthenticated users get redirected to login
+const PROTECTED_ROUTE_PREFIXES = [
+  "/dashboard",
+  "/admin",
+  "/fpo",
+];
+
 export default function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Get token from cookie
-  const token = request.cookies.get("auth_token")?.value;
+  // Backend sets HttpOnly cookie named "access_token" on login
+  const token = request.cookies.get("access_token")?.value;
 
-  const isAuthRoute = AUTH_ROUTE_PREFIXES.some((route) => pathname.startsWith(route));
-  const isDashboardRoute = pathname.startsWith("/dashboard");
+  const isAuthRoute      = AUTH_ROUTE_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+  const isProtectedRoute = PROTECTED_ROUTE_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 
-  // If user is authenticated and trying to access auth routes (login/register)
-  // redirect to dashboard
-  if (token && isAuthRoute) {
-    return NextResponse.redirect(new URL("/dashboard/overview", request.url));
-  }
-
-  // If user is not authenticated and trying to access protected routes
-  // redirect to login
-  if (!token && isDashboardRoute) {
+  // Unauthenticated user hitting a protected route → redirect to login immediately
+  if (!token && isProtectedRoute) {
     const loginUrl = new URL("/v1/login", request.url);
-    loginUrl.searchParams.set("from", pathname);
+    loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  // Allow the request to proceed
   return NextResponse.next();
 }
 

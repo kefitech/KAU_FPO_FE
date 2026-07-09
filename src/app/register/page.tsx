@@ -1,15 +1,13 @@
-// biome-ignore-all lint/suspicious/noArrayIndexKey: intentional across this file
-
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { CheckCircle2, ChevronRight, Eye, EyeOff, Smartphone, XCircle } from "lucide-react";
-import { Controller, type Resolver, useForm, useWatch } from "react-hook-form";
+import { Controller, type Resolver, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -49,7 +47,6 @@ function EligibilityStep({ onPass }: { onPass: (token: string) => void }) {
   const [districtQuery, setDistrictQuery] = useState("");
   const skipNextInputChange = useRef(false);
   const filteredDistricts = DISTRICT_OPTIONS.filter((o) => o.label.toLowerCase().includes(districtQuery.toLowerCase()));
-
   const { register, handleSubmit, control, formState, setValue } = useForm<EligibilityValues>({
     resolver: zodResolver(eligibilitySchema) as unknown as Resolver<EligibilityValues>,
     mode: "onTouched",
@@ -61,17 +58,6 @@ function EligibilityStep({ onPass }: { onPass: (token: string) => void }) {
       has_bank_account: false,
     },
   });
-
-  // hook is now top-level, unconditional
-  const districtValue = useWatch({ control, name: "district" });
-
-  useEffect(() => {
-    const label = DISTRICT_OPTIONS.find((o) => o.value === districtValue)?.label ?? "";
-    skipNextInputChange.current = true;
-    setDistrictQuery(label);
-  }, [districtValue]);
-
-  // ... rest of component
 
   const checkMutation = useMutation({
     mutationFn: (values: EligibilityValues) => fpoRegistrationApi.checkEligibility(values),
@@ -128,7 +114,12 @@ function EligibilityStep({ onPass }: { onPass: (token: string) => void }) {
           render={({ field }) => (
             <Combobox
               value={field.value}
-              onValueChange={field.onChange}
+              onValueChange={(v) => {
+                field.onChange(v);
+                const label = DISTRICT_OPTIONS.find((o) => o.value === v)?.label ?? "";
+                skipNextInputChange.current = true;
+                setDistrictQuery(label);
+              }}
               inputValue={districtQuery}
               onInputValueChange={(v) => {
                 if (skipNextInputChange.current) {
@@ -167,7 +158,7 @@ function EligibilityStep({ onPass }: { onPass: (token: string) => void }) {
           min={10}
           max={100000}
           placeholder="Minimum 10 required"
-          className="w-48"
+          className="w-full sm:w-48"
           onInput={(e) => {
             const el = e.currentTarget;
             if (el.value.length > 6) el.value = el.value.slice(0, 6);
@@ -215,7 +206,7 @@ function EligibilityStep({ onPass }: { onPass: (token: string) => void }) {
 
       <Button
         type="submit"
-        className="gap-1.5 self-end bg-green-600 hover:bg-green-700"
+        className="gap-1.5 w-full sm:w-auto sm:self-end bg-green-600 hover:bg-green-700"
         disabled={checkMutation.isPending}
       >
         {checkMutation.isPending ? "Checking…" : "Check Eligibility"}
@@ -609,14 +600,14 @@ export default function RegisterPage() {
   const currentIndex = STAGE_ORDER.indexOf(stage);
 
   return (
-    <div className="flex flex-col items-center justify-center px-4 py-12">
+    <div className="flex flex-col items-center justify-center px-4 py-6 sm:py-12">
       {/* Progress indicator */}
-      <div className="mb-8 flex items-center gap-2">
+      <div className="mb-6 sm:mb-8 flex items-center gap-1.5 sm:gap-2">
         {STAGES.map(({ key, label }, i) => {
           const done = STAGE_ORDER.indexOf(key) < currentIndex;
           const active = key === stage;
           return (
-            <div key={key} className="flex items-center gap-2">
+            <div key={key} className="flex items-center gap-1.5 sm:gap-2">
               <div
                 className={`flex items-center gap-1.5 font-medium text-sm ${active ? "text-green-700" : done ? "text-muted-foreground" : "text-muted-foreground/50"}`}
               >
@@ -624,20 +615,21 @@ export default function RegisterPage() {
                   <CheckCircle2 className="h-4 w-4 text-green-600" />
                 ) : (
                   <span
-                    className={`flex h-5 w-5 items-center justify-center rounded-full text-xs ${active ? "bg-green-600 text-white" : "bg-muted text-muted-foreground"}`}
+                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs ${active ? "bg-green-600 text-white" : "bg-muted text-muted-foreground"}`}
                   >
                     {i + 1}
                   </span>
                 )}
-                {label}
+                <span className="hidden sm:inline">{label}</span>
+                <span className="sm:hidden text-xs">{label}</span>
               </div>
-              {i < STAGES.length - 1 && <div className="h-px w-6 bg-border" />}
+              {i < STAGES.length - 1 && <div className="h-px w-4 sm:w-6 bg-border shrink-0" />}
             </div>
           );
         })}
       </div>
 
-      <div className="w-full max-w-md rounded-xl border bg-card p-6 shadow-sm">
+      <div className="w-full max-w-md rounded-xl border bg-card p-4 sm:p-6 shadow-sm">
         {stage === "eligibility" && (
           <EligibilityStep
             onPass={(token) => {

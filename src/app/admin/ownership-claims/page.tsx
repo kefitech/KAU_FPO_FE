@@ -78,16 +78,20 @@ export default function OwnershipClaimsPage() {
           open={sheet.open}
           onOpenChange={(open) => setSheet((prev) => ({ ...prev, open }))}
           title={sheet.item.fpo_name}
-          actions={[
-            {
-              label: t.action_review ?? "Review Claim",
-              icon: ClipboardCheck,
-              onClick: () => {
-                setSheet((prev) => ({ ...prev, open: false }));
-                setReviewing(sheet.item);
-              },
-            },
-          ]}
+          actions={
+            sheet.item.status === "approved" || sheet.item.status === "rejected"
+              ? []
+              : [
+                  {
+                    label: t.action_review ?? "Review Claim",
+                    icon: ClipboardCheck,
+                    onClick: () => {
+                      setSheet((prev) => ({ ...prev, open: false }));
+                      setReviewing(sheet.item);
+                    },
+                  },
+                ]
+          }
           fields={[
             { type: "section", label: "Claimant" },
             { label: "Name", value: sheet.item.claimant_name },

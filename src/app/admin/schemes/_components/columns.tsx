@@ -86,11 +86,13 @@ export function getSchemeColumns(t: T = {}, tCommon: T = {}): ColumnDef<AdminSch
     {
       accessorKey: "administering_body",
       header: t.col_administering_body ?? "Administering Body",
+      meta: { hideOnMobile: true },
       cell: ({ row }) => <TextCell value={row.original.administering_body} maxWidth="max-w-[200px]" muted />,
     },
     {
       accessorKey: "category_display",
       header: t.col_category ?? "Category",
+      meta: { hideOnMobile: true },
       cell: ({ row }) => {
         const color = CATEGORY_BADGE_COLORS[row.original.category] ?? "bg-muted text-muted-foreground";
         return (

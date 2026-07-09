@@ -4,5 +4,6 @@ declare module "@tanstack/react-table" {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   interface ColumnMeta<TData, TValue> {
     width?: string;
+    hideOnMobile?: boolean;
   }
 }

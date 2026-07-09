@@ -65,15 +65,15 @@ export default function ExternalApisPage() {
   );
 
   return (
-    <div className="flex flex-col gap-6 px-8 py-6">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-6 py-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-bold text-2xl">{t.page_title ?? "External APIs"}</h1>
           <p className="mt-0.5 text-muted-foreground text-sm">
             {t.page_description ?? "Manage third-party service integrations for verification and data lookup"}
           </p>
         </div>
-        <Button size="sm" onClick={() => setDialog({ open: true, editing: null })}>
+        <Button size="sm" className="self-start sm:self-auto" onClick={() => setDialog({ open: true, editing: null })}>
           <Plus className="mr-1.5 h-4 w-4" />
           {t.add_button ?? "Add External API"}
         </Button>

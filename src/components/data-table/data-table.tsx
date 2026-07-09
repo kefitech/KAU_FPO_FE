@@ -51,7 +51,16 @@ export function DataTable<TData>({
   });
 
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() => {
+    if (typeof window === "undefined" || window.innerWidth >= 640) return {};
+    const hidden: VisibilityState = {};
+    for (const col of columns) {
+      if (!col.meta?.hideOnMobile) continue;
+      const id = "accessorKey" in col ? String(col.accessorKey) : col.id;
+      if (id) hidden[id] = false;
+    }
+    return hidden;
+  });
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const tableRef = useRef<HTMLDivElement>(null);
 

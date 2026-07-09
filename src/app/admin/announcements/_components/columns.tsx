@@ -47,16 +47,19 @@ export function getAnnouncementColumns({
     {
       accessorKey: "category",
       header: t.col_category ?? "Category",
+      meta: { hideOnMobile: true },
       cell: ({ row }) => <Badge variant="outline">{row.original.category_display ?? row.original.category}</Badge>,
     },
     {
       accessorKey: "published_date",
       header: t.col_published ?? "Published",
+      meta: { hideOnMobile: true },
       cell: ({ row }) => formatDate(row.original.published_date),
     },
     {
       accessorKey: "order",
       header: t.col_order ?? "Order",
+      meta: { hideOnMobile: true },
     },
     {
       accessorKey: "is_active",

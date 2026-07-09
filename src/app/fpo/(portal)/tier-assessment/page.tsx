@@ -92,7 +92,7 @@ function SubmittedView({
   return (
     <div className="flex flex-col gap-6">
       {/* Tier result card */}
-      <div className="flex flex-col items-center gap-4 rounded-xl border bg-card p-8 text-center shadow-sm">
+      <div className="flex flex-col items-center gap-4 rounded-xl border bg-card p-5 sm:p-8 text-center shadow-sm">
         <p className="font-medium text-muted-foreground text-sm">
           {data.financial_year} Assessment Result
         </p>
@@ -156,7 +156,7 @@ function SubmittedView({
 function DomainScoreRow({ domain }: { domain: TierDomainScore }) {
   const pct = domain.max_score > 0 ? (domain.score / domain.max_score) * 100 : 0;
   return (
-    <div className="flex items-center gap-4 px-5 py-3">
+    <div className="flex items-center gap-3 px-4 sm:px-5 py-3">
       <span className="min-w-0 flex-1 text-sm">{domain.domain_name}</span>
       <div className="flex items-center gap-3">
         <div className="hidden h-1.5 w-28 overflow-hidden rounded-full bg-muted sm:block">
@@ -165,7 +165,7 @@ function DomainScoreRow({ domain }: { domain: TierDomainScore }) {
             style={{ width: `${Math.min(100, Math.max(0, pct))}%` }}
           />
         </div>
-        <span className="w-20 text-right font-medium text-sm tabular-nums">
+        <span className="shrink-0 text-right font-medium text-sm tabular-nums">
           {domain.score.toFixed(1)} / {domain.max_score}
         </span>
       </div>
@@ -195,7 +195,7 @@ function HistorySection({ items, currentYear }: { items: TierHistoryItem[]; curr
       {open && (
         <div className="divide-y border-t">
           {past.map((item) => (
-            <div key={item.id} className="flex items-center gap-4 px-5 py-3.5">
+            <div key={item.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 sm:px-5 py-3">
               <span className="font-medium text-sm">{item.financial_year}</span>
               <div
                 className={`rounded-full border px-2.5 py-0.5 font-bold text-xs ${tierColor(item.tier_assigned)}`}
@@ -343,7 +343,7 @@ export default function TierAssessmentPage() {
   // ── Loading ─────────────────────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-6 p-6">
+      <div className="flex flex-col gap-6 px-3 sm:px-6 py-4 sm:py-6">
         <Skeleton className="h-8 w-48" />
         <div className="flex flex-col gap-4 rounded-xl border p-6">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -361,7 +361,7 @@ export default function TierAssessmentPage() {
   // ── No assessment yet ────────────────────────────────────────────────────────
   if (!assessment) {
     return (
-      <div className="flex flex-col gap-6 p-6">
+      <div className="flex flex-col gap-6 px-3 sm:px-6 py-4 sm:py-6">
         <div>
           <h1 className="font-bold text-2xl">Tier Assessment</h1>
           <p className="mt-0.5 text-muted-foreground text-sm">
@@ -369,7 +369,7 @@ export default function TierAssessmentPage() {
           </p>
         </div>
 
-        <div className="flex flex-col items-center gap-5 rounded-xl border bg-card p-12 text-center shadow-sm">
+        <div className="flex flex-col items-center gap-5 rounded-xl border bg-card p-6 sm:p-12 text-center shadow-sm">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
             <ClipboardList className="h-8 w-8 text-primary" />
           </div>
@@ -406,7 +406,7 @@ export default function TierAssessmentPage() {
   // ── Submitted — read-only results ────────────────────────────────────────────
   if (assessment.status === "submitted") {
     return (
-      <div className="flex flex-col gap-6 p-6">
+      <div className="flex flex-col gap-6 px-3 sm:px-6 py-4 sm:py-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="font-bold text-2xl">Tier Assessment</h1>
@@ -443,7 +443,7 @@ export default function TierAssessmentPage() {
   const allRequiredDone = answeredRequired.length === visibleRequired.length;
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="flex flex-col gap-6 px-3 sm:px-6 py-4 sm:py-6">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -530,7 +530,7 @@ export default function TierAssessmentPage() {
       ))}
 
       {/* Submit */}
-      <div className="flex items-center justify-between rounded-xl border bg-card p-4 shadow-sm">
+      <div className="flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <p className="text-muted-foreground text-sm">
           {allRequiredDone
             ? "All required questions answered. Ready to submit."
@@ -538,7 +538,7 @@ export default function TierAssessmentPage() {
                 visibleRequired.length - answeredRequired.length !== 1 ? "s" : ""
               } remaining.`}
         </p>
-        <Button
+        <Button className="w-full sm:w-auto"
           onClick={() => submitMutation.mutate()}
           disabled={submitMutation.isPending || !allRequiredDone}
         >

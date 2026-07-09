@@ -128,6 +128,7 @@ export function getApplicationColumns(t: T, tCommon: T): ColumnDef<ApplicationLi
     {
       accessorKey: "application_id",
       header: t.col_application_id ?? "Application ID",
+      meta: { hideOnMobile: true },
       cell: ({ row }) => <TextCell value={row.original.application_id} mono maxWidth="max-w-[160px]" />,
     },
     {
@@ -138,6 +139,7 @@ export function getApplicationColumns(t: T, tCommon: T): ColumnDef<ApplicationLi
     {
       accessorKey: "district_display",
       header: t.col_district ?? "District",
+      meta: { hideOnMobile: true },
     },
     {
       accessorKey: "status",
@@ -147,6 +149,7 @@ export function getApplicationColumns(t: T, tCommon: T): ColumnDef<ApplicationLi
     {
       accessorKey: "primary_user_name",
       header: t.col_primary_user ?? "Primary User",
+      meta: { hideOnMobile: true },
       enableSorting: false,
       cell: ({ row }) => (
         <div className="flex flex-col">
@@ -158,6 +161,7 @@ export function getApplicationColumns(t: T, tCommon: T): ColumnDef<ApplicationLi
     {
       accessorKey: "current_tier",
       header: t.col_tier ?? "Tier",
+      meta: { hideOnMobile: true },
       cell: ({ row }) => {
         const tier = row.original.tier ?? row.original.current_tier;
         return tier ? (
@@ -171,11 +175,13 @@ export function getApplicationColumns(t: T, tCommon: T): ColumnDef<ApplicationLi
     {
       accessorKey: "total_members",
       header: t.col_members ?? "Members",
+      meta: { hideOnMobile: true },
       cell: ({ row }) => row.original.total_members ?? "—",
     },
     {
       accessorKey: "updated_at",
       header: t.col_last_updated ?? "Last Updated",
+      meta: { hideOnMobile: true },
       cell: ({ row }) =>
         new Date(row.original.updated_at).toLocaleDateString("en-IN", {
           day: "2-digit",

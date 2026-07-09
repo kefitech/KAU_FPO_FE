@@ -53,8 +53,6 @@ const BLOCK_DESCRIPTIONS: Record<string, string> = {
 
 const RICH_TEXT_BLOCKS = ["about_body", "how_to_register", "hero_description"];
 
-// Converts legacy plain text (\n\n separated) to HTML for TipTap + view mode.
-// If content already starts with an HTML tag, returns it unchanged.
 function toHtml(content: string): string {
   if (!content) return "";
   if (content.trimStart().startsWith("<")) return content;
@@ -87,7 +85,6 @@ function BlockEditor({ block, languages, t }: BlockEditorProps) {
   const defaultLang = sortedLangs[0];
 
   const rawContent = typeof block.content === "object" ? (block.content as Record<string, string>) : {};
-  // Normalise legacy plain text to HTML on initial load
   const initialValues = Object.fromEntries(
     Object.entries(rawContent).map(([k, v]) => [k, RICH_TEXT_BLOCKS.includes(block.block_key) ? toHtml(v) : v])
   );
@@ -134,34 +131,56 @@ function BlockEditor({ block, languages, t }: BlockEditorProps) {
   };
 
   const LanguageBar = () => (
-    <div className="flex items-center gap-3 rounded-md border bg-muted/40 px-4 py-2.5">
-      <span className="text-muted-foreground text-sm shrink-0">{t.field_language ?? "Language:"}</span>
-      <Select value={activeLang} onValueChange={setActiveLang}>
-        <SelectTrigger className="h-8 w-48 bg-background text-sm">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
+    <div className="rounded-md border bg-muted/40 px-3 py-2.5 sm:px-4">
+      {/* Select row */}
+      <div className="flex items-center gap-2">
+        <span className="text-muted-foreground text-sm shrink-0">{t.field_language ?? "Language:"}</span>
+        <Select value={activeLang} onValueChange={setActiveLang}>
+          <SelectTrigger className="h-8 flex-1 sm:w-48 sm:flex-none bg-background text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {sortedLangs.map((lang) => {
+              const filled = !!values[lang.code]?.trim();
+              return (
+                <SelectItem key={lang.code} value={lang.code}>
+                  <span className="flex items-center gap-2">
+                    {filled ? (
+                      <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                    ) : (
+                      <Circle className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
+                    )}
+                    {lang.native_name}
+                    {lang.is_default && (
+                      <span className="text-muted-foreground text-xs">(default)</span>
+                    )}
+                  </span>
+                </SelectItem>
+              );
+            })}
+          </SelectContent>
+        </Select>
+        {/* Badges — show beside select on desktop */}
+        <div className="hidden sm:flex items-center gap-1.5 ml-auto">
           {sortedLangs.map((lang) => {
             const filled = !!values[lang.code]?.trim();
             return (
-              <SelectItem key={lang.code} value={lang.code}>
-                <span className="flex items-center gap-2">
-                  {filled ? (
-                    <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />
-                  ) : (
-                    <Circle className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
-                  )}
-                  {lang.native_name}
-                  {lang.is_default && (
-                    <span className="text-muted-foreground text-xs">(default)</span>
-                  )}
-                </span>
-              </SelectItem>
+              <span
+                key={lang.code}
+                className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                  filled
+                    ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                {lang.code.toUpperCase()}
+              </span>
             );
           })}
-        </SelectContent>
-      </Select>
-      <div className="ml-auto flex items-center gap-1.5">
+        </div>
+      </div>
+      {/* Badges — show below select on mobile */}
+      <div className="flex sm:hidden items-center gap-1.5 mt-2 flex-wrap">
         {sortedLangs.map((lang) => {
           const filled = !!values[lang.code]?.trim();
           return (
@@ -184,7 +203,7 @@ function BlockEditor({ block, languages, t }: BlockEditorProps) {
   return (
     <div className="flex flex-col gap-5">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="font-semibold text-lg">{label}</h2>
           <p className="text-muted-foreground text-sm mt-0.5">{description}</p>
@@ -202,7 +221,7 @@ function BlockEditor({ block, languages, t }: BlockEditorProps) {
             </Button>
           </div>
         ) : (
-          <Button variant="outline" size="sm" onClick={() => setIsEditing(true)} className="shrink-0">
+          <Button variant="outline" size="sm" onClick={() => setIsEditing(true)} className="self-start">
             <Pencil className="mr-1.5 h-3.5 w-3.5" />
             {t.btn_edit ?? "Edit"}
           </Button>
@@ -307,8 +326,14 @@ function ContentBlocksTab({ t }: { t: T }) {
 
   if (isLoading) {
     return (
-      <div className="flex gap-6">
-        <div className="w-52 shrink-0 space-y-1">
+      <div className="flex flex-col gap-4 sm:flex-row sm:gap-6">
+        <div className="flex gap-1 overflow-x-auto pb-1 sm:hidden">
+          {Array.from({ length: 6 }).map((_, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: skeleton
+            <Skeleton key={i} className="h-9 w-28 shrink-0 rounded-lg" />
+          ))}
+        </div>
+        <div className="hidden sm:block w-52 shrink-0 space-y-1">
           {Array.from({ length: 6 }).map((_, i) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: skeleton
             <Skeleton key={i} className="h-10 rounded-md" />
@@ -324,8 +349,37 @@ function ContentBlocksTab({ t }: { t: T }) {
   }
 
   return (
-    <div className="flex gap-6 min-h-0">
-      <nav className="w-52 shrink-0 border-r pr-4">
+    <div className="flex flex-col gap-4 sm:flex-row sm:gap-6 min-h-0">
+      {/* Mobile: horizontal scrollable block picker */}
+      <div className="flex sm:hidden overflow-x-auto border-b gap-1 pb-1 scrollbar-none">
+        {sortedBlocks.map((block) => {
+          const isActive = (activeKey || sortedBlocks[0]?.block_key) === block.block_key;
+          const isFilled = getBlockFillStatus(block);
+          const label = BLOCK_LABELS[block.block_key] ?? block.block_key;
+          return (
+            <button
+              key={block.block_key}
+              type="button"
+              onClick={() => setActiveKey(block.block_key)}
+              className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm transition-colors ${
+                isActive
+                  ? "bg-muted text-foreground font-medium"
+                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+              }`}
+            >
+              {isFilled ? (
+                <CheckCircle2 className="h-3 w-3 shrink-0 text-green-500" />
+              ) : (
+                <Circle className="h-3 w-3 shrink-0 text-muted-foreground/40" />
+              )}
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Desktop: left vertical block nav */}
+      <nav className="hidden sm:block w-52 shrink-0 border-r pr-4">
         <p className="mb-2 px-3 text-muted-foreground text-xs font-medium uppercase tracking-wide">
           {t.blocks_heading ?? "Blocks"}
         </p>
@@ -390,8 +444,6 @@ const TABS = [
 
 type TabKey = (typeof TABS)[number]["key"];
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
-
 const TAB_LABEL_KEYS: Record<string, string> = {
   "content-blocks": "tab_content_blocks",
   documents: "tab_documents",
@@ -423,7 +475,7 @@ export default function SiteContentPage() {
   }
 
   return (
-    <div className="flex flex-col gap-0 p-6">
+    <div className="flex flex-col gap-0 py-6">
       {/* Page header */}
       <div className="mb-6">
         <h1 className="font-bold text-2xl">{t.page_title ?? "Site Content"}</h1>
@@ -432,9 +484,27 @@ export default function SiteContentPage() {
         </p>
       </div>
 
-      <div className="flex gap-0">
-        {/* Left nav */}
-        <nav className="w-52 shrink-0 border-r pr-6">
+      <div className="flex flex-col gap-0 sm:flex-row">
+        {/* Mobile: horizontal scrollable tab bar */}
+        <div className="flex sm:hidden overflow-x-auto border-b gap-1 pb-1 mb-4 scrollbar-none">
+          {TABS.map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setTab(key)}
+              className={`flex shrink-0 items-center whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                tab === key
+                  ? "bg-muted text-foreground"
+                  : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+              }`}
+            >
+              {t[TAB_LABEL_KEYS[key] ?? ""] ?? label}
+            </button>
+          ))}
+        </div>
+
+        {/* Desktop: left vertical nav */}
+        <nav className="hidden sm:block w-52 shrink-0 border-r pr-6">
           <ul className="flex flex-col gap-0.5">
             {TABS.map(({ key, label }) => (
               <li key={key}>
@@ -455,7 +525,7 @@ export default function SiteContentPage() {
         </nav>
 
         {/* Right content */}
-        <div className="flex-1 min-w-0 pl-8">
+        <div className="flex-1 min-w-0 sm:pl-8">
           {tab === "content-blocks" && <ContentBlocksTab t={t} />}
           {tab === "documents" && <DocumentsTab t={t} />}
           {tab === "gallery" && <GalleryTab t={t} />}

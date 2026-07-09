@@ -1,6 +1,10 @@
 "use client";
 
 import "@/app/globals.css";
+import { useEffect, useState } from "react";
+
+import { usePathname, useRouter } from "next/navigation";
+
 import { DynamicSidebar } from "@/components/layout/dynamic-sidebar";
 import { LocaleSwitcher } from "@/components/layout/locale-switcher";
 import { NotificationBell } from "@/components/layout/notification-bell";
@@ -9,10 +13,30 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { fpoNavigationConfig } from "@/config/navigation-defaults";
+import { useAuthStore } from "@/stores/auth-store";
 import { useLocaleStore } from "@/stores/locale-store";
 
 export default function FpoPortalLayout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  const pathname = usePathname();
   const locale = useLocaleStore((state) => state.locale);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    if (!isAuthenticated) {
+      router.replace(`/v1/login?next=${encodeURIComponent(pathname)}`);
+    }
+  }, [mounted, isAuthenticated, pathname, router]);
+
+  if (!mounted || !isAuthenticated) {
+    return null;
+  }
 
   return (
     <SidebarProvider>

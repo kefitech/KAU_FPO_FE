@@ -141,23 +141,25 @@ function DocumentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-0 overflow-x-hidden">
-        <DialogHeader>
+      <DialogContent className="flex flex-col max-h-[90vh] sm:max-w-md gap-0 p-0">
+        {/* Sticky header */}
+        <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
           <DialogTitle>{editing ? "Edit Document" : "Upload Document"}</DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4 py-2 min-w-0">
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
           {/* Title with language switcher */}
-          <div className="flex flex-col gap-1.5 min-w-0">
-            <div className="flex items-center justify-between min-w-0">
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between gap-2">
               {/* biome-ignore lint/a11y/noLabelWithoutControl: label is visually associated with dynamically rendered inputs */}
               <label className="text-sm font-medium shrink-0">
                 Title <span className="text-destructive">*</span>
               </label>
-              {langsLoading && <Skeleton className="h-8 w-36" />}
+              {langsLoading && <Skeleton className="h-8 w-32" />}
               {!langsLoading && languages.length > 1 && (
                 <Select value={activeLang} onValueChange={setActiveLang}>
-                  <SelectTrigger className="h-8 w-36 text-sm">
+                  <SelectTrigger className="h-8 w-32 text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -302,14 +304,15 @@ function DocumentDialog({
           </div>
         </div>
 
-        <DialogFooter>
+        {/* Sticky footer */}
+        <div className="shrink-0 border-t px-6 py-4 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 bg-background">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={mutation.isPending}>
             Cancel
           </Button>
           <Button onClick={() => mutation.mutate()} disabled={!canSubmit || mutation.isPending}>
             {mutation.isPending ? "Saving…" : editing ? "Save Changes" : "Upload"}
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );

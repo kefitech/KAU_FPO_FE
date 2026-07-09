@@ -51,12 +51,12 @@ function SettingRow({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between gap-8 border-b py-4 last:border-0">
+    <div className="flex flex-col gap-2 border-b py-4 last:border-0 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
       <div className="flex min-w-0 flex-col gap-0.5">
         <span className="font-medium text-sm">{label}</span>
         {description && <span className="text-muted-foreground text-xs">{description}</span>}
       </div>
-      <div className="w-64 shrink-0">{children}</div>
+      <div className="w-full sm:w-64 sm:shrink-0">{children}</div>
     </div>
   );
 }

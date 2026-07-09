@@ -24,7 +24,7 @@ const STATUS_CONFIG: Record<FpoClaim["status"], { icon: React.ElementType; color
     icon: CheckCircle2,
     color: "text-green-600 dark:text-green-400",
     title: "Claim Approved",
-    desc: "Claim approved. You now have full access to this FPO.",
+    desc: "Claim approved. Please complete your FPO registration to access the dashboard.",
   },
   rejected: {
     icon: XCircle,
@@ -187,8 +187,8 @@ function ClaimCard({ claim }: { claim: FpoClaim }) {
           </p>
 
           {claim.status === "approved" && (
-            <Button size="sm" className="mt-3" onClick={() => router.push("/fpo/dashboard")}>
-              Go to Dashboard →
+            <Button size="sm" className="mt-3" onClick={() => router.push("/fpo/register")}>
+              Continue Registration →
             </Button>
           )}
 

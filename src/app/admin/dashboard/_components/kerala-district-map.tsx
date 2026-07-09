@@ -213,14 +213,14 @@ export function KeralaDistrictMap({ data, locale }: Props) {
 
   if (!geoData) {
     return (
-      <div className="animate-pulse rounded-xl bg-muted" style={{ height: 480 }} />
+      <div className="animate-pulse rounded-b-xl bg-muted" style={{ height: "min(480px, 75vw)" }} />
     );
   }
 
   return (
     <div
-      className="relative overflow-hidden rounded-xl border"
-      style={{ height: 480, background: waterBg }}
+      className="relative z-0 overflow-hidden rounded-b-xl"
+      style={{ height: "min(480px, 75vw)", background: waterBg }}
     >
       <MapContainer
         center={[10.85, 76.27]}

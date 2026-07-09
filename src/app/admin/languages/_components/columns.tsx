@@ -11,6 +11,7 @@ import { languageApi } from "@/app/admin/_api/language";
 import { RowActions } from "@/components/data-table/row-actions";
 import { Badge } from "@/components/ui/badge";
 import { useConfirmStore } from "@/stores/confirm-store";
+import { useLocaleStore } from "@/stores/locale-store";
 import type { Language } from "@/types";
 
 type T = Record<string, string>;
@@ -19,12 +20,14 @@ function LanguageActions({ language, t, tCommon }: { language: Language; t: T; t
   const router = useRouter();
   const queryClient = useQueryClient();
   const confirm = useConfirmStore((s) => s.confirm);
+  const setLocale = useLocaleStore((s) => s.setLocale);
 
   const toggleMutation = useMutation({
     mutationFn: () => (language.is_active ? languageApi.deactivate(language.id) : languageApi.activate(language.id)),
     onSuccess: () => {
       toast.success(`Language ${language.is_active ? "deactivated" : "activated"}`);
       queryClient.invalidateQueries({ queryKey: ["languages"] });
+      queryClient.invalidateQueries({ queryKey: ["public-languages"] });
     },
     onError: () => toast.error(tCommon.action_failed ?? "Action failed"),
   });
@@ -41,6 +44,8 @@ function LanguageActions({ language, t, tCommon }: { language: Language; t: T; t
     onSuccess: () => {
       toast.success(`"${language.name}" set as default`);
       queryClient.invalidateQueries({ queryKey: ["languages"] });
+      queryClient.invalidateQueries({ queryKey: ["public-languages"] });
+      setLocale(language.code, language.is_rtl ?? false);
     },
     onError: () => toast.error(tCommon.action_failed ?? "Action failed"),
   });
@@ -58,6 +63,7 @@ function LanguageActions({ language, t, tCommon }: { language: Language; t: T; t
     onSuccess: () => {
       toast.success(`"${language.name}" deleted`);
       queryClient.invalidateQueries({ queryKey: ["languages"] });
+      queryClient.invalidateQueries({ queryKey: ["public-languages"] });
     },
     onError: () => toast.error(tCommon.delete_failed ?? "Failed to delete"),
   });

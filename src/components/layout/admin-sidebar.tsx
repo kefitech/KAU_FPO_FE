@@ -18,6 +18,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarSeparator,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
@@ -43,6 +44,9 @@ export function AdminSidebar() {
   const pathname = usePathname();
   const { logout } = useAuth();
   const locale = useLocaleStore((s) => s.locale);
+  const { setOpenMobile, isMobile } = useSidebar();
+
+  const closeMobile = () => { if (isMobile) setOpenMobile(false); };
 
   const { data, isLoading } = useQuery({
     queryKey: ["auth-me", locale],
@@ -93,7 +97,7 @@ export function AdminSidebar() {
                           isActive={isActive}
                           className={isActive ? "!bg-[#49a760]/15 !text-[#49a760] dark:!bg-[#49a760]/20 dark:!text-[#49a760]" : ""}
                         >
-                          <Link href={item.path}>
+                          <Link href={item.path} onClick={closeMobile}>
                             <Icon className="h-4 w-4 shrink-0" />
                             <span className="text-sm group-data-[collapsible=icon]:hidden">{item.label}</span>
                           </Link>
@@ -114,7 +118,7 @@ export function AdminSidebar() {
               isActive={pathname.startsWith("/admin/settings")}
               className={pathname.startsWith("/admin/settings") ? "!bg-[#49a760]/15 !text-[#49a760] dark:!bg-[#49a760]/20 dark:!text-[#49a760]" : ""}
             >
-              <Link href="/admin/settings/profile">
+              <Link href="/admin/settings/profile" onClick={closeMobile}>
                 <Settings className="h-4 w-4 shrink-0" />
                 <span className="text-sm group-data-[collapsible=icon]:hidden">Settings</span>
               </Link>

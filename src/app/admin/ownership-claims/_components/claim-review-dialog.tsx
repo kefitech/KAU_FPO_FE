@@ -131,12 +131,14 @@ export function ClaimReviewDialog({ claim, onOpenChange }: ClaimReviewDialogProp
 
   return (
     <Dialog open={!!claim} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-        <DialogHeader>
+      <DialogContent className="flex flex-col max-h-[90vh] sm:max-w-lg gap-0 p-0">
+        {/* Sticky header */}
+        <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
           <DialogTitle>Ownership Claim Review</DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col gap-5">
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-5">
           {/* Status badge */}
           <div className="flex items-center gap-2">
             <Badge variant="secondary" className={`flex items-center gap-1 ${statusCfg.className}`}>
@@ -168,7 +170,7 @@ export function ClaimReviewDialog({ claim, onOpenChange }: ClaimReviewDialogProp
           {/* Reason */}
           <div>
             <p className="mb-1.5 font-medium text-xs text-muted-foreground uppercase tracking-wide">Reason</p>
-            <p className="rounded-lg border bg-muted/20 p-3 text-sm leading-relaxed whitespace-pre-wrap">
+            <p className="rounded-lg border bg-muted/20 p-3 text-sm leading-relaxed whitespace-pre-wrap break-words">
               {claim.reason}
             </p>
           </div>
@@ -227,121 +229,121 @@ export function ClaimReviewDialog({ claim, onOpenChange }: ClaimReviewDialogProp
               )}
             </div>
           )}
-
-          {/* Action area — pending or docs_requested claims */}
-          {isActionable && (
-            <div className="flex flex-col gap-3 border-t pt-4">
-              {/* Mode toggle */}
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setMode("decide")}
-                  className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
-                    mode === "decide"
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border text-muted-foreground hover:bg-muted/50"
-                  }`}
-                >
-                  Approve / Reject
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMode("request_docs")}
-                  className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
-                    mode === "request_docs"
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border text-muted-foreground hover:bg-muted/50"
-                  }`}
-                >
-                  Request Documents
-                </button>
-              </div>
-
-              {/* Decide mode */}
-              {mode === "decide" && (
-                <>
-                  <div>
-                    <label className="mb-1.5 block font-medium text-sm" htmlFor="review-notes">
-                      Review Notes <span className="text-destructive">*</span>
-                    </label>
-                    <textarea
-                      id="review-notes"
-                      rows={3}
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      placeholder="Add notes explaining your decision (min. 10 characters)…"
-                      disabled={isPending}
-                      className="w-full resize-none rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
-                    />
-                    {notes.trim().length > 0 && !notesValid && (
-                      <p className="mt-1 text-destructive text-xs">Minimum 10 characters required.</p>
-                    )}
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      className="flex-1 text-destructive hover:text-destructive"
-                      disabled={!notesValid || isPending}
-                      onClick={handleReject}
-                    >
-                      {rejectMutation.isPending ? "Rejecting…" : "Reject"}
-                    </Button>
-                    {isSuperAdmin && (
-                      <Button
-                        className="flex-1"
-                        disabled={!notesValid || isPending}
-                        onClick={handleApprove}
-                      >
-                        {approveMutation.isPending ? "Approving…" : "Approve"}
-                      </Button>
-                    )}
-                  </div>
-
-                  {!isSuperAdmin && (
-                    <p className="text-center text-muted-foreground text-xs">
-                      Only super admins can approve claims.
-                    </p>
-                  )}
-                </>
-              )}
-
-              {/* Request documents mode */}
-              {mode === "request_docs" && (
-                <>
-                  <div>
-                    <label className="mb-1.5 block font-medium text-sm" htmlFor="docs-message">
-                      Message to Claimant <span className="text-destructive">*</span>
-                    </label>
-                    <textarea
-                      id="docs-message"
-                      rows={4}
-                      value={docsMessage}
-                      onChange={(e) => setDocsMessage(e.target.value)}
-                      placeholder="Describe which documents are needed and why (min. 10 characters)…"
-                      disabled={isPending}
-                      className="w-full resize-none rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
-                    />
-                    {docsMessage.trim().length > 0 && !docsMessageValid && (
-                      <p className="mt-1 text-destructive text-xs">Minimum 10 characters required.</p>
-                    )}
-                  </div>
-                  <p className="text-muted-foreground text-xs">
-                    The claimant will be notified via email, SMS, and in-app notification with your message.
-                  </p>
-                  <Button
-                    disabled={!docsMessageValid || isPending}
-                    onClick={handleRequestDocs}
-                    className="w-full"
-                  >
-                    <FileSearch className="mr-2 h-4 w-4" />
-                    {requestDocsMutation.isPending ? "Sending…" : "Send Document Request"}
-                  </Button>
-                </>
-              )}
-            </div>
-          )}
         </div>
+
+        {/* Sticky footer — action area always visible */}
+        {isActionable && (
+          <div className="shrink-0 border-t px-6 py-4 flex flex-col gap-3 bg-background">
+            {/* Mode toggle */}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setMode("decide")}
+                className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
+                  mode === "decide"
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border text-muted-foreground hover:bg-muted/50"
+                }`}
+              >
+                Approve / Reject
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("request_docs")}
+                className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
+                  mode === "request_docs"
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border text-muted-foreground hover:bg-muted/50"
+                }`}
+              >
+                Request Documents
+              </button>
+            </div>
+
+            {/* Decide mode */}
+            {mode === "decide" && (
+              <>
+                <div>
+                  <label className="mb-1.5 block font-medium text-sm" htmlFor="review-notes">
+                    Review Notes <span className="text-destructive">*</span>
+                  </label>
+                  <textarea
+                    id="review-notes"
+                    rows={3}
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Add notes explaining your decision (min. 10 characters)…"
+                    disabled={isPending}
+                    className="w-full resize-none rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                  />
+                  {notes.trim().length > 0 && !notesValid && (
+                    <p className="mt-1 text-destructive text-xs">Minimum 10 characters required.</p>
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1 text-destructive hover:text-destructive"
+                    disabled={!notesValid || isPending}
+                    onClick={handleReject}
+                  >
+                    {rejectMutation.isPending ? "Rejecting…" : "Reject"}
+                  </Button>
+                  {isSuperAdmin && (
+                    <Button
+                      className="flex-1"
+                      disabled={!notesValid || isPending}
+                      onClick={handleApprove}
+                    >
+                      {approveMutation.isPending ? "Approving…" : "Approve"}
+                    </Button>
+                  )}
+                </div>
+
+                {!isSuperAdmin && (
+                  <p className="text-center text-muted-foreground text-xs">
+                    Only super admins can approve claims.
+                  </p>
+                )}
+              </>
+            )}
+
+            {/* Request documents mode */}
+            {mode === "request_docs" && (
+              <>
+                <div>
+                  <label className="mb-1.5 block font-medium text-sm" htmlFor="docs-message">
+                    Message to Claimant <span className="text-destructive">*</span>
+                  </label>
+                  <textarea
+                    id="docs-message"
+                    rows={3}
+                    value={docsMessage}
+                    onChange={(e) => setDocsMessage(e.target.value)}
+                    placeholder="Describe which documents are needed and why (min. 10 characters)…"
+                    disabled={isPending}
+                    className="w-full resize-none rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                  />
+                  {docsMessage.trim().length > 0 && !docsMessageValid && (
+                    <p className="mt-1 text-destructive text-xs">Minimum 10 characters required.</p>
+                  )}
+                </div>
+                <p className="text-muted-foreground text-xs">
+                  The claimant will be notified via email, SMS, and in-app notification with your message.
+                </p>
+                <Button
+                  disabled={!docsMessageValid || isPending}
+                  onClick={handleRequestDocs}
+                  className="w-full"
+                >
+                  <FileSearch className="mr-2 h-4 w-4" />
+                  {requestDocsMutation.isPending ? "Sending…" : "Send Document Request"}
+                </Button>
+              </>
+            )}
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

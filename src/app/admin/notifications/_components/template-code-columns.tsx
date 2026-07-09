@@ -1,7 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
@@ -22,7 +20,6 @@ const CHANNEL_STYLES: Record<string, string> = {
 };
 
 function TemplateCodeActions({ item, tConfirm, tCommon }: { item: NotificationTemplateCode; tConfirm: T; tCommon: T }) {
-  const router = useRouter();
   const queryClient = useQueryClient();
   const confirm = useConfirmStore((s) => s.confirm);
 
@@ -56,10 +53,6 @@ function TemplateCodeActions({ item, tConfirm, tCommon }: { item: NotificationTe
   return (
     <RowActions
       actions={[
-        {
-          label: tCommon.edit ?? "Edit",
-          onClick: () => router.push(`/admin/notification-template-codes/${item.id}/edit`),
-        },
         {
           label: item.is_active ? "Deactivate" : "Activate",
           onClick: () => toggleMutation.mutate(),
@@ -99,6 +92,7 @@ export function getTemplateCodeColumns(
     {
       accessorKey: "variables",
       header: t.col_variables ?? "Variables",
+      meta: { hideOnMobile: true },
       cell: ({ row }) => {
         const vars = row.original.variables;
         if (!vars.length) return <span className="text-muted-foreground">—</span>;
@@ -116,11 +110,13 @@ export function getTemplateCodeColumns(
     {
       accessorKey: "template_count",
       header: t.col_templates ?? "Templates",
+      meta: { hideOnMobile: true },
       cell: ({ row }) => <span className="text-sm">{row.original.template_count}</span>,
     },
     {
       accessorKey: "missing_languages",
       header: t.col_missing ?? "Missing",
+      meta: { hideOnMobile: true },
       cell: ({ row }) => {
         const missing = row.original.missing_languages;
         if (!missing.length) return <span className="text-green-600 text-sm">—</span>;

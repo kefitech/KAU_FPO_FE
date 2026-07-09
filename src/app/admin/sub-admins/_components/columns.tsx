@@ -134,11 +134,13 @@ export function getSubAdminColumns(t: T = {}, tConfirm: T = {}, tCommon: T = {})
     {
       accessorKey: "email",
       header: t.col_email ?? "Email",
+      meta: { hideOnMobile: true },
       cell: ({ row }) => <span className="text-muted-foreground">{row.original.email}</span>,
     },
     {
       accessorKey: "permissions",
       header: t.col_permissions ?? "Permissions",
+      meta: { hideOnMobile: true },
       cell: ({ row }) => {
         const perms = row.original.permissions;
         if (perms.length === 0) {
@@ -182,6 +184,7 @@ export function getSubAdminColumns(t: T = {}, tConfirm: T = {}, tCommon: T = {})
     {
       accessorKey: "date_joined",
       header: t.col_joined ?? "Joined",
+      meta: { hideOnMobile: true },
       cell: ({ row }) => (
         <span className="text-muted-foreground text-sm">{new Date(row.original.date_joined).toLocaleDateString()}</span>
       ),

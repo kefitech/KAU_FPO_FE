@@ -77,13 +77,13 @@ export function DataTableToolbar<TData>({
   return (
     <div className="flex flex-wrap items-center gap-2">
       {/* Search */}
-      <div className="relative">
+      <div className="relative w-full sm:w-auto">
         <Search className="absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Search..."
           value={localSearch}
           onChange={(e) => setLocalSearch(e.target.value)}
-          className="h-9 w-64 pr-8 pl-8"
+          className="h-9 w-full sm:w-64 pr-8 pl-8"
         />
         {localSearch && (
           <button
@@ -119,7 +119,7 @@ export function DataTableToolbar<TData>({
             key={filter.key}
             value={activeFilters[filter.key] ?? ""}
             onChange={(e) => onFilter?.(filter.key, e.target.value)}
-            className="h-9 min-w-[140px] rounded-md border bg-background px-3 text-foreground text-sm shadow-xs focus:outline-none focus:ring-1 focus:ring-ring"
+            className="h-9 flex-1 min-w-[110px] sm:flex-none sm:min-w-[140px] rounded-md border bg-background px-3 text-foreground text-sm shadow-xs focus:outline-none focus:ring-1 focus:ring-ring"
           >
             <option value="">{filter.label}</option>
             {(filter.options ?? []).map((opt) => (

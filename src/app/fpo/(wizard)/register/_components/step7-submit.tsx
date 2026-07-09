@@ -121,9 +121,9 @@ export function Step7Submit({ profile, onBack }: Step7Props) {
 
 function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between gap-4">
-      <span className="shrink-0 text-muted-foreground">{label}</span>
-      <span className="text-right font-medium">{value}</span>
+    <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:gap-4">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="font-medium sm:text-right">{value}</span>
     </div>
   );
 }

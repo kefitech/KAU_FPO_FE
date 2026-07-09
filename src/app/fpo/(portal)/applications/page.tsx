@@ -139,7 +139,7 @@ function StatusTab({ data, refetch, isFetching }: { data: FpoApplicationStatus; 
       </div>
 
       {/* Status card */}
-      <div className="flex items-start gap-4 rounded-xl border bg-card p-6 shadow-sm">
+      <div className="flex items-start gap-3 rounded-xl border bg-card p-4 sm:p-6 shadow-sm">
         <div className={`rounded-full p-3 ${cfg.bg}`}>
           <Icon className={`h-5 w-5 ${cfg.text}`} />
         </div>
@@ -180,7 +180,7 @@ function StatusTab({ data, refetch, isFetching }: { data: FpoApplicationStatus; 
       )}
 
       {data.timeline.length > 0 && (
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
+        <div className="rounded-xl border bg-card p-4 sm:p-6 shadow-sm">
           <p className="mb-5 font-semibold">Activity Timeline</p>
           <ol className="relative ml-2 flex flex-col border-muted border-l">
             {[...data.timeline].reverse().map((entry) => (
@@ -217,7 +217,7 @@ function ApplicationTab({ profile }: { profile: FpoProfile }) {
         <p className="text-muted-foreground text-sm">Read-only view of your submitted details</p>
       </div>
 
-      <div className="rounded-xl border bg-card p-6 shadow-sm">
+      <div className="rounded-xl border bg-card p-4 sm:p-6 shadow-sm">
         <SectionTitle>Basic Information</SectionTitle>
         <InfoRow label="FPO Name" value={profile.name} />
         {profile.name_ml && <InfoRow label="FPO Name (Malayalam)" value={profile.name_ml} />}
@@ -311,7 +311,7 @@ export default function FpoApplicationsPage() {
 
   if (statusLoading || profileLoading) {
     return (
-      <div className="flex flex-col gap-6 px-8 py-6">
+      <div className="flex flex-col gap-6 px-3 sm:px-6 py-4 sm:py-6">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-10 w-72 rounded-lg" />
         <Skeleton className="h-28 w-full rounded-xl" />

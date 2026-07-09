@@ -157,7 +157,7 @@ export default function FpoSchemesPage() {
     : undefined;
 
   return (
-    <div className="flex flex-col gap-6 px-6 py-6">
+    <div className="flex flex-col gap-6 px-3 sm:px-6 py-4 sm:py-6">
       {/* Header */}
       <div>
         <h1 className="font-bold text-2xl">{t.page_title ?? "Government Schemes"}</h1>

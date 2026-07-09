@@ -104,8 +104,11 @@ export default function ApplicationsPage() {
         tier: searchParams.get("tier") ?? undefined,
       });
       toast.success("Report downloaded");
-    } catch {
-      toast.error("Failed to download report");
+    } catch (err: unknown) {
+      const e = err as { status?: number; message?: string } | undefined;
+      const msg = e?.status ? `Failed to download report (${e.status})` : "Failed to download report";
+      console.error("[ReportDownload]", err);
+      toast.error(msg);
     } finally {
       setDownloading(false);
     }
@@ -128,8 +131,8 @@ export default function ApplicationsPage() {
   const a = sheet.app;
 
   return (
-    <div className="flex flex-col gap-6 px-8 py-6">
-      <div className="flex items-start justify-between">
+    <div className="flex flex-col gap-6 py-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="font-bold text-2xl">{t.page_title ?? "FPO Applications"}</h1>
           <p className="mt-0.5 text-muted-foreground text-sm">
@@ -139,7 +142,7 @@ export default function ApplicationsPage() {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button size="sm" variant="outline" disabled={downloading}>
+            <Button size="sm" variant="outline" disabled={downloading} className="self-start sm:self-auto">
               {downloading ? (
                 <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
               ) : (

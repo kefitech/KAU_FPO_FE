@@ -77,7 +77,7 @@ export function FpoReportCard() {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle className="text-base">FPO Summary Report</CardTitle>
             <p className="text-muted-foreground text-xs mt-0.5">
@@ -86,7 +86,7 @@ export function FpoReportCard() {
           </div>
 
           {/* Format toggle */}
-          <div className="flex items-center gap-1 rounded-lg border p-1">
+          <div className="flex items-center gap-1 rounded-lg border p-1 self-start sm:self-auto">
             <button
               type="button"
               onClick={() => setFormat("excel")}
@@ -117,7 +117,7 @@ export function FpoReportCard() {
 
       <CardContent className="flex flex-col gap-4">
         {/* Filters */}
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs text-muted-foreground">Status</Label>
             <Select value={status} onValueChange={setStatus}>
@@ -150,7 +150,7 @@ export function FpoReportCard() {
             </Select>
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="col-span-2 flex flex-col gap-1.5 sm:col-span-1">
             <Label className="text-xs text-muted-foreground">Tier</Label>
             <Select value={tier} onValueChange={setTier}>
               <SelectTrigger className="h-8 text-sm">
@@ -168,35 +168,37 @@ export function FpoReportCard() {
         </div>
 
         {/* Date range + actions */}
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-xs text-muted-foreground">From Date</Label>
-            <input
-              type="date"
-              value={fromDate}
-              max={toDate || today}
-              onChange={(e) => setFromDate(e.target.value)}
-              className="h-8 rounded-md border bg-background px-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-xs text-muted-foreground">To Date</Label>
-            <input
-              type="date"
-              value={toDate}
-              min={fromDate || undefined}
-              max={today}
-              onChange={(e) => setToDate(e.target.value)}
-              className="h-8 rounded-md border bg-background px-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            />
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+          <div className="grid grid-cols-2 gap-3 sm:contents">
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs text-muted-foreground">From Date</Label>
+              <input
+                type="date"
+                value={fromDate}
+                max={toDate || today}
+                onChange={(e) => setFromDate(e.target.value)}
+                className="h-8 w-full rounded-md border bg-background px-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs text-muted-foreground">To Date</Label>
+              <input
+                type="date"
+                value={toDate}
+                min={fromDate || undefined}
+                max={today}
+                onChange={(e) => setToDate(e.target.value)}
+                className="h-8 w-full rounded-md border bg-background px-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
           </div>
 
-          <div className="flex flex-1 items-center justify-end gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-1 sm:items-center sm:justify-end">
             {hasFilters && (
               <button
                 type="button"
                 onClick={clearFilters}
-                className="text-muted-foreground text-xs hover:text-foreground transition-colors"
+                className="text-center text-muted-foreground text-xs hover:text-foreground transition-colors sm:text-right"
               >
                 Clear filters
               </button>
@@ -205,7 +207,7 @@ export function FpoReportCard() {
               size="sm"
               onClick={handleDownload}
               disabled={loading}
-              className={format === "pdf" ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"}
+              className={`w-full sm:w-auto ${format === "pdf" ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"}`}
             >
               <Download className="mr-1.5 h-3.5 w-3.5" />
               {loading ? "Downloading…" : `Download ${format === "pdf" ? "PDF" : "Excel"}`}

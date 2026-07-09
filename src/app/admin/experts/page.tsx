@@ -72,15 +72,15 @@ export default function ExpertsPage() {
   }, [locale]);
 
   return (
-    <div className="flex flex-col gap-6 px-8 py-6">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-6 py-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-bold text-2xl">{t.page_title ?? "Experts"}</h1>
           <p className="mt-0.5 text-muted-foreground text-sm">
             {t.page_description ?? "Manage agricultural experts and KAU specialists"}
           </p>
         </div>
-        <Button size="sm" onClick={() => router.push("/admin/experts/new")}>
+        <Button size="sm" className="self-start sm:self-auto" onClick={() => router.push("/admin/experts/new")}>
           <Plus className="mr-1.5 h-4 w-4" />
           {t.btn_add ?? "Add Expert"}
         </Button>

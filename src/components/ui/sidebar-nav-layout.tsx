@@ -63,9 +63,31 @@ export function SidebarNavLayout({
   }, []);
 
   return (
-    <div className="flex gap-0">
-      {/* Left nav */}
-      <nav style={{ width: navWidth }} className="shrink-0 sticky top-6 self-start">
+    <div className="flex flex-col gap-0 sm:flex-row">
+      {/* Mobile: horizontal scrollable tab bar */}
+      <div className="flex sm:hidden overflow-x-auto border-b gap-1 pb-1 scrollbar-none">
+        {items.map(({ key, label, icon: Icon }) => {
+          const isActive = activeKey === key;
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => onNavigate(key)}
+              className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm transition-colors ${
+                isActive
+                  ? "bg-muted text-foreground font-medium"
+                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+              }`}
+            >
+              <Icon className="h-4 w-4 shrink-0" />
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Desktop: left vertical nav */}
+      <nav style={{ width: navWidth }} className="hidden sm:block shrink-0 sticky top-6 self-start">
         <ul className="flex flex-col gap-0.5">
           {items.map(({ key, label, icon: Icon }) => {
             const isActive = activeKey === key;
@@ -89,14 +111,13 @@ export function SidebarNavLayout({
         </ul>
       </nav>
 
-      {/* Right content — drag handle sits in the left padding area */}
-      <div className="flex-1 min-w-0 flex flex-col gap-4 relative" style={{ paddingLeft: "2rem" }}>
-        {/* Drag handle: absolutely fills the left padding strip */}
+      {/* Content area */}
+      <div className="relative flex-1 min-w-0 flex flex-col gap-4 pt-4 sm:pt-0 sm:pl-8">
+        {/* Drag handle: desktop only */}
         <div
           onMouseDown={onMouseDown}
           title="Drag to resize"
-          style={{ cursor: "col-resize", position: "absolute", left: 0, top: 0, bottom: 0, width: 16 }}
-          className="hover:bg-border/50 active:bg-primary/20 transition-colors z-10"
+          className="hidden sm:block absolute left-0 top-0 bottom-0 w-4 hover:bg-border/50 active:bg-primary/20 transition-colors z-10 cursor-col-resize"
         />
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold tracking-tight">{activeLabel}</h2>

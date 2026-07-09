@@ -118,7 +118,7 @@ export default function FpoTeamPage() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="flex flex-col gap-6 px-3 sm:px-6 py-4 sm:py-6">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -129,12 +129,12 @@ export default function FpoTeamPage() {
         </div>
 
         {isPrimary && (
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setBulkInviteOpen(true)}>
+          <div className="flex gap-2 self-start sm:self-auto">
+            <Button variant="outline" size="sm" onClick={() => setBulkInviteOpen(true)}>
               <UploadCloud className="mr-1.5 h-4 w-4" />
               {t.btn_bulk_invite ?? "Bulk Invite"}
             </Button>
-            <Button onClick={() => setInviteOpen(true)}>
+            <Button size="sm" onClick={() => setInviteOpen(true)}>
               <UserPlus className="mr-1.5 h-4 w-4" />
               {t.btn_invite ?? "Invite Member"}
             </Button>
@@ -144,7 +144,7 @@ export default function FpoTeamPage() {
 
       {/* Bulk action bar */}
       {isPrimary && someSelected && (
-        <div className="flex items-center gap-3 rounded-lg border bg-muted/50 px-4 py-2.5">
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-muted/50 px-4 py-2.5">
           <CheckSquare className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm font-medium">{selected.size} selected</span>
           <div className="ml-auto flex gap-2">
@@ -175,8 +175,8 @@ export default function FpoTeamPage() {
                 </TableHead>
               )}
               <TableHead>{t.col_name ?? "Name"}</TableHead>
-              <TableHead>{t.col_email ?? "Email"}</TableHead>
-              <TableHead className="hidden sm:table-cell">{t.col_phone ?? "Phone"}</TableHead>
+              <TableHead className="hidden sm:table-cell">{t.col_email ?? "Email"}</TableHead>
+              <TableHead className="hidden md:table-cell">{t.col_phone ?? "Phone"}</TableHead>
               <TableHead className="hidden md:table-cell">{t.col_role ?? "Role"}</TableHead>
               <TableHead>{t.col_status ?? "Status"}</TableHead>
               <TableHead className="hidden lg:table-cell">{t.col_joined ?? "Joined"}</TableHead>
@@ -196,10 +196,10 @@ export default function FpoTeamPage() {
                   <TableCell>
                     <Skeleton className="h-4 w-32" />
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     <Skeleton className="h-4 w-40" />
                   </TableCell>
-                  <TableCell className="hidden sm:table-cell">
+                  <TableCell className="hidden md:table-cell">
                     <Skeleton className="h-4 w-24" />
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
@@ -234,8 +234,8 @@ export default function FpoTeamPage() {
                     </TableCell>
                   )}
                   <TableCell className="font-medium">{fullName(member)}</TableCell>
-                  <TableCell className="text-muted-foreground">{member.email}</TableCell>
-                  <TableCell className="hidden text-muted-foreground sm:table-cell">{member.phone || "—"}</TableCell>
+                  <TableCell className="hidden text-muted-foreground sm:table-cell">{member.email}</TableCell>
+                  <TableCell className="hidden text-muted-foreground md:table-cell">{member.phone || "—"}</TableCell>
                   <TableCell className="hidden capitalize text-muted-foreground md:table-cell">
                     {member.role.replace(/_/g, " ")}
                   </TableCell>

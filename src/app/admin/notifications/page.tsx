@@ -166,7 +166,7 @@ export default function NotificationsPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6 px-8 py-6">
+    <div className="flex flex-col gap-6 py-6">
       {/* Page header */}
       <div>
         <h1 className="font-bold text-2xl">{tPage.page_title ?? "Notifications"}</h1>
@@ -180,12 +180,7 @@ export default function NotificationsPage() {
         activeKey={activeTab}
         onNavigate={(key) => router.replace(`/admin/notifications?tab=${key}`)}
         action={
-          activeTab === "codes" ? (
-            <Button size="sm" onClick={() => router.push("/admin/notification-template-codes/new")}>
-              <Plus className="mr-1.5 h-4 w-4" />
-              {tPage.add_code_btn ?? "Add Template Code"}
-            </Button>
-          ) : activeTab === "templates" ? (
+          activeTab === "codes" ? null : activeTab === "templates" ? (
             <Button size="sm" onClick={() => router.push("/admin/notification-templates/new")}>
               <Plus className="mr-1.5 h-4 w-4" />
               {tPage.add_template_btn ?? "Add Template"}
@@ -251,22 +246,7 @@ export default function NotificationsPage() {
         open={codeView.open}
         onOpenChange={(open) => setCodeView((s) => ({ ...s, open }))}
         title={tCodeTable.view_title ?? "Template Code Details"}
-        actions={
-          codeView.row
-            ? [
-                {
-                  label: tCommon.edit ?? "Edit",
-                  icon: Pencil,
-                  onClick: () => router.push(`/admin/notification-template-codes/${codeView.row?.id}/edit`),
-                },
-                {
-                  label: tPage.add_template_btn ?? "Add Template",
-                  icon: Plus,
-                  onClick: () => router.push(`/admin/notification-templates/new?code=${codeView.row?.id}`),
-                },
-              ]
-            : []
-        }
+        actions={[]}
         fields={
           codeView.row
             ? [

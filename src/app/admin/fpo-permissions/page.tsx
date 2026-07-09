@@ -289,7 +289,7 @@ export default function FpoPermissionsPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6 px-8 py-6">
+    <div className="flex flex-col gap-6 py-6">
       <div>
         <h1 className="font-bold text-2xl">{tPage.page_title ?? "FPO Permissions"}</h1>
         <p className="mt-0.5 text-muted-foreground text-sm">

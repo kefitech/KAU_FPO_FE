@@ -35,11 +35,13 @@ export function getFaqColumns({ onEdit, onDelete, onToggleStatus, t, tCommon }: 
     {
       accessorKey: "category",
       header: t.col_category ?? "Category",
+      meta: { hideOnMobile: true },
       cell: ({ row }) => <Badge variant="outline">{row.original.category_display ?? row.original.category}</Badge>,
     },
     {
       accessorKey: "order",
       header: t.col_order ?? "Order",
+      meta: { hideOnMobile: true },
     },
     {
       accessorKey: "is_active",

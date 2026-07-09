@@ -79,15 +79,15 @@ export default function FaqsPage() {
   });
 
   return (
-    <div className="flex flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-6 py-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-bold text-2xl">{t.page_title ?? "FAQs"}</h1>
           <p className="text-muted-foreground text-sm mt-0.5">
             {t.page_description ?? "Manage frequently asked questions shown on the landing page."}
           </p>
         </div>
-        <Button className="bg-green-600 hover:bg-green-700" onClick={() => router.push("/admin/faqs/new")}>
+        <Button className="self-start sm:self-auto bg-green-600 hover:bg-green-700" onClick={() => router.push("/admin/faqs/new")}>
           <Plus className="mr-2 h-4 w-4" />
           {t.btn_add ?? "Add FAQ"}
         </Button>

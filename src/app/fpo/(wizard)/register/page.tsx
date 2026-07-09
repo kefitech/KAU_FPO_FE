@@ -123,7 +123,7 @@ function FpoRegisterPageInner() {
 
   if (isLoading || displayStep === null) {
     return (
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-6 py-8">
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 sm:gap-6 px-3 sm:px-6 py-5 sm:py-8">
         <Skeleton className="h-10 w-full" />
         <div className="flex flex-col gap-4">
           <Skeleton className="h-6 w-48" />
@@ -136,7 +136,7 @@ function FpoRegisterPageInner() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-6 py-8">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 sm:gap-6 px-3 sm:px-6 py-5 sm:py-8">
       <div className="flex items-center gap-3">
         <div className="min-w-0 flex-1">
           <StepIndicator current={displayStep} />
@@ -151,7 +151,7 @@ function FpoRegisterPageInner() {
         </button>
       </div>
 
-      <div className="rounded-xl border bg-card p-6 shadow-sm">
+      <div className="rounded-xl border bg-card p-4 sm:p-6 shadow-sm">
         {displayStep === 1 && (
           <Step1BasicInfo
             profile={profile ?? undefined}

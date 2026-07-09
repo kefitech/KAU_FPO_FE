@@ -13,11 +13,6 @@ import type { ExternalApi } from "@/types/admin";
 
 type T = Record<string, string>;
 
-const CHANNEL_STYLES: Record<string, string> = {
-  email: "border-blue-200 bg-blue-50 text-blue-700",
-  sms: "border-green-200 bg-green-50 text-green-700",
-  in_app: "border-purple-200 bg-purple-50 text-purple-700",
-};
 
 function ExternalApiActions({
   item,
@@ -102,6 +97,7 @@ export function getExternalApiColumns(
     {
       accessorKey: "api_url",
       header: t.col_api_url ?? "API URL",
+      meta: { hideOnMobile: true },
       cell: ({ row }) => (
         <TextCell
           value={row.original.api_url || (t.no_url ?? "Not set")}
@@ -129,6 +125,7 @@ export function getExternalApiColumns(
     {
       accessorKey: "updated_at",
       header: t.col_updated ?? "Last Updated",
+      meta: { hideOnMobile: true },
       cell: ({ row }) => (
         <span className="text-muted-foreground text-xs">
           {new Date(row.original.updated_at).toLocaleDateString("en-IN", {

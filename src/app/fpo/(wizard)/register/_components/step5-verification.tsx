@@ -73,18 +73,18 @@ function OtpSection({ type, contact, verified, onVerified }: OtpSectionProps) {
           type="button"
           variant="outline"
           size="sm"
-          className="w-fit"
+          className="w-full sm:w-fit"
           onClick={() => sendMutation.mutate()}
           disabled={sendMutation.isPending}
         >
           {sendMutation.isPending ? "Sending…" : `Send OTP to ${type === "email" ? "email" : "phone"}`}
         </Button>
       ) : (
-        <div className="flex items-end gap-2">
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor={`otp-${type}`} className="text-muted-foreground text-xs">
-              Enter 6-digit OTP
-            </label>
+        <div className="flex flex-col gap-2">
+          <label htmlFor={`otp-${type}`} className="text-muted-foreground text-xs">
+            Enter 6-digit OTP
+          </label>
+          <div className="flex items-center gap-2">
             <Input
               id={`otp-${type}`}
               value={otp}
@@ -93,24 +93,24 @@ function OtpSection({ type, contact, verified, onVerified }: OtpSectionProps) {
               maxLength={6}
               className="w-32 text-center font-mono tracking-widest"
             />
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => confirmMutation.mutate()}
+              disabled={otp.length !== 6 || confirmMutation.isPending}
+            >
+              {confirmMutation.isPending ? "Verifying…" : "Verify"}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => sendMutation.mutate()}
+              disabled={sendMutation.isPending}
+            >
+              Resend
+            </Button>
           </div>
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => confirmMutation.mutate()}
-            disabled={otp.length !== 6 || confirmMutation.isPending}
-          >
-            {confirmMutation.isPending ? "Verifying…" : "Verify"}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => sendMutation.mutate()}
-            disabled={sendMutation.isPending}
-          >
-            Resend
-          </Button>
         </div>
       )}
     </div>

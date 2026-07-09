@@ -43,13 +43,13 @@ const DISTRICT_SELECT_OPTIONS = [
 function ExpertSkeleton() {
   return (
     <div className="rounded-xl border bg-card p-5 flex flex-col gap-3">
-      <div className="flex items-start justify-between">
-        <div className="flex flex-col gap-1.5 flex-1">
+      <div className="flex flex-col gap-1.5">
+        <Skeleton className="h-5 w-28 rounded-full" />
+        <div className="flex flex-col gap-1.5">
           <Skeleton className="h-5 w-40" />
           <Skeleton className="h-4 w-32" />
           <Skeleton className="h-4 w-28" />
         </div>
-        <Skeleton className="h-5 w-20 rounded-full" />
       </div>
       <Skeleton className="h-4 w-3/4" />
       <Skeleton className="h-8 w-28 mt-2" />
@@ -71,18 +71,18 @@ function ExpertCard({
   const badgeClass = CATEGORY_BADGE_COLORS[expert.category] ?? "bg-muted text-muted-foreground";
 
   return (
-    <div className="flex flex-col gap-6 px-6 py-6">
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex flex-col gap-0.5 min-w-0">
-          <h3 className="font-semibold text-base leading-snug truncate">{expert.name}</h3>
-          {expert.designation && <p className="text-xs text-muted-foreground truncate">{expert.designation}</p>}
-          {expert.organisation && (
-            <p className="text-xs text-muted-foreground truncate">{expert.organisation}</p>
-          )}
-        </div>
-        <Badge className={`w-fit shrink-0 text-xs font-medium border ${badgeClass}`} variant="outline">
+    <div className="rounded-xl border bg-card shadow-sm hover:shadow-md transition-shadow flex flex-col gap-3 p-5">
+      <div className="flex flex-col gap-1.5">
+        <Badge className={`w-fit text-xs font-medium border ${badgeClass}`} variant="outline">
           {expert.category_display}
         </Badge>
+        <div className="flex flex-col gap-0.5 min-w-0">
+          <h3 className="font-semibold text-base leading-snug">{expert.name}</h3>
+          {expert.designation && <p className="text-xs text-muted-foreground">{expert.designation}</p>}
+          {expert.organisation && (
+            <p className="text-xs text-muted-foreground">{expert.organisation}</p>
+          )}
+        </div>
       </div>
 
       {expert.district && (
@@ -171,7 +171,7 @@ export default function FpoExpertsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 px-6 py-6">
+    <div className="flex flex-col gap-6 px-3 sm:px-6 py-4 sm:py-6">
       {/* Header */}
       <div>
         <h1 className="font-bold text-2xl">{t.page_title ?? "Expert Directory"}</h1>

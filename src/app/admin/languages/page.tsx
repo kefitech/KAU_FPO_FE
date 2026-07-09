@@ -233,7 +233,7 @@ export default function LanguagesPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6 px-8 py-6">
+    <div className="flex flex-col gap-6 py-6">
       {/* Page header */}
       <div>
         <h1 className="font-bold text-2xl">{tPage.page_title ?? "Languages & Translations"}</h1>

@@ -14,14 +14,36 @@ export default function FpoSettingsLayout({ children }: { children: React.ReactN
   const pathname = usePathname();
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-6">
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 py-6 px-3 sm:px-6">
       <div>
         <h1 className="font-bold text-2xl">Settings</h1>
         <p className="mt-0.5 text-muted-foreground text-sm">Manage your account profile and security preferences.</p>
       </div>
 
-      <div className="flex">
-        <nav className="w-52 shrink-0 border-r pr-6">
+      <div className="flex flex-col gap-0 sm:flex-row">
+        {/* Mobile: horizontal tab bar */}
+        <div className="flex sm:hidden overflow-x-auto border-b gap-1 pb-1 mb-4 scrollbar-none">
+          {NAV.map(({ label, href, icon: Icon }) => {
+            const isActive = pathname === href;
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                  isActive
+                    ? "bg-muted text-foreground"
+                    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                }`}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                {label}
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* Desktop: left vertical nav */}
+        <nav className="hidden sm:block w-52 shrink-0 border-r pr-6">
           <ul className="flex flex-col gap-0.5">
             {NAV.map(({ label, href, icon: Icon }) => {
               const isActive = pathname === href;
@@ -44,7 +66,8 @@ export default function FpoSettingsLayout({ children }: { children: React.ReactN
           </ul>
         </nav>
 
-        <div className="min-w-0 flex-1 pl-8">{children}</div>
+        {/* Right content */}
+        <div className="min-w-0 flex-1 sm:pl-8">{children}</div>
       </div>
     </div>
   );

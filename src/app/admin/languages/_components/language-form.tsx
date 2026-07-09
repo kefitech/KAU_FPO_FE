@@ -15,7 +15,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Info } from "lucide-react";
+
 import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Language } from "@/types";
 
 type T = Record<string, string>;
@@ -135,7 +138,7 @@ export function LanguageForm({ mode, language, t = {}, tCommon = {} }: LanguageF
         <CardContent>
           <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="flex flex-col gap-6">
             <FieldGroup>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Controller
                   control={control}
                   name="name"
@@ -164,7 +167,7 @@ export function LanguageForm({ mode, language, t = {}, tCommon = {} }: LanguageF
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Controller
                   control={control}
                   name="native_name"
@@ -185,6 +188,24 @@ export function LanguageForm({ mode, language, t = {}, tCommon = {} }: LanguageF
                     <Field>
                       <FieldLabel htmlFor="lang-locale">
                         {t.locale_label ?? "Locale"} <span className="text-destructive">*</span>
+                        <TooltipProvider delayDuration={200}>
+                          <Tooltip>
+                            <TooltipTrigger type="button" tabIndex={-1} className="leading-none">
+                              <Info className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground transition-colors" />
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="w-72 text-xs">
+                              <div className="flex flex-col gap-1.5">
+                                <p>A BCP 47 locale string combining language and region codes.</p>
+                                <p className="text-muted-foreground">Format: <span className="font-mono font-semibold text-foreground">language_REGION</span></p>
+                                <div className="flex flex-col gap-0.5 text-muted-foreground">
+                                  <span><span className="font-mono font-semibold text-foreground">ml_IN</span> — Malayalam (India)</span>
+                                  <span><span className="font-mono font-semibold text-foreground">en_US</span> — English (United States)</span>
+                                  <span><span className="font-mono font-semibold text-foreground">ta_IN</span> — Tamil (India)</span>
+                                </div>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </FieldLabel>
                       <Input id="lang-locale" placeholder={t.locale_placeholder ?? "e.g. ml_IN"} {...field} />
                       {errors.locale && <FieldError errors={[errors.locale]} />}
@@ -208,7 +229,7 @@ export function LanguageForm({ mode, language, t = {}, tCommon = {} }: LanguageF
 
             <div className="border-t pt-5">
               <p className="mb-4 font-medium text-muted-foreground text-sm">{t.section_settings ?? "Settings"}</p>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <Controller
                   control={control}
                   name="is_active"
@@ -242,7 +263,7 @@ export function LanguageForm({ mode, language, t = {}, tCommon = {} }: LanguageF
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3">
+            <div className="flex flex-wrap items-center justify-end gap-3">
               <Button type="button" variant="outline" onClick={() => router.push("/admin/languages?tab=languages")}>
                 {tCommon.cancel_btn ?? "Cancel"}
               </Button>

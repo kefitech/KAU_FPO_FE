@@ -187,20 +187,20 @@ export function ViewSheet({ open, onOpenChange, title, fields, actions }: ViewSh
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
-        style={{ width, maxWidth: MAX_WIDTH }}
+        style={{ width, maxWidth: `min(${MAX_WIDTH}px, 100vw)` }}
         className="flex flex-col gap-0 p-0 overflow-hidden"
       >
-        {/* Drag handle on the left edge */}
+        {/* Drag handle on the left edge (desktop only) */}
         <div
           onMouseDown={onMouseDown}
           style={{ cursor: "col-resize", position: "absolute", left: 0, top: 0, bottom: 0, width: 6, zIndex: 50 }}
-          className="hover:bg-primary/20 active:bg-primary/30 transition-colors"
+          className="hidden sm:block hover:bg-primary/20 active:bg-primary/30 transition-colors"
         />
 
         {/* Header */}
-        <SheetHeader className="px-6 py-5 border-b bg-muted/20">
+        <SheetHeader className="px-4 sm:px-6 py-4 sm:py-5 border-b bg-muted/20">
           <SheetTitle
-            className="text-base font-semibold tracking-tight"
+            className="text-base font-semibold tracking-tight pr-8"
             dangerouslySetInnerHTML={{ __html: title }}
           />
         </SheetHeader>
@@ -209,7 +209,7 @@ export function ViewSheet({ open, onOpenChange, title, fields, actions }: ViewSh
         <div className="flex flex-col flex-1 overflow-y-auto">
           {/* Action bar */}
           {actions && actions.length > 0 && (
-            <div className="px-6 py-3.5 border-b bg-background flex flex-wrap gap-2">
+            <div className="px-4 sm:px-6 py-3.5 border-b bg-background flex flex-wrap gap-2">
               {actions.map((action) => {
                 const Icon = action.icon;
                 return (
@@ -230,7 +230,7 @@ export function ViewSheet({ open, onOpenChange, title, fields, actions }: ViewSh
           )}
 
           {/* Fields */}
-          <div className="px-6 pb-8">
+          <div className="px-4 sm:px-6 pb-8">
             {fields.map((field, i) =>
               field.type === "section" ? (
                 <SectionDivider key={i} label={field.label} />

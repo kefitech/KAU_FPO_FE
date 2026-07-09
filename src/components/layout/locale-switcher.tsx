@@ -23,7 +23,7 @@ export function LocaleSwitcher() {
   const { data: languages = [] } = useQuery({
     queryKey: ["public-languages"],
     queryFn: siteContentApi.getLanguages,
-    staleTime: 10 * 60 * 1000,
+    staleTime: 60 * 1000, // 1 min — reflects admin activate/deactivate quickly
   });
 
   // On every page load: sync to API default if user hasn't explicitly chosen,

@@ -90,11 +90,13 @@ export function getExpertColumns(t: T = {}, tCommon: T = {}): ColumnDef<AdminExp
     {
       accessorKey: "organisation",
       header: t.col_organisation ?? "Organisation",
+      meta: { hideOnMobile: true },
       cell: ({ row }) => <TextCell value={row.original.organisation} maxWidth="max-w-[220px]" muted />,
     },
     {
       accessorKey: "category_display",
       header: t.col_category ?? "Category",
+      meta: { hideOnMobile: true },
       cell: ({ row }) => {
         const color = CATEGORY_BADGE_COLORS[row.original.category] ?? "bg-muted text-muted-foreground";
         return (
@@ -107,6 +109,7 @@ export function getExpertColumns(t: T = {}, tCommon: T = {}): ColumnDef<AdminExp
     {
       accessorKey: "district",
       header: t.col_district ?? "District",
+      meta: { hideOnMobile: true },
       cell: ({ row }) => {
         const label = DISTRICT_OPTIONS.find((d) => d.value === row.original.district)?.label ?? row.original.district;
         return <span className="text-sm text-muted-foreground">{label || "—"}</span>;

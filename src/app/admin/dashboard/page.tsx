@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import Image from "next/image";
 import Link from "next/link";
 
 import { useQuery } from "@tanstack/react-query";
@@ -70,17 +71,23 @@ function StatCard({
   value,
   icon: Icon,
   valueClass = "",
+  image,
 }: {
   title: string;
   value: number | undefined;
   icon: React.ElementType;
   valueClass?: string;
+  image?: string;
 }) {
   return (
-    <Card>
+    <Card className="relative overflow-hidden">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="font-medium text-sm">{title}</CardTitle>
-        <Icon className="h-4 w-4 text-muted-foreground" />
+        {image ? (
+          <Image src={image} alt={title} width={48} height={48} className="object-contain" />
+        ) : (
+          <Icon className="h-4 w-4 text-muted-foreground" />
+        )}
       </CardHeader>
       <CardContent>
         {value === undefined ? (
@@ -194,7 +201,7 @@ export default function AdminDashboardPage() {
 
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="flex flex-col gap-6 py-6">
       {/* Header */}
       <div className="flex items-center gap-2">
         <LayoutDashboard className="h-5 w-5 text-muted-foreground" />
@@ -216,12 +223,14 @@ export default function AdminDashboardPage() {
           value={stats?.stat_cards.approved_fpos}
           icon={CheckCircle}
           valueClass="text-green-600 dark:text-green-400"
+          image="/images/dashboard/approved.png"
         />
         <StatCard
           title={t.stat_pending_applications ?? "Pending Applications"}
           value={stats?.stat_cards.pending_applications}
           icon={AlertCircle}
           valueClass="text-yellow-600 dark:text-yellow-400"
+          image="/images/dashboard/pending.png"
         />
         <StatCard
           title={t.stat_suspended ?? "Suspended"}
@@ -407,12 +416,12 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Right column: District distribution map */}
-        <Card>
+        <Card className="overflow-hidden isolation-isolate">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">{t.chart_district_dist ?? "District Distribution"}</CardTitle>
             <p className="text-muted-foreground text-xs">{t.chart_district_subtitle ?? "FPOs registered per district — hover for details"}</p>
           </CardHeader>
-          <CardContent className="p-0 pt-0">
+          <CardContent className="p-0">
             <KeralaDistrictMap
               data={stats?.district_distribution ?? []}
               locale={locale}

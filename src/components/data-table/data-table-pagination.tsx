@@ -46,17 +46,40 @@ export function DataTablePagination({
     );
   }
 
-  return (
-    <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
-      {/* Showing X - Y of Z */}
-      <p className="text-muted-foreground text-sm">
-        {total === 0 ? "No results" : `Showing ${from}–${to} of ${total}`}
-      </p>
+  const NavButtons = () => (
+    <div className="flex items-center gap-1">
+      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => onPageChange(1)} disabled={page <= 1}>
+        <ChevronsLeft className="h-4 w-4" />
+      </Button>
+      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => onPageChange(page - 1)} disabled={page <= 1}>
+        <ChevronLeft className="h-4 w-4" />
+      </Button>
+      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => onPageChange(page + 1)} disabled={page >= totalPages}>
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => onPageChange(totalPages)} disabled={page >= totalPages}>
+        <ChevronsRight className="h-4 w-4" />
+      </Button>
+    </div>
+  );
 
-      <div className="flex items-center gap-4">
+  return (
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+      {/* Mobile: row 1 — showing count + nav buttons */}
+      <div className="flex items-center justify-between sm:contents">
+        <p className="text-muted-foreground text-sm">
+          {total === 0 ? "No results" : `Showing ${from}–${to} of ${total}`}
+        </p>
+        <div className="sm:hidden">
+          <NavButtons />
+        </div>
+      </div>
+
+      {/* Mobile: row 2 — rows per page + page X of Y | Desktop: right side */}
+      <div className="flex items-center gap-3 sm:gap-4">
         {/* Rows per page */}
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground text-sm">Rows per page</span>
+          <span className="text-muted-foreground text-sm whitespace-nowrap">Rows per page</span>
           <Select value={String(pageSize)} onValueChange={(v) => onPageSizeChange(Number(v))}>
             <SelectTrigger className="h-8 w-16">
               <SelectValue />
@@ -72,48 +95,13 @@ export function DataTablePagination({
         </div>
 
         {/* Page X of Y */}
-        <span className="text-muted-foreground text-sm">
+        <span className="text-muted-foreground text-sm whitespace-nowrap">
           Page {totalPages === 0 ? 0 : page} of {totalPages}
         </span>
 
-        {/* Navigation buttons */}
-        <div className="flex items-center gap-1">
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => onPageChange(1)}
-            disabled={page <= 1}
-          >
-            <ChevronsLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => onPageChange(page - 1)}
-            disabled={page <= 1}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => onPageChange(page + 1)}
-            disabled={page >= totalPages}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => onPageChange(totalPages)}
-            disabled={page >= totalPages}
-          >
-            <ChevronsRight className="h-4 w-4" />
-          </Button>
+        {/* Nav buttons — desktop only (mobile rendered above) */}
+        <div className="hidden sm:flex">
+          <NavButtons />
         </div>
       </div>
     </div>
