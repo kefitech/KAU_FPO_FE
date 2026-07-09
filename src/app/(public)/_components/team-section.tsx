@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 
+import { Autoplay, Navigation, Pagination } from "swiper/modules";
+import { Swiper, SwiperSlide } from "swiper/react";
+
 import { useLocaleStore } from "@/stores/locale-store";
 
 import { publicFetch } from "../_lib/public-fetch";
@@ -22,26 +25,6 @@ function getInitials(name: string): string {
     .map((w) => w[0])
     .join("")
     .toUpperCase();
-}
-
-function useItemsPerRow() {
-  const [itemsPerRow, setItemsPerRow] = useState(3); // default: lg
-
-  useEffect(() => {
-    function calculate() {
-      const w = window.innerWidth;
-      if (w >= 992)
-        setItemsPerRow(3); // lg: col-lg-4 -> 3 per row
-      else if (w >= 768)
-        setItemsPerRow(2); // md: col-md-6 -> 2 per row
-      else setItemsPerRow(1); // sm/xs: full width -> 1 per row
-    }
-    calculate();
-    window.addEventListener("resize", calculate);
-    return () => window.removeEventListener("resize", calculate);
-  }, []);
-
-  return itemsPerRow;
 }
 
 function MemberCard({ member }: { member: TeamMember }) {
@@ -105,7 +88,7 @@ function MemberCard({ member }: { member: TeamMember }) {
           width: "100%",
         }}
       >
-        <h3 style={{ textAlign: "center", margin: 0, fontWeight: 700}}>{member.name}</h3>
+        <h3 style={{ textAlign: "center", margin: 0, fontWeight: 700 }}>{member.name}</h3>
         {member.designation && (
           <span style={{ display: "block", textAlign: "center", width: "100%" }}>
             {member.designation}
@@ -151,12 +134,12 @@ interface Props {
   showAll?: boolean;
 }
 
-const FarmersSection = ({ showAll = false }: Props) => {
+const TeamSection = ({ showAll = false }: Props) => {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const locale = useLocaleStore((s) => s.locale);
-  const itemsPerRow = useItemsPerRow();
-  // biome-ignore lint/correctness/useExhaustiveDependencies: locale intentionally triggers a refetch even though it isn't referenced in the body
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: locale intentionally triggers a refetch
   useEffect(() => {
     publicFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/public/team/`)
       .then((r) => r.json())
@@ -165,33 +148,29 @@ const FarmersSection = ({ showAll = false }: Props) => {
       .finally(() => setLoading(false));
   }, [locale]);
 
-  const displayed = showAll ? members : members.slice(0, 3);
-  const shouldCenter = !loading && displayed.length > 0 && displayed.length < itemsPerRow;
-
+  // Team page — show all in a responsive grid
   if (showAll) {
     return (
       <div className="farmer-area default-padding bottom-less">
-        <div className="container ">
+        <div className="container">
           <div className="farmer-style-one">
             <h2 className="heading">Our Team</h2>
           </div>
           <div className="row">
             <div className="col-lg-10 offset-lg-1">
-              <div className={`row${shouldCenter ? " justify-content-center" : ""}`}>
+              <div className="row">
                 {loading ? (
                   [0, 1, 2, 3, 4, 5].map((i) => (
-                    
-
                     <div className="col-lg-4 col-md-6 farmer-stye-one" style={{ marginBottom: 30 }} key={i}>
                       <SkeletonCard />
                     </div>
                   ))
-                ) : displayed.length === 0 ? (
+                ) : members.length === 0 ? (
                   <div className="col-12 text-center" style={{ padding: "48px 0", color: "#888" }}>
                     No team members available.
                   </div>
                 ) : (
-                  displayed.map((member) => (
+                  members.map((member) => (
                     <div className="col-lg-4 col-md-6 farmer-stye-one" style={{ marginBottom: 30 }} key={member.id}>
                       <MemberCard member={member} />
                     </div>
@@ -205,6 +184,7 @@ const FarmersSection = ({ showAll = false }: Props) => {
     );
   }
 
+  // Home page — carousel (3 per row on desktop, arrows + dots)
   if (!loading && members.length === 0) return null;
 
   return (
@@ -226,19 +206,43 @@ const FarmersSection = ({ showAll = false }: Props) => {
       <div className="container">
         <div className="row">
           <div className="col-lg-10 offset-lg-1">
-            <div className="row">
-              {loading
-                ? [0, 1, 2].map((i) => (
-                    <div className="col-lg-4 col-md-6 farmer-stye-one" style={{ marginBottom: 30 }} key={i}>
-                      <SkeletonCard />
-                    </div>
-                  ))
-                : displayed.map((member) => (
-                    <div className="col-lg-4 col-md-6 farmer-stye-one" style={{ marginBottom: 30 }} key={member.id}>
+            {loading ? (
+              <div className="row">
+                {[0, 1, 2].map((i) => (
+                  <div className="col-lg-4 col-md-6 farmer-stye-one" style={{ marginBottom: 30 }} key={i}>
+                    <SkeletonCard />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="navigation-circle" style={{ position: "relative" }}>
+                <Swiper
+                  modules={[Navigation, Pagination, Autoplay]}
+                  spaceBetween={30}
+                  slidesPerView={1}
+                  loop={members.length > 3}
+                  autoplay={{ delay: 4000, disableOnInteraction: false }}
+                  pagination={{ el: ".team-swiper-pagination", clickable: true }}
+                  navigation={{
+                    nextEl: ".team-swiper-next",
+                    prevEl: ".team-swiper-prev",
+                  }}
+                  breakpoints={{
+                    768: { slidesPerView: 2 },
+                    992: { slidesPerView: 3 },
+                  }}
+                >
+                  {members.map((member) => (
+                    <SwiperSlide key={member.id} className="farmer-stye-one" style={{ paddingBottom: 30 }}>
                       <MemberCard member={member} />
-                    </div>
+                    </SwiperSlide>
                   ))}
-            </div>
+                </Swiper>
+                <div className="team-swiper-prev swiper-button-prev" />
+                <div className="team-swiper-next swiper-button-next" />
+                <div className="team-swiper-pagination swiper-pagination" style={{ marginTop: 16 }} />
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -246,4 +250,4 @@ const FarmersSection = ({ showAll = false }: Props) => {
   );
 };
 
-export default FarmersSection;
+export default TeamSection;

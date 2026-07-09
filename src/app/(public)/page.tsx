@@ -5,7 +5,7 @@ import Banner from "./_components/banner";
 import Contact from "./_components/contact";
 import Documents from "./_components/documents";
 import Facts from "./_components/facts";
-import FarmersSection from "./_components/farmers";
+import TeamSection from "./_components/team-section";
 import Gallery from "./_components/gallery";
 import HowToRegister from "./_components/how-to-register";
 import NewsSourcesStrip from "./_components/news-sources";
@@ -23,7 +23,7 @@ export default function HomePage() {
       <Banner />
       <About />
       <HowToRegister />
-      <FarmersSection showAll={true} />
+      <TeamSection showAll={false} />
       <Services />
       {/* <ProductList /> */}
       <WhyChoose />
