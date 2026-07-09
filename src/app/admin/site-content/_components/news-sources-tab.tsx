@@ -151,7 +151,18 @@ function NewsSourceDialog({
       onSuccess();
       onOpenChange(false);
     },
-    onError: () => toast.error("Failed to save news source."),
+    onError: (err: unknown) => {
+      const e = err as { message?: string; data?: { errors?: Record<string, string[]> } };
+      const fieldErrors = e?.data?.errors;
+      if (fieldErrors) {
+        const messages = Object.entries(fieldErrors)
+          .map(([field, errs]) => `${field}: ${errs.join(", ")}`)
+          .join("\n");
+        toast.error(messages);
+      } else {
+        toast.error(e?.message ?? "Failed to save news source.");
+      }
+    },
   });
 
   const handleSubmit = () => {
