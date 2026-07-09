@@ -51,7 +51,7 @@ export function TwoFactorForm() {
       setUser(me.user);
       sessionStorage.removeItem("2fa_partial_token");
       sessionStorage.setItem("show_welcome", "1");
-      router.push("/admin/dashboard");
+      router.replace("/admin/dashboard");
     } catch {
       toast.error(
         mode === "totp" ? "Invalid or expired code. Please try again." : "Invalid backup code. Please try again.",
@@ -82,7 +82,7 @@ export function TwoFactorForm() {
       await twoFactorApi.disable({ partial_token: partialToken, email_otp: emailOtp.trim() });
       sessionStorage.removeItem("2fa_partial_token");
       toast.success("Two-factor authentication has been disabled. Please log in again.");
-      router.push("/v1/login");
+      router.replace("/v1/login");
     } catch {
       toast.error("Invalid OTP. Please try again.");
     } finally {
@@ -247,7 +247,7 @@ export function TwoFactorForm() {
           className="text-muted-foreground text-sm hover:text-foreground"
           onClick={() => {
             sessionStorage.removeItem("2fa_partial_token");
-            router.push("/v1/login");
+            router.replace("/v1/login");
           }}
         >
           ← Back to login
