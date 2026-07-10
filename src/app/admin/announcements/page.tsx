@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import DOMPurify from "isomorphic-dompurify";
 import { Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 
@@ -49,6 +50,11 @@ export default function AnnouncementsPage() {
     onError: () => toast.error(tCommon.delete_failed ?? "Failed to delete"),
   });
 
+  function stripHtml(html?: string) {
+    if (!html) return "";
+    return DOMPurify.sanitize(html, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
+  }
+
   const toggleStatusMutation = useMutation({
     mutationFn: (item: AdminAnnouncement) => adminAnnouncementsApi.update(item.id, { is_active: !item.is_active }),
     onSuccess: () => {
@@ -76,15 +82,15 @@ export default function AnnouncementsPage() {
   });
 
   return (
-    <div className="flex flex-col gap-6 py-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-6 p-6">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="font-bold text-2xl">{t.page_title ?? "Announcements"}</h1>
           <p className="text-muted-foreground text-sm mt-0.5">
             {t.page_description ?? "Manage news and announcements shown on the landing page."}
           </p>
         </div>
-        <Button className="self-start sm:self-auto bg-green-600 hover:bg-green-700" onClick={() => router.push("/admin/announcements/new")}>
+        <Button className="bg-green-600 hover:bg-green-700" onClick={() => router.push("/admin/announcements/new")}>
           <Plus className="mr-2 h-4 w-4" />
           {t.btn_add ?? "Add Announcement"}
         </Button>
@@ -129,7 +135,7 @@ export default function AnnouncementsPage() {
               type: "node",
               node: (
                 <Badge variant="secondary" className="text-xs font-medium">
-                  {sheet.item.category_display}
+                  {sheet.item.category}
                 </Badge>
               ),
             },
@@ -144,7 +150,7 @@ export default function AnnouncementsPage() {
             { label: "Created", type: "date", value: sheet.item.created_at },
             { type: "section", label: "Content (English)" },
             { label: "Title (EN)", value: sheet.item.title?.en ?? Object.values(sheet.item.title ?? {})[0] },
-            { label: "Body (EN)", value: sheet.item.body?.en ?? Object.values(sheet.item.body ?? {})[0] },
+            { label: "Body (EN)", value: stripHtml(sheet.item.body?.en ?? Object.values(sheet.item.body ?? {})[0]) },
             ...(sheet.item.title?.ml
               ? [
                   { type: "section" as const, label: "Content (Malayalam)" },

@@ -1,9 +1,8 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
-import { publicFetch } from "../_lib/public-fetch";
 
+import { publicFetch } from "../_lib/public-fetch";
 
 interface AboutData {
   about_body: string;
@@ -31,11 +30,7 @@ export default function HowToRegister() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        Loading…
-      </div>
-    );
+    return <div className="flex min-h-[50vh] items-center justify-center">Loading…</div>;
   }
 
   if (error || !data) {
@@ -47,9 +42,6 @@ export default function HowToRegister() {
   }
 
   return (
-    <div className="devider" />
-    >
-
     <div className="default-padding">
       <div className="container">
         <div className="row">
