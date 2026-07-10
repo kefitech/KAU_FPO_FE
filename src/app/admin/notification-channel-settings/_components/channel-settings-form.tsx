@@ -16,9 +16,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import type { ChannelSetting, EmailConfig, SmsConfig } from "@/types";
 import { getErrorMessage } from "@/lib/get-error-message";
-
+import type { ChannelSetting, EmailConfig, SmsConfig } from "@/types";
 
 type T = Record<string, string>;
 
@@ -89,12 +88,6 @@ function parseEditingValues(item: ChannelSetting): FormValues {
   return base;
 }
 
-
-
-
-
-
-
 function buildConfig(values: FormValues): Record<string, unknown> {
   if (values.channel === "email") {
     const config: Partial<EmailConfig> = {
@@ -155,7 +148,7 @@ export function ChannelSettingsForm({ mode, channelSetting, t = {}, tCommon = {}
       queryClient.invalidateQueries({ queryKey: ["channel-settings"] });
       if (!isEdit) router.push("/admin/notifications?tab=channels");
     },
-   onError: (error) => {
+    onError: (error) => {
       const fallback = isEdit ? "Failed to update channel setting" : "Failed to create channel setting";
       toast.error(getErrorMessage(error, fallback));
     },
@@ -187,7 +180,7 @@ export function ChannelSettingsForm({ mode, channelSetting, t = {}, tCommon = {}
                     >
                       <option value="email">{t.channel_email ?? "Email"}</option>
                       <option value="sms">{t.channel_sms ?? "SMS"}</option>
-                      <option value="in_app">{t.channel_in_app ?? "In-App"}</option>
+                      {/* <option value="in_app">{t.channel_in_app ?? "In-App"}</option> */}
                     </select>
                     {errors.channel && <FieldError errors={[errors.channel]} />}
                   </Field>

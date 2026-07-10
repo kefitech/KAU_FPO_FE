@@ -45,7 +45,7 @@ function TemplateCodeActions({ item, tConfirm, tCommon }: { item: NotificationTe
   function handleDelete() {
     confirm({
       title: tConfirm.delete_tmpl_code ?? "Delete Template Code",
-      description: `Are you sure you want to delete "${item.name}"? This will also remove all language templates linked to this code. This action cannot be undone.`,
+      description: `Are you sure you want to delete "${item.code}"? This will also remove all language templates linked to this code. This action cannot be undone.`,
       onConfirm: () => deleteMutation.mutateAsync(),
     });
   }

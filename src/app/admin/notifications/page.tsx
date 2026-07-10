@@ -146,8 +146,8 @@ export default function NotificationsPage() {
       key: "language",
       label: "Language",
       options: (languagesData?.data ?? [])
-  .filter((l) => l.is_active)
-  .map((l) => ({ label: `${l.name} (${l.code})`, value: String(l.id) })),
+        .filter((l) => l.is_active)
+        .map((l) => ({ label: `${l.name} (${l.code})`, value: String(l.id) })),
     },
     {
       key: "is_active",
@@ -357,7 +357,7 @@ export default function NotificationsPage() {
         fields={
           channelView.row
             ? [
-                { label: tChannelTable.col_channel ?? "Channel", value: channelView.row.channel_display },
+                { label: tChannelTable.col_channel ?? "Channel", value: channelView.row.channel },
                 {
                   label: tChannelTable.col_status ?? "Status",
                   type: "status",

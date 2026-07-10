@@ -113,8 +113,8 @@ export function TemplateCodeForm({ mode, templateCode, t = {}, tCommon = {} }: T
   const channels = [
     { value: "email", label: t.channel_email ?? "Email" },
     { value: "sms", label: t.channel_sms ?? "SMS" },
-    { value: "in_app", label: t.channel_in_app ?? "In-App Notification" },
-    { value: "push", label: t.channel_push ?? "Push Notification" },
+    // { value: "in_app", label: t.channel_in_app ?? "In-App Notification" },
+    // { value: "push", label: t.channel_push ?? "Push Notification" },
   ];
 
   return (

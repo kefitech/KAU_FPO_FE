@@ -63,7 +63,7 @@ function TemplateActions({
   function handleDelete() {
     confirm({
       title: tConfirm.delete_template ?? "Delete Template",
-      description: `Are you sure you want to delete the ${item.language_name} version of "${item.template_code_detail.name}"? This action cannot be undone.`,
+      description: `Are you sure you want to delete the ${item.language_name} version of "${item.template_code_detail.code}"? This action cannot be undone.`,
       onConfirm: () => deleteMutation.mutateAsync(),
     });
   }
