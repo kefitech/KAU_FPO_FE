@@ -26,13 +26,11 @@ import { useLocaleStore } from "@/stores/locale-store";
 
 type T = Record<string, string>;
 
-const LocationMap = dynamic(
-  () => import("./_components/location-map").then((m) => ({ default: m.LocationMap })),
-  {
-    ssr: false,
-    loading: () => <div className="h-52 w-full animate-pulse rounded-lg bg-muted" />,
-  },
-);
+const LocationMap = dynamic(() => import("./_components/location-map").then((m) => ({ default: m.LocationMap })), {
+  ssr: false,
+  loading: () => <div className="h-52 w-full animate-pulse rounded-lg bg-muted" />,
+});
+
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -69,19 +67,35 @@ function timeAgo(dateStr: string) {
 }
 
 const STATUS_CONFIG: Record<FpoStatus, { label: string; className: string }> = {
-  draft:         { label: "Draft",          className: "bg-muted text-muted-foreground" },
-  submitted:     { label: "Submitted",      className: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" },
-  under_review:  { label: "Under Review",   className: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300" },
-  approved:      { label: "Approved",       className: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300" },
-  rejected:      { label: "Rejected",       className: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300" },
-  info_required: { label: "Info Required",  className: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300" },
+  draft: { label: "Draft", className: "bg-muted text-muted-foreground" },
+  submitted: { label: "Submitted", className: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" },
+  under_review: {
+    label: "Under Review",
+    className: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+  },
+  approved: { label: "Approved", className: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300" },
+  rejected: { label: "Rejected", className: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300" },
+  info_required: {
+    label: "Info Required",
+    className: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300",
+  },
 };
 
 const DISTRICT_LABELS: Record<string, string> = {
-  TVM: "Thiruvananthapuram", KLM: "Kollam", PTA: "Pathanamthitta",
-  ALP: "Alappuzha", KTM: "Kottayam", IDK: "Idukki", EKM: "Ernakulam",
-  TSR: "Thrissur", PKD: "Palakkad", MLP: "Malappuram", KZD: "Kozhikode",
-  WYD: "Wayanad", KNR: "Kannur", KSD: "Kasaragod",
+  TVM: "Thiruvananthapuram",
+  KLM: "Kollam",
+  PTA: "Pathanamthitta",
+  ALP: "Alappuzha",
+  KTM: "Kottayam",
+  IDK: "Idukki",
+  EKM: "Ernakulam",
+  TSR: "Thrissur",
+  PKD: "Palakkad",
+  MLP: "Malappuram",
+  KZD: "Kozhikode",
+  WYD: "Wayanad",
+  KNR: "Kannur",
+  KSD: "Kasaragod",
 };
 
 // ─── Skeletons ────────────────────────────────────────────────────────────────
@@ -109,7 +123,8 @@ export default function FpoDashboardPage() {
   const [t, setT] = useState<T>({});
 
   useEffect(() => {
-    translationsApi.getPublic(locale, "fpo_dashboard,common")
+    translationsApi
+      .getPublic(locale, "fpo_dashboard,common")
       .then((data) => setT(data.fpo_dashboard ?? {}))
       .catch(() => undefined);
   }, [locale]);
@@ -126,25 +141,22 @@ export default function FpoDashboardPage() {
     staleTime: 60_000,
   });
 
-  const infoRequiredNote = appStatus?.status === "info_required"
-    ? appStatus.timeline.findLast((e) => e.to_status === "info_required")?.notes ?? null
-    : null;
+  const infoRequiredNote =
+    appStatus?.status === "info_required"
+      ? (appStatus.timeline.findLast((e) => e.to_status === "info_required")?.notes ?? null)
+      : null;
 
   useEffect(() => {
     if (sessionStorage.getItem("show_welcome") === "1") {
       sessionStorage.removeItem("show_welcome");
       const fullName = user ? `${user.first_name} ${user.last_name}`.trim() : "there";
       const role = user?.role ? formatRole(user.role) : null;
-      const initials = user
-        ? `${user.first_name[0] ?? ""}${user.last_name[0] ?? ""}`.toUpperCase()
-        : "U";
+      const initials = user ? `${user.first_name[0] ?? ""}${user.last_name[0] ?? ""}`.toUpperCase() : "U";
       toast.custom(
         () => (
           <div className="flex w-72 sm:w-80 items-center gap-3 rounded-xl border bg-background px-4 py-3 shadow-lg">
             <Avatar className="h-10 w-10 shrink-0">
-              <AvatarFallback className="bg-green-100 font-semibold text-green-700 text-sm">
-                {initials}
-              </AvatarFallback>
+              <AvatarFallback className="bg-green-100 font-semibold text-green-700 text-sm">{initials}</AvatarFallback>
             </Avatar>
             <div className="flex flex-col">
               <p className="font-semibold text-foreground text-sm">
@@ -181,19 +193,25 @@ export default function FpoDashboardPage() {
   }
 
   const { profile, tier, location, team, documents, notifications, quick_links } = data;
-  const statusCfg = STATUS_CONFIG[profile.status] ?? { label: profile.status, className: "bg-muted text-muted-foreground" };
+  const statusCfg = STATUS_CONFIG[profile.status] ?? {
+    label: profile.status,
+    className: "bg-muted text-muted-foreground",
+  };
   const districtLabel = DISTRICT_LABELS[location.district] ?? location.district;
 
   return (
     <div className="flex flex-col gap-6 px-3 sm:px-6 py-4 sm:py-6">
-
       {/* ── Header ── */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-bold text-2xl leading-tight">{profile.name}</h1>
+          <h1 className="font-bold text-xl leading-tight sm:text-2xl md:text-3xl lg:text-4xl break-all">
+            {profile.name}
+          </h1>
           <p className="mt-0.5 font-mono text-muted-foreground text-sm">{profile.application_id}</p>
         </div>
-        <span className={`inline-flex items-center rounded-full px-3 py-1 font-semibold text-xs ${statusCfg.className}`}>
+        <span
+          className={`inline-flex items-center rounded-full px-3 py-1 font-semibold text-xs ${statusCfg.className}`}
+        >
           {statusCfg.label}
         </span>
       </div>
@@ -203,9 +221,14 @@ export default function FpoDashboardPage() {
         <div className="flex items-start gap-3 rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 dark:border-orange-800 dark:bg-orange-900/20">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-orange-600 dark:text-orange-400" />
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-orange-800 text-sm dark:text-orange-300">Additional Information Required</p>
+            <p className="font-semibold text-orange-800 text-sm dark:text-orange-300">
+              Additional Information Required
+            </p>
             <p className="mt-0.5 text-orange-700 text-sm dark:text-orange-400">{infoRequiredNote}</p>
-            <Link href="/fpo/register" className="mt-2 inline-flex items-center gap-1 font-medium text-orange-700 text-xs underline underline-offset-2 dark:text-orange-400">
+            <Link
+              href="/fpo/register"
+              className="mt-2 inline-flex items-center gap-1 font-medium text-orange-700 text-xs underline underline-offset-2 dark:text-orange-400"
+            >
               Update my application <ChevronRight className="h-3 w-3" />
             </Link>
           </div>
@@ -222,7 +245,8 @@ export default function FpoDashboardPage() {
           <CardContent>
             <div className="font-bold text-2xl">{profile.total_members}</div>
             <p className="text-muted-foreground text-xs">
-              {team.active} {t.label_members_active ?? "active"} · {team.total - team.active} {t.label_members_inactive ?? "inactive"}
+              {team.active} {t.label_members_active ?? "active"} · {team.total - team.active}{" "}
+              {t.label_members_inactive ?? "inactive"}
             </p>
           </CardContent>
         </Card>
@@ -234,7 +258,9 @@ export default function FpoDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="font-bold text-2xl">{documents.uploaded}</div>
-            <p className="text-muted-foreground text-xs">{documents.verified} {t.label_documents_verified ?? "verified"}</p>
+            <p className="text-muted-foreground text-xs">
+              {documents.verified} {t.label_documents_verified ?? "verified"}
+            </p>
           </CardContent>
         </Card>
 
@@ -246,7 +272,7 @@ export default function FpoDashboardPage() {
           <CardContent>
             <div className="font-bold text-2xl">{tier.tier ?? "—"}</div>
             <p className="text-muted-foreground text-xs">
-              {tier.financial_year ?? (t.tier_not_assessed ?? "Not assigned yet")}
+              {tier.financial_year ?? t.tier_not_assessed ?? "Not assigned yet"}
             </p>
           </CardContent>
         </Card>
@@ -265,10 +291,8 @@ export default function FpoDashboardPage() {
 
       {/* ── Main grid ── */}
       <div className="grid gap-6 lg:grid-cols-3">
-
         {/* Left: profile details + commodities */}
         <div className="flex flex-col gap-6 lg:col-span-2">
-
           {/* FPO Details */}
           <Card>
             <CardHeader>
@@ -343,14 +367,10 @@ export default function FpoDashboardPage() {
               )}
               <div className="flex flex-col gap-0.5 text-sm">
                 <p className="font-medium">{location.address_line1}</p>
-                {location.address_line2 && (
-                  <p className="text-muted-foreground">{location.address_line2}</p>
-                )}
+                {location.address_line2 && <p className="text-muted-foreground">{location.address_line2}</p>}
                 <p className="flex items-center gap-1 text-muted-foreground">
                   <MapPin className="h-3.5 w-3.5 shrink-0" />
-                  {location.block_taluk
-                    ? `${location.block_taluk.replace(/\b\w/g, (c) => c.toUpperCase())}, `
-                    : ""}
+                  {location.block_taluk ? `${location.block_taluk.replace(/\b\w/g, (c) => c.toUpperCase())}, ` : ""}
                   {districtLabel} — {location.pincode}
                 </p>
               </div>
@@ -360,7 +380,6 @@ export default function FpoDashboardPage() {
 
         {/* Right: quick links + notifications */}
         <div className="flex flex-col gap-6">
-
           {/* Quick Links */}
           <Card>
             <CardHeader>
@@ -410,7 +429,6 @@ export default function FpoDashboardPage() {
               )}
             </CardContent>
           </Card>
-
         </div>
       </div>
     </div>
