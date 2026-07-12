@@ -10,9 +10,8 @@ const PageLoader = () => {
   const [fading, setFading] = useState(false);
 
   useEffect(() => {
-    console.log("PageLoader effect firing, hasStarted =", hasStarted);
     if (hasStarted) return;
-    hasStarted = false; // was true
+    hasStarted = true;
 
     let pct = 0;
     const tick = setInterval(() => {

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, CheckCheck, Inbox, Search } from "lucide-react";
+import { ArrowLeft, Bell, CheckCheck, Inbox, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -89,21 +89,28 @@ function NotifDetail({
   item,
   onMarkRead,
   isPending,
+  onBack,
 }: {
   item: InboxNotification;
   onMarkRead: () => void;
   isPending: boolean;
+  onBack?: () => void;
 }) {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="border-b px-6 py-5">
+      <div className="border-b px-4 sm:px-6 py-4 sm:py-5">
+        {onBack && (
+          <button type="button" onClick={onBack} className="flex items-center gap-1 text-sm text-muted-foreground mb-3 hover:text-foreground">
+            <ArrowLeft className="h-4 w-4" /> Back
+          </button>
+        )}
         <h2
-          className="font-semibold text-lg leading-snug"
+          className="font-semibold text-base sm:text-lg leading-snug"
           dangerouslySetInnerHTML={{ __html: item.title }}
         />
-        <div className="mt-2 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-muted-foreground">
             <span>From: <span className="font-medium text-foreground">KAU-FPO Platform</span></span>
             <span>{formatFull(item.created_at)}</span>
           </div>
@@ -117,7 +124,7 @@ function NotifDetail({
       </div>
 
       {/* Body */}
-      <div className="flex-1 overflow-y-auto px-6 py-6">
+      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 sm:py-6">
         <div
           className="text-sm leading-relaxed text-foreground prose prose-sm max-w-none dark:prose-invert"
           dangerouslySetInnerHTML={{ __html: item.body }}
@@ -152,6 +159,7 @@ function EmptyDetail() {
 export function InboxPage() {
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<InboxNotification | null>(null);
+  const [showDetail, setShowDetail] = useState(false);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 20;
@@ -198,44 +206,61 @@ export function InboxPage() {
   // Auto-mark read when opening
   const handleSelect = (item: InboxNotification) => {
     setSelected(item);
+    setShowDetail(true);
     if (!item.is_read) {
       markReadMutation.mutate(item.id);
     }
   };
 
   // Reset selection when page changes
-  useEffect(() => { setSelected(null); }, [page]);
+  useEffect(() => { setSelected(null); setShowDetail(false); }, [page]);
 
   return (
     <div className="flex flex-col gap-0 h-[calc(100vh-120px)]">
-      {/* Page header */}
-      <div className="flex items-center justify-between px-8 py-4 border-b">
-        <div className="flex items-center gap-3">
-          <h1 className="font-bold text-2xl">Inbox</h1>
+      {/* Page header — hidden on mobile when viewing detail */}
+      {!showDetail && (
+        <div className="flex items-center justify-between px-4 sm:px-8 py-4 border-b">
+          <div className="flex items-center gap-3">
+            <h1 className="font-bold text-xl sm:text-2xl">Inbox</h1>
+            {unreadCount > 0 && (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-bold text-primary-foreground">
+                {unreadCount}
+              </span>
+            )}
+          </div>
           {unreadCount > 0 && (
-            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-bold text-primary-foreground">
-              {unreadCount}
-            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => markAllMutation.mutate()}
+              disabled={markAllMutation.isPending}
+              className="gap-1.5"
+            >
+              <CheckCheck className="h-4 w-4" />
+              <span className="hidden sm:inline">Mark all read</span>
+              <span className="sm:hidden">Mark all</span>
+            </Button>
           )}
         </div>
-        {unreadCount > 0 && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => markAllMutation.mutate()}
-            disabled={markAllMutation.isPending}
-            className="gap-1.5"
-          >
-            <CheckCheck className="h-4 w-4" />
-            Mark all read
-          </Button>
-        )}
-      </div>
+      )}
 
-      {/* Split pane */}
-      <div className="flex flex-1 min-h-0 border-b">
+      {/* Mobile: detail view */}
+      {showDetail && selected && (
+        <div className="flex sm:hidden flex-1 min-h-0 flex-col">
+          <NotifDetail
+            item={selected}
+            onMarkRead={() => markReadMutation.mutate(selected.id)}
+            isPending={markReadMutation.isPending}
+            onBack={() => setShowDetail(false)}
+          />
+        </div>
+      )}
+
+      {/* Mobile: list (hidden when showing detail) */}
+      {/* Desktop: split pane always visible */}
+      <div className={`flex flex-1 min-h-0 border-b ${showDetail ? "hidden sm:flex" : "flex"}`}>
         {/* Left — list */}
-        <div className="w-[340px] shrink-0 flex flex-col border-r">
+        <div className="w-full sm:w-[340px] shrink-0 flex flex-col sm:border-r">
           {/* Search */}
           <div className="px-3 py-2.5 border-b">
             <div className="relative">
@@ -291,8 +316,8 @@ export function InboxPage() {
           )}
         </div>
 
-        {/* Right — detail */}
-        <div className="flex-1 min-w-0">
+        {/* Right — detail (desktop only) */}
+        <div className="hidden sm:flex flex-1 min-w-0">
           {selected ? (
             <NotifDetail
               item={selected}
