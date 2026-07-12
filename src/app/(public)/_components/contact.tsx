@@ -230,7 +230,6 @@ const Contact = () => {
                           value={formData.message}
                           onChange={set("message")}
                           required
-                          required
                         />
                         {fieldErrors.message && (
                           <div style={{ color: "#c0392b", fontSize: 12, marginTop: 4 }}>{fieldErrors.message}</div>
