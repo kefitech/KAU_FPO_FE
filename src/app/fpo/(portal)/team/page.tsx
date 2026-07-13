@@ -233,7 +233,12 @@ export default function FpoTeamPage() {
                       />
                     </TableCell>
                   )}
-                  <TableCell className="font-medium">{fullName(member)}</TableCell>
+                  <TableCell className="font-medium">
+                    <div>{fullName(member)}</div>
+                    <div className="mt-0.5 capitalize text-muted-foreground text-xs md:hidden">
+                      {member.role.replace(/_/g, " ")}
+                    </div>
+                  </TableCell>
                   <TableCell className="hidden text-muted-foreground sm:table-cell">{member.email}</TableCell>
                   <TableCell className="hidden text-muted-foreground md:table-cell">{member.phone || "—"}</TableCell>
                   <TableCell className="hidden capitalize text-muted-foreground md:table-cell">
