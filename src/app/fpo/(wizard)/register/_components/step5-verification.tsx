@@ -42,7 +42,10 @@ function OtpSection({ type, contact, verified, onVerified }: OtpSectionProps) {
       toast.success(`${type === "email" ? "Email" : "Phone"} verified successfully`);
       onVerified();
     },
-    onError: () => toast.error("Invalid OTP. Please check and try again."),
+    onError: (err: unknown) => {
+      const e = err as { message?: string; data?: { message?: string } };
+      toast.error(e?.data?.message ?? e?.message ?? "Invalid OTP. Please check and try again.");
+    },
   });
 
   const Icon = type === "email" ? Mail : Phone;
