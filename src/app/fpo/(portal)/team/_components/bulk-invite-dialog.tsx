@@ -174,9 +174,9 @@ export function BulkInviteDialog({ open, onOpenChange }: BulkInviteDialogProps) 
 
           {tab === "json" && (
             <div className="flex flex-col gap-3">
-              <div className="grid grid-cols-[1fr_1fr_1.5fr_1fr_2rem] gap-2 px-1">
+              <div className="grid grid-cols-[1.2fr_1.2fr_1.5fr_1fr_2rem] gap-2 px-1">
                 {["First Name *", "Last Name *", "Email *", "Phone"].map((h) => (
-                  <span key={h} className="text-muted-foreground text-xs font-medium">
+                  <span key={h} className="text-muted-foreground text-xs font-medium whitespace-nowrap">
                     {h}
                   </span>
                 ))}
@@ -184,7 +184,7 @@ export function BulkInviteDialog({ open, onOpenChange }: BulkInviteDialogProps) 
 
               {rows.map((row, i) => (
                 <div key={i} className="flex flex-col gap-1">
-                  <div className="grid grid-cols-[1fr_1fr_1.5fr_1fr_2rem] items-start gap-2">
+                  <div className="grid grid-cols-[1.2fr_1.2fr_1.5fr_1fr_2rem] items-start gap-2">
                     <div className="flex flex-col gap-1">
                       <Input
                         placeholder="First name"
