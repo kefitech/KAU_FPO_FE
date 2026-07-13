@@ -32,19 +32,16 @@ interface TemplateTestRenderDialogProps {
 }
 
 interface TestRenderResponse {
-  status: string;
-  message: string;
-  data: {
-    template: {
-      subject: string;
-    };
-    rendered: {
-      body: string;
-      whatsapp_template_name?: string;
-      whatsapp_template_language?: string;
-    };
-    context_used: Record<string, string>;
+  template: {
+    subject: string;
   };
+  rendered: {
+    subject?: string;
+    body: string;
+    whatsapp_template_name?: string;
+    whatsapp_template_language?: string;
+  };
+  context_used: Record<string, string>;
 }
 
 export function TemplateTestRenderDialog({ open, onClose, template, t, tCommon }: TemplateTestRenderDialogProps) {
@@ -58,11 +55,11 @@ export function TemplateTestRenderDialog({ open, onClose, template, t, tCommon }
   const mutation = useMutation({
     mutationFn: () => notificationTemplateApi.testRender(template!.id, context),
     onSuccess: (response: TestRenderResponse) => {
-    setResult({
-      subject: response.data.template.subject,
-      body: response.data.rendered.body,
-    });
-  },
+      setResult({
+        subject: response.rendered.subject ?? response.template.subject,
+        body: response.rendered.body,
+      });
+    },
   onError: (error) => {
     toast.error(getErrorMessage(error, t.toast_failed ?? "Failed to render template"));
   },
@@ -133,7 +130,7 @@ export function TemplateTestRenderDialog({ open, onClose, template, t, tCommon }
                 )}
                 <div className="rounded-md border p-3">
                   <p className="mb-1 text-muted-foreground text-xs">{t.body_label ?? "Body"}</p>
-                  <p className="whitespace-pre-wrap text-sm">{result.body}</p>
+                  <div className="prose prose-sm max-w-none text-sm" dangerouslySetInnerHTML={{ __html: result.body }} />
                 </div>
               </div>
             </>

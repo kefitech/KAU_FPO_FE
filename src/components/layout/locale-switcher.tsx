@@ -54,9 +54,9 @@ export function LocaleSwitcher() {
 
   return (
     <Select value={locale} onValueChange={handleChange}>
-      <SelectTrigger className="h-8 w-auto gap-1.5 border px-2.5 text-xs font-medium">
+      <SelectTrigger className="h-8 w-8 border px-2 text-xs font-medium sm:w-auto sm:gap-1.5 sm:px-2.5">
         <Languages className="h-3.5 w-3.5 shrink-0" />
-        <SelectValue />
+        <span className="hidden sm:block"><SelectValue /></span>
       </SelectTrigger>
       <SelectContent align="end">
         {languages.map((lang) => (

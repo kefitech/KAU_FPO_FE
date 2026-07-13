@@ -20,8 +20,8 @@ import { useAuthStore } from "@/stores/auth-store";
 import { useLocaleStore } from "@/stores/locale-store";
 import type { FpoRedirect } from "@/types/auth";
 
-function resolvePostLoginPath(redirect: FpoRedirect | null): string {
-  if (!redirect) return "/admin/dashboard";
+function resolvePostLoginPath(redirect: FpoRedirect | null, firstMenuPath?: string): string {
+  if (!redirect) return firstMenuPath ?? "/admin/dashboard";
   switch (redirect.stage) {
     case "wizard_step":
       return redirect.step ? `/fpo/register?step=${redirect.step}` : "/fpo/register";
@@ -80,7 +80,7 @@ export function LoginForm() {
         const meData = await authApi.me();
         setUser(meData.user);
         sessionStorage.setItem("show_welcome", "1");
-        router.replace(resolvePostLoginPath(meData.redirect));
+        router.replace(resolvePostLoginPath(meData.redirect, meData.menu?.[0]?.path));
       }
     } catch (error) {
       const axiosErr = error as { response?: { data?: { message?: string } }; message?: string } | undefined;

@@ -23,7 +23,8 @@ const formSchema = z
       .min(8, { message: "At least 8 characters" })
       .regex(/[A-Z]/, { message: "At least one uppercase letter" })
       .regex(/[a-z]/, { message: "At least one lowercase letter" })
-      .regex(/[0-9]/, { message: "At least one number" }),
+      .regex(/[0-9]/, { message: "At least one number" })
+      .regex(/[^A-Za-z0-9]/, { message: "At least one special character" }),
     confirm_password: z.string().min(1, { message: "Please confirm your password." }),
   })
   .refine((data) => data.new_password === data.confirm_password, {
@@ -115,6 +116,7 @@ export function ChangePasswordForm() {
                       { label: "One uppercase letter (A–Z)", met: /[A-Z]/.test(passwordVal) },
                       { label: "One lowercase letter (a–z)", met: /[a-z]/.test(passwordVal) },
                       { label: "One number (0–9)", met: /[0-9]/.test(passwordVal) },
+                      { label: "One special character (!@#$…)", met: /[^A-Za-z0-9]/.test(passwordVal) },
                     ].map(({ label, met }) => (
                       <p
                         key={label}

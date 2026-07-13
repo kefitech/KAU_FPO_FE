@@ -72,6 +72,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
     const stack = navHistoryRef.current;
     const lastEntry = stack[stack.length - 1];
+
+    // Strip the /new entry when the user navigates away from a /new page
     if (lastEntry?.endsWith("/new") && !pathname.endsWith("/new")) {
       const withoutNew = stack.slice(0, -1);
       if (withoutNew[withoutNew.length - 1] === pathname) {
@@ -79,9 +81,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       } else {
         navHistoryRef.current = [...withoutNew, pathname];
       }
-    } else {
-      navHistoryRef.current = [...stack, pathname];
+      return;
     }
+
+    // Skip duplicate consecutive entries (e.g. save → redirect back to list page)
+    if (lastEntry === pathname) return;
+
+    navHistoryRef.current = [...stack, pathname];
   }, [pathname]);
 
   function handleBack() {
@@ -90,6 +96,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       navHistoryRef.current = navHistoryRef.current.slice(0, -1);
       isPoppingRef.current = true;
       router.push(getStructuralParent(pathname));
+      return;
+    }
+
+    // Top-level section pages (/admin/X) always go straight to dashboard —
+    // don't step through the history stack which may contain stale edit/search entries.
+    const segments = pathname.split("/").filter(Boolean);
+    if (segments.length <= 2) {
+      router.push("/admin/dashboard");
       return;
     }
 

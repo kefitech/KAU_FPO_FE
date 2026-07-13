@@ -21,6 +21,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/use-auth";
 import { getIcon } from "@/lib/utils/icon-map";
@@ -42,14 +43,19 @@ function MenuItemComponent({
   locale?: string;
 }) {
   const { logout } = useAuth();
+  const { isMobile, setOpenMobile } = useSidebar();
   const Icon = getIcon(item.icon);
   const title = item.translations?.[locale] ?? item.title;
   const isActive = pathname === item.url || pathname.startsWith(`${item.url}/`);
 
+  function closeMobile() {
+    if (isMobile) setOpenMobile(false);
+  }
+
   if (item.id === "logout") {
     return (
       <SidebarMenuItem>
-        <SidebarMenuButton onClick={() => logout()}>
+        <SidebarMenuButton onClick={() => { closeMobile(); logout(); }}>
           <Icon className="h-4 w-4 shrink-0" />
           <span className="text-sm group-data-[collapsible=icon]:hidden">{title}</span>
         </SidebarMenuButton>
@@ -78,7 +84,7 @@ function MenuItemComponent({
                 return (
                   <SidebarMenuSubItem key={child.id}>
                     <SidebarMenuSubButton asChild isActive={isChildActive}>
-                      <Link href={child.url}>
+                      <Link href={child.url} onClick={closeMobile}>
                         <ChildIcon className="h-3.5 w-3.5" />
                         <span className="text-sm">{childTitle}</span>
                         {child.badge && (
@@ -101,7 +107,7 @@ function MenuItemComponent({
   return (
     <SidebarMenuItem>
       <SidebarMenuButton asChild isActive={isActive}>
-        <Link href={item.url}>
+        <Link href={item.url} onClick={closeMobile}>
           <Icon className="h-4 w-4 shrink-0" />
           <span className="text-sm group-data-[collapsible=icon]:hidden">{title}</span>
           {item.badge && (

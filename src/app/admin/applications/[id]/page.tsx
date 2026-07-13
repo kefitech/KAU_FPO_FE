@@ -875,6 +875,7 @@ function ApplicationDetailContent() {
   const isSuperAdmin = user?.role === "super_admin";
   const activeTab = (searchParams.get("tab") ?? "overview") as TabKey;
 
+  const confirm = useConfirmStore((s) => s.confirm);
   const [t, setT] = useState<T>({});
   const [tCommon, setTCommon] = useState<T>({});
   const action = searchParams.get("action");
@@ -1006,7 +1007,16 @@ function ApplicationDetailContent() {
               size="sm"
               variant="outline"
               className="text-orange-600 border-orange-200 hover:bg-orange-50"
-              onClick={() => confirm("Suspend this FPO?") && deactivateMutation.mutate()}
+              onClick={() =>
+                confirm({
+                  title: "Suspend FPO",
+                  description: "This will suspend the FPO account. They will lose access to the platform until reactivated.",
+                  confirmLabel: "Suspend",
+                  confirmingLabel: "Suspending…",
+                  variant: "destructive",
+                  onConfirm: () => deactivateMutation.mutateAsync(),
+                })
+              }
               disabled={deactivateMutation.isPending}
             >
               <XCircle className="mr-1.5 h-4 w-4" />
@@ -1017,7 +1027,16 @@ function ApplicationDetailContent() {
             <Button
               size="sm"
               className="bg-green-600 hover:bg-green-700"
-              onClick={() => confirm("Reactivate this FPO?") && activateMutation.mutate()}
+              onClick={() =>
+                confirm({
+                  title: "Reactivate FPO",
+                  description: "This will restore the FPO's access to the platform.",
+                  confirmLabel: "Reactivate",
+                  confirmingLabel: "Activating…",
+                  variant: "default",
+                  onConfirm: () => activateMutation.mutateAsync(),
+                })
+              }
               disabled={activateMutation.isPending}
             >
               <CheckCheck className="mr-1.5 h-4 w-4" />

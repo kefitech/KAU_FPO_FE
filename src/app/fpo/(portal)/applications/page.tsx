@@ -323,7 +323,7 @@ export default function FpoApplicationsPage() {
   if (!statusData) return null;
 
   return (
-    <div className="flex flex-col gap-6 px-8 py-6">
+    <div className="flex flex-col gap-6 px-3 sm:px-6 py-4 sm:py-6">
       <div>
         <h1 className="font-bold text-2xl">My Application</h1>
         <p className="text-muted-foreground text-sm">Track status and review your submitted details</p>

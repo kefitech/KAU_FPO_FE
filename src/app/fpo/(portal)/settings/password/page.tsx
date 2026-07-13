@@ -17,8 +17,14 @@ import { authApi } from "@/lib/api/auth";
 const passwordSchema = z
   .object({
     current_password: z.string().min(1, { message: "Current password is required." }),
-    new_password: z.string().min(8, { message: "Password must be at least 8 characters." }),
-    confirm_password: z.string().min(8, { message: "Password must be at least 8 characters." }),
+    new_password: z
+      .string()
+      .min(8, { message: "Password must be at least 8 characters." })
+      .regex(/[A-Z]/, { message: "Password must contain at least one uppercase letter." })
+      .regex(/[a-z]/, { message: "Password must contain at least one lowercase letter." })
+      .regex(/[0-9]/, { message: "Password must contain at least one number." })
+      .regex(/[^A-Za-z0-9]/, { message: "Password must contain at least one special character." }),
+    confirm_password: z.string().min(1, { message: "Please confirm your new password." }),
   })
   .refine((d) => d.new_password !== d.current_password, {
     message: "New password cannot be the same as your current password.",
