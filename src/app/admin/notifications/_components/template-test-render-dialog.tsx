@@ -33,7 +33,9 @@ interface TemplateTestRenderDialogProps {
 
 interface TestRenderResponse {
   template: {
-    subject: string;
+    subject?: string;
+    body?: string;
+    [key: string]: any;
   };
   rendered: {
     subject?: string;
@@ -50,20 +52,19 @@ export function TemplateTestRenderDialog({ open, onClose, template, t, tCommon }
 
   const variables = template?.variables ?? [];
 
-
-
   const mutation = useMutation({
     mutationFn: () => notificationTemplateApi.testRender(template!.id, context),
-    onSuccess: (response: TestRenderResponse) => {
+    onSuccess: (response) => {
+      const subject = response.data.rendered.subject || response.data.template.subject || "";
       setResult({
-        subject: response.rendered.subject ?? response.template.subject,
-        body: response.rendered.body,
+        subject,
+        body: response.data.rendered.body,  // ← Access via response.data
       });
     },
-  onError: (error) => {
-    toast.error(getErrorMessage(error, t.toast_failed ?? "Failed to render template"));
-  },
-});
+    onError: (error) => {
+      toast.error(getErrorMessage(error, t.toast_failed ?? "Failed to render template"));
+    },
+  });
 
   function handleClose() {
     setContext({});
@@ -82,7 +83,7 @@ export function TemplateTestRenderDialog({ open, onClose, template, t, tCommon }
             {t.title ?? "Test Render"}
           </DialogTitle>
         </DialogHeader>
-
+        <div className="max-h-[60vh] overflow-y-auto">
         <div className="flex flex-col gap-4">
           <div className="space-y-1 rounded-md border bg-muted/40 px-3 py-2 text-xs">
             <p className="font-medium">{template.template_code_detail.name}</p>
@@ -135,6 +136,7 @@ export function TemplateTestRenderDialog({ open, onClose, template, t, tCommon }
               </div>
             </>
           )}
+        </div>
         </div>
 
         <DialogFooter>

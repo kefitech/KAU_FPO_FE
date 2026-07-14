@@ -48,6 +48,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   approved:     { label: "Approved",     color: "#22c55e" },
   rejected:     { label: "Rejected",     color: "#ef4444" },
   suspended:    { label: "Suspended",    color: "#7f1d1d" },
+  claimed:      { label: "Claimed",      color: "#6E18D9"}
 };
 
 const TIER_CONFIG: Record<string, { label: string; color: string }> = {

@@ -104,7 +104,7 @@ export interface FpoStep1Payload {
   step: 1;
   name: string;
   name_ml?: string;
-  registration_number: string;
+  registration_number?: string;
   cin_number?: string;
   date_of_registration: string;
   legal_structure: string;

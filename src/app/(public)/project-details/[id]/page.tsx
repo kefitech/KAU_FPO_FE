@@ -72,7 +72,7 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ id: s
                 </div>
               </div>
             </div>
-            <div className="project-pagi-area">
+            <div className="pagination">
               <div className="project-previous">
                 <Link href={`/project-details/${previousId}`}>
                   <div className="icon"><i className="fas fa-angle-double-left" /></div>

@@ -3314,13 +3314,15 @@ nav.navbar.validnavs.inc-shape::after {
 	color: var(--white);
 }
 
-.banner-area.navigation-circle .swiper-button-prev,
-.banner-area.navigation-circle .swiper-button-next {
-	height: 60px;
-	width: 60px;
-	line-height: 60px;
-	border-radius: 50%;
-	border: 2px solid rgba(255, 255, 255, 0.3);
+.navigation-circle .swiper-button-prev,
+.navigation-circle .swiper-button-next {
+  height: 60px;
+  width: 60px;
+  line-height: 60px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  top: 100px;
+  transform: translateY(-50%);
 }
 
 .banner-area.navigation-circle .swiper-button-prev::after,
@@ -5922,6 +5924,37 @@ ul.counter-list li:nth-child(2) {
 .gallery-style-two:hover .link {
 	transform: rotate(0);
 }
+
+/* Override Bootstrap pagination - GREEN theme */
+.pagination .page-link {
+  color: #333;
+  border-color: #ddd;
+  background-color: #fff;
+}
+
+.pagination .page-link:hover {
+  color: #49a760;
+  border-color: #49a760;
+  background-color: #f9f9f9;
+}
+
+/* Active page - GREEN */
+.pagination .page-item.active .page-link {
+  background-color: #49a760;
+  border-color: #49a760;
+  color: #fff;
+}
+
+/* Disabled state */
+.pagination .page-item.disabled .page-link {
+  color: #ccc;
+  cursor: not-allowed;
+}
+
+
+
+
+
 
 
 /* ============================================================== 

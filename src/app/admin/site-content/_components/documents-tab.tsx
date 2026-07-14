@@ -38,6 +38,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { api } from "@/lib/api/client";
 import { useConfirmStore } from "@/stores/confirm-store";
 import type { AdminDocument } from "@/types/admin";
+import { AxiosError } from "axios";
 
 type T = Record<string, string>;
 
@@ -50,6 +51,18 @@ interface PublicLanguage {
   is_default: boolean;
 }
 
+
+
+interface ApiError {
+  message: string;
+  status: number;
+  data: {
+    status: "error";
+    message: string;
+    data: null;
+    errors?: Record<string, string[]>;
+  };
+}
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatFileSize(bytes: number): string {
@@ -134,7 +147,14 @@ function DocumentDialog({
       onSuccess();
       onOpenChange(false);
     },
-    onError: () => toast.error("Failed to save document."),
+   onError: (error: ApiError) => {
+      const errorMsg = error.data?.errors?.file?.[0] 
+        || error.data?.message 
+        || "Failed to save document.";
+      
+      toast.error(errorMsg);
+      toast.error("Failed to save file")
+    }
   });
 
   const canSubmit = !!titleValues[defaultLang?.code ?? "en"]?.trim() && (editing ? true : !!file);
@@ -159,7 +179,7 @@ function DocumentDialog({
               {langsLoading && <Skeleton className="h-8 w-32" />}
               {!langsLoading && languages.length > 1 && (
                 <Select value={activeLang} onValueChange={setActiveLang}>
-                  <SelectTrigger className="h-8 w-32 text-sm">
+                  <SelectTrigger className="h-8 w-45 text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -174,7 +194,7 @@ function DocumentDialog({
                               <Circle className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
                             )}
                             {lang.native_name}
-                            {lang.is_default && <span className="text-muted-foreground text-xs">(default)</span>}
+                            {lang.is_default && <div className="text-muted-foreground text-xs">(default)</div>}
                           </span>
                         </SelectItem>
                       );

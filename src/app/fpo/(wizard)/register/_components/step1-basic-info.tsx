@@ -29,9 +29,18 @@ const schema = z
     name_ml: z.string().optional(),
     legal_structure: z.string().min(1, { message: "Please select registration type" }),
     legal_structure_detail: z.string().optional(),
-    registration_number: z.string().min(1, { message: "Registration number is required" }),
+    registration_number: z.string().optional(),
     cin_number: z.string().optional(),
-    date_of_registration: z.string().min(1, { message: "Date of registration is required" }),
+    date_of_registration: z
+      .string()
+      .min(1, { message: "Date of registration is required" })
+      .refine(
+        (val) => {
+          const date = new Date(val);
+          return date >= new Date("2004-01-01");
+        },
+        { message: "Date of registration cannot be before 2004" }
+      ),
     pan_number: z
       .string()
       .min(1, { message: "PAN number is required" })
@@ -46,8 +55,14 @@ const schema = z
         message: "CIN number is required for Companies Act / Producer Companies",
       });
     }
+    if (data.legal_structure !== "companies_act" && !data.registration_number?.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["registration_number"],
+        message: "Registration number is required",
+      });
+    }
   });
-
 type FormValues = z.infer<typeof schema>;
 type FieldValidationState = Record<string, { error: string | null; duplicate: boolean }>;
 
@@ -160,7 +175,8 @@ export function Step1BasicInfo({ profile, onSave, onSuccess }: Step1Props) {
         name_ml: values.name_ml || undefined,
         legal_structure: values.legal_structure,
         legal_structure_detail: hasSubDropdown ? values.legal_structure_detail || undefined : undefined,
-        registration_number: values.registration_number,
+        // registration_number expected as string by API payload; coerce undefined to empty string
+        registration_number: values.registration_number || "",
         cin_number: values.cin_number || undefined,
         date_of_registration: values.date_of_registration,
         pan_number: values.pan_number || undefined,
@@ -278,9 +294,11 @@ export function Step1BasicInfo({ profile, onSave, onSuccess }: Step1Props) {
       <div className="grid gap-4 sm:grid-cols-2">
         <Field>
           <FieldLabel htmlFor="registration_number">
-            Registration Number <span className="text-destructive">*</span>
+            Registration Number{" "}
+            {selectedStructure !== "companies_act" && <span className="text-destructive">*</span>}
             {isClaimedFpo && <span className="ml-1 text-muted-foreground text-xs">(locked)</span>}
           </FieldLabel>
+          
           <Input
             id="registration_number"
             placeholder="e.g. REG/2024/001"
@@ -327,6 +345,7 @@ export function Step1BasicInfo({ profile, onSave, onSuccess }: Step1Props) {
         <Input
           id="date_of_registration"
           type="date"
+          min="2004-01-01"
           max={new Date().toISOString().split("T")[0]}
           {...register("date_of_registration")}
         />

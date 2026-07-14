@@ -1,6 +1,6 @@
 import About from "./_components/about";
 import AgrulLayout from "./_components/agrul-layout";
-import Blog from "./_components/announcement-news";
+import NewsWidget from "./_components/announcement-news";
 import Banner from "./_components/banner";
 import Contact from "./_components/contact";
 import Documents from "./_components/documents";
@@ -31,7 +31,8 @@ export default function HomePage() {
       <Gallery />
       <Facts />
       <Contact />
-      <Blog />
+     
+      <NewsWidget />
       <NewsSourcesStrip />
       <Documents />
     </AgrulLayout>

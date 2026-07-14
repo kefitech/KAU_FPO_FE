@@ -198,6 +198,7 @@ export function ExpertForm({ mode, expert, t = {}, tCommon = {} }: ExpertFormPro
                   name="category"
                   render={({ field }) => (
                     <SearchableSelect
+                      key={field.value}  // Add this line
                       value={field.value}
                       onChange={field.onChange}
                       options={EXPERT_CATEGORIES}
@@ -245,6 +246,7 @@ export function ExpertForm({ mode, expert, t = {}, tCommon = {} }: ExpertFormPro
                     name="district"
                     render={({ field }) => (
                       <SearchableSelect
+                        key={field.value}
                         value={field.value ?? ""}
                         onChange={field.onChange}
                         options={DISTRICT_SELECT_OPTIONS}
@@ -269,13 +271,23 @@ export function ExpertForm({ mode, expert, t = {}, tCommon = {} }: ExpertFormPro
                     {errors.email && <FieldError errors={[errors.email]} />}
                   </Field>
 
-                  <Field>
+                 <Field>
                     <FieldLabel htmlFor="phone">{t.field_phone ?? "Phone"}</FieldLabel>
                     <Controller
                       control={control}
                       name="phone"
                       render={({ field }) => (
-                        <Input id="phone" type="tel" placeholder="+91 98765 43210" {...field} />
+                        <Input 
+                          id="phone" 
+                          type="tel"
+                          maxLength={10}
+                          placeholder="+91 98765 43210"
+                          {...field}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+                            field.onChange(value);
+                          }}
+                        />
                       )}
                     />
                   </Field>
@@ -307,7 +319,14 @@ export function ExpertForm({ mode, expert, t = {}, tCommon = {} }: ExpertFormPro
         <Button type="button" variant="outline" onClick={() => router.push("/admin/experts")}>
           {tCommon.cancel ?? "Cancel"}
         </Button>
-        <Button type="button" variant="ghost" onClick={() => reset(expert ? expertToForm(expert) : defaultValues)}>
+        <Button 
+          type="button" 
+          variant="ghost" 
+          onClick={() => {
+            const resetData = expert ? expertToForm(expert) : defaultValues;
+            reset(resetData, { keepValues: false });
+          }}
+        >
           {tCommon.reset ?? "Reset"}
         </Button>
         <Button type="submit" form="expert-form" disabled={mutation.isPending}>

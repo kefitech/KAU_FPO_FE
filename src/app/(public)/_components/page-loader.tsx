@@ -11,7 +11,7 @@ const PageLoader = () => {
 
   useEffect(() => {
     if (hasStarted) return;
-    hasStarted = true;
+    hasStarted = false;
 
     let pct = 0;
     const tick = setInterval(() => {

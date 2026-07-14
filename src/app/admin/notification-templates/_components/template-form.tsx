@@ -27,7 +27,7 @@ type T = Record<string, string>;
 const schema = z.object({
   template_code: z.string().min(1, { message: "Please select a template code" }),
   language: z.string().min(1, { message: "Please select a language" }),
-  subject: z.string(),
+  subject: z.string().min(1, { message: "Subject is required"}),
   body: z.string().min(1, { message: "Body is required" }),
   is_active: z.boolean(),
 });
@@ -227,7 +227,7 @@ export function TemplateForm({ mode, template, t = {}, tCommon = {} }: TemplateF
                 name="subject"
                 render={({ field }) => (
                   <Field>
-                    <FieldLabel htmlFor="t-subject">{t.subject_label ?? "Subject"}</FieldLabel>
+                    <FieldLabel htmlFor="t-subject">{t.subject_label ?? "Subject"}<span className="text-destructive">*</span></FieldLabel>
                     <Input
                       id="t-subject"
                       placeholder={t.subject_placeholder ?? "e.g. Your FPO application has been approved"}

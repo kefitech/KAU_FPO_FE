@@ -182,11 +182,11 @@ const Footer = () => {
                   </li>
                   <li>
                     <div className="icon"><i className="fas fa-envelope" /></div>
-                    <div className="content"><strong>Email:</strong> <a href="mailto:info@validtheme.com">info@validtheme.com</a></div>
+                    <div className="content"><strong>Email:</strong> <a href="mailto:registrar@kau.in">registrar@kau.in</a></div>
                   </li>
                   <li>
                     <div className="icon"><i className="fas fa-phone" /></div>
-                    <div className="content"><strong>Phone:</strong> <a href="tel:2151234567">+123 34598768</a></div>
+                    <div className="content"><strong>Phone:</strong> <a href="tel:+91 487 237 0509">+91 487 237 0509</a></div>
                   </li>
                 </ul>
               </div>

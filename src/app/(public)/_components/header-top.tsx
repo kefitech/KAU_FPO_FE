@@ -64,7 +64,7 @@ const HeaderTop = () => {
         <div className="row align-center">
           <div className="col-lg-9">
             <div className="flex-item left">
-              <p>That&apos;s right, we only sell 100% organic</p>
+              <p>Smart &amp; Empovered Farmers</p>
               <ul>
                 <li><i className="fas fa-map-marker-alt" /> Kerala Agricultural University Mannuthy.</li>
                 <li><i className="fas fa-phone-alt" /> +4733378901</li>

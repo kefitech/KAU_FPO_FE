@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useLocaleStore } from "@/stores/locale-store";
 import CountUp from "react-countup";
 import { publicFetch } from "../_lib/public-fetch";
-import { AnnouncementDetailModal } from "../blog-standard/page";
+import { AnnouncementDetailModal } from "../news-events/page";
 
 interface AnnouncementNews {
   id: number;
@@ -25,7 +25,7 @@ function formatDate(dateStr: string): string {
   });
 }
 
-const Blog = () => {
+const NewsWidget = () => {
   const [items, setItems] = useState<AnnouncementNews[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<AnnouncementNews | null>(null);
@@ -62,7 +62,7 @@ const Blog = () => {
         >
           <h3 style={{ fontSize: 32, fontWeight: 700, color: "#1a1a1a", margin: 0 }}>News and Announcements</h3>
           <Link
-            href="/blog-standard"
+            href="/news-events"
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -215,4 +215,4 @@ const Blog = () => {
   );
 };
 
-export default Blog;
+export default NewsWidget;

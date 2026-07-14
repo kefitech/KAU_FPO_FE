@@ -174,9 +174,9 @@ export function BulkInviteDialog({ open, onOpenChange }: BulkInviteDialogProps) 
 
           {tab === "json" && (
             <div className="flex flex-col gap-3">
-              <div className="grid grid-cols-[1.2fr_1.2fr_1.5fr_1fr_2rem] gap-2 px-1">
+              <div className="hidden md:grid md:grid-cols-[1.2fr_1.2fr_1.5fr_1fr_2rem] gap-2 px-1">
                 {["First Name *", "Last Name *", "Email *", "Phone"].map((h) => (
-                  <span key={h} className="text-muted-foreground text-xs font-medium whitespace-nowrap">
+                  <span key={h} className="text-muted-foreground text-xs font-medium">
                     {h}
                   </span>
                 ))}
@@ -184,8 +184,9 @@ export function BulkInviteDialog({ open, onOpenChange }: BulkInviteDialogProps) 
 
               {rows.map((row, i) => (
                 <div key={i} className="flex flex-col gap-1">
-                  <div className="grid grid-cols-[1.2fr_1.2fr_1.5fr_1fr_2rem] items-start gap-2">
+                  <div className="grid md:grid-cols-[1.2fr_1.2fr_1.5fr_1fr_2rem] grid-cols-1 items-start gap-2">
                     <div className="flex flex-col gap-1">
+                      <label className="md:hidden text-muted-foreground text-xs font-medium">First Name *</label>
                       <Input
                         placeholder="First name"
                         value={row.first_name}
@@ -199,6 +200,7 @@ export function BulkInviteDialog({ open, onOpenChange }: BulkInviteDialogProps) 
                     </div>
 
                     <div className="flex flex-col gap-1">
+                      <label className="md:hidden text-muted-foreground text-xs font-medium">Last Name *</label>
                       <Input
                         placeholder="Last name"
                         value={row.last_name}
@@ -210,6 +212,7 @@ export function BulkInviteDialog({ open, onOpenChange }: BulkInviteDialogProps) 
                     </div>
 
                     <div className="flex flex-col gap-1">
+                      <label className="md:hidden text-muted-foreground text-xs font-medium">Email *</label>
                       <Input
                         placeholder="email@example.com"
                         value={row.email}
@@ -221,6 +224,7 @@ export function BulkInviteDialog({ open, onOpenChange }: BulkInviteDialogProps) 
                     </div>
 
                     <div className="flex flex-col gap-1">
+                      <label className="md:hidden text-muted-foreground text-xs font-medium">Phone</label>
                       <Input
                         placeholder="Phone"
                         maxLength={10}
@@ -236,7 +240,7 @@ export function BulkInviteDialog({ open, onOpenChange }: BulkInviteDialogProps) 
                       type="button"
                       onClick={() => removeRow(i)}
                       disabled={rows.length === 1}
-                      className="mt-2 flex items-center justify-center text-muted-foreground hover:text-destructive disabled:opacity-30"
+                      className="md:mt-2 flex items-center justify-center text-muted-foreground hover:text-destructive disabled:opacity-30"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>

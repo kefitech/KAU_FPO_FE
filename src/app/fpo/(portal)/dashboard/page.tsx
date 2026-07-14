@@ -276,11 +276,11 @@ export default function FpoDashboardPage() {
             </p>
           </CardContent>
         </Card>
-
+      
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="font-medium text-sm">{t.card_notifications_title ?? "Notifications"}</CardTitle>
-            <Bell className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="font-medium text-sm flex-1 min-w-0">{t.card_notifications_title ?? "Notifications"}</CardTitle>
+            <Bell className="h-4 w-4 text-muted-foreground shrink-0 ml-2" />
           </CardHeader>
           <CardContent>
             <div className="font-bold text-2xl">{notifications.unread_count}</div>
@@ -420,8 +420,8 @@ export default function FpoDashboardPage() {
                       key={n.id}
                       className={`rounded-lg border p-3 ${!n.is_read ? "border-primary/20 bg-primary/5" : ""}`}
                     >
-                      <p className="font-medium text-sm">{n.title}</p>
-                      <p className="mt-0.5 line-clamp-2 text-muted-foreground text-xs">{n.body}</p>
+                      <p className="font-medium text-sm break-words">{n.title}</p>
+                      <p className="mt-0.5 text-muted-foreground break-words text-xs">{n.body}</p>
                       <p className="mt-1 text-muted-foreground text-xs">{timeAgo(n.created_at)}</p>
                     </div>
                   ))}

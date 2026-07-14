@@ -40,13 +40,11 @@ const MainMenu = ({ toggleSubMenu, navbarPlacement }: Props) => {
           <li><Link href="/service-details/1">Services Details</Link></li>
         </ul>
       </li> */}
-      <li className="dropdown">
-        <Link href="#" className="dropdown-toggle" data-toggle="dropdown" onClick={toggleSubMenu}>Blog</Link>
-        <ul className="dropdown-menu">
-          <li><Link href="/blog-standard">Blog</Link></li>
-        </ul>
+      <li>
+        <Link href="/news-events">News &amp; Events</Link>
       </li>
-    </ul>
+      </ul>
+        
   );
 };
 

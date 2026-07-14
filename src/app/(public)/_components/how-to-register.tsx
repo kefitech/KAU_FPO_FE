@@ -13,6 +13,46 @@ interface AboutData {
   how_to_register: string;
 }
 
+interface ParsedBlock {
+  type: "phase" | "step" | "text" | "break";
+  text: string;
+  innerHTML?: string;
+}
+
+function parseContent(raw: string): ParsedBlock[] {
+  if (!raw) return [];
+
+  const looksLikeHtml = /<p[\s>]/i.test(raw);
+
+  if (looksLikeHtml) {
+    const doc = new DOMParser().parseFromString(raw, "text/html");
+    return Array.from(doc.querySelectorAll("p")).map((p) => {
+      const text = p.textContent?.trim() ?? "";
+      return classify(text, p.innerHTML);
+    });
+  }
+
+  // Plain text with \n separators
+  return raw
+    .split("\n")
+    .map((line) => classify(line.trim(), line.trim()));
+}
+
+function classify(text: string, innerHTML: string): ParsedBlock {
+  if (/^PHASE\s+[IVX]+:/i.test(text)) {
+    return { type: "phase", text };
+  }
+  if (/^STEP\s+\d+/i.test(text)) {
+    // normalize "Step 1 — Title" or "STEP 1: Title" into one display string
+    const cleaned = text.replace(/^STEP\s+(\d+)\s*[—:-]\s*/i, "Step $1 — ");
+    return { type: "step", text: cleaned };
+  }
+  if (text === "") {
+    return { type: "break", text: "" };
+  }
+  return { type: "text", text, innerHTML };
+}
+
 export default function HowToRegister() {
   const [data, setData] = useState<AboutData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -20,8 +60,11 @@ export default function HowToRegister() {
 
   useEffect(() => {
     publicFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/public/site-content/`)
-      .then((res) => res.json())
-      .then((json) => setData(json.data))
+      .then((res) => {
+        if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+        return res.json();
+      })
+      .then((json) => setData(json.data ?? null))
       .catch((err) => {
         console.error(err);
         setError("Unable to load page content. Please try again shortly.");
@@ -41,6 +84,8 @@ export default function HowToRegister() {
     );
   }
 
+  const blocks = parseContent(data.how_to_register ?? "");
+
   return (
     <div className="default-padding">
       <div className="container">
@@ -51,10 +96,9 @@ export default function HowToRegister() {
               <div className="devider" />
             </div>
 
-            <div style={{ whiteSpace: "pre-line", lineHeight: 1.9 }}>
-              {(data.how_to_register ?? "").split("\n").map((line, i) => {
-                // Phase headings like "PHASE I: ..."
-                if (/^PHASE\s+[IVX]+:/i.test(line.trim())) {
+            <div style={{ lineHeight: 1.9 }}>
+              {blocks.map((block, i) => {
+                if (block.type === "phase") {
                   return (
                     <h4
                       key={i}
@@ -67,13 +111,12 @@ export default function HowToRegister() {
                         letterSpacing: 0.5,
                       }}
                     >
-                      {line.trim()}
+                      {block.text}
                     </h4>
                   );
                 }
 
-                // Step lines like "Step 1 — ..."
-                if (/^Step\s+\d+/i.test(line.trim())) {
+                if (block.type === "step") {
                   return (
                     <p
                       key={i}
@@ -84,20 +127,24 @@ export default function HowToRegister() {
                         marginBottom: 2,
                       }}
                     >
-                      {line.trim()}
+                      {block.text}
                     </p>
                   );
                 }
 
-                // Empty lines
-                if (line.trim() === "") {
+                if (block.type === "break") {
                   return <br key={i} />;
                 }
 
-                // Regular paragraph lines
-                return (
+                return block.innerHTML ? (
+                  <p
+                    key={i}
+                    style={{ margin: "2px 0", color: "var(--color-paragraph)" }}
+                    dangerouslySetInnerHTML={{ __html: block.innerHTML }}
+                  />
+                ) : (
                   <p key={i} style={{ margin: "2px 0", color: "var(--color-paragraph)" }}>
-                    {line}
+                    {block.text}
                   </p>
                 );
               })}

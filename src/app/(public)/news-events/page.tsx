@@ -149,7 +149,7 @@ function AnnouncementDetailModal({ item, onClose }: { item: Announcement | null;
         }}
       >
         {/* Thumbnail banner */}
-        <div style={{ position: "relative", width: "100%", height: 220, flexShrink: 0, background: "#f0f0f0" }}>
+        {/* <div style={{ position: "relative", width: "100%", height: 220, flexShrink: 0, background: "#f0f0f0" }}>
           <img
             src={item.thumbnail_url || "/assets/img/news-placeholder.jpg"}
             alt={item.title}
@@ -177,7 +177,7 @@ function AnnouncementDetailModal({ item, onClose }: { item: Announcement | null;
           >
             <i className="fas fa-times" />
           </button>
-        </div>
+        </div> */}
 
         {/* Content */}
         <div style={{ padding: "24px 28px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 14 }}>
@@ -235,7 +235,7 @@ function AnnouncementDetailModal({ item, onClose }: { item: Announcement | null;
 
 export { AnnouncementDetailModal };
 
-export default function BlogStandardPage() {
+export default function NewsAndEvents() {
   const [items, setItems] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabKey>("announcement");
@@ -342,7 +342,7 @@ export default function BlogStandardPage() {
                       }}
                     >
                       {/* Thumbnail */}
-                      <div
+                      {/* <div
                         style={{
                           width: 110,
                           height: 110,
@@ -357,7 +357,7 @@ export default function BlogStandardPage() {
                           alt={item.title}
                           style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                         />
-                      </div>
+                      </div> */}
 
                       {/* Content */}
                       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 8 }}>
