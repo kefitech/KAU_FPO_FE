@@ -148,7 +148,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <Separator orientation="vertical" className="h-4" />
             </span>
             <NotificationBell />
-            <span className="hidden sm:block">
+            <span>
               <LocaleSwitcher />
             </span>
             <ThemeToggle />
