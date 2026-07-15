@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 import { Autoplay, Navigation, Pagination } from "swiper/modules";
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -139,6 +139,11 @@ const TeamSection = ({ showAll = false }: Props) => {
   const [loading, setLoading] = useState(true);
   const locale = useLocaleStore((s) => s.locale);
 
+  // Use STATE (not refs) so Swiper re-renders once these are set
+  const [prevEl, setPrevEl] = useState<HTMLDivElement | null>(null);
+  const [nextEl, setNextEl] = useState<HTMLDivElement | null>(null);
+  const [paginationEl, setPaginationEl] = useState<HTMLDivElement | null>(null);
+
   // biome-ignore lint/correctness/useExhaustiveDependencies: locale intentionally triggers a refetch
   useEffect(() => {
     publicFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/public/team/`)
@@ -199,6 +204,7 @@ const TeamSection = ({ showAll = false }: Props) => {
               <h5 className="sub-title">Our Team</h5>
               <h2 className="title">Meet Our Leadership</h2>
               <div className="devider" />
+              
             </div>
           </div>
         </div>
@@ -214,18 +220,21 @@ const TeamSection = ({ showAll = false }: Props) => {
                   </div>
                 ))}
               </div>
-            ) : (
-              <div className="navigation-circle" style={{ position: "relative" }}>
+            ) : (           
+             <div className="navigation-circle" style={{ position: "relative" }}>
                 <Swiper
                   modules={[Navigation, Pagination, Autoplay]}
                   spaceBetween={30}
                   slidesPerView={1}
                   loop={members.length > 3}
                   autoplay={{ delay: 4000, disableOnInteraction: false }}
-                  pagination={{ el: ".team-swiper-pagination", clickable: true }}
                   navigation={{
-                    nextEl: ".team-swiper-next",
-                    prevEl: ".team-swiper-prev",
+                    prevEl,
+                    nextEl,
+                  }}
+                  pagination={{
+                    el: paginationEl,
+                    clickable: true,
                   }}
                   breakpoints={{
                     768: { slidesPerView: 2 },
@@ -238,9 +247,9 @@ const TeamSection = ({ showAll = false }: Props) => {
                     </SwiperSlide>
                   ))}
                 </Swiper>
-                <div className="team-swiper-prev swiper-button-prev" />
-                <div className="team-swiper-next swiper-button-next" />
-                <div className="team-swiper-pagination swiper-pagination" style={{ marginTop: 16 }} />
+                <div ref={setPrevEl} className="team-swiper-prev swiper-button-prev" />
+                <div ref={setNextEl} className="team-swiper-next swiper-button-next" />
+                <div ref={setPaginationEl} className="team-swiper-pagination swiper-pagination" style={{ marginTop: 16 }} />
               </div>
             )}
           </div>

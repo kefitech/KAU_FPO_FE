@@ -105,7 +105,7 @@ const NewsSourcesStrip = () => {
 
   if (!loading && sources.length === 0) return null;
 
-  const preview = sources.slice(0, 4);
+  const preview = sources.slice(0, 5);
   const hasMore = sources.length > 4;
 
   return (
@@ -143,12 +143,17 @@ const NewsSourcesStrip = () => {
             <div style={{ position: "relative", padding: "0 50px" }}>
               <Swiper
                 modules={[Navigation, Autoplay]}
-                loop={true}
+                loop={true}          // turn this off entirely
+
                 autoplay={{ delay: 3000, disableOnInteraction: false }}
                 navigation={{ nextEl: ".news-swiper-next", prevEl: ".news-swiper-prev" }}
                 spaceBetween={24}
                 slidesPerView={1}
-                breakpoints={{ 576: { slidesPerView: 2 }, 992: { slidesPerView: 3 }, 1200: { slidesPerView: 4 } }}
+                breakpoints={{
+                  576: { slidesPerView: Math.min(preview.length, 2) },
+                  992: { slidesPerView: Math.min(preview.length, 3) },
+                  1200: { slidesPerView: Math.min(preview.length, 4) },
+                }}
               >
                 {preview.map((s) => (
                   <SwiperSlide key={s.id}>

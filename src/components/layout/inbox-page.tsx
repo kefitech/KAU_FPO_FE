@@ -147,7 +147,7 @@ function EmptyList() {
 
 function EmptyDetail() {
   return (
-    <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground">
+    <div className="flex flex-col w-6/6 items-center justify-center h-full gap-3 text-muted-foreground">
       <Bell className="h-12 w-12 opacity-10" />
       <p className="text-sm">Select a notification to read</p>
     </div>

@@ -396,6 +396,11 @@ export function DocumentsTab({ t = {} }: { t?: T }) {
     setEditing(doc);
     setDialogOpen(true);
   }
+  function getTitleText(title: AdminDocument["title_display"]): string {
+  return typeof title === "string"
+    ? title
+    : title?? Object.values(title ?? {})[0] ?? "";
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -439,22 +444,26 @@ export function DocumentsTab({ t = {} }: { t?: T }) {
               ))
             ) : documents.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="py-12 text-center text-muted-foreground text-sm">
+                <TableCell colSpan={6} className="py-12 text-center text-muted-foreground text-sm ">
                   No documents uploaded yet.
                 </TableCell>
               </TableRow>
             ) : (
-              documents.map((doc) => (
-                <TableRow key={doc.id} className={!doc.is_active ? "opacity-50" : ""}>
+              documents.map((doc) => {
+                const titleText = getTitleText(doc.title_display);
+            return(
+                <TableRow key={doc.id} className={!doc.is_active ? "opacity-50" : ""} >
                   <TableCell>
                     <a
                       href={doc.file_url}
                       target="_blank"
                       rel="noreferrer"
                       className="flex items-center gap-1.5 font-medium hover:underline text-sm"
+                      title={titleText}
                     >
-                      <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                      {doc.title_display}
+                      <FileText className="h-4 w-4 shrink-0 text-muted-foreground " />
+                      
+                      <span className=" max-w-[240px] truncate">{titleText}</span>
                       <ExternalLink className="h-3 w-3 text-muted-foreground" />
                     </a>
                   </TableCell>
@@ -528,7 +537,7 @@ export function DocumentsTab({ t = {} }: { t?: T }) {
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))
+              )})
             )}
           </TableBody>
         </Table>

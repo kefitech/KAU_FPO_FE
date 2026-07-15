@@ -4,6 +4,7 @@
 import { useEffect, useState, FormEvent } from "react";
 import { publicFetch } from "../_lib/public-fetch";
 import DOMPurify from "dompurify";
+import { useLocaleStore } from "@/stores";
 
 interface AboutData {
   about_body: string;
@@ -22,8 +23,10 @@ export default function About() {
   const [data, setData] = useState<AboutData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const locale = useLocaleStore((s) => s.locale)
 
   useEffect(() => {
+    if (!locale) return;
     publicFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/public/site-content/`)
       .then((res) => res.json())
       .then((json) => setData(json.data))
@@ -32,7 +35,7 @@ export default function About() {
         setError("Unable to load page content. Please try again shortly.");
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [locale]);
   
 
   if (loading) {

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { useQuery } from "@tanstack/react-query";
-import { MapPin, Search } from "lucide-react";
+import { MapPin, Search, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { fpoDashboardApi } from "@/app/fpo/_api/dashboard";
@@ -157,10 +157,14 @@ export default function FpoExpertsPage() {
     staleTime: 5 * 60 * 1000,
   });
 
-  function handleSearch(e: React.FormEvent) {
-    e.preventDefault();
-    setSearch(searchInput);
-  }
+  // Debounce searchInput -> search, so the query re-fires automatically as
+  // the user types (after a short pause) instead of needing a submit button.
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      setSearch(searchInput);
+    }, 400);
+    return () => clearTimeout(handle);
+  }, [searchInput]);
 
   function handleContact(expert: FpoExpert) {
     if (!isApprovedFpo) {
@@ -210,20 +214,28 @@ export default function FpoExpertsPage() {
               placeholder={t.district_placeholder ?? "All Districts"}
             />
           </div>
-          <form onSubmit={handleSearch} className="flex items-center gap-2 flex-1">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <Input
-                className="pl-8 h-8 text-sm"
-                placeholder={t.search_placeholder ?? "Search experts…"}
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-              />
-            </div>
-            <Button type="submit" size="sm" variant="outline" className="h-8">
-              {t.btn_search ?? "Search"}
-            </Button>
-          </form>
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              className="pl-8 pr-8 h-8 text-sm"
+              placeholder={t.search_placeholder ?? "Search experts…"}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+            />
+            {searchInput && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchInput("");
+                  setSearch("");
+                }}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label="Clear search"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

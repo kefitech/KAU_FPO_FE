@@ -180,7 +180,7 @@ export function ChannelSettingsForm({ mode, channelSetting, t = {}, tCommon = {}
                     >
                       <option value="email">{t.channel_email ?? "Email"}</option>
                       <option value="sms">{t.channel_sms ?? "SMS"}</option>
-                      {/* <option value="in_app">{t.channel_in_app ?? "In-App"}</option> */}
+                      <option value="in_app">{t.channel_in_app ?? "In-App"}</option>
                     </select>
                     {errors.channel && <FieldError errors={[errors.channel]} />}
                   </Field>

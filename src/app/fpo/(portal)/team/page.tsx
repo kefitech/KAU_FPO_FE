@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckSquare, UploadCloud, UserPlus } from "lucide-react";
+import { CheckSquare, Columns3, Search, UploadCloud, UserPlus, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { fpoTeamApi } from "@/app/fpo/_api/team";
@@ -11,6 +11,15 @@ import { RowActions } from "@/components/data-table/row-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { translationsApi } from "@/lib/api/translations";
@@ -36,6 +45,27 @@ function fullName(m: FpoTeamMember) {
   return `${m.first_name} ${m.last_name}`.trim();
 }
 
+// ── Optional/toggleable columns ───────────────────────────────────────────
+// "name" and "status" are always shown, so they're not part of this list.
+// Visibility is controlled entirely by the dropdown now (no responsive
+// hidden/table-cell classes) — on small screens the table scrolls
+// horizontally instead of auto-hiding columns.
+const TOGGLEABLE_COLUMNS = [
+  { key: "email", label: "Email" },
+  { key: "phone", label: "Phone" },
+  { key: "role", label: "Role" },
+  { key: "joined", label: "Joined" },
+] as const;
+
+type ColumnKey = (typeof TOGGLEABLE_COLUMNS)[number]["key"];
+
+const DEFAULT_VISIBLE_COLUMNS: Record<ColumnKey, boolean> = {
+  email: true,
+  phone: true,
+  role: true,
+  joined: true,
+};
+
 export default function FpoTeamPage() {
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
@@ -54,6 +84,12 @@ export default function FpoTeamPage() {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [bulkInviteOpen, setBulkInviteOpen] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [visibleColumns, setVisibleColumns] = useState<Record<ColumnKey, boolean>>(DEFAULT_VISIBLE_COLUMNS);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  function toggleColumn(key: ColumnKey) {
+    setVisibleColumns((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
 
   const { data: members = [], isLoading } = useQuery({
     queryKey: ["fpo-team"],
@@ -61,8 +97,22 @@ export default function FpoTeamPage() {
     staleTime: 30_000,
   });
 
+  // ── Search filtering ────────────────────────────────────────────────────
+  // Matches against name, email, phone, and role only (status excluded).
+  const filteredMembers = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return members;
+    return members.filter((m) => {
+      const haystack = [fullName(m), m.email, m.phone ?? "", formatDate(m.joined_at)]
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [members, searchQuery]);
+ 
+
   // ── Selection helpers ──────────────────────────────────────────────────────
-  const allIds = members.map((m) => m.id);
+  const allIds = filteredMembers.map((m) => m.id);
   const allSelected = allIds.length > 0 && allIds.every((id) => selected.has(id));
   const someSelected = selected.size > 0;
 
@@ -116,6 +166,9 @@ export default function FpoTeamPage() {
 
   const isBulkPending = bulkActivateMutation.isPending || bulkDeactivateMutation.isPending;
 
+  const visibleColumnCount = TOGGLEABLE_COLUMNS.filter((c) => visibleColumns[c.key]).length;
+  const isSearching = searchQuery.trim().length > 0;
+
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col gap-6 px-3 sm:px-6 py-4 sm:py-6">
@@ -124,22 +177,79 @@ export default function FpoTeamPage() {
         <div>
           <h1 className="font-bold text-2xl">{t.page_title ?? "Team Members"}</h1>
           <p className="mt-0.5 text-muted-foreground text-sm">
-            {isLoading ? "Loading…" : `${members.length} member${members.length !== 1 ? "s" : ""}`}
+            {isLoading
+              ? "Loading…"
+              : isSearching
+                ? `${filteredMembers.length} of ${members.length} member${members.length !== 1 ? "s" : ""}`
+                : `${members.length} member${members.length !== 1 ? "s" : ""}`}
           </p>
         </div>
 
-        {isPrimary && (
-          <div className="flex gap-2 self-start sm:self-auto">
-            <Button variant="outline" size="sm" onClick={() => setBulkInviteOpen(true)}>
-              <UploadCloud className="mr-1.5 h-4 w-4" />
-              {t.btn_bulk_invite ?? "Bulk Invite"}
+        <div className="flex gap-2 self-start sm:self-auto">
+          {isPrimary && (
+            <>
+              <Button variant="outline" size="sm" onClick={() => setBulkInviteOpen(true)}>
+                <UploadCloud className="mr-1.5 h-4 w-4" />
+                {t.btn_bulk_invite ?? "Bulk Invite"}
+              </Button>
+              <Button size="sm" onClick={() => setInviteOpen(true)}>
+                <UserPlus className="mr-1.5 h-4 w-4" />
+                {t.btn_invite ?? "Invite Member"}
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Search box + column visibility, pinned to the container's edges */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="relative max-w-sm flex-1">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by name, email, phone, or role…"
+            className="pl-8 pr-8"
+          />
+          {isSearching && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              aria-label="Clear search"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm">
+              <Columns3 className="mr-1.5 h-4 w-4" />
+              Columns
+              {visibleColumnCount < TOGGLEABLE_COLUMNS.length && (
+                <Badge variant="secondary" className="ml-1.5 h-5 px-1.5">
+                  {visibleColumnCount}/{TOGGLEABLE_COLUMNS.length}
+                </Badge>
+              )}
             </Button>
-            <Button size="sm" onClick={() => setInviteOpen(true)}>
-              <UserPlus className="mr-1.5 h-4 w-4" />
-              {t.btn_invite ?? "Invite Member"}
-            </Button>
-          </div>
-        )}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {TOGGLEABLE_COLUMNS.map((col) => (
+              <DropdownMenuCheckboxItem
+                key={col.key}
+                checked={visibleColumns[col.key]}
+                onCheckedChange={() => toggleColumn(col.key)}
+                onSelect={(e) => e.preventDefault()}
+              >
+                {col.label}
+              </DropdownMenuCheckboxItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Bulk action bar */}
@@ -165,7 +275,7 @@ export default function FpoTeamPage() {
       )}
 
       {/* Table */}
-      <div className="rounded-lg border">
+      <div className="rounded-lg border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -175,11 +285,11 @@ export default function FpoTeamPage() {
                 </TableHead>
               )}
               <TableHead>{t.col_name ?? "Name"}</TableHead>
-              <TableHead className="hidden sm:table-cell">{t.col_email ?? "Email"}</TableHead>
-              <TableHead className="hidden md:table-cell">{t.col_phone ?? "Phone"}</TableHead>
-              <TableHead className="hidden md:table-cell">{t.col_role ?? "Role"}</TableHead>
+              {visibleColumns.email && <TableHead>{t.col_email ?? "Email"}</TableHead>}
+              {visibleColumns.phone && <TableHead>{t.col_phone ?? "Phone"}</TableHead>}
+              {visibleColumns.role && <TableHead>{t.col_role ?? "Role"}</TableHead>}
               <TableHead>{t.col_status ?? "Status"}</TableHead>
-              <TableHead className="hidden lg:table-cell">{t.col_joined ?? "Joined"}</TableHead>
+              {visibleColumns.joined && <TableHead>{t.col_joined ?? "Joined"}</TableHead>}
               {isPrimary && <TableHead className="w-28 text-right">Action</TableHead>}
             </TableRow>
           </TableHeader>
@@ -196,33 +306,50 @@ export default function FpoTeamPage() {
                   <TableCell>
                     <Skeleton className="h-4 w-32" />
                   </TableCell>
-                  <TableCell className="hidden sm:table-cell">
-                    <Skeleton className="h-4 w-40" />
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    <Skeleton className="h-4 w-24" />
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    <Skeleton className="h-4 w-20" />
-                  </TableCell>
+                  {visibleColumns.email && (
+                    <TableCell>
+                      <Skeleton className="h-4 w-40" />
+                    </TableCell>
+                  )}
+                  {visibleColumns.phone && (
+                    <TableCell>
+                      <Skeleton className="h-4 w-24" />
+                    </TableCell>
+                  )}
+                  {visibleColumns.role && (
+                    <TableCell>
+                      <Skeleton className="h-4 w-20" />
+                    </TableCell>
+                  )}
                   <TableCell>
                     <Skeleton className="h-5 w-16 rounded-full" />
                   </TableCell>
-                  <TableCell className="hidden lg:table-cell">
-                    <Skeleton className="h-4 w-24" />
-                  </TableCell>
+                  {visibleColumns.joined && (
+                    <TableCell>
+                      <Skeleton className="h-4 w-24" />
+                    </TableCell>
+                  )}
                   {isPrimary && <TableCell />}
                 </TableRow>
               ))
-            ) : members.length === 0 ? (
+            ) : filteredMembers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={isPrimary ? 8 : 6} className="py-12 text-center text-muted-foreground text-sm">
-                  {t.empty_state ?? "No team members yet."}
-                  {isPrimary && ` ${t.empty_state_description ?? 'Use "Invite Member" to add someone.'}`}
+                <TableCell
+                  colSpan={2 + visibleColumnCount + (isPrimary ? 2 : 0)}
+                  className="py-12 text-center text-muted-foreground text-sm"
+                >
+                  {isSearching ? (
+                    "No members match your search."
+                  ) : (
+                    <>
+                      {t.empty_state ?? "No team members yet."}
+                      {isPrimary && ` ${t.empty_state_description ?? 'Use "Invite Member" to add someone.'}`}
+                    </>
+                  )}
                 </TableCell>
               </TableRow>
             ) : (
-              members.map((member) => (
+              filteredMembers.map((member) => (
                 <TableRow key={member.id} className={selected.has(member.id) ? "bg-muted/40" : ""}>
                   {isPrimary && (
                     <TableCell>
@@ -239,11 +366,17 @@ export default function FpoTeamPage() {
                       {member.role.replace(/_/g, " ")}
                     </div>
                   </TableCell>
-                  <TableCell className="hidden text-muted-foreground sm:table-cell">{member.email}</TableCell>
-                  <TableCell className="hidden text-muted-foreground md:table-cell">{member.phone || "—"}</TableCell>
-                  <TableCell className="hidden capitalize text-muted-foreground md:table-cell">
-                    {member.role.replace(/_/g, " ")}
-                  </TableCell>
+                  {visibleColumns.email && (
+                    <TableCell className="text-muted-foreground">{member.email}</TableCell>
+                  )}
+                  {visibleColumns.phone && (
+                    <TableCell className="text-muted-foreground">{member.phone || "—"}</TableCell>
+                  )}
+                  {visibleColumns.role && (
+                    <TableCell className="capitalize text-muted-foreground">
+                      {member.role.replace(/_/g, " ")}
+                    </TableCell>
+                  )}
                   <TableCell>
                     <Badge
                       variant="secondary"
@@ -256,9 +389,9 @@ export default function FpoTeamPage() {
                       {member.is_active ? (t.badge_active ?? "Active") : (t.badge_inactive ?? "Inactive")}
                     </Badge>
                   </TableCell>
-                  <TableCell className="hidden text-muted-foreground lg:table-cell">
-                    {formatDate(member.joined_at)}
-                  </TableCell>
+                  {visibleColumns.joined && (
+                    <TableCell className="text-muted-foreground">{formatDate(member.joined_at)}</TableCell>
+                  )}
                   {isPrimary && (
                     <TableCell className="text-right">
                       <RowActions

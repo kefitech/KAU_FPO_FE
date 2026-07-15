@@ -18,6 +18,7 @@ const WhyChoose = () => {
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: refetch intentionally triggered on locale change
   useEffect(() => {
+    if(!locale) return;
     faqApi
       .getAll({ page: 1, page_size: 3 })
       .then((res) => {

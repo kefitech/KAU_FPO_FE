@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { useQuery } from "@tanstack/react-query";
-import { ExternalLink, Search } from "lucide-react";
+import { ExternalLink, Search, X } from "lucide-react";
 
 import { schemesApi } from "@/lib/api/schemes";
 import { translationsApi } from "@/lib/api/translations";
@@ -137,6 +137,15 @@ export default function FpoSchemesPage() {
       .catch(() => undefined);
   }, [locale]);
 
+  // Debounce searchInput -> search, so the query re-fires automatically as
+  // the user types (after a short pause) instead of needing a submit button.
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      setSearch(searchInput);
+    }, 400);
+    return () => clearTimeout(handle);
+  }, [searchInput]);
+
   const { data: schemes, isLoading } = useQuery({
     queryKey: ["fpo-schemes", activeCategory, search],
     queryFn: () =>
@@ -146,11 +155,6 @@ export default function FpoSchemesPage() {
       }),
     staleTime: 5 * 60 * 1000,
   });
-
-  function handleSearch(e: React.FormEvent) {
-    e.preventDefault();
-    setSearch(searchInput);
-  }
 
   const sheetActions = selectedScheme?.official_link
     ? [{ label: t.btn_visit ?? "Visit Website", icon: ExternalLink, variant: "outline" as const, onClick: () => window.open(selectedScheme.official_link, "_blank") }]
@@ -167,39 +171,48 @@ export default function FpoSchemesPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap gap-2">
-          {SCHEME_CATEGORIES.map((cat) => (
-            <button
-              key={cat.value}
-              type="button"
-              onClick={() => setActiveCategory(cat.value)}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors border ${
-                activeCategory === cat.value
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-background text-muted-foreground border-border hover:bg-muted hover:text-foreground"
-              }`}
-            >
-              {cat.label}
-            </button>
-          ))}
-        </div>
 
-        <form onSubmit={handleSearch} className="flex items-center gap-2 w-full sm:w-64">
-          <div className="relative flex-1">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap gap-2">
+            {SCHEME_CATEGORIES.map((cat) => (
+              <button
+                key={cat.value}
+                type="button"
+                onClick={() => setActiveCategory(cat.value)}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors border ${
+                  activeCategory === cat.value
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background text-muted-foreground border-border hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="relative w-full sm:w-64">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
-              className="pl-8 h-8 text-sm"
+              className="pl-8 pr-8 h-8 text-sm"
               placeholder={t.search_placeholder ?? "Search schemes…"}
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
             />
+            {searchInput && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchInput("");
+                  setSearch("");
+                }}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label="Clear search"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
-          <Button type="submit" size="sm" variant="outline" className="h-8">
-            {t.btn_search ?? "Search"}
-          </Button>
-        </form>
-      </div>
+        </div>
 
       {/* Scheme Grid */}
       {isLoading ? (

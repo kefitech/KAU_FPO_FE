@@ -34,6 +34,7 @@ const NewsWidget = () => {
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: refetch intentionally triggered on locale change
   useEffect(() => {
+    if(!locale) return;
     publicFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/public/announcements/?page_size=4`)
       .then((r) => r.json())
       .then((json) => {

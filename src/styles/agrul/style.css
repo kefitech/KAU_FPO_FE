@@ -5487,6 +5487,41 @@ ul.counter-list li:nth-child(2) {
 	transform: rotate(45deg);
 }
 
+.team-swiper-prev,
+.team-swiper-next {
+  width: 44px;
+  height: 44px;
+  border-radius:50%;
+  border: 2px solid var(--color-primary);
+  color: var(--color-primary);
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  top: 100px !important; /* half of the 200px image height */
+  transform: translateY(0%) !important;
+}
+.team-swiper-prev::after,
+.team-swiper-next::after {
+  font-size: 16px; /* shrink default arrow icon */
+}
+
+
+.navigation-circle {
+  padding: 0 50px; /* reserves 50px on each side for the 44px arrow + margin */
+}
+
+@media (min-width: 992px) and (max-width: 1249px) {
+  .navigation-circle {
+    padding: 0 40px; /* tighter, tune to taste */
+  }
+  .team-swiper-prev {
+    left: -4px !important;
+  }
+  .team-swiper-next {
+    right: -4px !important;
+  }
+}
+
+
 .personal-info ul li {
 	border-top: 1px solid #e7e7e7;
 	padding: 10px 0;

@@ -986,16 +986,16 @@ function ApplicationDetailContent() {
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
+          {/* <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
             <Pencil className="mr-1.5 h-4 w-4" />
             Edit Details
-          </Button>
-          {(app.status === "approved" || app.status === "info_required") && (
+          </Button> */}
+          {/* {(app.status === "approved" || app.status === "info_required") && (
             <Button size="sm" variant="outline" onClick={() => setRequestInfoOpen(true)}>
               <AlertCircle className="mr-1.5 h-4 w-4" />
               {t.btn_request_info ?? "Request Info"}
             </Button>
-          )}
+          )} */}
           {app.status === "approved" && (
             <Button size="sm" variant="destructive" onClick={() => setRejectOpen(true)}>
               <XCircle className="mr-1.5 h-4 w-4" />

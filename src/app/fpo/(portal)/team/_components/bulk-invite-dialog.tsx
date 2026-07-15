@@ -338,7 +338,7 @@ export function BulkInviteDialog({ open, onOpenChange }: BulkInviteDialogProps) 
               {failedInvites.length} invite{failedInvites.length > 1 ? "s" : ""} could not be sent:
             </p>
 
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 max-h-[280px] overflow-y-auto pr-1">
               {failedInvites.map((f) => (
                 <div key={f.row} className="rounded-lg border bg-destructive/5 px-3 py-2 text-sm">
                   <p className="font-medium">{f.email}</p>
