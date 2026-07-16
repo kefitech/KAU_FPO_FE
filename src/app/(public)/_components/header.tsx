@@ -7,7 +7,7 @@ import { LocaleSwitcher } from "@/components/layout/locale-switcher";
 import useSidebarMenu from "../_hooks/useSidebarMenu";
 import useStickyMenu from "../_hooks/useStickyMenu";
 import useSubMenuToggle from "../_hooks/useSubMenuToggle";
-import HeaderTop from "./header-top";
+import HeaderTop, { LangToggle } from "./header-top";
 import MainMenu from "./main-menu";
 
 const Header = () => {
@@ -27,6 +27,7 @@ const Header = () => {
               <button type="button" className="navbar-toggle" onClick={openMenu}>
                 <i className="fa fa-bars" />
               </button>
+              <LocaleSwitcher />
               <Link className="navbar-brand" href="/">
                 <div className="navbar-logos">
                   <img src="/assets/img/logo.png" className="logo" alt="Logo" />

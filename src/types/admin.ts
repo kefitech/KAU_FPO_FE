@@ -306,7 +306,11 @@ export function getObjectInfoDisplay(object_info: AuditLog["object_info"]): stri
 export function getChangesDisplay(changes: AuditLog["changes"]): string {
   if (!changes) return "—";
   if (typeof changes === "string") return changes || "—";
-  try { return JSON.stringify(changes, null, 2); } catch { return "—"; }
+  try {
+    return JSON.stringify(changes, null, 2);
+  } catch {
+    return "—";
+  }
 }
 
 // ─── Notification Inbox ───────────────────────────────────────────────────────
@@ -420,7 +424,7 @@ export interface AdminScheme {
   benefit_details: string;
   application_process: string;
   official_link: string;
-  last_updated: string | null;
+  updated_at: string | null;
   is_active: boolean;
   order: number;
 }

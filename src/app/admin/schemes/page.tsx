@@ -8,8 +8,8 @@ import { ExternalLink, Pencil, Plus } from "lucide-react";
 
 import { adminSchemesApi } from "@/app/admin/_api/schemes";
 import { DataTable } from "@/components/data-table";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ViewSheet } from "@/components/ui/view-sheet";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
@@ -124,8 +124,14 @@ export default function SchemesPage() {
               ),
             },
             { label: "Administering Body", value: s.administering_body },
-            { label: "Status", type: "status", active: s.is_active, activeLabel: tCommon.badge_active ?? "Active", inactiveLabel: tCommon.badge_inactive ?? "Inactive" },
-            { label: "Last Updated", type: "date", value: s.last_updated },
+            {
+              label: "Status",
+              type: "status",
+              active: s.is_active,
+              activeLabel: tCommon.badge_active ?? "Active",
+              inactiveLabel: tCommon.badge_inactive ?? "Inactive",
+            },
+            { label: "Last Updated", type: "date", value: s.updated_at },
             ...(s.objective ? [{ label: "Objective", value: s.objective }] : []),
             { type: "section" as const, label: "Details" },
             { label: "Eligibility", value: s.eligibility },
