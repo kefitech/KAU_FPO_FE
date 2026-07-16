@@ -27,7 +27,6 @@ const Header = () => {
               <button type="button" className="navbar-toggle" onClick={openMenu}>
                 <i className="fa fa-bars" />
               </button>
-              <LocaleSwitcher />
               <Link className="navbar-brand" href="/">
                 <div className="navbar-logos">
                   <img src="/assets/img/logo.png" className="logo" alt="Logo" />
