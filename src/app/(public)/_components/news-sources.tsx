@@ -92,6 +92,7 @@ const NewsSourcesStrip = () => {
   const locale = useLocaleStore((s) => s.locale);
 
   useEffect(() => {
+    if(!locale) return;
     publicFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/public/news-sources/`)
       .then((r) => r.json())
       .then((json) => {
@@ -101,7 +102,7 @@ const NewsSourcesStrip = () => {
       })
       .catch(() => setSources([]))
       .finally(() => setLoading(false));
-  }, []);
+  }, [locale]);
 
   if (!loading && sources.length === 0) return null;
 

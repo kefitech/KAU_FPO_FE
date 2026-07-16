@@ -5,7 +5,7 @@ import { siteContentApi } from "@/lib/api/site-content";
 
 interface Lang { code: string; native_name: string; is_default: boolean; is_rtl: boolean }
 
-function LangToggle() {
+export function LangToggle() {
   const locale = useLocaleStore((s) => s.locale);
   const setLocale = useLocaleStore((s) => s.setLocale);
   const setDefaultLocale = useLocaleStore((s) => s.setDefaultLocale);

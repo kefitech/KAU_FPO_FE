@@ -41,7 +41,7 @@ const schema = z.object({
   category: z.string().min(1, { message: "Category is required" }),
   district: z.string().optional(),
   email: z.string().email({ message: "Valid email is required" }),
-  phone: z.string().optional(),
+  phone: z.string().regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit mobile number").optional().or(z.literal("")),
   is_active: z.boolean().optional(),
 });
 
@@ -265,7 +265,7 @@ export function ExpertForm({ mode, expert, t = {}, tCommon = {} }: ExpertFormPro
                       control={control}
                       name="email"
                       render={({ field }) => (
-                        <Input id="email" type="email" placeholder="expert@kau.in" {...field} />
+                        <Input id="email" type="email" placeholder="eg: expert@kau.in" {...field} />
                       )}
                     />
                     {errors.email && <FieldError errors={[errors.email]} />}
@@ -281,7 +281,7 @@ export function ExpertForm({ mode, expert, t = {}, tCommon = {} }: ExpertFormPro
                           id="phone" 
                           type="tel"
                           maxLength={10}
-                          placeholder="+91 98765 43210"
+                          placeholder="eg: 9876543210"
                           {...field}
                           onChange={(e) => {
                             const value = e.target.value.replace(/\D/g, ''); // Remove non-digits
@@ -290,6 +290,7 @@ export function ExpertForm({ mode, expert, t = {}, tCommon = {} }: ExpertFormPro
                         />
                       )}
                     />
+                    {errors.phone && <FieldError errors={[errors.phone]} />}
                   </Field>
                 </div>
 

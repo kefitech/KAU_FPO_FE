@@ -437,7 +437,7 @@ function tierBadgeClass(tier: string) {
 }
 
 const assignTierSchema = z.object({
-  tier: z.string().min(1),
+  tier: z.string().min(1, {message:"Please select a tier"}),
   financial_year: z
     .string()
     .min(1, "Financial year is required")

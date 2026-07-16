@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import Link from "next/link";
-
+import { useLocaleStore } from "@/stores/locale-store";
 import DOMPurify from "isomorphic-dompurify";
 
 import AgrulLayout from "../_components/agrul-layout";
@@ -241,14 +241,16 @@ export default function NewsAndEvents() {
   const [activeTab, setActiveTab] = useState<TabKey>("announcement");
   const [currentPage, setCurrentPage] = useState(1);
   const [selected, setSelected] = useState<Announcement | null>(null);
+  const locale = useLocaleStore((s) => s.locale);
 
   useEffect(() => {
+    if(!locale) return;
     publicFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/public/announcements/?page_size=100`)
       .then((r) => r.json())
       .then((json) => setItems((json.data as Announcement[]) ?? []))
       .catch(() => setItems([]))
       .finally(() => setLoading(false));
-  }, []);
+  }, [locale]);
 
   const totalPages = Math.max(1, Math.ceil(items.length / ITEMS_PER_PAGE));
   const start = (currentPage - 1) * ITEMS_PER_PAGE;

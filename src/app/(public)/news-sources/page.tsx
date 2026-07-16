@@ -73,6 +73,7 @@ export default function NewsSourcesPage() {
   const locale = useLocaleStore((s) => s.locale);
 
   useEffect(() => {
+    if(!locale) return;
     publicFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/public/news-sources/`)
       .then((r) => r.json())
       .then((json) => setData(json.data as NewsSourcesData))

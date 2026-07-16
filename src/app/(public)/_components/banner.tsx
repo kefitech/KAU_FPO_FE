@@ -5,7 +5,7 @@ import { bannerData } from "../_data/banner";
 
 const Banner = () => {
   return (
-    <div className="banner-area navigation-circle text-light banner-style-one zoom-effect overflow-hidden">
+    <div className="banner-area  text-light banner-style-one zoom-effect overflow-hidden">
       <Swiper
         className="banner-fade"
         direction="horizontal"
