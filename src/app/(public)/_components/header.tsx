@@ -1,12 +1,14 @@
 "use client";
+
 import Link from "next/link";
+
+import { LocaleSwitcher } from "@/components/layout/locale-switcher";
+
 import useSidebarMenu from "../_hooks/useSidebarMenu";
 import useStickyMenu from "../_hooks/useStickyMenu";
 import useSubMenuToggle from "../_hooks/useSubMenuToggle";
 import HeaderTop from "./header-top";
 import MainMenu from "./main-menu";
-import { LangToggle } from "./header-top";
-
 
 const Header = () => {
   const toggleSubMenu = useSubMenuToggle();
@@ -17,24 +19,27 @@ const Header = () => {
     <>
       <HeaderTop />
       <header>
-        <nav className={`navbar mobile-sidenav inc-shape navbar-common navbar-sticky navbar-default validnavs ${isMenuSticky ? "sticked" : ""}`}>
-            <div className="container d-flex align-items-center gap-3 navbar-container-fix">
-              
-              <div className="navbar-header">
-                <button type="button" className="navbar-toggle" onClick={openMenu}>
-                  <i className="fa fa-bars" />
-                </button>
-                <Link className="navbar-brand" href="/">
-                  <div className="navbar-logos">
-                    <img src="/assets/img/logo.png" className="logo" alt="Logo" />
-                    <img src="/assets/img/SHM_MIDH.png" className="logo logo-secondary" alt="SHM MIDH Logo" />
-                  </div>
-                </Link>
-                
-              </div>
+        <nav
+          className={`navbar mobile-sidenav inc-shape navbar-common navbar-sticky navbar-default validnavs ${isMenuSticky ? "sticked" : ""}`}
+        >
+          <div className="container d-flex align-items-center gap-3 navbar-container-fix">
+            <div className="navbar-header">
+              <button type="button" className="navbar-toggle" onClick={openMenu}>
+                <i className="fa fa-bars" />
+              </button>
+              <Link className="navbar-brand" href="/">
+                <div className="navbar-logos">
+                  <img src="/assets/img/logo.png" className="logo" alt="Logo" />
+                  <img src="/assets/img/SHM_MIDH.png" className="logo logo-secondary" alt="SHM MIDH Logo" />
+                </div>
+              </Link>
+            </div>
 
             <div className="main-nav-content">
-              <div id="navbar-menu" className={`collapse navbar-collapse ${isOpen ? "show collapse-mobile" : "collapse-mobile"}`}>
+              <div
+                id="navbar-menu"
+                className={`collapse navbar-collapse ${isOpen ? "show collapse-mobile" : "collapse-mobile"}`}
+              >
                 <img src="/assets/img/logo.png" alt="Logo" />
                 <button type="button" className="navbar-toggle" onClick={closeMenu}>
                   <i className="fa fa-times" />
@@ -42,14 +47,26 @@ const Header = () => {
                 <MainMenu navbarPlacement="navbar-right" toggleSubMenu={toggleSubMenu} />
                 <div className="sidebar-info">
                   <ul>
-                    <li><i className="fas fa-map-marker-alt" /> Kerala Agriculture University, Mannuthy</li>
-                    <li><i className="fas fa-phone-alt" /> +4733378901</li>
+                    <li>
+                      <i className="fas fa-map-marker-alt" /> Kerala Agriculture University, Mannuthy
+                    </li>
+                    <li>
+                      <i className="fas fa-phone-alt" /> +4733378901
+                    </li>
                   </ul>
                   <div className="sidebar-social">
-                    <a href="https://www.facebook.com/" target="_blank" rel="noopener noreferrer"><i className="fab fa-facebook-f" /></a>
-                    <a href="https://www.x.com/" target="_blank" rel="noopener noreferrer"><i className="fab fa-twitter" /></a>
-                    <a href="https://www.youtube.com/" target="_blank" rel="noopener noreferrer"><i className="fab fa-youtube" /></a>
-                    <a href="https://www.linkedin.com/" target="_blank" rel="noopener noreferrer"><i className="fab fa-linkedin-in" /></a>
+                    <a href="https://www.facebook.com/" target="_blank" rel="noopener noreferrer">
+                      <i className="fab fa-facebook-f" />
+                    </a>
+                    <a href="https://www.x.com/" target="_blank" rel="noopener noreferrer">
+                      <i className="fab fa-twitter" />
+                    </a>
+                    <a href="https://www.youtube.com/" target="_blank" rel="noopener noreferrer">
+                      <i className="fab fa-youtube" />
+                    </a>
+                    <a href="https://www.linkedin.com/" target="_blank" rel="noopener noreferrer">
+                      <i className="fab fa-linkedin-in" />
+                    </a>
                   </div>
                 </div>
               </div>
