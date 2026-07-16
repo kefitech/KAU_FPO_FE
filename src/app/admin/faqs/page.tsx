@@ -87,7 +87,10 @@ export default function FaqsPage() {
             {t.page_description ?? "Manage frequently asked questions shown on the landing page."}
           </p>
         </div>
-        <Button className="self-start sm:self-auto bg-green-600 hover:bg-green-700" onClick={() => router.push("/admin/faqs/new")}>
+        <Button
+          className="self-start sm:self-auto bg-green-600 hover:bg-green-700"
+          onClick={() => router.push("/admin/faqs/new")}
+        >
           <Plus className="mr-2 h-4 w-4" />
           {t.btn_add ?? "Add FAQ"}
         </Button>
@@ -133,7 +136,7 @@ export default function FaqsPage() {
               type: "node",
               node: (
                 <Badge variant="secondary" className="text-xs font-medium">
-                  {sheet.item.category_display}
+                  {sheet.item.category}
                 </Badge>
               ),
             },

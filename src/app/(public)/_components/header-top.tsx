@@ -1,22 +1,33 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useLocaleStore } from "@/stores/locale-store";
+
 import { siteContentApi } from "@/lib/api/site-content";
+import { useLocaleStore } from "@/stores/locale-store";
 
-interface Lang { code: string; native_name: string; is_default: boolean; is_rtl: boolean }
+interface Lang {
+  code: string;
+  native_name: string;
+  is_default: boolean;
+  is_rtl: boolean;
+}
 
-export function LangToggle() {
+export function LangToggle({ variant }: { variant?: "dark" }) {
   const locale = useLocaleStore((s) => s.locale);
   const setLocale = useLocaleStore((s) => s.setLocale);
   const setDefaultLocale = useLocaleStore((s) => s.setDefaultLocale);
   const [langs, setLangs] = useState<Lang[]>([]);
 
   useEffect(() => {
-    siteContentApi.getLanguages().then((data) => {
-      setLangs(data);
-      const def = data.find((l) => l.is_default) ?? data[0];
-      if (def) setDefaultLocale(def.code, def.is_rtl);
-    }).catch(() => {});
+    siteContentApi
+      .getLanguages()
+      .then((data) => {
+        setLangs(data);
+        const def = data.find((l) => l.is_default) ?? data[0];
+        if (def) setDefaultLocale(def.code, def.is_rtl);
+      })
+      .catch(() => {
+        // Intentionally ignore the error
+      });
   }, [setDefaultLocale]);
 
   useEffect(() => {
@@ -26,29 +37,22 @@ export function LangToggle() {
   if (langs.length <= 1) return null;
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-      <i className="fas fa-globe" style={{ color: "rgba(255,255,255,0.8)", fontSize: 12 }} />
+    <div className="langToggle-wrapper">
+      <i className={`fas fa-globe langToggle-icon ${variant === "dark" ? "langToggle-icon--dark" : ""}`} />
       <select
         value={locale}
         onChange={(e) => {
           const lang = langs.find((l) => l.code === e.target.value);
           setLocale(e.target.value, lang?.is_rtl ?? false);
         }}
-        style={{
-          background: "rgba(255,255,255,0.12)",
-          border: "1px solid rgba(255,255,255,0.25)",
-          borderRadius: 4,
-          color: "#fff",
-          fontSize: 12,
-          fontWeight: 600,
-          padding: "2px 6px",
-          cursor: "pointer",
-          outline: "none",
-          appearance: "auto",
-        }}
+        className={variant === "dark" ? "langToggle-select langToggle-select--dark" : "langToggle-select"}
       >
         {langs.map((l) => (
-          <option key={l.code} value={l.code} style={{ background: "#1a3c34", color: "#fff" }}>
+          <option
+            key={l.code}
+            value={l.code}
+            className={variant === "dark" ? "langToggle-option langToggle-option--dark" : "langToggle-option"}
+          >
             {l.native_name}
           </option>
         ))}
@@ -66,8 +70,12 @@ const HeaderTop = () => {
             <div className="flex-item left">
               <p>Smart &amp; Empovered Farmers</p>
               <ul>
-                <li><i className="fas fa-map-marker-alt" /> Kerala Agricultural University Mannuthy.</li>
-                <li><i className="fas fa-phone-alt" /> +4733378901</li>
+                <li>
+                  <i className="fas fa-map-marker-alt" /> Kerala Agricultural University Mannuthy.
+                </li>
+                <li>
+                  <i className="fas fa-phone-alt" /> +4733378901
+                </li>
               </ul>
             </div>
           </div>
@@ -76,10 +84,26 @@ const HeaderTop = () => {
               <LangToggle />
               <div className="social">
                 <ul>
-                  <li><a href="https://www.facebook.com/" target="_blank" rel="noopener noreferrer"><i className="fab fa-facebook-f" /></a></li>
-                  <li><a href="https://www.x.com/" target="_blank" rel="noopener noreferrer"><i className="fab fa-twitter" /></a></li>
-                  <li><a href="https://www.youtube.com/" target="_blank" rel="noopener noreferrer"><i className="fab fa-youtube" /></a></li>
-                  <li><a href="https://www.linkedin.com/" target="_blank" rel="noopener noreferrer"><i className="fab fa-linkedin-in" /></a></li>
+                  <li>
+                    <a href="https://www.facebook.com/" target="_blank" rel="noopener noreferrer">
+                      <i className="fab fa-facebook-f" />
+                    </a>
+                  </li>
+                  <li>
+                    <a href="https://www.x.com/" target="_blank" rel="noopener noreferrer">
+                      <i className="fab fa-twitter" />
+                    </a>
+                  </li>
+                  <li>
+                    <a href="https://www.youtube.com/" target="_blank" rel="noopener noreferrer">
+                      <i className="fab fa-youtube" />
+                    </a>
+                  </li>
+                  <li>
+                    <a href="https://www.linkedin.com/" target="_blank" rel="noopener noreferrer">
+                      <i className="fab fa-linkedin-in" />
+                    </a>
+                  </li>
                 </ul>
               </div>
             </div>

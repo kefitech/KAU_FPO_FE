@@ -2,8 +2,6 @@
 
 import Link from "next/link";
 
-import { LocaleSwitcher } from "@/components/layout/locale-switcher";
-
 import useSidebarMenu from "../_hooks/useSidebarMenu";
 import useStickyMenu from "../_hooks/useStickyMenu";
 import useSubMenuToggle from "../_hooks/useSubMenuToggle";
@@ -27,6 +25,7 @@ const Header = () => {
               <button type="button" className="navbar-toggle" onClick={openMenu}>
                 <i className="fa fa-bars" />
               </button>
+
               <Link className="navbar-brand" href="/">
                 <div className="navbar-logos">
                   <img src="/assets/img/logo.png" className="logo" alt="Logo" />
@@ -40,10 +39,17 @@ const Header = () => {
                 id="navbar-menu"
                 className={`collapse navbar-collapse ${isOpen ? "show collapse-mobile" : "collapse-mobile"}`}
               >
-                <img src="/assets/img/logo.png" alt="Logo" />
-                <button type="button" className="navbar-toggle" onClick={closeMenu}>
-                  <i className="fa fa-times" />
-                </button>
+                <div className="mobile-menu-top-row">
+                  <img src="/assets/img/logo.png" alt="Logo" />
+                  <div className="mobile-menu-top-right">
+                    <div className="d-lg-none">
+                      <LangToggle variant="dark" />
+                    </div>
+                    <button type="button" className="navbar-toggle" onClick={closeMenu}>
+                      <i className="fa fa-times" />
+                    </button>
+                  </div>
+                </div>
                 <MainMenu navbarPlacement="navbar-right" toggleSubMenu={toggleSubMenu} />
                 <div className="sidebar-info">
                   <ul>
