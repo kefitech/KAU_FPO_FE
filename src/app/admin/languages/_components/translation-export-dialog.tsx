@@ -77,7 +77,7 @@ export function TranslationExportDialog({ open, onClose, t, tCommon }: Translati
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-sm" aria-describedby={undefined}>
+      <DialogContent className="sm:max-w-sm" aria-describedby={undefined} onOpenAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>{t.title ?? "Export Translation Template"}</DialogTitle>
         </DialogHeader>

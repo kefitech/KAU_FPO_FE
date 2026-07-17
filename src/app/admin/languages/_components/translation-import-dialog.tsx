@@ -126,7 +126,7 @@ export function TranslationImportDialog({ open, onClose, t, tCommon }: Translati
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md" aria-describedby={undefined}>
+      <DialogContent className="sm:max-w-md" aria-describedby={undefined} onOpenAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>{t.title ?? "Import Translations"}</DialogTitle>
         </DialogHeader>
@@ -217,7 +217,7 @@ export function TranslationImportDialog({ open, onClose, t, tCommon }: Translati
             <p className="font-semibold text-muted-foreground text-xs uppercase tracking-wide">
               Step 3 — Upload Filled File
             </p>
-
+            {/*biome-ignore lint/a11y/useSemanticElements: dropzone needs div for drag-and-drop events */}
             <div
               role="button"
               tabIndex={0}
@@ -228,7 +228,9 @@ export function TranslationImportDialog({ open, onClose, t, tCommon }: Translati
               onDragLeave={() => setDragOver(false)}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
-              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") fileInputRef.current?.click(); }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") fileInputRef.current?.click();
+              }}
               className={`flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 transition-colors ${
                 dragOver
                   ? "border-primary bg-primary/5"
