@@ -483,7 +483,7 @@ function TwoFactorSection() {
               <label className="font-medium text-sm" htmlFor="disable-totp">
                 Enter your 6-digit authenticator code
               </label>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap items-center justify-center gap-2">
                 <input
                   id="disable-totp"
                   type="text"
@@ -494,24 +494,26 @@ function TwoFactorSection() {
                   placeholder="000000"
                   className="h-10 w-36 rounded-md border bg-background px-3 text-center font-mono text-lg tracking-[0.4em] shadow-xs focus:outline-none focus:ring-1 focus:ring-ring"
                 />
-                <Button
-                  variant="destructive"
-                  onClick={() => disableMutation.mutate({ code: disableCode })}
-                  disabled={disableCode.length < 6 || disableMutation.isPending}
-                >
-                  {disableMutation.isPending ? "Disabling..." : "Confirm Disable"}
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    setDisableStep("idle");
-                    setDisableCode("");
-                    setDisableMode("totp");
-                    setOtpSent(false);
-                  }}
-                >
-                  Cancel
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="destructive"
+                    onClick={() => disableMutation.mutate({ code: disableCode })}
+                    disabled={disableCode.length < 6 || disableMutation.isPending}
+                  >
+                    {disableMutation.isPending ? "Disabling..." : "Confirm Disable"}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setDisableStep("idle");
+                      setDisableCode("");
+                      setDisableMode("totp");
+                      setOtpSent(false);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
               </div>
               <button
                 type="button"
