@@ -351,11 +351,11 @@ export default function LanguagesPage() {
                   icon: Pencil,
                   onClick: () => router.push(`/admin/languages/${langView.row?.id}/edit`),
                 },
-                {
-                  label: tPage.add_translation_btn ?? "Add Translation",
-                  icon: Plus,
-                  onClick: () => router.push(`/admin/translations/new?language=${langView.row?.id}`),
-                },
+                // {
+                //   label: tPage.add_translation_btn ?? "Add Translation",
+                //   icon: Plus,
+                //   onClick: () => router.push(`/admin/translations/new?language=${langView.row?.id}`),
+                // },
               ]
             : []
         }
@@ -402,11 +402,11 @@ export default function LanguagesPage() {
                   icon: Pencil,
                   onClick: () => router.push(`/admin/categories/${catView.row?.id}/edit`),
                 },
-                {
-                  label: tPage.add_translation_btn ?? "Add Translation",
-                  icon: Plus,
-                  onClick: () => router.push(`/admin/translations/new?category=${catView.row?.id}`),
-                },
+                // {
+                //   label: tPage.add_translation_btn ?? "Add Translation",
+                //   icon: Plus,
+                //   onClick: () => router.push(`/admin/translations/new?category=${catView.row?.id}`),
+                // },
               ]
             : []
         }
