@@ -228,7 +228,7 @@ function GalleryDialog({
               <label className="text-sm font-medium">Caption <span className="text-muted-foreground text-xs">(optional)</span></label>
               {!langsLoading && languages.length > 1 && (
                 <Select value={activeLang} onValueChange={setActiveLang}>
-                  <SelectTrigger className="h-8 w-36 text-sm">
+                  <SelectTrigger className="h-8 w-44 text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

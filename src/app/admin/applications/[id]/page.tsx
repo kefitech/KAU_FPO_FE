@@ -103,17 +103,22 @@ function InfoRow({ label, value }: { label: string; value?: string | number | nu
 function SectionCard({
   icon: Icon,
   title,
+  headerAction,
   children,
 }: {
   icon: React.ElementType;
   title: string;
+  headerAction?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-4 rounded-lg border bg-card p-5">
-      <div className="flex items-center gap-2">
-        <Icon className="h-4 w-4 text-muted-foreground" />
-        <h3 className="font-semibold text-sm">{title}</h3>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Icon className="h-4 w-4 text-muted-foreground" />
+          <h3 className="font-semibold text-sm">{title}</h3>
+        </div>
+        {headerAction}
       </div>
       {children}
     </div>
@@ -801,53 +806,62 @@ function AuditLogTab({ fpoId }: { fpoId: number }) {
       </div>
     );
 
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-end">
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => refetch()} disabled={isFetching}>
-          <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
-        </Button>
-      </div>
-
+      return (
+      <SectionCard
+        icon={Clock}
+        title="Audit Log"
+        headerAction={
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => refetch()} disabled={isFetching}>
+            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
+          </Button>
+        }
+      >
+      {/* Log list block */}
       {logs.length === 0 ? (
         <p className="text-muted-foreground text-sm py-4 text-center">No audit events found for this FPO.</p>
       ) : (
-        <div className={`flex flex-col divide-y transition-opacity ${isFetching ? "opacity-50" : ""}`}>
-          {logs.map((log: AuditLog) => (
-            <div key={log.id} className="flex items-start gap-4 py-3">
-              <span className="text-muted-foreground text-xs whitespace-nowrap pt-0.5 w-36 shrink-0">
-                {new Date(log.created_at).toLocaleString("en-IN", {
-                  day: "2-digit",
-                  month: "short",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </span>
-              <Badge variant="secondary" className="text-[11px] shrink-0">
-                {log.action_display || log.action}
-              </Badge>
-              <div className="min-w-0 flex flex-col gap-0.5">
-                <span className="text-sm font-medium">{getPerformedByName(log.performed_by)}</span>
-                {log.object_info != null && (
-                  <span className="text-muted-foreground text-xs truncate">
-                    {getObjectInfoDisplay(log.object_info)}
+          <div className="w-full overflow-x-auto">
+            <div className={`flex flex-col divide-y transition-opacity min-w-max sm:min-w-0 ${isFetching ? "opacity-50" : ""}`}>
+              {logs.map((log: AuditLog) => (
+                <div key={log.id} className="flex items-start gap-4 py-3">
+                  <span className="text-muted-foreground text-xs whitespace-nowrap pt-0.5 w-36 shrink-0">
+                    {new Date(log.created_at).toLocaleString("en-IN", {
+                      day: "2-digit",
+                      month: "short",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </span>
-                )}
-              </div>
+                  <Badge variant="secondary" className="text-[11px] shrink-0">
+                    {log.action_display || log.action}
+                  </Badge>
+                  <div className="min-w-0 flex flex-col gap-0.5 sm:min-w-[180px]">
+                    <span className="text-sm font-medium whitespace-nowrap sm:whitespace-normal">{getPerformedByName(log.performed_by)}</span>
+                    {log.object_info != null && (
+                      <span className="text-muted-foreground text-xs whitespace-nowrap sm:whitespace-normal sm:truncate">
+                        {getObjectInfoDisplay(log.object_info)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </div>
       )}
-
-      <DataTablePagination
-        page={page}
-        pageSize={pageSize}
-        total={totalCount}
-        onPageChange={setPage}
-        onPageSizeChange={handlePageSizeChange}
-        pageSizeOptions={[10, 20, 50]}
-      />
-    </div>
+     {/* Pagination block, below the list */}
+       {logs.length > 0 && (
+         <div className="w-full">
+           <DataTablePagination
+             page={page}
+             pageSize={pageSize}
+             total={totalCount}
+             onPageChange={setPage}
+             onPageSizeChange={handlePageSizeChange}
+             pageSizeOptions={[10, 20, 50]}
+           />
+         </div>
+       )}
+    </SectionCard>
   );
 }
 
@@ -1047,24 +1061,48 @@ function ApplicationDetailContent() {
       </div>
 
       {/* Tab nav */}
-      <div className="flex border-b gap-0">
-        {TABS.map(({ key, label, icon: Icon }) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setTab(key)}
-            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
-              activeTab === key
-                ? "border-primary text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
-            }`}
-          >
-            <Icon className="h-3.5 w-3.5" />
-            {label}
-          </button>
-        ))}
-      </div>
+        <div className="flex flex-col gap-0 sm:flex-row">
+          {/* Mobile: horizontal scrollable pill tab bar */}
+          <div className="flex sm:hidden overflow-x-auto border-b gap-1 pb-1 scrollbar-none">
+            {TABS.map(({ key, label, icon: Icon }) => {
+              const isActive = activeTab === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setTab(key)}
+                  className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm transition-colors ${
+                    isActive
+                      ? "bg-muted text-foreground font-medium"
+                      : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                  }`}
+                >
+                  <Icon className="h-4 w-4 shrink-0" />
+                  {label}
+                </button>
+              );
+            })}
+          </div>
 
+          {/* Desktop: existing underline tab bar */}
+          <div className="hidden sm:flex border-b gap-0">
+            {TABS.map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setTab(key)}
+                className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
+                  activeTab === key
+                    ? "border-primary text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
       {/* Overview */}
       {activeTab === "overview" && (
         <div className="flex flex-col gap-5">
@@ -1186,8 +1224,12 @@ function ApplicationDetailContent() {
                 )}
                 {app.annual_turnover && (
                   <InfoRow
-                    label={t.field_annual_turnover ?? "Annual Turnover (₹)"}
-                    value={Number(app.annual_turnover).toLocaleString("en-IN")}
+                    label="Annual Turnover"
+                    value={new Intl.NumberFormat("en-IN", {
+                      style: "currency",
+                      currency: "INR",
+                      maximumFractionDigits: 0,
+                    }).format(Number(app.annual_turnover) * 100000)}
                   />
                 )}
               </div>
@@ -1357,9 +1399,9 @@ function ApplicationDetailContent() {
 
       {/* Audit Log */}
       {activeTab === "audit-log" && (
-        <SectionCard icon={Clock} title="Audit Log">
+        
           <AuditLogTab fpoId={fpoId} />
-        </SectionCard>
+        
       )}
 
       {/* Dialogs */}

@@ -223,15 +223,15 @@ export default function AdminDashboardPage() {
           title={t.stat_approved_fpos ?? "Approved FPOs"}
           value={stats?.stat_cards.approved_fpos}
           icon={CheckCircle}
-          valueClass="text-green-600 dark:text-green-400"
-          image="/images/dashboard/approved.png"
+          // valueClass="text-green-600 dark:text-green-400"
+          // image="/images/dashboard/approved.png"
         />
         <StatCard
           title={t.stat_pending_applications ?? "Pending Applications"}
           value={stats?.stat_cards.pending_applications}
           icon={AlertCircle}
-          valueClass="text-yellow-600 dark:text-yellow-400"
-          image="/images/dashboard/pending.png"
+          // valueClass="text-yellow-600 dark:text-yellow-400"
+          // image="/images/dashboard/pending.png"
         />
         <StatCard
           title={t.stat_suspended ?? "Suspended"}
