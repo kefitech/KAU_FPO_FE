@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useLocaleStore } from "@/stores/locale-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
@@ -37,6 +37,27 @@ const Documents = () => {
   const [collapsed, setCollapsed] = useState(true);
   const locale = useLocaleStore((s) => s.locale);
   const closeSidebar = useSidebarStore((s) => s.closeMenu);
+  const panelRef = useRef<HTMLDivElement>(null);
+  // Close docs panel when clicking/touching outside it
+  useEffect(() => {
+    if (collapsed) return;
+    const handleOutside = (e: MouseEvent | TouchEvent) => {
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+        setCollapsed(true);
+      }
+    };
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("touchstart", handleOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("touchstart", handleOutside);
+    };
+  }, [collapsed]);
+  // Lock background scroll while docs panel is open
+  useEffect(() => {
+    document.body.style.overflow = collapsed ? "" : "hidden";
+  }, [collapsed]);
+
   // biome-ignore lint/correctness/useExhaustiveDependencies: refetch intentionally on locale change
   useEffect(() => {
     publicFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/public/documents/?page_size=20`)
@@ -63,6 +84,7 @@ const Documents = () => {
       }}
       // Hide on small screens via inline media — handled via className below
       className="documents-sticky-panel"
+      ref={panelRef}
     >
       {/* Collapse tab */}
       <button
@@ -110,7 +132,7 @@ const Documents = () => {
       <div
         style={{
           background: "#fff",
-          boxShadow: collapsed ? "none" : "-4px 0 24px rgba(0,0,0,0.13)",
+          boxShadow: collapsed ? "none" : "-4px 0 24px rgba(0,0,0,0.001)",
           width: collapsed ? 0 : 240,
           maxHeight: "70vh",
           display: "flex",

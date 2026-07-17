@@ -14,10 +14,12 @@ export const useSidebarStore = create<SidebarState>((set) => ({
   openMenu: () => {
     set({ isOpen: true });
     document.body.classList.add("no-fade");
+    document.body.style.overflow = "hidden";
   },
 
   closeMenu: () => {
     set({ isOpen: false });
     document.body.classList.remove("no-fade");
+    document.body.style.overflow = "";
   },
 }));

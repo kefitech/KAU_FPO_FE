@@ -1,6 +1,9 @@
 "use client";
 
+import { useEffect } from "react";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 import useSidebarMenu from "../_hooks/useSidebarMenu";
 import useStickyMenu from "../_hooks/useStickyMenu";
@@ -12,6 +15,11 @@ const Header = () => {
   const toggleSubMenu = useSubMenuToggle();
   const { isOpen, openMenu, closeMenu } = useSidebarMenu();
   const isMenuSticky = useStickyMenu();
+  const pathname = usePathname();
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only re-run on route change, closeMenu identity intentionally excluded
+  useEffect(() => {
+    closeMenu();
+  }, [pathname]);
 
   return (
     <>
@@ -76,7 +84,22 @@ const Header = () => {
                   </div>
                 </div>
               </div>
-              <div className="overlay-screen" />
+              <button
+                type="button"
+                className={`overlay-screen ${isOpen ? "opened" : ""}`}
+                onClick={closeMenu}
+                tabIndex={isOpen ? 0 : -1}
+                aria-label="Close menu"
+                onKeyDown={(e) => e.key === "Escape" && closeMenu()}
+                style={{
+                  border: "none",
+                  background: "none",
+                  padding: 0,
+                  margin: 0,
+                  cursor: "pointer",
+                  display: "block",
+                }}
+              />
             </div>
           </div>
         </nav>
