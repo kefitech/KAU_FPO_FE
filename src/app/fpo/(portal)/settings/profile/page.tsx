@@ -68,7 +68,7 @@ export default function FpoSettingsProfilePage() {
   const [editing, setEditing] = useState(false);
 
   const { data: profile, isLoading } = useQuery({
-    queryKey: ["fpo-profile"],
+    queryKey: ["fpo-profile-settings"],
     queryFn: fpoProfileApi.get,
     staleTime: 5 * 60 * 1000,
   });

@@ -3,15 +3,7 @@
 import Link from "next/link";
 
 import { useQuery } from "@tanstack/react-query";
-import {
-  AlertCircle,
-  ArrowRight,
-  CheckCircle2,
-  Clock,
-  FileText,
-  RefreshCw,
-  XCircle,
-} from "lucide-react";
+import { AlertCircle, ArrowRight, CheckCircle2, Clock, FileText, RefreshCw, XCircle } from "lucide-react";
 
 import { fpoRegistrationApi } from "@/app/fpo/_api/fpo-registration";
 import { Badge } from "@/components/ui/badge";
@@ -72,14 +64,19 @@ const STATUS_CONFIG: Record<
 
 function formatDate(iso: string) {
   return new Intl.DateTimeFormat("en-IN", {
-    day: "numeric", month: "short", year: "numeric",
-    hour: "2-digit", minute: "2-digit",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   }).format(new Date(iso));
 }
 
 function formatDateOnly(iso: string) {
   return new Intl.DateTimeFormat("en-IN", {
-    day: "numeric", month: "short", year: "numeric",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
   }).format(new Date(iso));
 }
 
@@ -113,17 +110,25 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 
 // ─── Status Tab ────────────────────────────────────────────────────────────────
 
-function StatusTab({ data, refetch, isFetching }: { data: FpoApplicationStatus; refetch: () => void; isFetching: boolean }) {
+function StatusTab({
+  data,
+  refetch,
+  isFetching,
+}: {
+  data: FpoApplicationStatus;
+  refetch: () => void;
+  isFetching: boolean;
+}) {
   const cfg = STATUS_CONFIG[data.status];
   const Icon = cfg.icon;
 
-  const infoNote = data.status === "info_required"
-    ? data.timeline.findLast((e) => e.to_status === "info_required")?.notes ?? null
-    : null;
+  const infoNote =
+    data.status === "info_required"
+      ? (data.timeline.findLast((e) => e.to_status === "info_required")?.notes ?? null)
+      : null;
 
-  const rejectionNote = data.status === "rejected"
-    ? data.timeline.findLast((e) => e.to_status === "rejected")?.notes ?? null
-    : null;
+  const rejectionNote =
+    data.status === "rejected" ? (data.timeline.findLast((e) => e.to_status === "rejected")?.notes ?? null) : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -222,10 +227,15 @@ function ApplicationTab({ profile }: { profile: FpoProfile }) {
         <InfoRow label="FPO Name" value={profile.name} />
         {profile.name_ml && <InfoRow label="FPO Name (Malayalam)" value={profile.name_ml} />}
         <InfoRow label="Legal Structure" value={humanize(profile.legal_structure)} />
-        {profile.legal_structure_detail && <InfoRow label="Legal Structure Detail" value={profile.legal_structure_detail} />}
+        {profile.legal_structure_detail && (
+          <InfoRow label="Legal Structure Detail" value={profile.legal_structure_detail} />
+        )}
         <InfoRow label="Registration Number" value={profile.registration_number} />
         {profile.cin_number && <InfoRow label="CIN Number" value={profile.cin_number} />}
-        <InfoRow label="Date of Registration" value={profile.date_of_registration ? formatDateOnly(profile.date_of_registration) : null} />
+        <InfoRow
+          label="Date of Registration"
+          value={profile.date_of_registration ? formatDateOnly(profile.date_of_registration) : null}
+        />
         {profile.pan_number && <InfoRow label="PAN Number" value={profile.pan_number} />}
         {profile.gst_number && <InfoRow label="GST Number" value={profile.gst_number} />}
 
@@ -245,7 +255,9 @@ function ApplicationTab({ profile }: { profile: FpoProfile }) {
         <InfoRow label="Designation" value={humanize(profile.signatory_designation)} />
         <InfoRow label="Signatory Phone" value={profile.signatory_phone} />
         {profile.signatory_email && <InfoRow label="Signatory Email" value={profile.signatory_email} />}
-        {profile.signatory_aadhaar_last4 && <InfoRow label="Aadhaar (last 4)" value={profile.signatory_aadhaar_last4} />}
+        {profile.signatory_aadhaar_last4 && (
+          <InfoRow label="Aadhaar (last 4)" value={profile.signatory_aadhaar_last4} />
+        )}
         <InfoRow label="Total Members" value={profile.total_members} />
         <InfoRow label="Male Members" value={profile.male_members} />
         <InfoRow label="Female Members" value={profile.female_members} />
@@ -256,7 +268,9 @@ function ApplicationTab({ profile }: { profile: FpoProfile }) {
         <InfoRow label="CEO Available" value={profile.ceo_available ? "Yes" : "No"} />
         <InfoRow label="Accountant Available" value={profile.accountant_available ? "Yes" : "No"} />
         {profile.promoting_agency && <InfoRow label="Promoting Agency" value={humanize(profile.promoting_agency)} />}
-        {profile.facilitating_agency_name && <InfoRow label="Facilitating Agency" value={profile.facilitating_agency_name} />}
+        {profile.facilitating_agency_name && (
+          <InfoRow label="Facilitating Agency" value={profile.facilitating_agency_name} />
+        )}
 
         <SectionTitle>Business & Banking</SectionTitle>
         {profile.primary_commodities?.length > 0 && (
@@ -264,7 +278,9 @@ function ApplicationTab({ profile }: { profile: FpoProfile }) {
             <p className="text-xs text-muted-foreground font-medium">Primary Commodities</p>
             <div className="flex flex-wrap gap-1 justify-end">
               {profile.primary_commodities.map((c) => (
-                <Badge key={c} variant="secondary" className="text-[10px]">{c.replace(/_/g, " ")}</Badge>
+                <Badge key={c} variant="secondary" className="text-[10px]">
+                  {c.replace(/_/g, " ")}
+                </Badge>
               ))}
             </div>
           </div>
@@ -274,7 +290,9 @@ function ApplicationTab({ profile }: { profile: FpoProfile }) {
             <p className="text-xs text-muted-foreground font-medium">Secondary Commodities</p>
             <div className="flex flex-wrap gap-1 justify-end">
               {profile.secondary_commodities.map((c) => (
-                <Badge key={c} variant="secondary" className="text-[10px]">{c.replace(/_/g, " ")}</Badge>
+                <Badge key={c} variant="secondary" className="text-[10px]">
+                  {c.replace(/_/g, " ")}
+                </Badge>
               ))}
             </div>
           </div>
@@ -295,16 +313,20 @@ function ApplicationTab({ profile }: { profile: FpoProfile }) {
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function FpoApplicationsPage() {
-  const { data: statusData, isLoading: statusLoading, refetch, isFetching } = useQuery({
+  const {
+    data: statusData,
+    isLoading: statusLoading,
+    refetch,
+    isFetching,
+  } = useQuery({
     queryKey: ["fpo-status"],
     queryFn: fpoRegistrationApi.getStatus,
     staleTime: 30_000,
-    refetchInterval: (query) =>
-      query.state.data?.status === "info_required" ? 60_000 : false,
+    refetchInterval: (query) => (query.state.data?.status === "info_required" ? 60_000 : false),
   });
 
   const { data: profileData, isLoading: profileLoading } = useQuery({
-    queryKey: ["fpo-profile"],
+    queryKey: ["fpo-profile-application"],
     queryFn: fpoRegistrationApi.getProfile,
     staleTime: 5 * 60_000,
   });
@@ -332,7 +354,9 @@ export default function FpoApplicationsPage() {
       <Tabs defaultValue="status">
         <TabsList>
           <TabsTrigger value="status">Status & Timeline</TabsTrigger>
-          <TabsTrigger value="details" disabled={!profileData}>Application Details</TabsTrigger>
+          <TabsTrigger value="details" disabled={!profileData}>
+            Application Details
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="status" className="mt-6">

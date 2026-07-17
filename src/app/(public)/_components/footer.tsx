@@ -1,10 +1,14 @@
 "use client";
-import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useLocaleStore } from "@/stores/locale-store";
-import { publicFetch } from "../_lib/public-fetch";
+
+import Link from "next/link";
+
+import { Autoplay, Navigation } from "swiper/modules";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { Navigation, Autoplay } from "swiper/modules";
+
+import { useLocaleStore } from "@/stores/locale-store";
+
+import { publicFetch } from "../_lib/public-fetch";
 
 interface QuickLink {
   id: number;
@@ -49,7 +53,15 @@ function PartnerBox({ link }: { link: QuickLink }) {
           style={{ maxHeight: 56, maxWidth: "100%", objectFit: "contain", filter: "brightness(0) invert(1)" }}
         />
       ) : (
-        <span style={{ color: "rgba(255,255,255,0.85)", fontFamily: "var(--font-default)", fontWeight: 700, fontSize: 14, textAlign: "center" }}>
+        <span
+          style={{
+            color: "rgba(255,255,255,0.85)",
+            fontFamily: "var(--font-default)",
+            fontWeight: 700,
+            fontSize: 14,
+            textAlign: "center",
+          }}
+        >
           {link.name}
         </span>
       )}
@@ -61,7 +73,7 @@ const Footer = () => {
   const [email, setEmail] = useState("");
   const [quickLinks, setQuickLinks] = useState<QuickLink[]>([]);
   const locale = useLocaleStore((s) => s.locale);
-
+  // biome-ignore lint/correctness/useExhaustiveDependencies: locale intentionally kept to allow future locale-based refetch
   useEffect(() => {
     publicFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/public/quick-links/`)
       .then((r) => r.json())
@@ -82,7 +94,17 @@ const Footer = () => {
       <div className="container">
         {quickLinks.length > 0 && (
           <div style={{ borderBottom: "1px solid rgba(255,255,255,0.1)", padding: "32px 0" }}>
-            <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.5)", marginBottom: 24, fontFamily: "var(--font-default)" }}>
+            <p
+              style={{
+                fontSize: 12,
+                fontWeight: 700,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                color: "rgba(255,255,255,0.5)",
+                marginBottom: 24,
+                fontFamily: "var(--font-default)",
+              }}
+            >
               Our Partners
             </p>
             <div style={{ position: "relative", padding: quickLinks.length > 4 ? "0 48px" : "0" }}>
@@ -103,16 +125,60 @@ const Footer = () => {
                       </SwiperSlide>
                     ))}
                   </Swiper>
-                  <button type="button" className="ql-swiper-prev" style={{ position: "absolute", left: 0, top: "50%", transform: "translateY(-50%)", zIndex: 10, width: 36, height: 36, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.3)", background: "rgba(255,255,255,0.1)", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}>
+                  <button
+                    type="button"
+                    className="ql-swiper-prev"
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      zIndex: 10,
+                      width: 36,
+                      height: 36,
+                      borderRadius: "50%",
+                      border: "1px solid rgba(255,255,255,0.3)",
+                      background: "rgba(255,255,255,0.1)",
+                      color: "#fff",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 12,
+                    }}
+                  >
                     <i className="fas fa-chevron-left" />
                   </button>
-                  <button type="button" className="ql-swiper-next" style={{ position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)", zIndex: 10, width: 36, height: 36, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.3)", background: "rgba(255,255,255,0.1)", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}>
+                  <button
+                    type="button"
+                    className="ql-swiper-next"
+                    style={{
+                      position: "absolute",
+                      right: 0,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      zIndex: 10,
+                      width: 36,
+                      height: 36,
+                      borderRadius: "50%",
+                      border: "1px solid rgba(255,255,255,0.3)",
+                      background: "rgba(255,255,255,0.1)",
+                      color: "#fff",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 12,
+                    }}
+                  >
                     <i className="fas fa-chevron-right" />
                   </button>
                 </>
               ) : (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
-                  {quickLinks.map((link) => <PartnerBox key={link.id} link={link} />)}
+                  {quickLinks.map((link) => (
+                    <PartnerBox key={link.id} link={link} />
+                  ))}
                 </div>
               )}
             </div>
@@ -123,9 +189,7 @@ const Footer = () => {
           <div className="row">
             <div className="col-lg-4 col-md-6 item">
               <div className="footer-item about">
-                <img className="logo" src="/assets/img/logo.png" alt="Logo"   style={{ height: '300px' }}  />
-
-                
+                <img className="logo" src="/assets/img/logo.png" alt="Logo" style={{ height: "300px" }} />
               </div>
             </div>
 
@@ -133,11 +197,19 @@ const Footer = () => {
               <div className="footer-item link">
                 <h4 className="widget-title">Explore</h4>
                 <ul>
-                  <li><Link href="/about-us">About Us</Link></li>
-                  <li><Link href="/team">Meet Our Team</Link></li>
-                  <li><Link href="/blog-standard">News &amp; Media</Link></li>
+                  <li>
+                    <Link href="/about-us">About Us</Link>
+                  </li>
+                  <li>
+                    <Link href="/team">Meet Our Team</Link>
+                  </li>
+                  <li>
+                    <Link href="/news-events">News &amp; Media</Link>
+                  </li>
                   {/* <li><Link href="/services">Services</Link></li> */}
-                  <li><Link href="/contact-us">Contact Us</Link></li>
+                  <li>
+                    <Link href="/contact-us">Contact Us</Link>
+                  </li>
                 </ul>
               </div>
             </div>
@@ -177,16 +249,28 @@ const Footer = () => {
                 <h4 className="widget-title">Contact Info</h4>
                 <ul>
                   <li>
-                    <div className="icon"><i className="fas fa-home" /></div>
-                    <div className="content"><strong>Address:</strong>Kerala Agricultural University, Mannuthy P.O, Pin- 680651.</div>
+                    <div className="icon">
+                      <i className="fas fa-home" />
+                    </div>
+                    <div className="content">
+                      <strong>Address:</strong>Kerala Agricultural University, Mannuthy P.O, Pin- 680651.
+                    </div>
                   </li>
                   <li>
-                    <div className="icon"><i className="fas fa-envelope" /></div>
-                    <div className="content"><strong>Email:</strong> <a href="mailto:registrar@kau.in">registrar@kau.in</a></div>
+                    <div className="icon">
+                      <i className="fas fa-envelope" />
+                    </div>
+                    <div className="content">
+                      <strong>Email:</strong> <a href="mailto:registrar@kau.in">registrar@kau.in</a>
+                    </div>
                   </li>
                   <li>
-                    <div className="icon"><i className="fas fa-phone" /></div>
-                    <div className="content"><strong>Phone:</strong> <a href="tel:+91 487 237 0509">+91 487 237 0509</a></div>
+                    <div className="icon">
+                      <i className="fas fa-phone" />
+                    </div>
+                    <div className="content">
+                      <strong>Phone:</strong> <a href="tel:+91 487 237 0509">+91 487 237 0509</a>
+                    </div>
                   </li>
                 </ul>
               </div>
@@ -197,22 +281,31 @@ const Footer = () => {
         <div className="footer-bottom">
           <div className="row">
             <div className="col-lg-6">
-              <p>&copy; Copyright {new Date().getFullYear()}. All Rights Reserved by{" "}
-                <a href="https://www.kefitech.com/" target="_blank" rel="noopener noreferrer">Kefitech Solution</a>
+              <p>
+                &copy; Copyright {new Date().getFullYear()}. All Rights Reserved by{" "}
+                <a href="https://www.kefitech.com/" target="_blank" rel="noopener noreferrer">
+                  Kefitech Solution
+                </a>
               </p>
             </div>
             <div className="col-lg-6 text-end">
               <ul>
                 {/* <li><Link href="/about-us">Terms</Link></li>
                 <li><Link href="/about-us">Privacy</Link></li> */}
-                <li><Link href="/contact-us">Support</Link></li>
+                <li>
+                  <Link href="/contact-us">Support</Link>
+                </li>
               </ul>
             </div>
           </div>
         </div>
       </div>
-      <div className="shape-right-bottom"><img src="/assets/img/shape/10.png" alt="shape" /></div>
-      <div className="shape-left-bottom"><img src="/assets/img/shape/11.png" alt="shape" /></div>
+      <div className="shape-right-bottom">
+        <img src="/assets/img/shape/10.png" alt="shape" />
+      </div>
+      <div className="shape-left-bottom">
+        <img src="/assets/img/shape/11.png" alt="shape" />
+      </div>
     </footer>
   );
 };
