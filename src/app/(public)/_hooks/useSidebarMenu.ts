@@ -1,18 +1,11 @@
 "use client";
-import { useState } from "react";
+
+import { useSidebarStore } from "@/stores/sidebar-store";
 
 const useSidebarMenu = () => {
-  const [isOpen, setIsOpen] = useState(false);
-
-  const openMenu = () => {
-    setIsOpen(true);
-    document.body.classList.add("no-fade");
-  };
-
-  const closeMenu = () => {
-    setIsOpen(false);
-    document.body.classList.remove("no-fade");
-  };
+  const isOpen = useSidebarStore((s) => s.isOpen);
+  const openMenu = useSidebarStore((s) => s.openMenu);
+  const closeMenu = useSidebarStore((s) => s.closeMenu);
 
   return { isOpen, openMenu, closeMenu };
 };

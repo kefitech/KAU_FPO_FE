@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+
 import { useLocaleStore } from "@/stores/locale-store";
+import { useSidebarStore } from "@/stores/sidebar-store";
+
 import { publicFetch } from "../_lib/public-fetch";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -18,10 +21,10 @@ interface Document {
 
 function getFileIcon(url: string): { icon: string; color: string } {
   const ext = url.split("?")[0].split(".").pop()?.toLowerCase();
-  if (ext === "pdf")                          return { icon: "fas fa-file-pdf",        color: "#e53935" };
-  if (["xls", "xlsx", "csv"].includes(ext ?? "")) return { icon: "fas fa-file-excel",  color: "#43a047" };
-  if (["doc", "docx"].includes(ext ?? ""))    return { icon: "fas fa-file-word",       color: "#1e88e5" };
-  if (["ppt", "pptx"].includes(ext ?? ""))   return { icon: "fas fa-file-powerpoint",  color: "#fb8c00" };
+  if (ext === "pdf") return { icon: "fas fa-file-pdf", color: "#e53935" };
+  if (["xls", "xlsx", "csv"].includes(ext ?? "")) return { icon: "fas fa-file-excel", color: "#43a047" };
+  if (["doc", "docx"].includes(ext ?? "")) return { icon: "fas fa-file-word", color: "#1e88e5" };
+  if (["ppt", "pptx"].includes(ext ?? "")) return { icon: "fas fa-file-powerpoint", color: "#fb8c00" };
   if (["jpg", "jpeg", "png", "gif", "webp"].includes(ext ?? "")) return { icon: "fas fa-file-image", color: "#8e24aa" };
   return { icon: "fas fa-file-alt", color: "#757575" };
 }
@@ -33,7 +36,8 @@ const Documents = () => {
   const [loading, setLoading] = useState(true);
   const [collapsed, setCollapsed] = useState(true);
   const locale = useLocaleStore((s) => s.locale);
-
+  const closeSidebar = useSidebarStore((s) => s.closeMenu);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refetch intentionally on locale change
   useEffect(() => {
     publicFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/public/documents/?page_size=20`)
       .then((r) => r.json())
@@ -63,7 +67,11 @@ const Documents = () => {
       {/* Collapse tab */}
       <button
         type="button"
-        onClick={() => setCollapsed((p) => !p)}
+        onClick={() => {
+          const next = !collapsed;
+          setCollapsed(next);
+          if (!next) closeSidebar();
+        }}
         title={collapsed ? "Show Documents" : "Hide Documents"}
         style={{
           background: "var(--color-primary)",
@@ -81,10 +89,7 @@ const Documents = () => {
           boxShadow: "-3px 0 12px rgba(0,0,0,0.15)",
         }}
       >
-        <i
-          className={collapsed ? "fas fa-chevron-left" : "fas fa-chevron-right"}
-          style={{ fontSize: 11 }}
-        />
+        <i className={collapsed ? "fas fa-chevron-left" : "fas fa-chevron-right"} style={{ fontSize: 11 }} />
         {collapsed && (
           <span
             style={{
@@ -101,51 +106,52 @@ const Documents = () => {
       </button>
 
       {/* Panel */}
-      {!collapsed && (
+
+      <div
+        style={{
+          background: "#fff",
+          boxShadow: collapsed ? "none" : "-4px 0 24px rgba(0,0,0,0.13)",
+          width: collapsed ? 0 : 240,
+          maxHeight: "70vh",
+          display: "flex",
+          flexDirection: "column",
+          borderRadius: "8px 0 0 8px",
+          overflow: "hidden",
+          opacity: collapsed ? 0 : 1,
+          transition: "width 0.3s ease, opacity 0.25s ease, box-shadow 0.3s ease",
+        }}
+      >
+        {/* Header */}
         <div
           style={{
-            background: "#fff",
-            boxShadow: "-4px 0 24px rgba(0,0,0,0.13)",
-            width: 240,
-            maxHeight: "70vh",
+            background: "var(--color-primary)",
+            padding: "12px 16px",
             display: "flex",
-            flexDirection: "column",
-            borderRadius: "8px 0 0 8px",
-            overflow: "hidden",
+            alignItems: "center",
+            gap: 8,
+            flexShrink: 0,
           }}
         >
-          {/* Header */}
-          <div
+          <i className="fas fa-folder-open" style={{ color: "#fff", fontSize: 14 }} />
+          <span
             style={{
-              background: "var(--color-primary)",
-              padding: "12px 16px",
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              flexShrink: 0,
+              color: "#fff",
+              fontFamily: "var(--font-default)",
+              fontWeight: 700,
+              fontSize: 13,
+              letterSpacing: "0.03em",
             }}
           >
-            <i className="fas fa-folder-open" style={{ color: "#fff", fontSize: 14 }} />
-            <span
-              style={{
-                color: "#fff",
-                fontFamily: "var(--font-default)",
-                fontWeight: 700,
-                fontSize: 13,
-                letterSpacing: "0.03em",
-              }}
-            >
-              Documents
-            </span>
-          </div>
+            Documents
+          </span>
+        </div>
 
-          {/* List */}
-          <div style={{ overflowY: "auto", flexGrow: 1 }}>
-            {loading ? (
-              [80, 65, 90, 70].map((w, i) => (
-                // biome-ignore lint/suspicious/noArrayIndexKey: skeleton
+        {/* List */}
+        <div style={{ overflowY: "auto", flexGrow: 1 }}>
+          {loading
+            ? [80, 65, 90, 70].map((w) => (
                 <div
-                  key={i}
+                  key={`skeleton-${w}`}
                   style={{
                     padding: "12px 14px",
                     borderBottom: "1px solid #f0f0f0",
@@ -154,14 +160,31 @@ const Documents = () => {
                     gap: 10,
                   }}
                 >
-                  <div style={{ width: 28, height: 28, borderRadius: 6, background: "#f0f0f0", flexShrink: 0, animation: "pulse 1.5s ease-in-out infinite" }} />
-                  <div style={{ height: 12, borderRadius: 4, background: "#f0f0f0", width: `${w}%`, animation: "pulse 1.5s ease-in-out infinite" }} />
+                  <div
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 6,
+                      background: "#f0f0f0",
+                      flexShrink: 0,
+                      animation: "pulse 1.5s ease-in-out infinite",
+                    }}
+                  />
+                  <div
+                    style={{
+                      height: 12,
+                      borderRadius: 4,
+                      background: "#f0f0f0",
+                      width: `${w}%`,
+                      animation: "pulse 1.5s ease-in-out infinite",
+                    }}
+                  />
                 </div>
               ))
-            ) : (
-              docs.map((doc) => {
+            : docs.map((doc) => {
                 const { icon, color } = getFileIcon(doc.file_url);
                 return (
+                  //biome-ignore lint/a11y/noStaticElementInteractions: hover-only visual effect, no real interactivity
                   <div
                     key={doc.id}
                     style={{
@@ -172,8 +195,12 @@ const Documents = () => {
                       gap: 10,
                       transition: "background 0.2s",
                     }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "#f9f9f9"; }}
-                    onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLDivElement).style.background = "#f9f9f9";
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLDivElement).style.background = "transparent";
+                    }}
                   >
                     {/* File icon */}
                     <div
@@ -256,11 +283,9 @@ const Documents = () => {
                     </div>
                   </div>
                 );
-              })
-            )}
-          </div>
+              })}
         </div>
-      )}
+      </div>
     </div>
   );
 };
