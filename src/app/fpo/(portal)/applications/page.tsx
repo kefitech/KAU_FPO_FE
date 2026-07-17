@@ -274,9 +274,9 @@ function ApplicationTab({ profile }: { profile: FpoProfile }) {
 
         <SectionTitle>Business & Banking</SectionTitle>
         {profile.primary_commodities?.length > 0 && (
-          <div className="py-2.5 border-b border-border/50 grid grid-cols-2 gap-2 items-start">
+          <div className="py-2.5 border-b border-border/50 grid grid-cols-1 gap-2 items-start">
             <p className="text-xs text-muted-foreground font-medium">Primary Commodities</p>
-            <div className="flex flex-wrap gap-1 justify-end">
+            <div className="flex flex-wrap gap-1 justify-start">
               {profile.primary_commodities.map((c) => (
                 <Badge key={c} variant="secondary" className="text-[10px]">
                   {c.replace(/_/g, " ")}
@@ -286,9 +286,9 @@ function ApplicationTab({ profile }: { profile: FpoProfile }) {
           </div>
         )}
         {profile.secondary_commodities?.length > 0 && (
-          <div className="py-2.5 border-b border-border/50 grid grid-cols-2 gap-2 items-start">
+          <div className="py-2.5 border-b border-border/50 grid grid-cols-1 gap-2 items-start">
             <p className="text-xs text-muted-foreground font-medium">Secondary Commodities</p>
-            <div className="flex flex-wrap gap-1 justify-end">
+            <div className="flex flex-wrap gap-1 justify-start">
               {profile.secondary_commodities.map((c) => (
                 <Badge key={c} variant="secondary" className="text-[10px]">
                   {c.replace(/_/g, " ")}
@@ -298,7 +298,14 @@ function ApplicationTab({ profile }: { profile: FpoProfile }) {
           </div>
         )}
         {profile.annual_turnover && (
-          <InfoRow label="Annual Turnover" value={`₹ ${Number(profile.annual_turnover).toLocaleString("en-IN")}`} />
+          <InfoRow
+            label="Annual Turnover"
+            value={new Intl.NumberFormat("en-IN", {
+              style: "currency",
+              currency: "INR",
+              maximumFractionDigits: 0,
+            }).format(Number(profile.annual_turnover) * 100000)}
+          />
         )}
         <InfoRow label="Bank Name" value={humanize(profile.bank_name)} />
         <InfoRow label="Bank Branch" value={profile.bank_branch} />
