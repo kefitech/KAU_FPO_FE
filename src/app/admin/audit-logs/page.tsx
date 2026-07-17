@@ -11,19 +11,32 @@ import { Badge } from "@/components/ui/badge";
 import { ViewSheet } from "@/components/ui/view-sheet";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
-import { getChangesDisplay, getObjectInfoDisplay, getPerformedByName, type AuditLog } from "@/types/admin";
+import { type AuditLog, getChangesDisplay, getObjectInfoDisplay, getPerformedByName } from "@/types/admin";
 
 type T = Record<string, string>;
 
 const ACTION_TYPES = [
-  "create", "update", "delete", "soft_delete", "restore",
-  "login", "logout", "failed_login",
-  "password_change", "password_reset",
-  "export", "import",
-  "document_upload", "document_delete",
-  "fpo_profile_change", "fpo_submit", "fpo_status_change",
+  "create",
+  "update",
+  "delete",
+  "soft_delete",
+  "restore",
+  "login",
+  "logout",
+  "failed_login",
+  "password_change",
+  "password_reset",
+  "export",
+  "import",
+  "document_upload",
+  "document_delete",
+  "fpo_profile_change",
+  "fpo_submit",
+  "fpo_status_change",
   "tier_recalculation",
-  "fpo_user_invite", "fpo_user_activate", "fpo_user_deactivate",
+  "fpo_user_invite",
+  "fpo_user_activate",
+  "fpo_user_deactivate",
 ];
 
 const FILTERS: FilterConfig[] = [
@@ -59,6 +72,7 @@ function getColumns(t: T): ColumnDef<AuditLog>[] {
     {
       accessorKey: "action_display",
       header: t.col_action ?? "Action",
+      enableSorting: false,
       cell: ({ row }) => (
         <Badge variant="secondary" className="text-[11px] font-medium">
           {row.original.action_display || row.original.action}
@@ -68,11 +82,13 @@ function getColumns(t: T): ColumnDef<AuditLog>[] {
     {
       accessorKey: "performed_by",
       header: t.col_performed_by ?? "Performed By",
+      enableSorting: false,
       cell: ({ row }) => <span className="font-medium">{getPerformedByName(row.original.performed_by)}</span>,
     },
     {
       accessorKey: "object_info",
       header: t.col_object ?? "Object",
+      enableSorting: false,
       cell: ({ row }) => (
         <span className="text-muted-foreground text-sm max-w-[200px] truncate block">
           {getObjectInfoDisplay(row.original.object_info)}
@@ -149,7 +165,10 @@ export default function AuditLogsPage() {
                   label: tTable.col_action ?? "Action",
                   value: logView.row.action_display || logView.row.action,
                 },
-                { label: tTable.col_performed_by ?? "Performed By", value: getPerformedByName(logView.row.performed_by) },
+                {
+                  label: tTable.col_performed_by ?? "Performed By",
+                  value: getPerformedByName(logView.row.performed_by),
+                },
                 { label: tTable.col_time ?? "Time", type: "date", value: logView.row.created_at },
                 { label: tTable.col_object ?? "Object", type: "section" },
                 { label: tTable.col_object ?? "Object Info", value: getObjectInfoDisplay(logView.row.object_info) },
