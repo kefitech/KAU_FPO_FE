@@ -8,11 +8,11 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 import { fpoTeamApi } from "@/app/fpo/_api/team";
-import { translationsApi } from "@/lib/api/translations";
-import { useLocaleStore } from "@/stores/locale-store";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { translationsApi } from "@/lib/api/translations";
+import { useLocaleStore } from "@/stores/locale-store";
 
 const rowSchema = z.object({
   first_name: z.string().min(1, "First name is required"),
@@ -43,7 +43,8 @@ export function BulkInviteDialog({ open, onOpenChange }: BulkInviteDialogProps) 
   const [tab, setTab] = useState<Tab>("json");
 
   useEffect(() => {
-    translationsApi.getPublic(locale, "fpo_team,common")
+    translationsApi
+      .getPublic(locale, "fpo_team,common")
       .then((data) => setT(data.fpo_team ?? {}))
       .catch(() => undefined);
   }, [locale]);
@@ -98,6 +99,17 @@ export function BulkInviteDialog({ open, onOpenChange }: BulkInviteDialogProps) 
     setRowErrors((prev) => prev.map((errs, idx) => (idx === i ? { ...errs, [field]: fieldErr } : errs)));
   }
 
+  function getRowIdentifier(f: {
+    row: number;
+    email?: string | null;
+    first_name?: string | null;
+    last_name?: string | null;
+  }) {
+    if (f.first_name && f.last_name) return `${f.first_name} ${f.last_name}`.trim(); // CHANGED: require both, not either
+    if (f.email) return f.email;
+    return `Row ${f.row}`;
+  }
+
   const jsonMutation = useMutation({
     mutationFn: () => {
       const members = rows
@@ -118,7 +130,7 @@ export function BulkInviteDialog({ open, onOpenChange }: BulkInviteDialogProps) 
       onOpenChange(false);
     },
     onError: (err: unknown) => {
-      toast.error((err as { message?: string })?.message ?? (t.bulk_invite_toast_failed ?? "Failed to send invitations"));
+      toast.error((err as { message?: string })?.message ?? t.bulk_invite_toast_failed ?? "Failed to send invitations");
     },
   });
 
@@ -139,7 +151,7 @@ export function BulkInviteDialog({ open, onOpenChange }: BulkInviteDialogProps) 
       onOpenChange(false);
     },
     onError: (err: unknown) => {
-      toast.error((err as { message?: string })?.message ?? (t.bulk_invite_toast_failed ?? "File upload failed"));
+      toast.error((err as { message?: string })?.message ?? t.bulk_invite_toast_failed ?? "File upload failed");
     },
   });
 
@@ -186,6 +198,7 @@ export function BulkInviteDialog({ open, onOpenChange }: BulkInviteDialogProps) 
                 <div key={i} className="flex flex-col gap-1">
                   <div className="grid md:grid-cols-[1.2fr_1.2fr_1.5fr_1fr_2rem] grid-cols-1 items-start gap-2">
                     <div className="flex flex-col gap-1">
+                      {/* biome-ignore lint/a11y/noLabelWithoutControl: mobile-only visual label, input is described by placeholder */}
                       <label className="md:hidden text-muted-foreground text-xs font-medium">First Name *</label>
                       <Input
                         placeholder="First name"
@@ -200,6 +213,7 @@ export function BulkInviteDialog({ open, onOpenChange }: BulkInviteDialogProps) 
                     </div>
 
                     <div className="flex flex-col gap-1">
+                      {/* biome-ignore lint/a11y/noLabelWithoutControl: mobile-only visual label, input is described by placeholder */}
                       <label className="md:hidden text-muted-foreground text-xs font-medium">Last Name *</label>
                       <Input
                         placeholder="Last name"
@@ -212,6 +226,7 @@ export function BulkInviteDialog({ open, onOpenChange }: BulkInviteDialogProps) 
                     </div>
 
                     <div className="flex flex-col gap-1">
+                      {/* biome-ignore lint/a11y/noLabelWithoutControl: mobile-only visual label, input is described by placeholder */}
                       <label className="md:hidden text-muted-foreground text-xs font-medium">Email *</label>
                       <Input
                         placeholder="email@example.com"
@@ -224,6 +239,7 @@ export function BulkInviteDialog({ open, onOpenChange }: BulkInviteDialogProps) 
                     </div>
 
                     <div className="flex flex-col gap-1">
+                      {/* biome-ignore lint/a11y/noLabelWithoutControl: mobile-only visual label, input is described by placeholder */}
                       <label className="md:hidden text-muted-foreground text-xs font-medium">Phone</label>
                       <Input
                         placeholder="Phone"
@@ -318,7 +334,9 @@ export function BulkInviteDialog({ open, onOpenChange }: BulkInviteDialogProps) 
                   {t.bulk_invite_btn_cancel ?? "Cancel"}
                 </Button>
                 <Button onClick={() => fileMutation.mutate()} disabled={!file || isPending}>
-                  {fileMutation.isPending ? (t.bulk_invite_btn_uploading ?? "Uploading…") : (t.bulk_invite_btn_upload ?? "Upload & Invite")}
+                  {fileMutation.isPending
+                    ? (t.bulk_invite_btn_uploading ?? "Uploading…")
+                    : (t.bulk_invite_btn_upload ?? "Upload & Invite")}
                 </Button>
               </div>
             </div>
@@ -341,7 +359,7 @@ export function BulkInviteDialog({ open, onOpenChange }: BulkInviteDialogProps) 
             <div className="flex flex-col gap-2 max-h-[280px] overflow-y-auto pr-1">
               {failedInvites.map((f) => (
                 <div key={f.row} className="rounded-lg border bg-destructive/5 px-3 py-2 text-sm">
-                  <p className="font-medium">{f.email}</p>
+                  <p className="font-medium">{getRowIdentifier(f)}</p>
                   <p className="text-muted-foreground text-xs mt-0.5">{f.reason}</p>
                 </div>
               ))}
