@@ -75,11 +75,40 @@ const Gallery = () => {
               >
                 {photos.map((photo) => (
                   <SwiperSlide key={photo.id}>
-                    <div className="gallery-style-one">
-                      <img src={photo.photo_url} alt={photo.caption || "Gallery"} />
+                    <div className="gallery-style-one" style={{ position: "relative", overflow: "hidden" }}>
+                      <img
+                        src={photo.photo_url}
+                        alt={photo.caption || "Gallery"}
+                        style={{
+                          width: "100%",
+                          height: "320px",
+                          objectFit: "cover",
+                          display: "block",
+                        }}
+                      />
                       {photo.caption && (
-                        <div className="overlay">
-                          <h4>{photo.caption}</h4>
+                        <div
+                          className="overlay"
+                          style={{
+                            display: "block",
+                            position: "absolute",
+                            left: 30,
+                            right: 30,
+                            bottom: 0,
+                            boxSizing: "border-box",
+                            overflow: "hidden",
+                          }}
+                        >
+                          <h4
+                            style={{
+                              margin: 0,
+                              overflowWrap: "break-word",
+                              wordBreak: "break-word",
+                              whiteSpace: "normal",
+                            }}
+                          >
+                            {photo.caption}
+                          </h4>
                         </div>
                       )}
                     </div>

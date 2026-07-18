@@ -10,7 +10,7 @@ import { tierAssessmentApi } from "@/app/fpo/_api/tier-assessment";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { TierAssessmentData, TierDomainScore, TierHistoryItem, TierQuestion, TierUpload } from "@/types/fpo";
+import type {  TierAssessmentAnswer, TierAssessmentData, TierDomainScore,  TierHistoryItem, TierQuestion, TierUpload } from "@/types/fpo";
 
 import { FileUploadSection } from "./_components/file-upload-section";
 import { QuestionField } from "./_components/question-field";
@@ -85,8 +85,11 @@ function SubmittedView({
   reopening?: boolean;
 }) {
   const { assessment } = data;
+  const [expandedDomain, setExpandedDomain] = useState<string | null>(null);
   if (!assessment) return null;
   const domains = assessment.domain_scores ?? [];
+  const questions = data.questions ?? [];
+  const uploads = assessment.uploads ?? [];
   const total = assessment.total_score ? Number(assessment.total_score) : null;
 
   return (
@@ -134,7 +137,17 @@ function SubmittedView({
           </div>
           <div className="divide-y">
             {domains.map((d) => (
-              <DomainScoreRow key={d.domain_code} domain={d} />
+              <DomainScoreRow
+                key={d.domain_code}
+                domain={d}
+                questions={questions}
+                answers={assessment.answers}
+                uploads={uploads}
+                expanded={expandedDomain === d.domain_code}
+                onToggle={() =>
+                  setExpandedDomain((cur) => (cur === d.domain_code ? null : d.domain_code))
+                }
+              />
             ))}
           </div>
           {total !== null && (
@@ -153,22 +166,135 @@ function SubmittedView({
   );
 }
 
-function DomainScoreRow({ domain }: { domain: TierDomainScore }) {
-  const pct = domain.max_score > 0 ? (domain.score / domain.max_score) * 100 : 0;
+function formatAnswerValue(q: TierQuestion, value: unknown): string {
+  if (value === null || value === undefined || value === "") return "—";
+
+  const options = q.answer_config?.options as { value: string; label: string }[] | undefined;
+
+  const labelFor = (v: string | number) => {
+    const match = options?.find((o) => String(o.value) === String(v));
+    return match?.label ?? String(v);
+  };
+
+  if (Array.isArray(value)) {
+    return value.map((v) => labelFor(v)).join(", ");
+  }
+  return labelFor(value as string | number);
+}
+
+function fileNameFromUrl(url: string) {
+  const parts = url.split("/");
+  return parts[parts.length - 1] ?? url;
+}
+
+
+function AnsweredQuestionRow({
+  question,
+  answerEntry,
+  upload,
+}: {
+  question: TierQuestion;
+  answerEntry: TierAssessmentAnswer | undefined;
+  upload?: TierUpload;
+}) {
   return (
-    <div className="flex items-center gap-3 px-4 sm:px-5 py-3">
-      <span className="min-w-0 flex-1 text-sm">{domain.domain_name}</span>
-      <div className="flex items-center gap-3">
-        <div className="hidden h-1.5 w-28 overflow-hidden rounded-full bg-muted sm:block">
-          <div
-            className="h-full rounded-full bg-primary transition-all"
-            style={{ width: `${Math.min(100, Math.max(0, pct))}%` }}
-          />
-        </div>
-        <span className="shrink-0 text-right font-medium text-sm tabular-nums">
-          {domain.score.toFixed(1)} / {domain.max_score}
+    <div className="flex flex-col gap-1.5 px-4 sm:px-5 py-3">
+      <div className="flex items-start gap-2">
+        <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-muted-foreground text-xs">
+          {question.question_no}
         </span>
+        <p className="text-sm leading-relaxed">{question.text}</p>
       </div>
+      <p className="pl-7 text-sm font-medium">
+        {formatAnswerValue(question, (answerEntry as { answer?: unknown } | undefined)?.answer)}
+      </p>
+      {question.has_upload && (
+        <div className="pl-7">
+          {upload ? (
+            <a
+              href={upload.file_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary text-xs underline underline-offset-2"
+            >
+              {fileNameFromUrl(upload.file_url)}
+            </a>
+          ) : (
+            <span className="text-muted-foreground text-xs">
+              {question.upload_label || "No file uploaded"}
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DomainScoreRow({
+  domain,
+  questions,
+  answers,
+  uploads,
+  expanded,
+  onToggle,
+}: {
+  domain: TierDomainScore;
+  questions: TierQuestion[];
+  answers: TierAssessmentAnswer[];
+  uploads: TierUpload[];
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const pct = domain.max_score > 0 ? (domain.score / domain.max_score) * 100 : 0;
+  const domainQuestions = questions
+    .filter((q) => q.domain_name === domain.domain_name && q.input_type !== "computed")
+    .sort((a, b) => a.question_no - b.question_no);
+  const answerByQNo = new Map((answers ?? []).map((a) => [a.question_no, a]));
+  const uploadByQNo = new Map(uploads.map((u) => [u.question_no, u]));
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center gap-3 px-4 sm:px-5 py-3 text-left"
+        aria-expanded={expanded}
+      >
+        <span className="min-w-0 flex-1 text-sm">{domain.domain_name}</span>
+        <div className="flex items-center gap-3">
+          <div className="hidden h-1.5 w-28 overflow-hidden rounded-full bg-muted sm:block">
+            <div
+              className="h-full rounded-full bg-primary transition-all"
+              style={{ width: `${Math.min(100, Math.max(0, pct))}%` }}
+            />
+          </div>
+          <span className="shrink-0 text-right font-medium text-sm tabular-nums">
+            {domain.score.toFixed(1)} / {domain.max_score}
+          </span>
+          {expanded ? (
+            <ChevronUp className="h-4 w-4 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          )}
+        </div>
+      </button>
+
+      {expanded && (
+        <div className="divide-y border-t bg-muted/20">
+          {domainQuestions.length === 0 ? (
+            <p className="px-5 py-3 text-muted-foreground text-sm">No questions in this domain.</p>
+          ) : (
+            domainQuestions.map((q) => (
+              <AnsweredQuestionRow
+                key={q.question_no}
+                question={q}
+                answerEntry={answerByQNo.get(q.question_no)}
+                upload={uploadByQNo.get(q.question_no)}
+              />
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 }
