@@ -2,12 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import Link from "next/link";
-import { useLocaleStore } from "@/stores/locale-store";
 import DOMPurify from "isomorphic-dompurify";
 
 import AgrulLayout from "../_components/agrul-layout";
 import BreadCrumb from "../_components/bread-crumb";
+import { useLocaleStore } from "@/stores/locale-store";
 import { publicFetch } from "../_lib/public-fetch";
 
 interface Announcement {
@@ -19,7 +18,14 @@ interface Announcement {
   thumbnail_url?: string | null;
 }
 
+type TabKey = "announcement" | "news";
+
 const ITEMS_PER_PAGE = 6;
+
+const TABS: { key: TabKey; label: string; icon: string }[] = [
+  { key: "announcement", label: "Announcements", icon: "fas fa-bullhorn" },
+  { key: "news", label: "News", icon: "fas fa-newspaper" },
+];
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", {
@@ -96,7 +102,7 @@ function CardSkeleton() {
   );
 }
 
-// ─── Detail Modal — matches this page's card style ─────────────────────────────
+// ─── Detail Modal ─────────────────────────────────────────────────────────────
 
 function AnnouncementDetailModal({ item, onClose }: { item: Announcement | null; onClose: () => void }) {
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -148,37 +154,6 @@ function AnnouncementDetailModal({ item, onClose }: { item: Announcement | null;
           overflow: "hidden",
         }}
       >
-        {/* Thumbnail banner */}
-        {/* <div style={{ position: "relative", width: "100%", height: 220, flexShrink: 0, background: "#f0f0f0" }}>
-          <img
-            src={item.thumbnail_url || "/assets/img/news-placeholder.jpg"}
-            alt={item.title}
-            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-          />
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              position: "absolute",
-              top: 14,
-              right: 14,
-              background: "rgba(255,255,255,0.9)",
-              border: "none",
-              borderRadius: "50%",
-              width: 34,
-              height: 34,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 16,
-              color: "#333",
-            }}
-          >
-            <i className="fas fa-times" />
-          </button>
-        </div> */}
-
         {/* Content */}
         <div style={{ padding: "24px 28px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 14 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
@@ -240,27 +215,31 @@ export default function NewsAndEvents() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabKey>("announcement");
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [selected, setSelected] = useState<Announcement | null>(null);
   const locale = useLocaleStore((s) => s.locale);
 
   useEffect(() => {
-    if(!locale) return;
-    publicFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/public/announcements/?page_size=100`)
+    setLoading(true);
+    publicFetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/public/announcements/?category=${activeTab}&page=${currentPage}&page_size=${ITEMS_PER_PAGE}`,
+      { headers: { "X-Language": locale || "en" } }
+    )
       .then((r) => r.json())
-      .then((json) => setItems((json.data as Announcement[]) ?? []))
+      .then((json) => {
+        setItems((json.data as Announcement[]) ?? []);
+        setTotalPages(json?.meta?.pagination?.total_pages ?? 1);
+        setTotalCount(json?.meta?.pagination?.total_count ?? 0);
+      })
       .catch(() => setItems([]))
       .finally(() => setLoading(false));
-  }, [locale]);
+  }, [locale, activeTab, currentPage]);
 
-  const totalPages = Math.max(1, Math.ceil(items.length / ITEMS_PER_PAGE));
-  const start = (currentPage - 1) * ITEMS_PER_PAGE;
-  const filtered = items.filter((i) => i.category === activeTab);
-  type TabKey = "announcement" | "news";
-
-  const TABS: { key: TabKey; label: string; icon: string }[] = [
-    { key: "announcement", label: "Announcements", icon: "fas fa-bullhorn" },
-    { key: "news", label: "News", icon: "fas fa-newspaper" },
-  ];
+  function handleTabChange(tab: TabKey) {
+    setActiveTab(tab);
+    setCurrentPage(1);
+  }
 
   return (
     <AgrulLayout>
@@ -269,13 +248,12 @@ export default function NewsAndEvents() {
         <div className="container">
           <div className="text-center" style={{ marginBottom: 40 }}>
             {TABS.map((tab) => {
-              const count = items.filter((i) => i.category === tab.key).length;
               const isActive = activeTab === tab.key;
               return (
                 <button
                   key={tab.key}
                   type="button"
-                  onClick={() => setActiveTab(tab.key)}
+                  onClick={() => handleTabChange(tab.key)}
                   style={{
                     margin: "0 8px",
                     padding: "12px 30px",
@@ -296,10 +274,10 @@ export default function NewsAndEvents() {
                 >
                   <i className={tab.icon} />
                   {tab.label}
-                  {!loading && count > 0 && (
+                  {isActive && !loading && totalCount > 0 && (
                     <span
                       style={{
-                        background: isActive ? "rgba(255,255,255,0.25)" : "var(--color-primary)",
+                        background: "rgba(255,255,255,0.25)",
                         color: "var(--white)",
                         borderRadius: 999,
                         fontSize: 11,
@@ -308,13 +286,14 @@ export default function NewsAndEvents() {
                         lineHeight: 1.6,
                       }}
                     >
-                      {count}
+                      {totalCount}
                     </span>
                   )}
                 </button>
               );
             })}
           </div>
+
           <div className="blog-item-box">
             <div className="row">
               {loading ? (
@@ -323,12 +302,12 @@ export default function NewsAndEvents() {
                     <CardSkeleton />
                   </div>
                 ))
-              ) : filtered.length === 0 ? (
+              ) : items.length === 0 ? (
                 <div className="col-12 text-center" style={{ padding: "60px 0", color: "#888" }}>
-                  No news or events available at the moment.
+                  No {activeTab === "announcement" ? "announcements" : "news"} available at the moment.
                 </div>
               ) : (
-                filtered.map((item) => (
+                items.map((item) => (
                   <div className="col-xl-6 col-md-12 single-item mb-30" key={item.id}>
                     <div
                       style={{
@@ -343,24 +322,6 @@ export default function NewsAndEvents() {
                         transition: "box-shadow 0.25s",
                       }}
                     >
-                      {/* Thumbnail */}
-                      {/* <div
-                        style={{
-                          width: 110,
-                          height: 110,
-                          borderRadius: 8,
-                          overflow: "hidden",
-                          flexShrink: 0,
-                          background: "#f0f0f0",
-                        }}
-                      >
-                        <img
-                          src={item.thumbnail_url || "/assets/img/news-placeholder.jpg"}
-                          alt={item.title}
-                          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                        />
-                      </div> */}
-
                       {/* Content */}
                       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 8 }}>
                         <span
@@ -397,7 +358,6 @@ export default function NewsAndEvents() {
                           >
                             {item.title}
                           </h3>
-                          {/* Divider */}
                           <div
                             style={{ width: 40, height: 3, background: "var(--color-secondary)", borderRadius: 2 }}
                           />
@@ -446,7 +406,7 @@ export default function NewsAndEvents() {
             </div>
           </div>
 
-          {!loading && items.length > ITEMS_PER_PAGE && (
+          {!loading && totalPages > 1 && (
             <div className="row">
               <div className="col-md-12 pagi-area text-center">
                 <nav>
