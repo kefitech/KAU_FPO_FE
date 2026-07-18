@@ -258,6 +258,19 @@ export default function FpoStatusPage() {
           </div>
         );
       })()}
+      {data.status === "rejected" && (() => {
+        const rejectionEntry = [...data.timeline].reverse().find((e) => e.to_status === "rejected" && e.notes);
+        return rejectionEntry ? (
+          <div className="flex flex-col gap-2 rounded-xl border border-red-200 bg-red-50 p-5 dark:border-red-800 dark:bg-red-950/30">
+            <div className="flex items-center gap-2 text-red-700 dark:text-red-400">
+              <XCircle className="h-4 w-4 shrink-0" />
+              <p className="font-semibold text-sm">Rejection Reason</p>
+            </div>
+            <p className="text-red-900 text-sm whitespace-pre-line dark:text-red-200">{rejectionEntry.notes}</p>
+          </div>
+        ) : null;
+      })()}
+
       {data.status === "approved" && (
         <Button
           className="gap-2 self-start bg-green-600 hover:bg-green-700"
