@@ -1,6 +1,6 @@
 // ─── Enums / Literals ────────────────────────────────────────────────────────
 
-export type FpoStatus = "draft" | "submitted" | "under_review" | "approved" | "rejected" | "info_required";
+export type FpoStatus = "draft" | "submitted" | "under_review" | "approved" | "rejected" | "info_required" | "suspended";
 
 export type FpoDocumentType =
   | "fpo_reg_cert"

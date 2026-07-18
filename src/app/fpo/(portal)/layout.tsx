@@ -13,6 +13,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { fpoNavigationConfig } from "@/config/navigation-defaults";
+import { resolvePostLoginPath } from "@/lib/fpo-redirect";
 import { useAuthStore } from "@/stores/auth-store";
 import { useLocaleStore } from "@/stores/locale-store";
 
@@ -21,6 +22,7 @@ export default function FpoPortalLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const locale = useLocaleStore((state) => state.locale);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const fpoRedirect = useAuthStore((s) => s.fpoRedirect);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -31,10 +33,18 @@ export default function FpoPortalLayout({ children }: { children: React.ReactNod
     if (!mounted) return;
     if (!isAuthenticated) {
       router.replace(`/v1/login?next=${encodeURIComponent(pathname)}`);
+      return;
     }
-  }, [mounted, isAuthenticated, pathname, router]);
+    if (fpoRedirect && fpoRedirect.stage !== "dashboard") {
+      router.replace(resolvePostLoginPath(fpoRedirect));
+    }
+  }, [mounted, isAuthenticated, fpoRedirect, pathname, router]);
 
   if (!mounted || !isAuthenticated) {
+    return null;
+  }
+
+  if (fpoRedirect && fpoRedirect.stage !== "dashboard") {
     return null;
   }
 

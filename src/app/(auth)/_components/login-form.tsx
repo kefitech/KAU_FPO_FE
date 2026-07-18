@@ -15,29 +15,10 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { authApi } from "@/lib/api/auth";
+import { resolvePostLoginPath } from "@/lib/fpo-redirect";
 import { translationsApi } from "@/lib/api/translations";
 import { useAuthStore } from "@/stores/auth-store";
 import { useLocaleStore } from "@/stores/locale-store";
-import type { FpoRedirect } from "@/types/auth";
-
-function resolvePostLoginPath(redirect: FpoRedirect | null, firstMenuPath?: string): string {
-  if (!redirect) return firstMenuPath ?? "/admin/dashboard";
-  switch (redirect.stage) {
-    case "wizard_step":
-      return redirect.step ? `/fpo/register?step=${redirect.step}` : "/fpo/register";
-    case "verify_email":
-    case "verify_phone":
-    case "upload_documents":
-    case "submit":
-      return "/fpo/register";
-    case "status":
-      return "/fpo/status";
-    case "dashboard":
-      return "/fpo/dashboard";
-    default:
-      return "/dashboard";
-  }
-}
 
 const formSchema = z.object({
   username: z.string().min(1, { message: "Username is required." }),
@@ -78,7 +59,7 @@ export function LoginForm() {
         router.push("/v1/login/2fa");
       } else if ("user" in result) {
         const meData = await authApi.me();
-        setUser(meData.user);
+        setUser(meData.user, meData.redirect);
         sessionStorage.setItem("show_welcome", "1");
         router.replace(resolvePostLoginPath(meData.redirect, meData.menu?.[0]?.path));
       }

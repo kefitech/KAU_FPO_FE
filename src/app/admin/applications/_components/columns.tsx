@@ -18,6 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useConfirmStore } from "@/stores/confirm-store";
 
 type T = Record<string, string>;
 
@@ -42,6 +43,7 @@ function StatusBadge({ status, label }: { status: ApplicationStatus; label: stri
 function ActionsCell({ row, t, tCommon }: { row: ApplicationListItem; t: T; tCommon: T }) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const confirm = useConfirmStore((s) => s.confirm);
 
   const activateMutation = useMutation({
     mutationFn: () => adminApplicationsApi.activate(row.id),
@@ -100,7 +102,16 @@ function ActionsCell({ row, t, tCommon }: { row: ApplicationListItem; t: T; tCom
         )}
         {isApproved && (
           <DropdownMenuItem
-            onClick={() => confirm(`Suspend "${row.name || "this FPO"}"?`) && deactivateMutation.mutate()}
+            onClick={() =>
+              confirm({
+                title: "Suspend FPO",
+                description: `Are you sure you want to suspend "${row.name || "this FPO"}"? They will lose access to the portal.`,
+                confirmLabel: "Suspend",
+                confirmingLabel: "Suspending…",
+                variant: "destructive",
+                onConfirm: () => deactivateMutation.mutateAsync(),
+              })
+            }
             disabled={deactivateMutation.isPending}
             className="text-orange-600 focus:text-orange-600"
           >
@@ -110,7 +121,16 @@ function ActionsCell({ row, t, tCommon }: { row: ApplicationListItem; t: T; tCom
         )}
         {canActivate && (
           <DropdownMenuItem
-            onClick={() => confirm(`Activate "${row.name || "this FPO"}"?`) && activateMutation.mutate()}
+            onClick={() =>
+              confirm({
+                title: "Activate FPO",
+                description: `Are you sure you want to activate "${row.name || "this FPO"}"?`,
+                confirmLabel: "Activate",
+                confirmingLabel: "Activating…",
+                variant: "default",
+                onConfirm: () => activateMutation.mutateAsync(),
+              })
+            }
             disabled={activateMutation.isPending}
             className="text-green-600 focus:text-green-600"
           >

@@ -3,6 +3,37 @@ import type { PaginatedResponse } from "@/types/pagination";
 
 // ─── Tier Assessment (Admin) ──────────────────────────────────────────────────
 
+export interface AssessmentAnswerData {
+  question_no: number;
+  question_text: string;
+  domain_code: string;
+  domain_name: string;
+  criterion_name: string;
+  input_type: string;
+  answer: string | number | string[] | boolean;
+  score: number;
+}
+
+export interface AssessmentUploadData {
+  id: string;
+  question_no: number;
+  original_filename: string;
+  file_url: string | null;
+  uploaded_at: string;
+}
+
+export interface TierAssessmentData {
+  id: string;
+  financial_year: string;
+  status: 'draft' | 'submitted';
+  total_score: number | null;
+  tier_assigned: string;
+  domain_scores: Record<string, number>;
+  submitted_at: string | null;
+  answers: AssessmentAnswerData[];
+  uploads: AssessmentUploadData[];
+}
+
 export interface TierAuditLogChanges {
   tier: string;
   financial_year: string;
@@ -207,4 +238,9 @@ export const adminApplicationsApi = {
 
   assignTier: (fpoId: number, payload: AssignTierPayload): Promise<void> =>
     api.post(`/admin/applications/${fpoId}/assign-tier/`, payload).then(() => undefined),
+
+  getTierAssessment: (fpoId: number) =>
+    api.get<{ status: string; data: { fpo_id: number; assessments: TierAssessmentData[] } }>(
+      `/admin/applications/${fpoId}/tier-assessment/`
+    ).then((r) => r.data.data.assessments),
 };

@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 
 import { useQuery } from "@tanstack/react-query";
-import { AlertCircle, ArrowRight, CheckCircle2, Clock, FileText, RefreshCw, XCircle } from "lucide-react";
+import { AlertCircle, ArrowRight, CheckCircle2, Clock, FileText, RefreshCw, ShieldOff, XCircle } from "lucide-react";
 
 import { fpoRegistrationApi } from "@/app/fpo/_api/fpo-registration";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +48,12 @@ const STATUS_CONFIG: Record<FpoStatus, { label: string; color: string; icon: Rea
       color: "bg-orange-100 text-orange-700",
       icon: AlertCircle,
       description: "Additional information is required to proceed.",
+    },
+    suspended: {
+      label: "Suspended",
+      color: "bg-red-100 text-red-700",
+      icon: ShieldOff,
+      description: "Your FPO account has been suspended. Please contact the administrator.",
     },
   };
 

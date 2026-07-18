@@ -34,6 +34,9 @@ import {
   type AssignTierPayload,
   adminApplicationsApi,
   type TierAuditLogEntry,
+  type TierAssessmentData,
+  type AssessmentAnswerData,
+  type AssessmentUploadData,
 } from "@/app/admin/_api/applications";
 import { auditLogsApi } from "@/app/admin/_api/audit-logs";
 import { fpoUsersApi } from "@/app/admin/_api/fpo-users";
@@ -867,11 +870,203 @@ function AuditLogTab({ fpoId }: { fpoId: number }) {
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
 
+// ─── Tier Assessment tab ──────────────────────────────────────────────────────
+
+function TierAssessmentTab({ fpoId }: { fpoId: number }) {
+  const { data: assessments = [], isLoading } = useQuery({
+    queryKey: ["tier-assessment-admin", fpoId],
+    queryFn: () => adminApplicationsApi.getTierAssessment(fpoId),
+    enabled: !!fpoId,
+    staleTime: 60_000,
+  });
+
+  if (isLoading)
+    return (
+      <div className="flex flex-col gap-4">
+        {[1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-24 w-full" />
+        ))}
+      </div>
+    );
+
+  if (assessments.length === 0)
+    return (
+      <p className="py-8 text-center text-muted-foreground text-sm">No tier assessment submitted yet.</p>
+    );
+
+  return (
+    <div className="flex flex-col gap-6">
+      {assessments.map((assessment: TierAssessmentData) => {
+        // Build domain name lookup from answers
+        const domainNameMap: Record<string, string> = {};
+        for (const ans of assessment.answers) {
+          if (!domainNameMap[ans.domain_code]) domainNameMap[ans.domain_code] = ans.domain_name;
+        }
+
+        // Sort domains in correct Roman numeral order
+        const DOMAIN_ORDER = ["I", "II", "III", "IV", "V", "VI"];
+        const sortDomains = <T,>(entries: [string, T][]) =>
+          entries.sort(([a], [b]) => {
+            const ai = DOMAIN_ORDER.indexOf(a);
+            const bi = DOMAIN_ORDER.indexOf(b);
+            return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+          });
+
+        // Group answers by domain (sorted)
+        const byDomain = assessment.answers.reduce<Record<string, AssessmentAnswerData[]>>((acc, ans) => {
+          const key = ans.domain_code;
+          if (!acc[key]) acc[key] = [];
+          acc[key].push(ans);
+          return acc;
+        }, {});
+        const sortedDomainEntries = sortDomains(Object.entries(byDomain));
+
+        return (
+          <div key={assessment.id} className="flex flex-col gap-4 rounded-lg border bg-card p-5">
+            {/* Header */}
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="font-semibold text-sm tabular-nums">{assessment.financial_year}</span>
+              <span
+                className={`inline-flex items-center rounded-full px-2.5 py-0.5 font-medium text-xs ${
+                  assessment.status === "submitted"
+                    ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                {assessment.status === "submitted" ? "Submitted" : "Draft"}
+              </span>
+              {assessment.tier_assigned && (
+                <span
+                  className={`inline-flex items-center rounded-full border px-2.5 py-0.5 font-bold text-xs ${tierBadgeClass(assessment.tier_assigned)}`}
+                >
+                  Tier {assessment.tier_assigned}
+                </span>
+              )}
+              {assessment.total_score !== null && (
+                <span className="text-muted-foreground text-sm tabular-nums">
+                  Score: <strong className="text-foreground">{assessment.total_score.toFixed(1)}</strong> / 100
+                </span>
+              )}
+              {assessment.submitted_at && (
+                <span className="ml-auto text-muted-foreground text-xs">
+                  Submitted{" "}
+                  {new Date(assessment.submitted_at).toLocaleString("en-IN", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+              )}
+            </div>
+
+            {/* Domain scores grid */}
+            {assessment.domain_scores && Object.keys(assessment.domain_scores).length > 0 && (
+              <div className="rounded-md border">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/40">
+                      <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Domain</th>
+                      <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground">Score</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {sortDomains(Object.entries(assessment.domain_scores)).map(([domain, score]) => (
+                      <tr key={domain}>
+                        <td className="px-3 py-2">
+                          <span className="font-mono text-xs font-semibold text-muted-foreground mr-2">{domain}</span>
+                          <span className="text-sm">{domainNameMap[domain] ?? domain}</span>
+                        </td>
+                        <td className="px-3 py-2 text-right tabular-nums text-sm font-medium">
+                          {typeof score === "number" ? score.toFixed(1) : score}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Answers grouped by domain */}
+            {sortedDomainEntries.map(([domainCode, answers]) => (
+              <div key={domainCode} className="flex flex-col gap-2">
+                <h4 className="font-medium text-xs uppercase tracking-wide text-muted-foreground">
+                  {answers[0].domain_name} ({domainCode})
+                </h4>
+                <div className="flex flex-col divide-y rounded-md border">
+                  {answers.map((ans) => (
+                    <div key={ans.question_no} className="flex items-start justify-between gap-4 px-3 py-2.5">
+                      <div className="flex min-w-0 gap-2">
+                        <span className="shrink-0 font-mono text-xs text-muted-foreground pt-0.5">
+                          Q{ans.question_no}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium">{ans.question_text}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {ans.criterion_name} · {ans.input_type}
+                          </p>
+                          <p className="text-sm mt-1">
+                            {Array.isArray(ans.answer)
+                              ? (ans.answer as string[]).join(", ")
+                              : typeof ans.answer === "boolean"
+                              ? ans.answer ? "Yes" : "No"
+                              : String(ans.answer ?? "—")}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            {/* Uploads */}
+            {assessment.uploads.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <h4 className="font-medium text-xs uppercase tracking-wide text-muted-foreground">Uploaded Files</h4>
+                <div className="flex flex-col divide-y rounded-md border">
+                  {assessment.uploads.map((upload) => (
+                    <div key={upload.id} className="flex items-center justify-between gap-3 px-3 py-2.5">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{upload.original_filename}</p>
+                          <p className="text-xs text-muted-foreground">Question {upload.question_no}</p>
+                        </div>
+                      </div>
+                      {upload.file_url ? (
+                        <a
+                          href={upload.file_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex shrink-0 items-center gap-1 text-primary text-xs hover:underline"
+                        >
+                          View <ExternalLink className="h-3 w-3" />
+                        </a>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Unavailable</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Tabs ─────────────────────────────────────────────────────────────────────
+
 const TABS = [
   { key: "overview", label: "Overview", icon: Building2 },
   { key: "documents", label: "Documents", icon: FileText },
   { key: "team", label: "Team", icon: Users },
   { key: "audit-log", label: "Audit Log", icon: Clock },
+  { key: "tier-assessment", label: "Tier Assessment", icon: Star },
 ] as const;
 
 type TabKey = (typeof TABS)[number]["key"];
@@ -1399,9 +1594,14 @@ function ApplicationDetailContent() {
 
       {/* Audit Log */}
       {activeTab === "audit-log" && (
-        
-          <AuditLogTab fpoId={fpoId} />
-        
+        <AuditLogTab fpoId={fpoId} />
+      )}
+
+      {/* Tier Assessment */}
+      {activeTab === "tier-assessment" && (
+        <SectionCard icon={Star} title="Tier Assessment">
+          <TierAssessmentTab fpoId={fpoId} />
+        </SectionCard>
       )}
 
       {/* Dialogs */}
