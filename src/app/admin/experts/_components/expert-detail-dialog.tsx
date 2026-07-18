@@ -122,13 +122,26 @@ function EnquiriesTab({ expertId }: { expertId: number }) {
     <div className="flex flex-col gap-3">
       {enquiries.map((enq) => (
         <div key={enq.id} className="rounded-lg border p-3 flex flex-col gap-1.5">
-          <div className="flex items-center justify-between gap-2">
-            <span className="font-medium text-sm">{enq.fpo_name}</span>
-            <span className="text-xs text-muted-foreground">
-              {new Date(enq.created_at).toLocaleDateString("en-IN", {
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex flex-col gap-0.5">
+              {enq.fpo_name && (
+                <span className="font-medium text-sm">{enq.fpo_name}</span>
+              )}
+              {enq.user_name && (
+                <span className="text-xs text-muted-foreground">
+                  {enq.user_name}
+                  {enq.user_email && ` · ${enq.user_email}`}
+                </span>
+              )}
+            </div>
+            <span className="text-xs text-muted-foreground shrink-0">
+              {new Date(enq.submitted_at).toLocaleString("en-IN", {
                 day: "numeric",
                 month: "short",
                 year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true,
               })}
             </span>
           </div>

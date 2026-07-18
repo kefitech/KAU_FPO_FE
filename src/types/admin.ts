@@ -488,9 +488,12 @@ export interface AdminExpertPayload {
 
 export interface ExpertEnquiry {
   id: number;
-  fpo_name: string;
+  fpo_name: string | null;
+  user_name: string | null;
+  user_email: string | null;
   message: string;
-  created_at: string;
+  submitted_at: string;
+  email_sent: boolean;
 }
 
 // ─── FPO Permissions ──────────────────────────────────────────────────────────
