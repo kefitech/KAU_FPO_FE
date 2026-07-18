@@ -106,7 +106,7 @@ export default function About() {
             <div className="row align-center">
               <div className="col-xl-7 col-md-6 col-lg-6 col-sm-7">
                 <h3>The Mission</h3>
-                <p>
+                <p style={{textAlign: "justify"}}>
                   The KAU-FPO Linkage (KFL) project will work with a mission to ignite a sustainable
                   agricultural development in Kerala by empowering FPOs as the driving force. This will be
                   achieved through a transformative partnership between Kerala Agricultural University
@@ -114,18 +114,18 @@ export default function About() {
                   mission encompasses the following:
                 </p>
                   <ul className="check-solid-list mt-20">
-                    <li>
+                    <li style={{textAlign: "justify"}}>
                       Empowerment of FPOs for excellence: Empowering FPO members through
                       knowledge and entrepreneurial skill development, equipping them to conquer the
                       challenges of modern agriculture and propel their organizations towards self-
                       sufficiency
                     </li>
-                    <li>Research for impact: Fueling groundbreaking business and policy-oriented research
+                    <li style={{textAlign: "justify"}}>Research for impact: Fueling groundbreaking business and policy-oriented research
                       directly addressing the critical issues faced by FPOs. This research will be a
                       cornerstone for providing actionable solutions for their growth and propelling
                       informed decision-making
                     </li>
-                    <li>Building sustainable FPO ecosystems: Foster a collaborative environment and
+                    <li style={{textAlign: "justify"}}>Building sustainable FPO ecosystems: Foster a collaborative environment and
                         provide handholding support to streamline FPO activities, ensuring their long-term
                         sustainability and maximising their impact on Kerala’s agriculture.
                     </li>
@@ -140,7 +140,7 @@ export default function About() {
                   <div>
                 <h2 className="banner-style-one" ><strong style={{ color: "var(--color-secondary)" }}>The Vision</strong></h2>
                 
-                <p>The KAU-FPO Linkage (KFL) project envisions a future where FPOs in Kerala flourish as
+                <p style={{textAlign: "justify"}}>The KAU-FPO Linkage (KFL) project envisions a future where FPOs in Kerala flourish as
                   empowered and self-sustaining institutions driven by strategic collaboration between the
                   academic expertise of Kerala Agricultural University and the invaluable real-world
                   experience of FPO members.</p>
