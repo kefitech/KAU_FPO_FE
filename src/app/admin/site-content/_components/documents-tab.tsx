@@ -569,10 +569,10 @@ export function DocumentsTab({ t = {} }: { t?: T }) {
         }}
       >
         <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0">
-          <DialogHeader className="px-6 pt-5 pb-3 border-b shrink-0">
+          <DialogHeader className="px-6 pt-5 pb-3 pr-12 border-b shrink-0">
             <DialogTitle className="flex items-center gap-2 text-base">
               <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-              {previewDoc?.title_display}
+              <span className="min-w-0 break-all">{previewDoc?.title_display}</span>
             </DialogTitle>
           </DialogHeader>
           <div className="flex-1 min-h-0">
