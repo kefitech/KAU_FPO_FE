@@ -19,6 +19,9 @@ const HREF_OVERRIDES: Record<string, string> = {
   "/admin/notification-templates": "/admin/notifications?tab=templates",
   "/admin/notification-template-codes": "/admin/notifications?tab=codes",
   "/admin/notification-channel-settings": "/admin/notifications?tab=channels",
+  "/admin/categories": "/admin/languages?tab=categories",
+  "/admin/translations": "/admin/languages?tab=translations",
+  "/admin/menu-items": "/admin/languages?tab=menu",
 };
 
 const SEGMENT_LABELS: Record<string, string> = {
@@ -35,9 +38,9 @@ const SEGMENT_LABELS: Record<string, string> = {
   "external-apis": "External APIs",
   applications: "FPO Applications",
   "ownership-claims": "Ownership Claims",
-  "schemes": "Schemes",
-  "experts": "Expert Directory",
-  "enquiries": "Enquiries",
+  schemes: "Schemes",
+  experts: "Expert Directory",
+  enquiries: "Enquiries",
   "notification-templates": "Templates",
   "notification-template-codes": "Template Codes",
   "notification-channel-settings": "Channel Settings",
