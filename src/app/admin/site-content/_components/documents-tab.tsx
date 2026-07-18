@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { AxiosError } from "axios";
 import {
   CheckCircle2,
   Circle,
@@ -38,7 +39,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { api } from "@/lib/api/client";
 import { useConfirmStore } from "@/stores/confirm-store";
 import type { AdminDocument } from "@/types/admin";
-import { AxiosError } from "axios";
 
 type T = Record<string, string>;
 
@@ -50,8 +50,6 @@ interface PublicLanguage {
   native_name: string;
   is_default: boolean;
 }
-
-
 
 interface ApiError {
   message: string;
@@ -107,8 +105,22 @@ function DocumentDialog({
   const [file, setFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isViewOnly, setIsViewOnly] = useState(false);
-
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
   const defaultLang = languages.find((l) => l.is_default);
+
+  function handleFileSelect(selected: File | null) {
+    if (!selected) {
+      setFile(null);
+      return;
+    }
+    if (selected.size > MAX_FILE_SIZE) {
+      toast.error(`File is too large (${formatFileSize(selected.size)}). Max allowed size is 5 MB.`);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      setFile(null);
+      return;
+    }
+    setFile(selected);
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -147,14 +159,12 @@ function DocumentDialog({
       onSuccess();
       onOpenChange(false);
     },
-   onError: (error: ApiError) => {
-      const errorMsg = error.data?.errors?.file?.[0] 
-        || error.data?.message 
-        || "Failed to save document.";
-      
+    onError: (error: ApiError) => {
+      const errorMsg = error.data?.errors?.file?.[0] || error.data?.message || "Failed to save document.";
+
       toast.error(errorMsg);
-      toast.error("Failed to save file")
-    }
+      toast.error("Failed to save file");
+    },
   });
 
   const canSubmit = !!titleValues[defaultLang?.code ?? "en"]?.trim() && (editing ? true : !!file);
@@ -251,7 +261,7 @@ function DocumentDialog({
                       type="file"
                       accept=".pdf"
                       className="hidden"
-                      onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                      onChange={(e) => handleFileSelect(e.target.files?.[0] ?? null)}
                     />
                   </label>
                 </div>
@@ -305,7 +315,7 @@ function DocumentDialog({
                 ref={fileInputRef}
                 type="file"
                 accept=".pdf"
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                onChange={(e) => handleFileSelect(e.target.files?.[0] ?? null)}
               />
             )}
           </div>
@@ -397,9 +407,7 @@ export function DocumentsTab({ t = {} }: { t?: T }) {
     setDialogOpen(true);
   }
   function getTitleText(title: AdminDocument["title_display"]): string {
-  return typeof title === "string"
-    ? title
-    : title?? Object.values(title ?? {})[0] ?? "";
+    return typeof title === "string" ? title : (title ?? Object.values(title ?? {})[0] ?? "");
   }
 
   return (
@@ -451,93 +459,96 @@ export function DocumentsTab({ t = {} }: { t?: T }) {
             ) : (
               documents.map((doc) => {
                 const titleText = getTitleText(doc.title_display);
-            return(
-                <TableRow key={doc.id} className={!doc.is_active ? "opacity-50" : ""} >
-                  <TableCell>
-                    <a
-                      href={doc.file_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center gap-1.5 font-medium hover:underline text-sm"
-                      title={titleText}
-                    >
-                      <FileText className="h-4 w-4 shrink-0 text-muted-foreground " />
-                      
-                      <span className=" max-w-[240px] truncate">{titleText}</span>
-                      <ExternalLink className="h-3 w-3 text-muted-foreground" />
-                    </a>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">{formatFileSize(doc.file_size)}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="secondary"
-                      className={
-                        doc.is_view_only
-                          ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                          : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                      }
-                    >
-                      {doc.is_view_only ? "View only" : "Downloadable"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="secondary"
-                      className={
-                        doc.is_active
-                          ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                          : "bg-muted text-muted-foreground"
-                      }
-                    >
-                      {doc.is_active ? "Active" : "Inactive"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
-                    {new Date(doc.created_at).toLocaleDateString("en-IN", {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                    })}
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setPreviewDoc(doc)}>
-                          <ZoomIn className="mr-2 h-4 w-4" />
-                          View PDF
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => openEdit(doc)}>
-                          <Pencil className="mr-2 h-4 w-4" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toggleMutation.mutate({ id: doc.id, active: !doc.is_active })}>
-                          {doc.is_active ? (
-                            <>
-                              <EyeOff className="mr-2 h-4 w-4" />
-                              Deactivate
-                            </>
-                          ) : (
-                            <>
-                              <Eye className="mr-2 h-4 w-4" />
-                              Activate
-                            </>
-                          )}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(doc)}>
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              )})
+                return (
+                  <TableRow key={doc.id} className={!doc.is_active ? "opacity-50" : ""}>
+                    <TableCell>
+                      <a
+                        href={doc.file_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-1.5 font-medium hover:underline text-sm"
+                        title={titleText}
+                      >
+                        <FileText className="h-4 w-4 shrink-0 text-muted-foreground " />
+
+                        <span className=" max-w-[240px] truncate">{titleText}</span>
+                        <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                      </a>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">{formatFileSize(doc.file_size)}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="secondary"
+                        className={
+                          doc.is_view_only
+                            ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                            : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                        }
+                      >
+                        {doc.is_view_only ? "View only" : "Downloadable"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="secondary"
+                        className={
+                          doc.is_active
+                            ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                            : "bg-muted text-muted-foreground"
+                        }
+                      >
+                        {doc.is_active ? "Active" : "Inactive"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {new Date(doc.created_at).toLocaleDateString("en-IN", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setPreviewDoc(doc)}>
+                            <ZoomIn className="mr-2 h-4 w-4" />
+                            View PDF
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openEdit(doc)}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => toggleMutation.mutate({ id: doc.id, active: !doc.is_active })}
+                          >
+                            {doc.is_active ? (
+                              <>
+                                <EyeOff className="mr-2 h-4 w-4" />
+                                Deactivate
+                              </>
+                            ) : (
+                              <>
+                                <Eye className="mr-2 h-4 w-4" />
+                                Activate
+                              </>
+                            )}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(doc)}>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
