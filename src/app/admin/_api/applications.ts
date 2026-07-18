@@ -101,6 +101,7 @@ export interface ApplicationDocument {
   verified_at: string | null;
   verified_by_name: string | null;
   created_at: string;
+  is_info_response_doc: boolean;
 }
 
 export interface ApplicationStatusEntry {
@@ -243,4 +244,7 @@ export const adminApplicationsApi = {
     api.get<{ status: string; data: { fpo_id: number; assessments: TierAssessmentData[] } }>(
       `/admin/applications/${fpoId}/tier-assessment/`
     ).then((r) => r.data.data.assessments),
+
+  approve: (fpoId: number, notes?: string) =>
+    api.post(`/admin/applications/${fpoId}/approve/`, { notes }).then((r) => r.data),
 };

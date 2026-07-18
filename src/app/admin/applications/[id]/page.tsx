@@ -1092,6 +1092,7 @@ function ApplicationDetailContent() {
   const [requestInfoOpen, setRequestInfoOpen] = useState(action === "request-info");
   const [assignTierOpen, setAssignTierOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [infoDetailsDoc, setInfoDetailsDoc] = useState<import("@/app/admin/_api/applications").ApplicationDocument | null>(null);
 
   useEffect(() => {
     translationsApi
@@ -1143,6 +1144,19 @@ function ApplicationDetailContent() {
       queryClient.invalidateQueries({ queryKey: ["applications"] });
     },
     onError: (err: unknown) => toast.error(err instanceof Error ? err.message : "Failed to deactivate"),
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: () => adminApplicationsApi.approve(fpoId),
+    onSuccess: () => {
+      toast.success("Application approved");
+      queryClient.invalidateQueries({ queryKey: ["application", fpoId] });
+      queryClient.invalidateQueries({ queryKey: ["applications"] });
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(msg ?? "Failed to approve application");
+    },
   });
 
   function setTab(key: TabKey) {
@@ -1199,12 +1213,12 @@ function ApplicationDetailContent() {
             <Pencil className="mr-1.5 h-4 w-4" />
             Edit Details
           </Button> */}
-          {/* {(app.status === "approved" || app.status === "info_required") && (
+          {app.status === "approved" && (
             <Button size="sm" variant="outline" onClick={() => setRequestInfoOpen(true)}>
               <AlertCircle className="mr-1.5 h-4 w-4" />
               {t.btn_request_info ?? "Request Info"}
             </Button>
-          )} */}
+          )}
           {app.status === "approved" && (
             <Button size="sm" variant="destructive" onClick={() => setRejectOpen(true)}>
               <XCircle className="mr-1.5 h-4 w-4" />
@@ -1250,6 +1264,26 @@ function ApplicationDetailContent() {
             >
               <CheckCheck className="mr-1.5 h-4 w-4" />
               {activateMutation.isPending ? "Activating…" : "Activate"}
+            </Button>
+          )}
+          {app.status === "submitted" && (
+            <Button
+              size="sm"
+              className="bg-green-600 hover:bg-green-700"
+              onClick={() =>
+                confirm({
+                  title: "Approve Application",
+                  description: "Approve this FPO application? This will grant them full access to the platform.",
+                  confirmLabel: "Approve",
+                  confirmingLabel: "Approving…",
+                  variant: "default",
+                  onConfirm: () => approveMutation.mutateAsync(),
+                })
+              }
+              disabled={approveMutation.isPending}
+            >
+              <CheckCheck className="mr-1.5 h-4 w-4" />
+              {approveMutation.isPending ? "Approving…" : "Approve"}
             </Button>
           )}
         </div>
@@ -1526,7 +1560,14 @@ function ApplicationDetailContent() {
                   <div className="flex min-w-0 items-center gap-2.5">
                     <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
                     <div className="min-w-0">
-                      <p className="font-medium text-sm">{formatDocType(doc.document_type)}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-sm">{formatDocType(doc.document_type)}</p>
+                        {doc.is_info_response_doc && (
+                          <span className="inline-flex items-center rounded-full bg-orange-100 px-2 py-0.5 font-medium text-orange-700 text-xs dark:bg-orange-900/30 dark:text-orange-300">
+                            Info Response
+                          </span>
+                        )}
+                      </div>
                       <p className="text-muted-foreground text-xs">
                         {(doc.file_size / 1024).toFixed(1)} KB · {doc.mime_type}
                       </p>
@@ -1552,6 +1593,16 @@ function ApplicationDetailContent() {
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
+                    {doc.is_info_response_doc && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 text-xs text-orange-600 hover:text-orange-700"
+                        onClick={() => setInfoDetailsDoc(doc)}
+                      >
+                        Info Details
+                      </Button>
+                    )}
                     <a
                       href={doc.file_url}
                       target="_blank"
@@ -1605,6 +1656,49 @@ function ApplicationDetailContent() {
       )}
 
       {/* Dialogs */}
+      {/* Info Details Dialog */}
+      {(() => {
+        if (!infoDetailsDoc) return null;
+        const history = app.status_history ?? [];
+        const docUploaded = new Date(infoDetailsDoc.created_at);
+        const infoEntry = [...history].reverse().find((h) => h.to_status === "info_required" && new Date(h.created_at) <= docUploaded);
+        const infoReply = infoEntry ? history.find((h) => h.from_status === "info_required" && new Date(h.created_at) > new Date(infoEntry.created_at)) : null;
+        return (
+          <Dialog open={!!infoDetailsDoc} onOpenChange={(o) => { if (!o) setInfoDetailsDoc(null); }}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Info Request Details</DialogTitle>
+              </DialogHeader>
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-1.5 rounded-lg border border-orange-200 bg-orange-50 p-4 dark:border-orange-800 dark:bg-orange-950/20">
+                  <p className="font-semibold text-orange-800 text-xs dark:text-orange-300">Admin Request</p>
+                  <p className="text-sm">{infoEntry?.notes || "—"}</p>
+                  <p className="text-muted-foreground text-xs">{infoEntry?.changed_by_name ?? "Admin"} · {infoEntry ? new Date(infoEntry.created_at).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : ""}</p>
+                </div>
+                {infoReply && (
+                  <div className="flex flex-col gap-1.5 rounded-lg border bg-muted/40 p-4">
+                    <p className="font-semibold text-xs">FPO Response</p>
+                    <p className="text-sm">{infoReply.notes || "—"}</p>
+                    <p className="text-muted-foreground text-xs">{infoReply.changed_by_name ?? "FPO"} · {new Date(infoReply.created_at).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
+                  </div>
+                )}
+                <div className="flex flex-col gap-1.5 rounded-lg border p-4">
+                  <p className="font-semibold text-xs">Attached Document</p>
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">{formatDocType(infoDetailsDoc.document_type)}</span>
+                    <span className="text-muted-foreground text-xs">· {(infoDetailsDoc.file_size / 1024).toFixed(1)} KB</span>
+                    <a href={infoDetailsDoc.file_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary text-xs hover:underline">
+                      View <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        );
+      })()}
+
       <RejectDialog fpoId={fpoId} t={t} tCommon={tCommon} open={rejectOpen} onOpenChange={setRejectOpen} />
       <RequestInfoDialog
         fpoId={fpoId}

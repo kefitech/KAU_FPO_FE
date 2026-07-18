@@ -66,4 +66,7 @@ export const fpoRegistrationApi = {
   sendPhoneOtp: () => api.post(`${BASE}phone-verify/send/`),
 
   confirmPhoneOtp: (otp: string) => api.post(`${BASE}phone-verify/confirm/`, { otp }),
+
+  submitInfoResponse: (notes: string) =>
+    api.post(`${BASE}me/info-response/`, { notes }).then((r) => r.data),
 };

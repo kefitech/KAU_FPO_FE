@@ -86,7 +86,17 @@ function ActionsCell({ row, t, tCommon }: { row: ApplicationListItem; t: T; tCom
           {t.action_view ?? tCommon.view ?? "View Details"}
         </DropdownMenuItem>
 
-        {(isApproved || isInfoRequired || canActivate) && <DropdownMenuSeparator />}
+        {(isApproved || isInfoRequired || row.status === "submitted" || canActivate) && <DropdownMenuSeparator />}
+
+        {row.status === "submitted" && (
+          <DropdownMenuItem
+            onClick={() => router.push(`/admin/applications/${row.id}?action=approve`)}
+            className="text-green-600 focus:text-green-600"
+          >
+            <CheckCheck className="mr-2 h-4 w-4" />
+            Approve
+          </DropdownMenuItem>
+        )}
 
         {isApproved && (
           <DropdownMenuItem onClick={() => router.push(`/admin/applications/${row.id}?action=request-info`)}>
