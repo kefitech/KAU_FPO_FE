@@ -27,8 +27,10 @@ type T = Record<string, string>;
 const schema = z.object({
   template_code: z.string().min(1, { message: "Please select a template code" }),
   language: z.string().min(1, { message: "Please select a language" }),
-  subject: z.string().min(1, { message: "Subject is required"}),
+  subject: z.string().optional(),
   body: z.string().min(1, { message: "Body is required" }),
+  whatsapp_template_name: z.string().optional(),
+  whatsapp_template_language: z.string().optional(),
   is_active: z.boolean(),
 });
 
@@ -46,6 +48,8 @@ const defaultValues: FormValues = {
   language: "",
   subject: "",
   body: "",
+  whatsapp_template_name: "",
+  whatsapp_template_language: "",
   is_active: true,
 };
 
@@ -53,8 +57,10 @@ function toFormValues(item: NotificationTemplate): FormValues {
   return {
     template_code: String(item.template_code),
     language: String(item.language),
-    subject: item.subject,
+    subject: item.subject ?? "",
     body: item.body,
+    whatsapp_template_name: item.whatsapp_template_name ?? "",
+    whatsapp_template_language: item.whatsapp_template_language ?? "",
     is_active: item.is_active,
   };
 }
@@ -98,13 +104,17 @@ export function TemplateForm({ mode, template, t = {}, tCommon = {} }: TemplateF
   const selectedCodeId = watch("template_code");
   const selectedCode = codes.find((c) => String(c.id) === selectedCodeId);
 
+  const isWhatsApp = selectedCode?.channel === "whatsapp";
+
   const mutation = useMutation({
     mutationFn: (values: FormValues) => {
       const payload = {
         template_code: Number(values.template_code),
         language: Number(values.language),
-        subject: values.subject,
+        subject: values.subject || undefined,
         body: values.body,
+        whatsapp_template_name: values.whatsapp_template_name || undefined,
+        whatsapp_template_language: values.whatsapp_template_language || undefined,
         is_active: values.is_active,
       };
       return isEdit ? notificationTemplateApi.update(template!.id, payload) : notificationTemplateApi.create(payload);
@@ -116,8 +126,8 @@ export function TemplateForm({ mode, template, t = {}, tCommon = {} }: TemplateF
       if (!isEdit) router.push("/admin/notifications?tab=templates");
     },
     onError: (error: any) => {
-      console.log("raw error:", error);
       const data = error?.data;
+      const FORM_FIELDS = new Set(["template_code", "language", "subject", "body", "whatsapp_template_name", "whatsapp_template_language", "is_active"]);
 
       if (data?.code === "validation_error" && data?.errors) {
         const { non_field_errors, ...fieldErrors } = data.errors;
@@ -127,10 +137,11 @@ export function TemplateForm({ mode, template, t = {}, tCommon = {} }: TemplateF
         }
 
         Object.entries(fieldErrors).forEach(([field, messages]) => {
-          setError(field as any, {
-            type: "server",
-            message: (messages as string[])[0],
-          });
+          if (FORM_FIELDS.has(field)) {
+            setError(field as any, { type: "server", message: (messages as string[])[0] });
+          } else {
+            toast.error((messages as string[])[0]);
+          }
         });
       } else {
         toast.error(error?.message ?? (isEdit ? "Failed to update template" : "Failed to create template"));
@@ -222,21 +233,25 @@ export function TemplateForm({ mode, template, t = {}, tCommon = {} }: TemplateF
                 )}
               />
 
-              <Controller
-                control={control}
-                name="subject"
-                render={({ field }) => (
-                  <Field>
-                    <FieldLabel htmlFor="t-subject">{t.subject_label ?? "Subject"}<span className="text-destructive">*</span></FieldLabel>
-                    <Input
-                      id="t-subject"
-                      placeholder={t.subject_placeholder ?? "e.g. Your FPO application has been approved"}
-                      {...field}
-                    />
-                    {errors.subject && <FieldError errors={[errors.subject]} />} {/* 👈 add this */}
-                  </Field>
-                )}
-              />
+              {!isWhatsApp && (
+                <Controller
+                  control={control}
+                  name="subject"
+                  render={({ field }) => (
+                    <Field>
+                      <FieldLabel htmlFor="t-subject">
+                        {t.subject_label ?? "Subject"} <span className="text-destructive">*</span>
+                      </FieldLabel>
+                      <Input
+                        id="t-subject"
+                        placeholder={t.subject_placeholder ?? "e.g. Your FPO application has been approved"}
+                        {...field}
+                      />
+                      {errors.subject && <FieldError errors={[errors.subject]} />}
+                    </Field>
+                  )}
+                />
+              )}
 
               <Controller
                 control={control}
@@ -258,6 +273,47 @@ export function TemplateForm({ mode, template, t = {}, tCommon = {} }: TemplateF
                   </Field>
                 )}
               />
+
+              {isWhatsApp && (
+                <>
+                  <Controller
+                    control={control}
+                    name="whatsapp_template_name"
+                    render={({ field }) => (
+                      <Field>
+                        <FieldLabel htmlFor="t-wa-name">
+                          WhatsApp Template Name <span className="text-destructive">*</span>
+                        </FieldLabel>
+                        <Input
+                          id="t-wa-name"
+                          placeholder="e.g. kau_fpo_welcome"
+                          {...field}
+                        />
+                        <p className="text-xs text-muted-foreground">Meta-approved template name from WhatsApp Business Manager.</p>
+                        {errors.whatsapp_template_name && <FieldError errors={[errors.whatsapp_template_name]} />}
+                      </Field>
+                    )}
+                  />
+                  <Controller
+                    control={control}
+                    name="whatsapp_template_language"
+                    render={({ field }) => (
+                      <Field>
+                        <FieldLabel htmlFor="t-wa-lang">
+                          WhatsApp Template Language
+                        </FieldLabel>
+                        <Input
+                          id="t-wa-lang"
+                          placeholder="e.g. en or ml"
+                          {...field}
+                        />
+                        <p className="text-xs text-muted-foreground">Language code used when registering the template with Meta (e.g. en, ml).</p>
+                        {errors.whatsapp_template_language && <FieldError errors={[errors.whatsapp_template_language]} />}
+                      </Field>
+                    )}
+                  />
+                </>
+              )}
             </FieldGroup>
 
             <div className="border-t pt-5">

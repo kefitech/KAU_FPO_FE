@@ -17,12 +17,12 @@ import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { getErrorMessage } from "@/lib/get-error-message";
-import type { ChannelSetting, EmailConfig, SmsConfig } from "@/types";
+import type { ChannelSetting, EmailConfig, SmsConfig, WhatsAppConfig } from "@/types";
 
 type T = Record<string, string>;
 
 const schema = z.object({
-  channel: z.enum(["email", "sms", "in_app"] as const, { message: "Please select a channel" }),
+  channel: z.enum(["email", "sms", "in_app", "whatsapp"] as const, { message: "Please select a channel" }),
   is_active: z.boolean(),
   email_host: z.string().optional(),
   email_port: z.number().optional(),
@@ -35,6 +35,9 @@ const schema = z.object({
   sms_sender_id: z.string().optional(),
   sms_base_url: z.string().optional(),
   sms_otp_template_id: z.string().optional(),
+  wa_phone_number_id: z.string().optional(),
+  wa_access_token: z.string().optional(),
+  wa_api_version: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -60,6 +63,9 @@ const defaultValues: FormValues = {
   sms_sender_id: "",
   sms_base_url: "",
   sms_otp_template_id: "",
+  wa_phone_number_id: "",
+  wa_access_token: "",
+  wa_api_version: "v20.0",
 };
 
 function parseEditingValues(item: ChannelSetting): FormValues {
@@ -81,6 +87,11 @@ function parseEditingValues(item: ChannelSetting): FormValues {
       base.sms_sender_id = c.sender_id ?? "";
       base.sms_base_url = c.base_url ?? "";
       base.sms_otp_template_id = c.otp_template_id ?? "";
+    } else if (item.channel === "whatsapp") {
+      const c = config as Partial<WhatsAppConfig>;
+      base.wa_phone_number_id = c.phone_number_id ?? "";
+      base.wa_access_token = "";
+      base.wa_api_version = c.api_version ?? "v20.0";
     }
   } catch {
     // config parse failed — leave defaults
@@ -108,6 +119,14 @@ function buildConfig(values: FormValues): Record<string, unknown> {
       otp_template_id: values.sms_otp_template_id,
     };
     if (values.sms_api_key) config.api_key = values.sms_api_key;
+    return config as Record<string, unknown>;
+  }
+  if (values.channel === "whatsapp") {
+    const config: Partial<WhatsAppConfig> = {
+      phone_number_id: values.wa_phone_number_id,
+      api_version: values.wa_api_version,
+    };
+    if (values.wa_access_token) config.access_token = values.wa_access_token;
     return config as Record<string, unknown>;
   }
   return {};
@@ -181,6 +200,7 @@ export function ChannelSettingsForm({ mode, channelSetting, t = {}, tCommon = {}
                       <option value="email">{t.channel_email ?? "Email"}</option>
                       <option value="sms">{t.channel_sms ?? "SMS"}</option>
                       <option value="in_app">{t.channel_in_app ?? "In-App"}</option>
+                      <option value="whatsapp">{t.channel_whatsapp ?? "WhatsApp"}</option>
                     </select>
                     {errors.channel && <FieldError errors={[errors.channel]} />}
                   </Field>
@@ -396,6 +416,67 @@ export function ChannelSettingsForm({ mode, channelSetting, t = {}, tCommon = {}
                 <p className="rounded-lg border border-dashed p-4 text-muted-foreground text-sm">
                   {t.in_app_note ?? "In-app notifications write directly to the database. No configuration required."}
                 </p>
+              )}
+
+              {channel === "whatsapp" && (
+                <>
+                  <p className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+                    {t.section_config ?? "Configuration"}
+                  </p>
+
+                  <Controller
+                    control={control}
+                    name="wa_phone_number_id"
+                    render={({ field }) => (
+                      <Field>
+                        <FieldLabel htmlFor="cs-wa-phone-id">
+                          Phone Number ID <span className="text-destructive">*</span>
+                        </FieldLabel>
+                        <Input
+                          id="cs-wa-phone-id"
+                          placeholder="e.g. 123456789012345"
+                          {...field}
+                        />
+                        <p className="text-xs text-muted-foreground">From Meta WhatsApp Business Manager → Phone Numbers.</p>
+                      </Field>
+                    )}
+                  />
+
+                  <Controller
+                    control={control}
+                    name="wa_access_token"
+                    render={({ field }) => (
+                      <Field>
+                        <FieldLabel htmlFor="cs-wa-token">
+                          Access Token <span className="text-destructive">*</span>
+                        </FieldLabel>
+                        <Input
+                          id="cs-wa-token"
+                          type="password"
+                          placeholder={isEdit ? "Enter new access token to update" : ""}
+                          {...field}
+                        />
+                        <p className="text-xs text-muted-foreground">Permanent token from Meta Business Manager → System Users.</p>
+                      </Field>
+                    )}
+                  />
+
+                  <Controller
+                    control={control}
+                    name="wa_api_version"
+                    render={({ field }) => (
+                      <Field>
+                        <FieldLabel htmlFor="cs-wa-version">API Version</FieldLabel>
+                        <Input
+                          id="cs-wa-version"
+                          placeholder="e.g. v20.0"
+                          {...field}
+                        />
+                        <p className="text-xs text-muted-foreground">Meta Graph API version (defaults to v20.0).</p>
+                      </Field>
+                    )}
+                  />
+                </>
               )}
             </FieldGroup>
 

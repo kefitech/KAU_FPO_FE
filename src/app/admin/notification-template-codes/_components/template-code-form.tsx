@@ -29,7 +29,7 @@ const schema = z.object({
       message: "Only lowercase letters, numbers and underscores",
     }),
   name: z.string().min(1, { message: "Name is required" }),
-  channel: z.enum(["email", "sms", "in_app", "push"] as const, {
+  channel: z.enum(["email", "sms", "in_app", "push", "whatsapp"] as const, {
     message: "Please select a channel",
   }),
   variables: z.string(),
@@ -113,7 +113,8 @@ export function TemplateCodeForm({ mode, templateCode, t = {}, tCommon = {} }: T
   const channels = [
     { value: "email", label: t.channel_email ?? "Email" },
     { value: "sms", label: t.channel_sms ?? "SMS" },
-    // { value: "in_app", label: t.channel_in_app ?? "In-App Notification" },
+    { value: "in_app", label: t.channel_in_app ?? "In-App Notification" },
+    { value: "whatsapp", label: t.channel_whatsapp ?? "WhatsApp" },
     // { value: "push", label: t.channel_push ?? "Push Notification" },
   ];
 

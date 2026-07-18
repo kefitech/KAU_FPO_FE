@@ -82,7 +82,7 @@ export interface BulkTranslationPayload {
 
 // ─── Notification Template Codes ──────────────────────────────────────────────
 
-export type NotificationChannel = "email" | "sms" | "in_app" | "push";
+export type NotificationChannel = "email" | "sms" | "in_app" | "push" | "whatsapp";
 
 export interface NotificationTemplateCode {
   id: number;
@@ -122,6 +122,8 @@ export interface NotificationTemplate {
   variables: string[];
   subject: string;
   body: string;
+  whatsapp_template_name?: string;
+  whatsapp_template_language?: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -130,14 +132,16 @@ export interface NotificationTemplate {
 export interface NotificationTemplatePayload {
   template_code: number;
   language: number;
-  subject: string;
+  subject?: string;
   body: string;
+  whatsapp_template_name?: string;
+  whatsapp_template_language?: string;
   is_active: boolean;
 }
 
 // ─── Notification Channel Settings ───────────────────────────────────────────
 
-export type ChannelSettingChannel = "email" | "sms" | "in_app";
+export type ChannelSettingChannel = "email" | "sms" | "in_app" | "whatsapp";
 
 export interface EmailConfig {
   host: string;
@@ -154,6 +158,12 @@ export interface SmsConfig {
   sender_id: string;
   base_url: string;
   otp_template_id: string;
+}
+
+export interface WhatsAppConfig {
+  phone_number_id: string;
+  access_token: string;
+  api_version: string;
 }
 
 export interface ChannelSetting {
