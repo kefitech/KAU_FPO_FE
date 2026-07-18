@@ -105,12 +105,21 @@ function FpoRegisterPageInner() {
   }, [fetchedProfile, searchParams.get, router.replace]);
 
   async function handleStepSuccess() {
-    const result = await refetch();
-    if (result.data) {
-      setProfile(result.data);
-      setDisplayStep(resolveStep(result.data));
-    }
+  const result = await refetch();
+  if (result.data) {
+    setProfile(result.data);
+    setDisplayStep((prev) => {
+      // If we already have a display step, the user is progressing through
+      // the wizard in the UI — advance by one rather than jumping to
+      // resolveStep(), which reflects the furthest step ever reached and
+      // would override backward navigation.
+      if (prev !== null) {
+        return Math.min(prev + 1, 7);
+      }
+      return resolveStep(result.data);
+    });
   }
+}
 
   async function handleSaveOnly() {
     const result = await refetch();
