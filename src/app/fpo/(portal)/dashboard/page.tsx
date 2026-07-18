@@ -314,12 +314,18 @@ export default function FpoDashboardPage() {
                 <span className="text-muted-foreground text-xs">{t.label_documents_status ?? "Documents Status"}</span>
                 <span className="flex items-center gap-1.5 font-medium text-sm">
                   <FileCheck className="h-3.5 w-3.5 text-muted-foreground" />
-                  {documents.ready_to_submit ? (
-                    <span className="text-green-600">{t.label_docs_ready ?? "Ready to submit"}</span>
-                  ) : (
+                  {documents.required_missing.length > 0 ? (
                     <span className="text-amber-600">
                       {documents.required_missing.length} {t.label_docs_missing ?? "required missing"}
                     </span>
+                  ) : documents.uploaded > 0 && documents.verified === documents.uploaded ? (
+                    <span className="text-green-600">{t.label_docs_verified ?? "Verified"}</span>
+                  ) : documents.verified > 0 ? (
+                    <span className="text-blue-600">
+                      {documents.verified}/{documents.uploaded} {t.label_docs_verified ?? "verified"}
+                    </span>
+                  ) : (
+                    <span className="text-amber-600">{t.label_docs_pending ?? "Pending Verification"}</span>
                   )}
                 </span>
               </div>
