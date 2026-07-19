@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import AgrulLayout from "../_components/agrul-layout";
 import BreadCrumb from "../_components/bread-crumb";
 import { faqApi, type Faq } from "@/lib/api/faq";
+import { Color } from "@tiptap/extension-text-style";
 
 const CATEGORIES = [
   { label: "All", value: "" },
@@ -79,7 +80,18 @@ export default function FaqPage() {
                     <button
                       type="button"
                       className={`nav-link${category === cat.value ? " active" : ""}`}
+                      
                       onClick={() => setCategory(cat.value)}
+                      style={
+                        category === cat.value ? {
+                          backgroundColor: "var(--color-primary)",
+                          borderColor: "var(--color-primary)",
+                          color: "#fff" 
+                        }
+                        :{
+                          color: "var(--color-primary)"
+                        }
+                      }
                     >
                       {cat.label}
                     </button>

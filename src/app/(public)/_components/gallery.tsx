@@ -28,13 +28,13 @@ const Gallery = () => {
   if (!loading && photos.length === 0) return null;
 
   return (
-    <div className="gallery-style-one-area default-padding-top">
+    <div className="gallery-style-one-area bg-gray default-padding-top">
       <div className="container">
         <div className="row">
           <div className="col-lg-8 offset-lg-2">
             <div className="site-heading text-center">
-              <h5 className="sub-title">Awesome Gallery</h5>
-              <h2 className="title">Gallery Of Our Products</h2>
+              <h5 className="sub-title">Capture The Moments</h5>
+              <h2 className="title">Gallery</h2>
               <div className="devider" />
             </div>
           </div>

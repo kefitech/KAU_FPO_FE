@@ -24,13 +24,13 @@ export default function HomePage() {
       <About />
       <HowToRegister />
       <TeamSection showAll={false} />
-      <Services />
+      {/* <Services /> */}
       {/* <ProductList /> */}
       <WhyChoose />
       {/* <Testimonial /> */}
       <Gallery />
       <Facts />
-      <Contact />
+      {/* <Contact /> */}
      
       <NewsWidget />
       <NewsSourcesStrip />

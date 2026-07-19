@@ -53,6 +53,7 @@ function MemberCard({ member }: { member: TeamMember }) {
               objectPosition: "top",
               borderRadius: "50%",
               display: "block",
+              border: "5px solid var(--color-primary)",
             }}
           />
         ) : (
@@ -158,6 +159,9 @@ const TeamSection = ({ showAll = false }: Props) => {
     return (
       <div className="farmer-area default-padding bottom-less">
         <div className="container">
+          <div className="shape-right-top">
+            <img src="/assets/img/shape/leaf.png" alt="leaf shape" />
+          </div>
           <div className="farmer-style-one">
             <h2 className="heading">Our Team</h2>
           </div>

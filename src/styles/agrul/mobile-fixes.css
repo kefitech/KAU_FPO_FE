@@ -65,6 +65,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
 }
 
 .navbar-logos .logo {
@@ -115,6 +116,15 @@ nav.navbar.validnavs .navbar-brand > img {
 
   .navbar-logos {
     gap: 8px;
+  }
+}
+
+/* ---- Mobile: shrink only the second logo ---- */
+@media (max-width: 767px) {
+  .navbar-logos .logo:nth-of-type(2) {
+    height: 32px;
+    flex-shrink: 1;
+    min-width: 0;
   }
 }
 

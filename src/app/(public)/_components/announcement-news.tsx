@@ -142,7 +142,7 @@ const NewsWidget = () => {
             {/* Left: featured image */}
             <div className="col-lg-6 choose-us-style-one">
               <div className="thumb">
-                <div style={{ width: "100%", height: "100%", minHeight: 480, borderRadius: 16, overflow: "hidden" }}>
+                <div style={{ width: "100%", height: "100%", minHeight: 300, borderRadius: 16, overflow: "hidden" }}>
                   <img
                     src="/assets/img/announcement/1.jpeg"
                     alt="News and Announcements"

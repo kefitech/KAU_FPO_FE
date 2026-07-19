@@ -12,7 +12,8 @@ const MainMenu = ({ toggleSubMenu, navbarPlacement }: Props) => {
       <li className="dropdown">
         <Link href="#" className="dropdown-toggle" data-toggle="dropdown" onClick={toggleSubMenu}>Home</Link>
         <ul className="dropdown-menu">
-          <li><Link href="/">Agriculture</Link></li>
+          <li><a href="/v1/login">Sign In</a></li>
+          <li><a href="/register">Register</a></li>
         </ul>
       </li>
       <li className="dropdown">
@@ -22,7 +23,7 @@ const MainMenu = ({ toggleSubMenu, navbarPlacement }: Props) => {
           <li><Link href="/team">Team</Link></li>
           <li><Link href="/howtoregister">How To Register</Link></li>
           <li><Link href="/news-sources">In the News</Link></li>
-          <li><Link href="/faq">Faq</Link></li>
+          <li><Link href="/faq">FAQs</Link></li>
           <li><Link href="/contact-us">Contact Us</Link></li>
         </ul>
       </li>
@@ -41,7 +42,7 @@ const MainMenu = ({ toggleSubMenu, navbarPlacement }: Props) => {
         </ul>
       </li> */}
       <li>
-        <Link href="/news-events">News &amp; Events</Link>
+        <Link href="/news-events">Events &amp; Updates</Link>
       </li>
       </ul>
         
