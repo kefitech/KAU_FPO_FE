@@ -12,6 +12,8 @@ export function resolvePostLoginPath(redirect: FpoRedirect | null, firstMenuPath
       return "/fpo/register";
     case "status":
       return "/fpo/status";
+    case "claim_status":
+      return "/fpo/claim/status";
     case "dashboard":
       return "/fpo/dashboard";
     default:
