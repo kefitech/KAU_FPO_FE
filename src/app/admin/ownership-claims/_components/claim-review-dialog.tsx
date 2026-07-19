@@ -250,7 +250,8 @@ export function ClaimReviewDialog({ claim, onOpenChange }: ClaimReviewDialogProp
               <button
                 type="button"
                 onClick={() => setMode("request_docs")}
-                className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
+                disabled={claim.status === "docs_requested"}
+                className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                   mode === "request_docs"
                     ? "border-primary bg-primary/10 text-primary"
                     : "border-border text-muted-foreground hover:bg-muted/50"
