@@ -68,7 +68,7 @@ export function ChangePasswordForm() {
       sessionStorage.removeItem("change_password_partial_token");
       setUser(result.user);
       sessionStorage.setItem("show_welcome", "1");
-      router.replace("/admin/dashboard");
+      router.replace("/v1/login");
     } catch (error) {
       const err = error as { message?: string; data?: { message?: string } };
       toast.error(err.data?.message ?? err.message ?? "Failed to change password. Please try again.");

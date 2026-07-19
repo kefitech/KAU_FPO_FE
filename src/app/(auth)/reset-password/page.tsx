@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CheckCircle, Eye, EyeOff } from "lucide-react";
+import { CheckCircle, Eye, EyeOff, XCircle } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -129,37 +129,78 @@ function ResetPasswordForm() {
                   </button>
                 </div>
                 {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                {field.value && field.value.length > 0 && (
+                  <div className="flex flex-col gap-1 pt-1">
+                    {[
+                      { label: "At least 8 characters", met: field.value.length >= 8 },
+                      { label: "One uppercase letter (A–Z)", met: /[A-Z]/.test(field.value) },
+                      { label: "One lowercase letter (a–z)", met: /[a-z]/.test(field.value) },
+                      { label: "One number (0–9)", met: /[0-9]/.test(field.value) },
+                      { label: "One special character (!@#$…)", met: /[^A-Za-z0-9]/.test(field.value) },
+                    ].map(({ label, met }) => (
+                      <p
+                        key={label}
+                        className={`flex items-center gap-1.5 text-xs ${met ? "text-green-600" : "text-muted-foreground"}`}
+                      >
+                        {met ? (
+                          <CheckCircle className="h-3 w-3 shrink-0" />
+                        ) : (
+                          <span className="ml-0.5 h-3 w-3 shrink-0 inline-flex items-center justify-center rounded-full border border-current text-[8px]">
+                            ✕
+                          </span>
+                        )}
+                        {label}
+                      </p>
+                    ))}
+                  </div>
+                )}
               </Field>
             )}
           />
           <Controller
             control={form.control}
             name="confirm_password"
-            render={({ field, fieldState }) => (
-              <Field className="gap-1.5" data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor="rp-confirm">Confirm password</FieldLabel>
-                <div className="relative">
-                  <Input
-                    {...field}
-                    id="rp-confirm"
-                    type={showConfirm ? "text" : "password"}
-                    placeholder="Repeat your password"
-                    autoComplete="new-password"
-                    aria-invalid={fieldState.invalid}
-                    className="pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirm((v) => !v)}
-                    className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    tabIndex={-1}
-                  >
-                    {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-                {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-              </Field>
-            )}
+            render={({ field, fieldState }) => {
+              const passwordVal = form.watch("new_password") ?? "";
+              const confirmVal = field.value ?? "";
+              const passwordsMatch = confirmVal.length > 0 && passwordVal === confirmVal;
+              const passwordsMismatch = confirmVal.length > 0 && passwordVal !== confirmVal;
+              return (
+                <Field className="gap-1.5" data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="rp-confirm">Confirm password</FieldLabel>
+                  <div className="relative">
+                    <Input
+                      {...field}
+                      id="rp-confirm"
+                      type={showConfirm ? "text" : "password"}
+                      placeholder="Repeat your password"
+                      autoComplete="new-password"
+                      aria-invalid={fieldState.invalid}
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirm((v) => !v)}
+                      className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      tabIndex={-1}
+                    >
+                      {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  {!fieldState.invalid && passwordsMatch && (
+                    <p className="flex items-center gap-1 text-green-600 text-xs">
+                      <CheckCircle className="h-3.5 w-3.5" /> Passwords match
+                    </p>
+                  )}
+                  {!fieldState.invalid && passwordsMismatch && (
+                    <p className="flex items-center gap-1 text-destructive text-xs">
+                      <XCircle className="h-3.5 w-3.5" /> Passwords do not match
+                    </p>
+                  )}
+                </Field>
+              );
+            }}
           />
         </FieldGroup>
         <Button className="w-full" type="submit" disabled={isLoading}>
@@ -174,7 +215,11 @@ export default function ResetPasswordPage() {
   return (
     <div
       className="relative flex h-svh items-center justify-center overflow-hidden p-4"
-      style={{ backgroundImage: "url('/assets/img/background/background.png')", backgroundSize: "cover", backgroundPosition: "center" }}
+      style={{
+        backgroundImage: "url('/assets/img/background/background.png')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }}
     >
       {/* Dark mode overlay */}
       <div className="absolute inset-0 hidden dark:block bg-black/70" />
@@ -202,7 +247,10 @@ export default function ResetPasswordPage() {
           </Link>
         </p>
 
-        <a href="/" className="flex items-center justify-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
+        <a
+          href="/"
+          className="flex items-center justify-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
           ← Back to Home
         </a>
       </div>
