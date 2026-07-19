@@ -67,6 +67,7 @@ const Gallery = () => {
                 grabCursor={true}
                 slidesPerView={1}
                 spaceBetween={15}
+                speed={800}
                 autoplay={{ delay: 3000, disableOnInteraction: false }}
                 pagination={{ el: ".swiper-pagination", clickable: true }}
                 navigation={{ nextEl: ".swiper-button-next", prevEl: ".swiper-button-prev" }}
