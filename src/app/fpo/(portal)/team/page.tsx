@@ -146,8 +146,18 @@ export default function FpoTeamPage() {
 
   const bulkActivateMutation = useMutation({
     mutationFn: () => fpoTeamApi.bulkActivate([...selected]),
-    onSuccess: () => {
-      toast.success(`${selected.size} member(s) activated`);
+    onSuccess: (data) => {
+      const { success, failed, errors } = data;
+ 
+      if (success > 0 && failed === 0) {
+        toast.success(`${success} member(s) Activated`);
+      } else if (success > 0 && failed > 0) {
+        toast.warning(`${success} Activated, ${failed} failed`);
+        errors.forEach((e) => toast.error(`${e.name ?? `User ${e.user_id}`}: ${e.reason}`));
+      } else {
+        errors.forEach((e) => toast.error(`${e.name ?? `User ${e.user_id}`}: ${e.reason}`));
+      }
+ 
       setSelected(new Set());
       queryClient.invalidateQueries({ queryKey: ["fpo-team"] });
     },
@@ -406,8 +416,13 @@ export default function FpoTeamPage() {
                               } else {
                                 fpoTeamApi
                                   .bulkActivate([member.id])
-                                  .then(() => {
-                                    toast.success(t.toast_activated ?? "Member reactivated");
+                                  .then((data) => {
+                                    if (data.success > 0) {
+                                      toast.success(t.toast_activated ?? "Member reactivated");
+                                    } else {
+                                      const err = data.errors[0];
+                                      toast.error(err ? `${err.name ?? "Member"}: ${err.reason}` : (t.toast_activate_failed ?? "Failed to reactivate"));
+                                    }
                                     queryClient.invalidateQueries({ queryKey: ["fpo-team"] });
                                   })
                                   .catch(() => toast.error(t.toast_activate_failed ?? "Failed to reactivate"));

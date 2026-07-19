@@ -12,6 +12,13 @@ type BulkInviteFileResponse = {
   };
 };
 
+interface BulkToggleResponse {
+  success: number;
+  failed: number;
+  results: { user_id: number; name: string }[];
+  errors: { user_id: number; name?: string; reason: string }[];
+}
+
 const BASE = "/fpo/me/team/";
 
 type ListResponse = FpoTeamMember[] | { status: string; message: string; data: FpoTeamMember[] };
@@ -39,9 +46,9 @@ export const fpoTeamApi = {
 
   resetPassword: (userId: number): Promise<void> => api.post(`${BASE}${userId}/reset-password/`).then(() => undefined),
 
-  bulkActivate: (userIds: number[]): Promise<void> =>
-    api.post(`${BASE}bulk-activate/`, { user_ids: userIds }).then(() => undefined),
+  bulkActivate: (userIds: number[]): Promise<BulkToggleResponse> =>
+   api.post<{ data: BulkToggleResponse }>(`${BASE}bulk-activate/`, { user_ids: userIds }).then((r) => r.data.data),
 
-  bulkDeactivate: (userIds: number[]): Promise<void> =>
-    api.post(`${BASE}bulk-deactivate/`, { user_ids: userIds }).then(() => undefined),
+  bulkDeactivate: (userIds: number[]): Promise<BulkToggleResponse> =>
+   api.post<{ data: BulkToggleResponse }>(`${BASE}bulk-deactivate/`, { user_ids: userIds }).then((r) => r.data.data),
 };
