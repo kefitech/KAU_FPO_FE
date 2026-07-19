@@ -40,24 +40,28 @@ const KeralaDistrictMap = dynamic(
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  draft:        { label: "Draft",        color: "#94a3b8" },
-  submitted:    { label: "Submitted",    color: "#3b82f6" },
-  under_review: { label: "Under Review", color: "#f97316" },
-  info_required:{ label: "Info Required",color: "#eab308" },
-  approved:     { label: "Approved",     color: "#22c55e" },
-  rejected:     { label: "Rejected",     color: "#ef4444" },
-  suspended:    { label: "Suspended",    color: "#7f1d1d" },
-  claimed:      { label: "Claimed",      color: "#6E18D9"}
-};
+function getStatusConfig(t: T): Record<string, { label: string; color: string }> {
+  return {
+    draft:        { label: t.status_draft         ?? "Draft",         color: "#94a3b8" },
+    submitted:    { label: t.status_submitted      ?? "Submitted",     color: "#3b82f6" },
+    under_review: { label: t.status_under_review   ?? "Under Review",  color: "#f97316" },
+    info_required:{ label: t.status_info_required  ?? "Info Required", color: "#eab308" },
+    approved:     { label: t.status_approved       ?? "Approved",      color: "#22c55e" },
+    rejected:     { label: t.status_rejected       ?? "Rejected",      color: "#ef4444" },
+    suspended:    { label: t.status_suspended      ?? "Suspended",     color: "#7f1d1d" },
+    claimed:      { label: t.status_claimed        ?? "Claimed",       color: "#6E18D9" },
+  };
+}
 
-const TIER_CONFIG: Record<string, { label: string; color: string }> = {
-  A:            { label: "Tier A",       color: "#22c55e" },
-  B:            { label: "Tier B",       color: "#3b82f6" },
-  C:            { label: "Tier C",       color: "#eab308" },
-  D:            { label: "Tier D",       color: "#f97316" },
-  not_assessed: { label: "Not Assessed", color: "#94a3b8" },
-};
+function getTierConfig(t: T): Record<string, { label: string; color: string }> {
+  return {
+    A:            { label: t.tier_a            ?? "Tier A",        color: "#22c55e" },
+    B:            { label: t.tier_b            ?? "Tier B",        color: "#3b82f6" },
+    C:            { label: t.tier_c            ?? "Tier C",        color: "#eab308" },
+    D:            { label: t.tier_d            ?? "Tier D",        color: "#f97316" },
+    not_assessed: { label: t.tier_not_assessed ?? "Not Assessed",  color: "#94a3b8" },
+  };
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -155,6 +159,9 @@ export default function AdminDashboardPage() {
 
   const stats = data;
 
+  const STATUS_CONFIG = getStatusConfig(t);
+  const TIER_CONFIG   = getTierConfig(t);
+
   // ── Status donut data ──────────────────────────────────────────────────────
   const statusData = stats
     ? Object.entries(stats.status_breakdown)
@@ -180,19 +187,19 @@ export default function AdminDashboardPage() {
   const pendingItems = pa
     ? [
         {
-          label: "Ownership Claims",
+          label: t.pending_ownership_claims ?? "Ownership Claims",
           count: pa.ownership_claims,
           href: "/admin/ownership-claims?status=pending",
           icon: Users,
         },
         {
-          label: "Unverified Documents",
+          label: t.pending_unverified_docs ?? "Unverified Documents",
           count: pa.unverified_documents,
           href: "/admin/applications?filter=unverified_docs",
           icon: FileWarning,
         },
         {
-          label: "Info Required FPOs",
+          label: t.pending_info_required ?? "Info Required FPOs",
           count: pa.info_required_fpos,
           href: "/admin/applications?status=info_required",
           icon: AlertCircle,

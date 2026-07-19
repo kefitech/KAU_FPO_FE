@@ -157,6 +157,8 @@ export function Step2Contact({ profile, onSave, onSuccess, onBack }: Step2Props)
     },
   });
 
+  const hasDuplicate = Object.values(fieldErrors).some((v) => v.duplicate);
+
   function handleInvalidSubmit(formErrors: Record<string, { message?: string }>) {
     const firstField = Object.keys(formErrors)[0] as keyof FormValues;
     if (!firstField) return;
@@ -461,7 +463,7 @@ export function Step2Contact({ profile, onSave, onSuccess, onBack }: Step2Props)
           <Button
             type="button"
             variant="outline"
-            disabled={submitMutation.isPending}
+            disabled={submitMutation.isPending || hasDuplicate}
             onClick={handleSubmit((v) => {
               if (!v.location) {
                 setError("location", { type: "manual", message: "Please pin your FPO location on the map" });
@@ -475,7 +477,7 @@ export function Step2Contact({ profile, onSave, onSuccess, onBack }: Step2Props)
           </Button>
           <Button
             type="button"
-            disabled={submitMutation.isPending}
+            disabled={submitMutation.isPending || hasDuplicate}
             onClick={handleSubmit((v) => {
               if (!v.location) {
                 setError("location", { type: "manual", message: "Please pin your FPO location on the map" });

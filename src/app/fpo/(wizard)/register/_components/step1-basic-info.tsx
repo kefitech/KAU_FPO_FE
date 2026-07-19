@@ -420,7 +420,7 @@ export function Step1BasicInfo({ profile, onSave, onSuccess }: Step1Props) {
           <Button
             type="button"
             variant="outline"
-            disabled={submitMutation.isPending}
+            disabled={submitMutation.isPending || hasDuplicate}
             onClick={handleSubmit((v) => {
               setSaveMode("save");
               submitMutation.mutate(v, { onSuccess: (data) => onSave?.(data) });
@@ -430,7 +430,7 @@ export function Step1BasicInfo({ profile, onSave, onSuccess }: Step1Props) {
           </Button>
           <Button
             type="button"
-            disabled={submitMutation.isPending}
+            disabled={submitMutation.isPending || hasDuplicate}
             onClick={handleSubmit((v) => {
               setSaveMode("next");
               submitMutation.mutate(v, { onSuccess: (data) => onSuccess(data) });
