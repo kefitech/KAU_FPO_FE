@@ -31,12 +31,12 @@ import { z } from "zod";
 
 import {
   type ApplicationStatus,
-  type AssignTierPayload,
-  adminApplicationsApi,
-  type TierAuditLogEntry,
-  type TierAssessmentData,
   type AssessmentAnswerData,
   type AssessmentUploadData,
+  type AssignTierPayload,
+  adminApplicationsApi,
+  type TierAssessmentData,
+  type TierAuditLogEntry,
 } from "@/app/admin/_api/applications";
 import { auditLogsApi } from "@/app/admin/_api/audit-logs";
 import { fpoUsersApi } from "@/app/admin/_api/fpo-users";
@@ -131,20 +131,23 @@ function SectionCard({
 // ─── Dialogs ──────────────────────────────────────────────────────────────────
 
 const editFPOSchema = z.object({
-  name:                z.string().optional(),
-  name_ml:             z.string().optional(),
-  office_phone:        z.string().optional(),
-  office_email:        z.string().optional().refine((v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), { message: "Invalid email" }),
-  district:            z.string().optional(),
-  address_line1:       z.string().optional(),
-  address_line2:       z.string().optional(),
-  pincode:             z.string().optional(),
-  pan_number:          z.string().optional(),
-  gst_number:          z.string().optional(),
-  cin_number:          z.string().optional(),
+  name: z.string().optional(),
+  name_ml: z.string().optional(),
+  office_phone: z.string().optional(),
+  office_email: z
+    .string()
+    .optional()
+    .refine((v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), { message: "Invalid email" }),
+  district: z.string().optional(),
+  address_line1: z.string().optional(),
+  address_line2: z.string().optional(),
+  pincode: z.string().optional(),
+  pan_number: z.string().optional(),
+  gst_number: z.string().optional(),
+  cin_number: z.string().optional(),
   registration_number: z.string().optional(),
-  website:             z.string().optional(),
-  description:         z.string().optional(),
+  website: z.string().optional(),
+  description: z.string().optional(),
 });
 type EditFPOValues = z.infer<typeof editFPOSchema>;
 
@@ -160,7 +163,12 @@ function EditFPODialog({
   onOpenChange: (v: boolean) => void;
 }) {
   const queryClient = useQueryClient();
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<EditFPOValues>({
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<EditFPOValues>({
     resolver: zodResolver(editFPOSchema),
     defaultValues,
   });
@@ -356,7 +364,7 @@ function RejectDialog({
   );
 }
 
-const requestInfoSchema = z.object({ notes: z.string().min(10, { message: "Notes must be at least 10 characters" }) });
+const requestInfoSchema = z.object({ notes: z.string().min(20, { message: "Notes must be at least 20 characters" }) });
 type RequestInfoValues = z.infer<typeof requestInfoSchema>;
 
 function RequestInfoDialog({
@@ -445,7 +453,7 @@ function tierBadgeClass(tier: string) {
 }
 
 const assignTierSchema = z.object({
-  tier: z.string().min(1, {message:"Please select a tier"}),
+  tier: z.string().min(1, { message: "Please select a tier" }),
   financial_year: z
     .string()
     .min(1, "Financial year is required")
@@ -809,61 +817,65 @@ function AuditLogTab({ fpoId }: { fpoId: number }) {
       </div>
     );
 
-      return (
-      <SectionCard
-        icon={Clock}
-        title="Audit Log"
-        headerAction={
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => refetch()} disabled={isFetching}>
-            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
-          </Button>
-        }
-      >
+  return (
+    <SectionCard
+      icon={Clock}
+      title="Audit Log"
+      headerAction={
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => refetch()} disabled={isFetching}>
+          <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
+        </Button>
+      }
+    >
       {/* Log list block */}
       {logs.length === 0 ? (
         <p className="text-muted-foreground text-sm py-4 text-center">No audit events found for this FPO.</p>
       ) : (
-          <div className="w-full overflow-x-auto">
-            <div className={`flex flex-col divide-y transition-opacity min-w-max sm:min-w-0 ${isFetching ? "opacity-50" : ""}`}>
-              {logs.map((log: AuditLog) => (
-                <div key={log.id} className="flex items-start gap-4 py-3">
-                  <span className="text-muted-foreground text-xs whitespace-nowrap pt-0.5 w-36 shrink-0">
-                    {new Date(log.created_at).toLocaleString("en-IN", {
-                      day: "2-digit",
-                      month: "short",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+        <div className="w-full overflow-x-auto">
+          <div
+            className={`flex flex-col divide-y transition-opacity min-w-max sm:min-w-0 ${isFetching ? "opacity-50" : ""}`}
+          >
+            {logs.map((log: AuditLog) => (
+              <div key={log.id} className="flex items-start gap-4 py-3">
+                <span className="text-muted-foreground text-xs whitespace-nowrap pt-0.5 w-36 shrink-0">
+                  {new Date(log.created_at).toLocaleString("en-IN", {
+                    day: "2-digit",
+                    month: "short",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+                <Badge variant="secondary" className="text-[11px] shrink-0">
+                  {log.action_display || log.action}
+                </Badge>
+                <div className="min-w-0 flex flex-col gap-0.5 sm:min-w-[180px]">
+                  <span className="text-sm font-medium whitespace-nowrap sm:whitespace-normal">
+                    {getPerformedByName(log.performed_by)}
                   </span>
-                  <Badge variant="secondary" className="text-[11px] shrink-0">
-                    {log.action_display || log.action}
-                  </Badge>
-                  <div className="min-w-0 flex flex-col gap-0.5 sm:min-w-[180px]">
-                    <span className="text-sm font-medium whitespace-nowrap sm:whitespace-normal">{getPerformedByName(log.performed_by)}</span>
-                    {log.object_info != null && (
-                      <span className="text-muted-foreground text-xs whitespace-nowrap sm:whitespace-normal sm:truncate">
-                        {getObjectInfoDisplay(log.object_info)}
-                      </span>
-                    )}
-                  </div>
+                  {log.object_info != null && (
+                    <span className="text-muted-foreground text-xs whitespace-nowrap sm:whitespace-normal sm:truncate">
+                      {getObjectInfoDisplay(log.object_info)}
+                    </span>
+                  )}
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
+        </div>
       )}
-     {/* Pagination block, below the list */}
-       {logs.length > 0 && (
-         <div className="w-full">
-           <DataTablePagination
-             page={page}
-             pageSize={pageSize}
-             total={totalCount}
-             onPageChange={setPage}
-             onPageSizeChange={handlePageSizeChange}
-             pageSizeOptions={[10, 20, 50]}
-           />
-         </div>
-       )}
+      {/* Pagination block, below the list */}
+      {logs.length > 0 && (
+        <div className="w-full">
+          <DataTablePagination
+            page={page}
+            pageSize={pageSize}
+            total={totalCount}
+            onPageChange={setPage}
+            onPageSizeChange={handlePageSizeChange}
+            pageSizeOptions={[10, 20, 50]}
+          />
+        </div>
+      )}
     </SectionCard>
   );
 }
@@ -890,9 +902,7 @@ function TierAssessmentTab({ fpoId }: { fpoId: number }) {
     );
 
   if (assessments.length === 0)
-    return (
-      <p className="py-8 text-center text-muted-foreground text-sm">No tier assessment submitted yet.</p>
-    );
+    return <p className="py-8 text-center text-muted-foreground text-sm">No tier assessment submitted yet.</p>;
 
   return (
     <div className="flex flex-col gap-6">
@@ -1010,8 +1020,10 @@ function TierAssessmentTab({ fpoId }: { fpoId: number }) {
                             {Array.isArray(ans.answer)
                               ? (ans.answer as string[]).join(", ")
                               : typeof ans.answer === "boolean"
-                              ? ans.answer ? "Yes" : "No"
-                              : String(ans.answer ?? "—")}
+                                ? ans.answer
+                                  ? "Yes"
+                                  : "No"
+                                : String(ans.answer ?? "—")}
                           </p>
                         </div>
                       </div>
@@ -1092,7 +1104,9 @@ function ApplicationDetailContent() {
   const [requestInfoOpen, setRequestInfoOpen] = useState(action === "request-info");
   const [assignTierOpen, setAssignTierOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
-  const [infoDetailsDoc, setInfoDetailsDoc] = useState<import("@/app/admin/_api/applications").ApplicationDocument | null>(null);
+  const [infoDetailsDoc, setInfoDetailsDoc] = useState<
+    import("@/app/admin/_api/applications").ApplicationDocument | null
+  >(null);
 
   useEffect(() => {
     translationsApi
@@ -1233,7 +1247,8 @@ function ApplicationDetailContent() {
               onClick={() =>
                 confirm({
                   title: "Suspend FPO",
-                  description: "This will suspend the FPO account. They will lose access to the platform until reactivated.",
+                  description:
+                    "This will suspend the FPO account. They will lose access to the platform until reactivated.",
                   confirmLabel: "Suspend",
                   confirmingLabel: "Suspending…",
                   variant: "destructive",
@@ -1290,48 +1305,48 @@ function ApplicationDetailContent() {
       </div>
 
       {/* Tab nav */}
-        <div className="flex flex-col gap-0 sm:flex-row">
-          {/* Mobile: horizontal scrollable pill tab bar */}
-          <div className="flex sm:hidden overflow-x-auto border-b gap-1 pb-1 scrollbar-none">
-            {TABS.map(({ key, label, icon: Icon }) => {
-              const isActive = activeTab === key;
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setTab(key)}
-                  className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm transition-colors ${
-                    isActive
-                      ? "bg-muted text-foreground font-medium"
-                      : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                  }`}
-                >
-                  <Icon className="h-4 w-4 shrink-0" />
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Desktop: existing underline tab bar */}
-          <div className="hidden sm:flex border-b gap-0">
-            {TABS.map(({ key, label, icon: Icon }) => (
+      <div className="flex flex-col gap-0 sm:flex-row">
+        {/* Mobile: horizontal scrollable pill tab bar */}
+        <div className="flex sm:hidden overflow-x-auto border-b gap-1 pb-1 scrollbar-none">
+          {TABS.map(({ key, label, icon: Icon }) => {
+            const isActive = activeTab === key;
+            return (
               <button
                 key={key}
                 type="button"
                 onClick={() => setTab(key)}
-                className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
-                  activeTab === key
-                    ? "border-primary text-foreground"
-                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm transition-colors ${
+                  isActive
+                    ? "bg-muted text-foreground font-medium"
+                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                 }`}
               >
-                <Icon className="h-3.5 w-3.5" />
+                <Icon className="h-4 w-4 shrink-0" />
                 {label}
               </button>
-            ))}
-          </div>
+            );
+          })}
         </div>
+
+        {/* Desktop: existing underline tab bar */}
+        <div className="hidden sm:flex border-b gap-0">
+          {TABS.map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setTab(key)}
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
+                activeTab === key
+                  ? "border-primary text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+              }`}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
       {/* Overview */}
       {activeTab === "overview" && (
         <div className="flex flex-col gap-5">
@@ -1644,9 +1659,7 @@ function ApplicationDetailContent() {
       )}
 
       {/* Audit Log */}
-      {activeTab === "audit-log" && (
-        <AuditLogTab fpoId={fpoId} />
-      )}
+      {activeTab === "audit-log" && <AuditLogTab fpoId={fpoId} />}
 
       {/* Tier Assessment */}
       {activeTab === "tier-assessment" && (
@@ -1661,10 +1674,21 @@ function ApplicationDetailContent() {
         if (!infoDetailsDoc) return null;
         const history = app.status_history ?? [];
         const docUploaded = new Date(infoDetailsDoc.created_at);
-        const infoEntry = [...history].reverse().find((h) => h.to_status === "info_required" && new Date(h.created_at) <= docUploaded);
-        const infoReply = infoEntry ? history.find((h) => h.from_status === "info_required" && new Date(h.created_at) > new Date(infoEntry.created_at)) : null;
+        const infoEntry = [...history]
+          .reverse()
+          .find((h) => h.to_status === "info_required" && new Date(h.created_at) <= docUploaded);
+        const infoReply = infoEntry
+          ? history.find(
+              (h) => h.from_status === "info_required" && new Date(h.created_at) > new Date(infoEntry.created_at),
+            )
+          : null;
         return (
-          <Dialog open={!!infoDetailsDoc} onOpenChange={(o) => { if (!o) setInfoDetailsDoc(null); }}>
+          <Dialog
+            open={!!infoDetailsDoc}
+            onOpenChange={(o) => {
+              if (!o) setInfoDetailsDoc(null);
+            }}
+          >
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Info Request Details</DialogTitle>
@@ -1673,13 +1697,33 @@ function ApplicationDetailContent() {
                 <div className="flex flex-col gap-1.5 rounded-lg border border-orange-200 bg-orange-50 p-4 dark:border-orange-800 dark:bg-orange-950/20">
                   <p className="font-semibold text-orange-800 text-xs dark:text-orange-300">Admin Request</p>
                   <p className="text-sm">{infoEntry?.notes || "—"}</p>
-                  <p className="text-muted-foreground text-xs">{infoEntry?.changed_by_name ?? "Admin"} · {infoEntry ? new Date(infoEntry.created_at).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : ""}</p>
+                  <p className="text-muted-foreground text-xs">
+                    {infoEntry?.changed_by_name ?? "Admin"} ·{" "}
+                    {infoEntry
+                      ? new Date(infoEntry.created_at).toLocaleString("en-IN", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      : ""}
+                  </p>
                 </div>
                 {infoReply && (
                   <div className="flex flex-col gap-1.5 rounded-lg border bg-muted/40 p-4">
                     <p className="font-semibold text-xs">FPO Response</p>
                     <p className="text-sm">{infoReply.notes || "—"}</p>
-                    <p className="text-muted-foreground text-xs">{infoReply.changed_by_name ?? "FPO"} · {new Date(infoReply.created_at).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
+                    <p className="text-muted-foreground text-xs">
+                      {infoReply.changed_by_name ?? "FPO"} ·{" "}
+                      {new Date(infoReply.created_at).toLocaleString("en-IN", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </p>
                   </div>
                 )}
                 <div className="flex flex-col gap-1.5 rounded-lg border p-4">
@@ -1687,8 +1731,15 @@ function ApplicationDetailContent() {
                   <div className="flex items-center gap-2">
                     <FileText className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm">{formatDocType(infoDetailsDoc.document_type)}</span>
-                    <span className="text-muted-foreground text-xs">· {(infoDetailsDoc.file_size / 1024).toFixed(1)} KB</span>
-                    <a href={infoDetailsDoc.file_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary text-xs hover:underline">
+                    <span className="text-muted-foreground text-xs">
+                      · {(infoDetailsDoc.file_size / 1024).toFixed(1)} KB
+                    </span>
+                    <a
+                      href={infoDetailsDoc.file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-primary text-xs hover:underline"
+                    >
                       View <ExternalLink className="h-3 w-3" />
                     </a>
                   </div>
@@ -1713,20 +1764,20 @@ function ApplicationDetailContent() {
         open={editOpen}
         onOpenChange={setEditOpen}
         defaultValues={{
-          name:                app.name ?? "",
-          name_ml:             app.name_ml ?? "",
-          office_phone:        app.office_phone ?? "",
-          office_email:        app.office_email ?? "",
-          district:            app.district ?? "",
-          address_line1:       app.address_line1 ?? "",
-          address_line2:       app.address_line2 ?? "",
-          pincode:             app.pincode ?? "",
-          pan_number:          app.pan_number ?? "",
-          gst_number:          app.gst_number ?? "",
-          cin_number:          app.cin_number ?? "",
+          name: app.name ?? "",
+          name_ml: app.name_ml ?? "",
+          office_phone: app.office_phone ?? "",
+          office_email: app.office_email ?? "",
+          district: app.district ?? "",
+          address_line1: app.address_line1 ?? "",
+          address_line2: app.address_line2 ?? "",
+          pincode: app.pincode ?? "",
+          pan_number: app.pan_number ?? "",
+          gst_number: app.gst_number ?? "",
+          cin_number: app.cin_number ?? "",
           registration_number: app.registration_number ?? "",
-          website:             app.website ?? "",
-          description:         app.description ?? "",
+          website: app.website ?? "",
+          description: app.description ?? "",
         }}
       />
     </div>
