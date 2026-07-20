@@ -47,11 +47,7 @@ function PartnerBox({ link }: { link: QuickLink }) {
       }}
     >
       {link.logo_url ? (
-        <img
-          src={link.logo_url}
-          alt={link.name}
-          style={{ maxHeight: 56, maxWidth: "100%", objectFit: "contain", filter: "brightness(0) invert(1)" }}
-        />
+        <img src={link.logo_url} alt={link.name} style={{ maxHeight: 56, maxWidth: "100%", objectFit: "contain" }} />
       ) : (
         <span
           style={{
@@ -189,7 +185,7 @@ const Footer = () => {
           <div className="row">
             <div className="col-lg-4 col-md-6 item">
               <div className="footer-item about">
-                <img className="logo" src="/assets/img/logo.png" alt="Logo"/>
+                <img className="logo" src="/assets/img/logo.png" alt="Logo" />
               </div>
             </div>
 
