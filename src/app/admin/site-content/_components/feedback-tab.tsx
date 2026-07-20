@@ -7,15 +7,9 @@ import { CheckCheck, Clock, Eye, Mail, MessageSquare, MoreHorizontal, RefreshCw 
 import { toast } from "sonner";
 
 import { feedbackApi } from "@/app/admin/_api/feedback";
-import type { AdminFeedback } from "@/types/admin";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,15 +18,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import type { AdminFeedback } from "@/types/admin";
 
 type T = Record<string, string>;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const STATUS_CONFIG: Record<
-  AdminFeedback["status"],
-  { label: string; className: string; icon: React.ElementType }
-> = {
+const STATUS_CONFIG: Record<AdminFeedback["status"], { label: string; className: string; icon: React.ElementType }> = {
   unread: {
     label: "Unread",
     className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
@@ -74,7 +66,12 @@ function FeedbackDetailDialog({
   if (!feedback) return null;
 
   return (
-    <Dialog open={!!feedback} onOpenChange={(v) => { if (!v) onClose(); }}>
+    <Dialog
+      open={!!feedback}
+      onOpenChange={(v) => {
+        if (!v) onClose();
+      }}
+    >
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -90,9 +87,7 @@ function FeedbackDetailDialog({
               <Mail className="h-3.5 w-3.5" />
               {feedback.email}
             </span>
-            {feedback.phone && (
-              <span>{feedback.phone}</span>
-            )}
+            {feedback.phone && <span>{feedback.phone}</span>}
             <span className="ml-auto text-xs">
               {new Date(feedback.created_at).toLocaleDateString("en-IN", {
                 day: "numeric",
@@ -106,7 +101,9 @@ function FeedbackDetailDialog({
 
           {/* Message */}
           <div className="rounded-md border bg-muted/30 px-4 py-3">
-            <p className="text-sm leading-relaxed whitespace-pre-wrap">{feedback.message}</p>
+            <p className="text-sm leading-relaxed whitespace-pre-wrap min-w-0 break-all h-38 overflow-y-auto">
+              {feedback.message}
+            </p>
           </div>
 
           {/* Status + actions */}
@@ -114,20 +111,13 @@ function FeedbackDetailDialog({
             <StatusBadge status={feedback.status} />
             <div className="flex items-center gap-2">
               {feedback.status !== "read" && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onStatusChange(feedback.id, "read")}
-                >
+                <Button variant="outline" size="sm" onClick={() => onStatusChange(feedback.id, "read")}>
                   <Eye className="mr-1.5 h-3.5 w-3.5" />
                   Mark as Read
                 </Button>
               )}
               {feedback.status !== "resolved" && (
-                <Button
-                  size="sm"
-                  onClick={() => onStatusChange(feedback.id, "resolved")}
-                >
+                <Button size="sm" onClick={() => onStatusChange(feedback.id, "resolved")}>
                   <CheckCheck className="mr-1.5 h-3.5 w-3.5" />
                   Resolve
                 </Button>
@@ -146,7 +136,12 @@ export function FeedbackTab({ t = {} }: { t?: T }) {
   const queryClient = useQueryClient();
   const [viewing, setViewing] = useState<AdminFeedback | null>(null);
 
-  const { data: feedbacks = [], isLoading, isFetching, refetch } = useQuery({
+  const {
+    data: feedbacks = [],
+    isLoading,
+    isFetching,
+    refetch,
+  } = useQuery({
     queryKey: ["admin-feedback"],
     queryFn: feedbackApi.getAll,
     staleTime: 30_000,
@@ -172,9 +167,7 @@ export function FeedbackTab({ t = {} }: { t?: T }) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h2 className="text-base font-semibold">{t.feedback_section_title ?? "Feedback"}</h2>
-          {unreadCount > 0 && (
-            <Badge className="bg-blue-600 text-white text-xs">{unreadCount} unread</Badge>
-          )}
+          {unreadCount > 0 && <Badge className="bg-blue-600 text-white text-xs">{unreadCount} unread</Badge>}
         </div>
         <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
           <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
@@ -201,7 +194,9 @@ export function FeedbackTab({ t = {} }: { t?: T }) {
                 <TableRow key={i}>
                   {Array.from({ length: 6 }).map((_, j) => (
                     // biome-ignore lint/suspicious/noArrayIndexKey: skeleton
-                    <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
+                    <TableCell key={j}>
+                      <Skeleton className="h-4 w-full" />
+                    </TableCell>
                   ))}
                 </TableRow>
               ))
@@ -246,25 +241,19 @@ export function FeedbackTab({ t = {} }: { t?: T }) {
                           View
                         </DropdownMenuItem>
                         {fb.status !== "read" && (
-                          <DropdownMenuItem
-                            onClick={() => statusMutation.mutate({ id: fb.id, status: "read" })}
-                          >
+                          <DropdownMenuItem onClick={() => statusMutation.mutate({ id: fb.id, status: "read" })}>
                             <Eye className="mr-2 h-4 w-4" />
                             Mark as Read
                           </DropdownMenuItem>
                         )}
                         {fb.status !== "resolved" && (
-                          <DropdownMenuItem
-                            onClick={() => statusMutation.mutate({ id: fb.id, status: "resolved" })}
-                          >
+                          <DropdownMenuItem onClick={() => statusMutation.mutate({ id: fb.id, status: "resolved" })}>
                             <CheckCheck className="mr-2 h-4 w-4" />
                             Resolve
                           </DropdownMenuItem>
                         )}
                         {fb.status !== "unread" && (
-                          <DropdownMenuItem
-                            onClick={() => statusMutation.mutate({ id: fb.id, status: "unread" })}
-                          >
+                          <DropdownMenuItem onClick={() => statusMutation.mutate({ id: fb.id, status: "unread" })}>
                             <Clock className="mr-2 h-4 w-4" />
                             Mark as Unread
                           </DropdownMenuItem>

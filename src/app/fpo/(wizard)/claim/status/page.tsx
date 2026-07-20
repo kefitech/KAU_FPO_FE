@@ -170,15 +170,15 @@ function ClaimCard({ claim }: { claim: FpoClaim }) {
     <div className="rounded-xl border bg-card p-5 shadow-sm">
       <div className="flex items-start gap-4">
         <Icon className={`mt-0.5 h-5 w-5 shrink-0 ${cfg.color}`} />
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
-            <p className="font-semibold text-sm">{claim.fpo_name}</p>
+            <p className="font-semibold text-sm break-words">{claim.fpo_name}</p>
             <span className={`shrink-0 text-xs font-medium ${cfg.color}`}>{cfg.title}</span>
           </div>
 
           {/* Status description */}
           {claim.status === "rejected" ? (
-            <p className="mt-1 text-muted-foreground text-sm">
+            <p className="mt-1 text-muted-foreground text-sm break-words">
               Claim rejected.{claim.review_notes ? ` Reason: ${claim.review_notes}` : ""}
             </p>
           ) : (
