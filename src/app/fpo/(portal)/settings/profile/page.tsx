@@ -209,6 +209,7 @@ export default function FpoSettingsProfilePage() {
   const mutation = useMutation({
     mutationFn: fpoProfileApi.update,
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["fpo-profile-settings"] });
       toast.success("Profile updated successfully.");
     },
     onError: (error: unknown) => {
