@@ -246,3 +246,11 @@ nav.navbar.validnavs .navbar-brand > img {
     flex: 0 0 100%;
   }
 }
+
+
+/* ---- News & Events tabs: center buttons on mobile ---- */
+@media (max-width: 991px) {
+  .tab-btn-wrapper {
+    justify-content: center;
+  }
+}

@@ -4,9 +4,10 @@ import { useEffect, useRef, useState } from "react";
 
 import DOMPurify from "isomorphic-dompurify";
 
+import { useLocaleStore } from "@/stores/locale-store";
+
 import AgrulLayout from "../_components/agrul-layout";
 import BreadCrumb from "../_components/bread-crumb";
-import { useLocaleStore } from "@/stores/locale-store";
 import { publicFetch } from "../_lib/public-fetch";
 
 interface Announcement {
@@ -224,7 +225,7 @@ export default function NewsAndEvents() {
     setLoading(true);
     publicFetch(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/public/announcements/?category=${activeTab}&page=${currentPage}&page_size=${ITEMS_PER_PAGE}`,
-      { headers: { "X-Language": locale || "en" } }
+      { headers: { "X-Language": locale || "en" } },
     )
       .then((r) => r.json())
       .then((json) => {
@@ -247,51 +248,59 @@ export default function NewsAndEvents() {
       <div className="blog-area blog-grid default-padding">
         <div className="container">
           <div className="text-center" style={{ marginBottom: 40 }}>
-            {TABS.map((tab) => {
-              const isActive = activeTab === tab.key;
-              return (
-                <button
-                  key={tab.key}
-                  type="button"
-                  onClick={() => handleTabChange(tab.key)}
-                  style={{
-                    margin: "0 8px",
-                    padding: "12px 30px",
-                    borderRadius: 4,
-                    border: "2px solid var(--color-primary)",
-                    background: isActive ? "var(--color-primary)" : "transparent",
-                    color: isActive ? "var(--white)" : "var(--color-primary)",
-                    fontFamily: "var(--font-default)",
-                    fontWeight: 700,
-                    fontSize: 14,
-                    cursor: "pointer",
-                    letterSpacing: "0.03em",
-                    transition: "all 0.3s",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 8,
-                  }}
-                >
-                  <i className={tab.icon} />
-                  {tab.label}
-                  {isActive && !loading && totalCount > 0 && (
-                    <span
-                      style={{
-                        background: "rgba(255,255,255,0.25)",
-                        color: "var(--white)",
-                        borderRadius: 999,
-                        fontSize: 11,
-                        fontWeight: 700,
-                        padding: "1px 8px",
-                        lineHeight: 1.6,
-                      }}
-                    >
-                      {totalCount}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                justifyContent: "center",
+                gap: 12,
+              }}
+            >
+              {TABS.map((tab) => {
+                const isActive = activeTab === tab.key;
+                return (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => handleTabChange(tab.key)}
+                    style={{
+                      padding: "12px 30px",
+                      borderRadius: 4,
+                      border: "2px solid var(--color-primary)",
+                      background: isActive ? "var(--color-primary)" : "transparent",
+                      color: isActive ? "var(--white)" : "var(--color-primary)",
+                      fontFamily: "var(--font-default)",
+                      fontWeight: 700,
+                      fontSize: 14,
+                      cursor: "pointer",
+                      letterSpacing: "0.03em",
+                      transition: "all 0.3s",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
+                    <i className={tab.icon} />
+                    {tab.label}
+                    {isActive && !loading && totalCount > 0 && (
+                      <span
+                        style={{
+                          background: "rgba(255,255,255,0.25)",
+                          color: "var(--white)",
+                          borderRadius: 999,
+                          fontSize: 11,
+                          fontWeight: 700,
+                          padding: "1px 8px",
+                          lineHeight: 1.6,
+                        }}
+                      >
+                        {totalCount}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <div className="blog-item-box">

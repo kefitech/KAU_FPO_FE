@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 
 import Link from "next/link";
 
-import { useLocaleStore } from "@/stores/locale-store";
 import CountUp from "react-countup";
+
+import { useLocaleStore } from "@/stores/locale-store";
+
 import { publicFetch } from "../_lib/public-fetch";
 import { AnnouncementDetailModal } from "../news-events/page";
 
@@ -44,7 +46,7 @@ const NewsWidget = () => {
     setLoading(true);
     publicFetch(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/public/announcements/?category=${activeTab}&page_size=4&page=1`,
-      { headers: { "X-Language": locale || "en" } }
+      { headers: { "X-Language": locale || "en" } },
     )
       .then((r) => r.json())
       .then((json) => {
@@ -89,7 +91,7 @@ const NewsWidget = () => {
         </div>
 
         {/* Tabs */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 36, flexWrap: "wrap" }}>
+        <div className="tab-btn-wrapper" style={{ display: "flex", gap: 8, marginBottom: 36, flexWrap: "wrap" }}>
           {TABS.map((tab) => {
             const isActive = activeTab === tab.key;
             return (
@@ -138,7 +140,6 @@ const NewsWidget = () => {
 
         <div className="container">
           <div className="row align-center">
-
             {/* Left: featured image */}
             <div className="col-lg-6 choose-us-style-one">
               <div className="thumb">
@@ -162,9 +163,7 @@ const NewsWidget = () => {
                         </div>
                         <div className="operator" />
                       </div>
-                      <span className="medium">
-                        {activeTab === "announcement" ? "Announcements" : "News"}
-                      </span>
+                      <span className="medium">{activeTab === "announcement" ? "Announcements" : "News"}</span>
                     </div>
                   </div>
                 </div>
@@ -174,103 +173,103 @@ const NewsWidget = () => {
             {/* Right: list */}
             <div className="col-lg-6">
               <div style={{ display: "flex", flexDirection: "column" }}>
-                {loading
-                  ? [0, 1, 2, 3].map((i) => (
-                      <div key={i} style={{ padding: "20px 0", borderBottom: i < 3 ? "1px solid #eee" : "none" }}>
-                        <div
-                          style={{
-                            height: 18,
-                            width: "70%",
-                            background: "#f0f0f0",
-                            borderRadius: 4,
-                            marginBottom: 12,
-                            animation: "pulse 1.5s ease-in-out infinite",
-                          }}
-                        />
-                        <div
-                          style={{
-                            height: 14,
-                            width: "40%",
-                            background: "#f0f0f0",
-                            borderRadius: 4,
-                            animation: "pulse 1.5s ease-in-out infinite",
-                          }}
-                        />
-                      </div>
-                    ))
-                  : items.length === 0
-                  ? (
-                      <div style={{ padding: "60px 0", textAlign: "center", color: "#888", fontSize: 15 }}>
-                        No {activeTab === "announcement" ? "announcements" : "news"} available at the moment.
-                      </div>
-                    )
-                  : items.map((item, idx) => (
+                {loading ? (
+                  [0, 1, 2, 3].map((i) => (
+                    <div key={i} style={{ padding: "20px 0", borderBottom: i < 3 ? "1px solid #eee" : "none" }}>
                       <div
-                        key={item.id}
                         style={{
-                          display: "flex",
-                          gap: 16,
-                          padding: "22px 0",
-                          borderBottom: idx < items.length - 1 ? "1px solid #eee" : "none",
+                          height: 18,
+                          width: "70%",
+                          background: "#f0f0f0",
+                          borderRadius: 4,
+                          marginBottom: 12,
+                          animation: "pulse 1.5s ease-in-out infinite",
                         }}
-                      >
-                        {/* Accent bar */}
-                        <div style={{ width: 3, borderRadius: 2, background: "var(--color-primary)", flexShrink: 0 }} />
+                      />
+                      <div
+                        style={{
+                          height: 14,
+                          width: "40%",
+                          background: "#f0f0f0",
+                          borderRadius: 4,
+                          animation: "pulse 1.5s ease-in-out infinite",
+                        }}
+                      />
+                    </div>
+                  ))
+                ) : items.length === 0 ? (
+                  <div style={{ padding: "60px 0", textAlign: "center", color: "#888", fontSize: 15 }}>
+                    No {activeTab === "announcement" ? "announcements" : "news"} available at the moment.
+                  </div>
+                ) : (
+                  items.map((item, idx) => (
+                    <div
+                      key={item.id}
+                      style={{
+                        display: "flex",
+                        gap: 16,
+                        padding: "22px 0",
+                        borderBottom: idx < items.length - 1 ? "1px solid #eee" : "none",
+                      }}
+                    >
+                      {/* Accent bar */}
+                      <div style={{ width: 3, borderRadius: 2, background: "var(--color-primary)", flexShrink: 0 }} />
 
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <h4
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <h4
+                          style={{
+                            fontSize: 18,
+                            fontWeight: 700,
+                            color: "#1a1a1a",
+                            lineHeight: 1.4,
+                            margin: "0 0 12px",
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                          }}
+                        >
+                          {item.title}
+                        </h4>
+
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            flexWrap: "wrap",
+                            gap: 8,
+                          }}
+                        >
+                          <span style={{ fontSize: 13, color: "#888" }}>
+                            Last Updated on {formatDate(item.published_date)}
+                          </span>
+
+                          <button
+                            type="button"
+                            onClick={() => setSelected(item)}
                             style={{
-                              fontSize: 18,
+                              background: "none",
+                              border: "none",
+                              padding: 0,
+                              cursor: "pointer",
+                              color: "var(--color-primary)",
+                              fontFamily: "var(--font-default)",
                               fontWeight: 700,
-                              color: "#1a1a1a",
-                              lineHeight: 1.4,
-                              margin: "0 0 12px",
-                              display: "-webkit-box",
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: "vertical",
-                              overflow: "hidden",
-                            }}
-                          >
-                            {item.title}
-                          </h4>
-
-                          <div
-                            style={{
-                              display: "flex",
+                              fontSize: 13,
+                              display: "inline-flex",
                               alignItems: "center",
-                              justifyContent: "space-between",
-                              flexWrap: "wrap",
-                              gap: 8,
+                              gap: 6,
+                              marginTop: 4,
                             }}
                           >
-                            <span style={{ fontSize: 13, color: "#888" }}>
-                              Last Updated on {formatDate(item.published_date)}
-                            </span>
-
-                            <button
-                              type="button"
-                              onClick={() => setSelected(item)}
-                              style={{
-                                background: "none",
-                                border: "none",
-                                padding: 0,
-                                cursor: "pointer",
-                                color: "var(--color-primary)",
-                                fontFamily: "var(--font-default)",
-                                fontWeight: 700,
-                                fontSize: 13,
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 6,
-                                marginTop: 4,
-                              }}
-                            >
-                              Read More <i className="fas fa-arrow-right" style={{ fontSize: 12 }} />
-                            </button>
-                          </div>
+                            Read More <i className="fas fa-arrow-right" style={{ fontSize: 12 }} />
+                          </button>
                         </div>
                       </div>
-                    ))}
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
