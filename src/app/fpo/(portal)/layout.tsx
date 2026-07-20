@@ -13,9 +13,11 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { fpoNavigationConfig } from "@/config/navigation-defaults";
+import { authApi } from "@/lib/api/auth";
 import { resolvePostLoginPath } from "@/lib/fpo-redirect";
 import { useAuthStore } from "@/stores/auth-store";
 import { useLocaleStore } from "@/stores/locale-store";
+import { check } from "zod";
 
 export default function FpoPortalLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -23,14 +25,25 @@ export default function FpoPortalLayout({ children }: { children: React.ReactNod
   const locale = useLocaleStore((state) => state.locale);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const fpoRedirect = useAuthStore((s) => s.fpoRedirect);
+  const setFpoRedirect = useAuthStore((s) => s.setFpoRedirect);
   const [mounted, setMounted] = useState(false);
+  const [checkedFresh, setCheckedFresh] = useState(false);
+
 
   useEffect(() => {
     setMounted(true);
   }, []);
-
   useEffect(() => {
-    if (!mounted) return;
+    if (!mounted || !isAuthenticated) return;
+    authApi
+      .me()
+      .then((res) => {
+        setFpoRedirect(res.redirect);
+      })
+      .finally(() => setCheckedFresh(true));
+  }, [mounted, isAuthenticated]);
+  useEffect(() => {
+    if (!mounted || !checkedFresh) return;
     if (!isAuthenticated) {
       router.replace(`/v1/login?next=${encodeURIComponent(pathname)}`);
       return;
@@ -38,9 +51,9 @@ export default function FpoPortalLayout({ children }: { children: React.ReactNod
     if (fpoRedirect && fpoRedirect.stage !== "dashboard") {
       router.replace(resolvePostLoginPath(fpoRedirect));
     }
-  }, [mounted, isAuthenticated, fpoRedirect, pathname, router]);
+  }, [mounted,checkedFresh, isAuthenticated, fpoRedirect, pathname, router]);
 
-  if (!mounted || !isAuthenticated) {
+  if (!mounted || !checkedFresh || !isAuthenticated) {
     return null;
   }
 
