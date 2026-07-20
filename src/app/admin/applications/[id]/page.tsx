@@ -437,6 +437,91 @@ function RequestInfoDialog({
   );
 }
 
+type StatusHistoryEntry = {
+  from_status?: string | null;
+  to_status: string;
+  changed_by_name?: string | null;
+  notes?: string | null;
+  created_at: string;
+};
+
+function InfoResponseDialog({
+  history,
+  open,
+  onOpenChange,
+  onApprove,
+  approving,
+}: {
+  history: StatusHistoryEntry[];
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onApprove: () => void;
+  approving: boolean;
+}) {
+  const infoEntry = [...history].reverse().find((h) => h.to_status === "info_required");
+  const infoReply = infoEntry
+    ? history.find((h) => h.from_status === "info_required" && new Date(h.created_at) > new Date(infoEntry.created_at))
+    : null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Info Request Details</DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5 rounded-lg border border-orange-200 bg-orange-50 p-4 dark:border-orange-800 dark:bg-orange-950/20">
+            <p className="font-semibold text-orange-800 text-xs dark:text-orange-300">Admin Request</p>
+            <p className="text-sm">{infoEntry?.notes || "—"}</p>
+            <p className="text-muted-foreground text-xs">
+              {infoEntry?.changed_by_name ?? "Admin"} ·{" "}
+              {infoEntry
+                ? new Date(infoEntry.created_at).toLocaleString("en-IN", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                : ""}
+            </p>
+          </div>
+          {infoReply && (
+            <div className="flex flex-col gap-1.5 rounded-lg border bg-muted/40 p-4">
+              <p className="font-semibold text-xs">FPO Response</p>
+              <p className="text-sm">{infoReply.notes || "—"}</p>
+              <p className="text-muted-foreground text-xs">
+                {infoReply.changed_by_name ?? "FPO"} ·{" "}
+                {new Date(infoReply.created_at).toLocaleString("en-IN", {
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </p>
+            </div>
+          )}
+          <div className="rounded-lg border border-dashed p-4">
+            <p className="text-muted-foreground text-xs">
+              Field-level change tracking isn&apos;t available yet — review the application details above for the latest
+              values.
+            </p>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Close
+          </Button>
+          <Button type="button" className="bg-green-600 hover:bg-green-700" onClick={onApprove} disabled={approving}>
+            {approving ? "Approving…" : "Approve"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── Tier helpers ─────────────────────────────────────────────────────────────
 
 const TIER_OPTIONS = ["A", "B", "C", "D"] as const;
@@ -1104,6 +1189,7 @@ function ApplicationDetailContent() {
   const [requestInfoOpen, setRequestInfoOpen] = useState(action === "request-info");
   const [assignTierOpen, setAssignTierOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [infoResponseOpen, setInfoResponseOpen] = useState(false);
   const [infoDetailsDoc, setInfoDetailsDoc] = useState<
     import("@/app/admin/_api/applications").ApplicationDocument | null
   >(null);
@@ -1196,6 +1282,12 @@ function ApplicationDetailContent() {
   }
 
   if (!app) return null;
+  const statusHistory = app.status_history ?? [];
+  const lastStatusEntry = statusHistory[statusHistory.length - 1];
+  const isInfoResubmission =
+    app.status === "submitted" &&
+    lastStatusEntry?.from_status === "info_required" &&
+    lastStatusEntry?.to_status === "submitted";
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-8 py-6">
@@ -1281,7 +1373,13 @@ function ApplicationDetailContent() {
               {activateMutation.isPending ? "Activating…" : "Activate"}
             </Button>
           )}
-          {app.status === "submitted" && (
+          {app.status === "submitted" && isInfoResubmission && (
+            <Button size="sm" variant="outline" onClick={() => setInfoResponseOpen(true)}>
+              <AlertCircle className="mr-1.5 h-4 w-4" />
+              Info Details
+            </Button>
+          )}
+          {app.status === "submitted" && !isInfoResubmission && (
             <Button
               size="sm"
               className="bg-green-600 hover:bg-green-700"
@@ -1758,6 +1856,14 @@ function ApplicationDetailContent() {
         open={requestInfoOpen}
         onOpenChange={setRequestInfoOpen}
       />
+      <InfoResponseDialog
+        history={statusHistory}
+        open={infoResponseOpen}
+        onOpenChange={setInfoResponseOpen}
+        onApprove={() => approveMutation.mutateAsync().then(() => setInfoResponseOpen(false))}
+        approving={approveMutation.isPending}
+      />
+
       <AssignTierDialog fpoId={fpoId} open={assignTierOpen} onOpenChange={setAssignTierOpen} />
       <EditFPODialog
         fpoId={fpoId}

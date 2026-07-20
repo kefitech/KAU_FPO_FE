@@ -13,7 +13,10 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { FpoClaim } from "@/types/fpo";
 
-const STATUS_CONFIG: Record<FpoClaim["status"], { icon: React.ElementType; color: string; title: string; desc: string }> = {
+const STATUS_CONFIG: Record<
+  FpoClaim["status"],
+  { icon: React.ElementType; color: string; title: string; desc: string }
+> = {
   pending: {
     icon: Clock,
     color: "text-yellow-600 dark:text-yellow-400",
@@ -53,7 +56,11 @@ function UploadRespondSection({ claim }: { claim: FpoClaim }) {
   const [uploading, setUploading] = useState(false);
 
   const respondMutation = useMutation({
-    mutationFn: () => fpoClaimApi.respond(claim.id, uploadedDocs.map((d) => d.id)),
+    mutationFn: () =>
+      fpoClaimApi.respond(
+        claim.id,
+        uploadedDocs.map((d) => d.id),
+      ),
     onSuccess: (msg) => {
       toast.success(msg || "Documents submitted successfully.");
       queryClient.invalidateQueries({ queryKey: ["fpo-claims"] });
@@ -98,9 +105,12 @@ function UploadRespondSection({ claim }: { claim: FpoClaim }) {
       {uploadedDocs.length > 0 && (
         <ul className="flex flex-col gap-1.5">
           {uploadedDocs.map((doc) => (
-            <li key={doc.id} className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm">
+            <li
+              key={doc.id}
+              className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm min-w-0"
+            >
               <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-              <span className="flex-1 truncate">{doc.name}</span>
+              <span className="flex-1 truncate min-w-0">{doc.name}</span>
               <button
                 type="button"
                 onClick={() => removeDoc(doc.id)}
@@ -121,16 +131,15 @@ function UploadRespondSection({ claim }: { claim: FpoClaim }) {
         onChange={handleFileChange}
       />
 
-      <Button
-        variant="outline"
-        size="sm"
-        disabled={uploading}
-        onClick={() => fileInputRef.current?.click()}
-      >
+      <Button variant="outline" size="sm" disabled={uploading} onClick={() => fileInputRef.current?.click()}>
         {uploading ? (
-          <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Uploading…</>
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Uploading…
+          </>
         ) : (
-          <><Paperclip className="mr-2 h-4 w-4" /> Add Document</>
+          <>
+            <Paperclip className="mr-2 h-4 w-4" /> Add Document
+          </>
         )}
       </Button>
 
@@ -141,7 +150,9 @@ function UploadRespondSection({ claim }: { claim: FpoClaim }) {
         onClick={() => respondMutation.mutate()}
       >
         {respondMutation.isPending ? (
-          <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting…</>
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting…
+          </>
         ) : (
           "Submit Documents to Admin"
         )}
@@ -183,7 +194,8 @@ function ClaimCard({ claim }: { claim: FpoClaim }) {
           )}
 
           <p className="mt-2 text-muted-foreground text-xs">
-            Submitted {new Date(claim.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}
+            Submitted{" "}
+            {new Date(claim.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}
           </p>
 
           {claim.status === "approved" && (
@@ -193,9 +205,7 @@ function ClaimCard({ claim }: { claim: FpoClaim }) {
           )}
 
           {/* Upload & respond section — only when docs_requested */}
-          {claim.status === "docs_requested" && (
-            <UploadRespondSection claim={claim} />
-          )}
+          {claim.status === "docs_requested" && <UploadRespondSection claim={claim} />}
 
           {/* Already submitted confirmation */}
           {claim.status === "docs_submitted" && (
@@ -218,7 +228,7 @@ export default function ClaimStatusPage() {
     staleTime: 30_000,
     refetchInterval: (query) => {
       const hasActive = query.state.data?.some(
-        (c) => c.status === "pending" || c.status === "docs_requested" || c.status === "docs_submitted"
+        (c) => c.status === "pending" || c.status === "docs_requested" || c.status === "docs_submitted",
       );
       return hasActive ? 60_000 : false;
     },
@@ -254,9 +264,7 @@ export default function ClaimStatusPage() {
       )}
 
       {claims.some((c) => c.status === "pending" || c.status === "docs_requested" || c.status === "docs_submitted") && (
-        <p className="text-center text-muted-foreground text-xs">
-          This page refreshes automatically every minute.
-        </p>
+        <p className="text-center text-muted-foreground text-xs">This page refreshes automatically every minute.</p>
       )}
     </div>
   );
