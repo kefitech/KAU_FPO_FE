@@ -92,11 +92,13 @@ function QuickLinkDialog({
   const [url, setUrl] = useState("");
   const [urlError, setUrlError] = useState<string | null>(null);
   const [logo, setLogo] = useState<File | null>(null);
+  const [logoError, setLogoError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) return;
     setLogo(null);
+    setLogoError(null);
     setUrlError(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
     if (editing) {
@@ -111,6 +113,18 @@ function QuickLinkDialog({
   const validateUrl = (value: string) => {
     const result = urlSchema.safeParse(value);
     return result.success ? null : result.error.issues[0].message;
+  };
+
+  const ALLOWED_LOGO_TYPES = ["image/jpeg", "image/png", "image/webp"];
+  const MAX_LOGO_SIZE = 5 * 1024 * 1024; // 5 MB, matches backend limit
+  const validateLogo = (file: File): string | null => {
+    if (!ALLOWED_LOGO_TYPES.includes(file.type)) {
+      return "Only JPG, PNG or WebP files are allowed.";
+    }
+    if (file.size > MAX_LOGO_SIZE) {
+      return "Logo must not exceed 5 MB.";
+    }
+    return null;
   };
 
   const mutation = useMutation({
@@ -135,6 +149,13 @@ function QuickLinkDialog({
     if (error) {
       setUrlError(error);
       return;
+    }
+    if (logo) {
+      const logoErr = validateLogo(logo);
+      if (logoErr) {
+        setLogoError(logoErr);
+        return;
+      }
     }
     mutation.mutate();
   };
@@ -213,9 +234,19 @@ function QuickLinkDialog({
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept="image/jpeg,image/png,image/webp,image/svg+xml"
+                      accept="image/jpeg,image/png,image/webp"
                       className="hidden"
-                      onChange={(e) => setLogo(e.target.files?.[0] ?? null)}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] ?? null;
+                        if (file) {
+                          const err = validateLogo(file);
+                          setLogoError(err);
+                          setLogo(err ? null : file);
+                        } else {
+                          setLogo(null);
+                          setLogoError(null);
+                        }
+                      }}
                     />
                   </label>
                 </div>
@@ -260,11 +291,22 @@ function QuickLinkDialog({
                 id="quick-link-logo"
                 ref={fileInputRef}
                 type="file"
-                accept="image/jpeg,image/png,image/webp,image/svg+xml"
-                onChange={(e) => setLogo(e.target.files?.[0] ?? null)}
+                accept="image/jpeg,image/png,image/webp"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] ?? null;
+                  if (file) {
+                    const err = validateLogo(file);
+                    setLogoError(err);
+                    setLogo(err ? null : file);
+                  } else {
+                    setLogo(null);
+                    setLogoError(null);
+                  }
+                }}
               />
             )}
-            <p className="text-xs text-muted-foreground">JPG, PNG, WebP or SVG</p>
+            <p className="text-xs text-muted-foreground">JPG, PNG, or WebP</p>
+            {logoError && <p className="text-xs text-destructive">{logoError}</p>}
           </div>
         </div>
 
