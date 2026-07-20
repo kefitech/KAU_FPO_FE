@@ -68,7 +68,7 @@ const HeaderTop = () => {
         <div className="row align-center">
           <div className="col-lg-9">
             <div className="flex-item left">
-              <p>Smart &amp; Empovered Farmers</p>
+              <p>Smart &amp; Empowered Farmers</p>
               <ul>
                 <li>
                   <i className="fas fa-map-marker-alt" /> Kerala Agricultural University Mannuthy.
