@@ -225,6 +225,7 @@ function DocumentDialog({
                 value={titleValues[activeLang] ?? ""}
                 onChange={(e) => setTitleValues((prev) => ({ ...prev, [activeLang]: e.target.value }))}
                 placeholder={`Document title in ${languages.find((l) => l.code === activeLang)?.name ?? activeLang}`}
+                maxLength={100}
               />
             )}
           </div>
