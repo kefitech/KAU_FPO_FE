@@ -27,6 +27,7 @@ export type FpoRedirectStage =
   | "upload_documents"
   | "submit"
   | "status"
+  | "claim_status"
   | "dashboard";
 
 export interface FpoRedirect {

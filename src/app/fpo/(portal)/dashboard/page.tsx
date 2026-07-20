@@ -79,6 +79,10 @@ const STATUS_CONFIG: Record<FpoStatus, { label: string; className: string }> = {
     label: "Info Required",
     className: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300",
   },
+  suspended: {
+    label: "Suspended",
+    className: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
+  },
 };
 
 const DISTRICT_LABELS: Record<string, string> = {
