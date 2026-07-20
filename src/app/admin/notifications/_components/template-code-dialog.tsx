@@ -27,7 +27,7 @@ const schema = z.object({
       message: "Only lowercase letters, numbers and underscores",
     }),
   name: z.string().min(1, { message: "Name is required" }),
-  channel: z.enum(["email", "sms", "in_app", "push"] as const, {
+  channel: z.enum(["email", "sms", "in_app", "push", "whatsapp"] as const, {
     message: "Please select a channel",
   }),
   variables: z.string(),

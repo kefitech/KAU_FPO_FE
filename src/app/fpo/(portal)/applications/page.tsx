@@ -60,6 +60,13 @@ const STATUS_CONFIG: Record<
     icon: AlertCircle,
     description: "KAU Admin has requested additional information before your application can proceed.",
   },
+  suspended: {
+    label: "Suspended",
+    bg: "bg-red-100 dark:bg-red-900/30",
+    text: "text-red-700 dark:text-red-300",
+    icon: XCircle,
+    description: "Your FPO account has been suspended. Please contact KAU Admin.",
+  },
 };
 
 function formatDate(iso: string) {
