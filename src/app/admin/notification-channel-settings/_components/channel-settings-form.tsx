@@ -17,7 +17,7 @@ import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { getErrorMessage } from "@/lib/get-error-message";
-import type { ChannelSetting, EmailConfig, SmsConfig, WhatsAppConfig } from "@/types";
+import type { ChannelSetting, EmailConfig, WhatsAppConfig } from "@/types";
 
 type T = Record<string, string>;
 
@@ -31,10 +31,9 @@ const schema = z.object({
   email_from_email: z.string().optional(),
   email_from_name: z.string().optional(),
   email_use_tls: z.boolean().optional(),
-  sms_api_key: z.string().optional(),
-  sms_sender_id: z.string().optional(),
-  sms_base_url: z.string().optional(),
-  sms_otp_template_id: z.string().optional(),
+  sms_url: z.string().optional(),
+  sms_application: z.string().optional(),
+  sms_token: z.string().optional(),
   wa_phone_number_id: z.string().optional(),
   wa_access_token: z.string().optional(),
   wa_api_version: z.string().optional(),
@@ -59,10 +58,9 @@ const defaultValues: FormValues = {
   email_from_email: "",
   email_from_name: "",
   email_use_tls: true,
-  sms_api_key: "",
-  sms_sender_id: "",
-  sms_base_url: "",
-  sms_otp_template_id: "",
+  sms_url: "",
+  sms_application: "",
+  sms_token: "",
   wa_phone_number_id: "",
   wa_access_token: "",
   wa_api_version: "v20.0",
@@ -82,11 +80,10 @@ function parseEditingValues(item: ChannelSetting): FormValues {
       base.email_from_name = c.from_name ?? "";
       base.email_use_tls = c.use_tls ?? true;
     } else if (item.channel === "sms") {
-      const c = config as Partial<SmsConfig>;
-      base.sms_api_key = "";
-      base.sms_sender_id = c.sender_id ?? "";
-      base.sms_base_url = c.base_url ?? "";
-      base.sms_otp_template_id = c.otp_template_id ?? "";
+      const c = config as Record<string, string>;
+      base.sms_url = c.url ?? "";
+      base.sms_application = c.application ?? "";
+      base.sms_token = "";
     } else if (item.channel === "whatsapp") {
       const c = config as Partial<WhatsAppConfig>;
       base.wa_phone_number_id = c.phone_number_id ?? "";
@@ -113,13 +110,12 @@ function buildConfig(values: FormValues): Record<string, unknown> {
     return config as Record<string, unknown>;
   }
   if (values.channel === "sms") {
-    const config: Partial<SmsConfig> = {
-      sender_id: values.sms_sender_id,
-      base_url: values.sms_base_url,
-      otp_template_id: values.sms_otp_template_id,
+    const config: Record<string, unknown> = {
+      url: values.sms_url,
+      application: values.sms_application,
     };
-    if (values.sms_api_key) config.api_key = values.sms_api_key;
-    return config as Record<string, unknown>;
+    if (values.sms_token) config.token = values.sms_token;
+    return config;
   }
   if (values.channel === "whatsapp") {
     const config: Partial<WhatsAppConfig> = {
@@ -341,71 +337,55 @@ export function ChannelSettingsForm({ mode, channelSetting, t = {}, tCommon = {}
 
                   <Controller
                     control={control}
-                    name="sms_api_key"
+                    name="sms_url"
                     render={({ field }) => (
                       <Field>
-                        <FieldLabel htmlFor="cs-api-key">
-                          {t.api_key_label ?? "API Key"} <span className="text-destructive">*</span>
+                        <FieldLabel htmlFor="cs-sms-url">
+                          Service URL <span className="text-destructive">*</span>
                         </FieldLabel>
                         <Input
-                          id="cs-api-key"
-                          type="password"
-                          placeholder={isEdit ? (t.api_key_placeholder ?? "Enter new API key to update") : ""}
+                          id="cs-sms-url"
+                          placeholder="e.g. http://finance.kau.in/services/Utility.asmx"
                           {...field}
                         />
+                        <p className="text-xs text-muted-foreground">KAU SOAP gateway endpoint.</p>
                       </Field>
                     )}
                   />
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <Controller
-                      control={control}
-                      name="sms_sender_id"
-                      render={({ field }) => (
-                        <Field>
-                          <FieldLabel htmlFor="cs-sender-id">
-                            {t.sender_id_label ?? "Sender ID"} <span className="text-destructive">*</span>
-                          </FieldLabel>
-                          <Input
-                            id="cs-sender-id"
-                            placeholder={t.sender_id_placeholder ?? "e.g. KAUFPO"}
-                            maxLength={6}
-                            {...field}
-                          />
-                        </Field>
-                      )}
-                    />
-                    <Controller
-                      control={control}
-                      name="sms_base_url"
-                      render={({ field }) => (
-                        <Field>
-                          <FieldLabel htmlFor="cs-base-url">
-                            {t.base_url_label ?? "Base URL"} <span className="text-destructive">*</span>
-                          </FieldLabel>
-                          <Input
-                            id="cs-base-url"
-                            placeholder={t.base_url_placeholder ?? "https://api.msg91.com/api/v5/"}
-                            {...field}
-                          />
-                        </Field>
-                      )}
-                    />
-                  </div>
+                  <Controller
+                    control={control}
+                    name="sms_application"
+                    render={({ field }) => (
+                      <Field>
+                        <FieldLabel htmlFor="cs-sms-application">
+                          Application <span className="text-destructive">*</span>
+                        </FieldLabel>
+                        <Input
+                          id="cs-sms-application"
+                          placeholder="e.g. KAUINF"
+                          {...field}
+                        />
+                        <p className="text-xs text-muted-foreground">Application identifier (DLT sender ID).</p>
+                      </Field>
+                    )}
+                  />
 
                   <Controller
                     control={control}
-                    name="sms_otp_template_id"
+                    name="sms_token"
                     render={({ field }) => (
                       <Field>
-                        <FieldLabel htmlFor="cs-otp-template-id">
-                          {t.otp_template_id_label ?? "OTP Template ID"} <span className="text-destructive">*</span>
+                        <FieldLabel htmlFor="cs-sms-token">
+                          Token <span className="text-destructive">*</span>
                         </FieldLabel>
                         <Input
-                          id="cs-otp-template-id"
-                          placeholder={t.otp_template_id_placeholder ?? "e.g. 6a01b545134776d8b5098002"}
+                          id="cs-sms-token"
+                          type="password"
+                          placeholder={isEdit ? "Enter new token to update" : ""}
                           {...field}
                         />
+                        <p className="text-xs text-muted-foreground">Auth token provided by KAU gateway.</p>
                       </Field>
                     )}
                   />
