@@ -31,7 +31,7 @@ type T = Record<string, string>;
 const STATUS_FILTERS = [
   {
     key: "status",
-    label: "Status",
+    label: "All Status",
     options: [
       { label: "Submitted", value: "submitted" },
       { label: "Under Review", value: "under_review" },
@@ -45,7 +45,7 @@ const STATUS_FILTERS = [
   },
   {
     key: "district",
-    label: "District",
+    label: "All District",
     options: [
       { label: "Thiruvananthapuram", value: "TVM" },
       { label: "Kollam", value: "KLM" },
@@ -65,7 +65,7 @@ const STATUS_FILTERS = [
   },
   {
     key: "tier",
-    label: "Tier",
+    label: "All Tier",
     options: [
       { label: "Tier A", value: "A" },
       { label: "Tier B", value: "B" },
@@ -199,7 +199,10 @@ export default function ApplicationsPage() {
               label: "Status",
               type: "node",
               node: (
-                <Badge className={`text-xs font-medium ${STATUS_COLORS[a.status] ?? "bg-muted text-muted-foreground"}`} variant="secondary">
+                <Badge
+                  className={`text-xs font-medium ${STATUS_COLORS[a.status] ?? "bg-muted text-muted-foreground"}`}
+                  variant="secondary"
+                >
                   {a.status_display}
                 </Badge>
               ),
