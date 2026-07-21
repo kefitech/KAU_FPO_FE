@@ -33,7 +33,7 @@ import { QuickLinksTab } from "./_components/quick-links-tab";
 import { NewsSourcesTab } from "./_components/news-sources-tab";
 import { FeedbackTab } from "./_components/feedback-tab";
 
-const BLOCK_LABELS: Record<string, string> = {
+const BLOCK_LABEL_FALLBACKS: Record<string, string> = {
   hero_headline: "Hero Headline",
   hero_subheading: "Hero Subheading",
   hero_description: "Hero Description",
@@ -42,7 +42,7 @@ const BLOCK_LABELS: Record<string, string> = {
   how_to_register: "How to Register",
 };
 
-const BLOCK_DESCRIPTIONS: Record<string, string> = {
+const BLOCK_DESC_FALLBACKS: Record<string, string> = {
   hero_headline: "Main heading on the landing page",
   hero_subheading: "Subtitle below the main heading",
   hero_description: "Body paragraph in the hero section",
@@ -50,6 +50,14 @@ const BLOCK_DESCRIPTIONS: Record<string, string> = {
   about_body: "Body content for the About section",
   how_to_register: "Step-by-step registration guide (shown in modal)",
 };
+
+function getBlockLabel(key: string, t: T): string {
+  return t[`block_${key}`] ?? BLOCK_LABEL_FALLBACKS[key] ?? key;
+}
+
+function getBlockDesc(key: string, t: T): string {
+  return t[`block_desc_${key}`] ?? BLOCK_DESC_FALLBACKS[key] ?? "";
+}
 
 const RICH_TEXT_BLOCKS = ["about_body", "how_to_register", "hero_description"];
 
@@ -95,8 +103,8 @@ function BlockEditor({ block, languages, t }: BlockEditorProps) {
   const [saveError, setSaveError] = useState("");
 
   const isRichText = RICH_TEXT_BLOCKS.includes(block.block_key);
-  const label = BLOCK_LABELS[block.block_key] ?? block.block_key;
-  const description = BLOCK_DESCRIPTIONS[block.block_key] ?? "";
+  const label = getBlockLabel(block.block_key, t);
+  const description = getBlockDesc(block.block_key, t);
   const currentContent = values[activeLang] ?? "";
   const isEmpty = !currentContent.trim();
 
@@ -355,7 +363,7 @@ function ContentBlocksTab({ t }: { t: T }) {
         {sortedBlocks.map((block) => {
           const isActive = (activeKey || sortedBlocks[0]?.block_key) === block.block_key;
           const isFilled = getBlockFillStatus(block);
-          const label = BLOCK_LABELS[block.block_key] ?? block.block_key;
+          const label = getBlockLabel(block.block_key, t);
           return (
             <button
               key={block.block_key}
@@ -387,7 +395,7 @@ function ContentBlocksTab({ t }: { t: T }) {
           {sortedBlocks.map((block) => {
             const isActive = (activeKey || sortedBlocks[0]?.block_key) === block.block_key;
             const isFilled = getBlockFillStatus(block);
-            const label = BLOCK_LABELS[block.block_key] ?? block.block_key;
+            const label = getBlockLabel(block.block_key, t);
             return (
               <li key={block.block_key}>
                 <button

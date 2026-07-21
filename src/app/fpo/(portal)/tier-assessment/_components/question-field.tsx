@@ -8,9 +8,11 @@ interface QuestionFieldProps {
   value: string | number | string[] | undefined;
   onChange: (value: string | number | string[]) => void;
   readOnly?: boolean;
+  boolYes?: string;
+  boolNo?: string;
 }
 
-export function QuestionField({ question, value, onChange, readOnly }: QuestionFieldProps) {
+export function QuestionField({ question, value, onChange, readOnly, boolYes, boolNo }: QuestionFieldProps) {
   const { input_type, answer_config, question_no } = question;
 
   if (input_type === "computed") return null;
@@ -34,6 +36,8 @@ export function QuestionField({ question, value, onChange, readOnly }: QuestionF
   }
 
   if (input_type === "boolean") {
+    const labelYes = boolYes ?? "Yes";
+    const labelNo  = boolNo  ?? "No";
     return (
       <div className="flex gap-6">
         {(["yes", "no"] as const).map((opt) => (
@@ -47,7 +51,7 @@ export function QuestionField({ question, value, onChange, readOnly }: QuestionF
               disabled={readOnly}
               className="accent-primary"
             />
-            <span className="text-sm">{opt === "yes" ? "Yes" : "No"}</span>
+            <span className="text-sm">{opt === "yes" ? labelYes : labelNo}</span>
           </label>
         ))}
       </div>
