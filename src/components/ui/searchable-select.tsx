@@ -64,6 +64,17 @@ export function SearchableSelect({
         }
         setQuery(v ?? "");
       }}
+      onOpenChange={(nextOpen) => {
+        if (nextOpen) {
+          // Popup just opened — clear the box so the user can type a fresh
+          // search instead of having to delete the current label first.
+          setQuery("");
+        } else if (selectedCode.current === null) {
+          // Closed without picking a new option (blur/escape) — restore the
+          // label for whatever is still selected.
+          setQuery(options.find((o) => o.value === value)?.label ?? "");
+        }
+      }}
       disabled={disabled}
     >
       <ComboboxInput
