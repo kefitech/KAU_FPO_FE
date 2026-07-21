@@ -18,6 +18,7 @@ import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { authApi } from "@/lib/api/auth";
 import { DISTRICT_OPTIONS } from "@/types/fpo";
+import { setServers } from "dns";
 
 type Stage = "eligibility" | "phone-otp" | "account";
 
@@ -385,11 +386,13 @@ type AccountValues = z.infer<typeof accountSchema>;
 
 function AccountStep({
   onBack,
+  onResetToEligibility,
   eligibilityToken,
   phoneToken,
   verifiedPhone,
 }: {
   onBack: () => void;
+  onResetToEligibility: () => void;
   eligibilityToken: string;
   phoneToken: string;
   verifiedPhone: string;
@@ -434,9 +437,34 @@ function AccountStep({
       const axiosErr = err as
         | { response?: { data?: { message?: string; errors?: Record<string, string[]> } }; message?: string }
         | undefined;
+
       const serverErrors = axiosErr?.response?.data?.errors;
-      if (serverErrors && Object.keys(serverErrors).length > 0) {
-        Object.entries(serverErrors).forEach(([field, messages]) => {
+
+      if (serverErrors?.eligibility_token) {
+        toast.error(serverErrors.eligibility_token[0]);
+        onResetToEligibility();
+        return;
+      }
+
+      if (serverErrors?.phone_token) {
+        toast.error(serverErrors.phone_token[0]);
+        onBack();
+        return;
+      }
+
+      const FORM_FIELDS = new Set<keyof AccountValues>([
+        "first_name",
+        "last_name",
+        "email",
+        "password",
+        "confirm_password",
+      ]);
+      const fieldErrors = Object.entries(serverErrors ?? {}).filter(([f]) =>
+        FORM_FIELDS.has(f as keyof AccountValues)
+      );
+
+      if (fieldErrors.length > 0) {
+        fieldErrors.forEach(([field, messages]) => {
           setError(field as keyof AccountValues, { type: "server", message: messages[0] });
         });
       } else {
@@ -653,6 +681,7 @@ export default function RegisterPage() {
         {stage === "account" && (
           <AccountStep
             onBack={() => setStage("phone-otp")}
+            onResetToEligibility={() => setStage("eligibility")}
             eligibilityToken={eligibilityToken}
             phoneToken={phoneToken}
             verifiedPhone={verifiedPhone}

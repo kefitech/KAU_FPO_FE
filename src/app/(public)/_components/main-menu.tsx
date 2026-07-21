@@ -7,17 +7,17 @@ interface Props {
   navbarPlacement?: string;
 }
 
-const MainMenu = ({ toggleSubMenu, navbarPlacement }: Props) => {
+const MainMenu = ({ openIndex, toggleSubMenu, navbarPlacement }: Props) => {
   return (
     <ul className={`nav navbar-nav ${navbarPlacement} navbar-right`} data-in="fadeInDown" data-out="fadeOutUp">
-      <li className={"dropdown ${openIndex ===0 ?"}>
+      <li className={`dropdown ${openIndex === 0 ? "on" : ""}`}>
         <Link href="#" className="dropdown-toggle" data-toggle="dropdown" onClick={toggleSubMenu?.(0)}>Home</Link>
         <ul className="dropdown-menu">
           <li><a href="/v1/login">Sign In</a></li>
           <li><a href="/register">Register</a></li>
         </ul>
       </li>
-      <li className="dropdown">
+      <li className={`dropdown ${openIndex === 1 ? "on" : ""}`}>
         <Link href="#" className="dropdown-toggle" data-toggle="dropdown" onClick={toggleSubMenu?.(1)}>Pages</Link>
         <ul className="dropdown-menu">
           <li><Link href="/about-us">About Us</Link></li>
@@ -28,7 +28,10 @@ const MainMenu = ({ toggleSubMenu, navbarPlacement }: Props) => {
           <li><Link href="/contact-us">Contact Us</Link></li>
         </ul>
       </li>
-      {/* <li className="dropdown">
+      <li>
+        <Link href="/news-events">Events &amp; Updates</Link>
+      </li>
+           {/* <li className="dropdown">
         <Link href="/project" className="dropdown-toggle" data-toggle="dropdown" onClick={toggleSubMenu}>Projects</Link>
         <ul className="dropdown-menu">
           <li><Link href="/project">Project</Link></li>
@@ -42,12 +45,9 @@ const MainMenu = ({ toggleSubMenu, navbarPlacement }: Props) => {
           <li><Link href="/service-details/1">Services Details</Link></li>
         </ul>
       </li> */}
-      <li>
-        <Link href="/news-events">Events &amp; Updates</Link>
-      </li>
-      </ul>
-        
+    </ul>
   );
 };
 
 export default MainMenu;
+ 

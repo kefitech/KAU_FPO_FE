@@ -1622,7 +1622,7 @@ function ApplicationDetailContent() {
             {(app.status_history ?? []).length === 0 ? (
               <p className="text-muted-foreground text-sm">{t.timeline_empty ?? "No status changes recorded yet."}</p>
             ) : (
-              <div className="flex flex-col gap-0">
+              <div className="flex max-h-96 flex-col gap-0 overflow-y-auto">
                 {(app.status_history ?? []).map((entry, i) => (
                   <div key={i} className="flex gap-3">
                     <div className="flex flex-col items-center">

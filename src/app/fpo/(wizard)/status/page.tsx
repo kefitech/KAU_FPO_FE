@@ -285,7 +285,7 @@ export default function FpoStatusPage() {
       {data.timeline.length > 0 && (
         <div className="flex flex-col gap-4 rounded-xl border bg-card p-6">
           <p className="font-semibold text-sm">Activity Timeline</p>
-          <ol className="relative ml-2 flex flex-col gap-0 border-muted border-l">
+          <ol className="relative ml-2 flex max-h-96 flex-col gap-0 border-muted border-l overflow-y-auto">
             {data.timeline.map((entry, _i) => (
               <li key={entry.id} className="mb-6 ml-4 last:mb-0">
                 <span className="absolute -left-[7px] flex h-3.5 w-3.5 items-center justify-center rounded-full border bg-background" />
