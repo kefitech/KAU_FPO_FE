@@ -195,8 +195,8 @@ export function LanguageForm({ mode, language, t = {}, tCommon = {} }: LanguageF
                             </TooltipTrigger>
                             <TooltipContent side="top" className="w-72 text-xs">
                               <div className="flex flex-col gap-1.5">
-                                <p>A BCP 47 locale string combining language and region codes.</p>
-                                <p className="text-muted-foreground">Format: <span className="font-mono font-semibold text-foreground">language_REGION</span></p>
+                                <p>Enter a locale in the format language_REGION, using a language code followed by a country or region code.</p>
+                                <p className="text-muted-foreground">Example Format: <span className="font-mono font-semibold text-foreground">language_REGION</span></p>
                                 <div className="flex flex-col gap-0.5 text-muted-foreground">
                                   <span><span className="font-mono font-semibold text-foreground">ml_IN</span> — Malayalam (India)</span>
                                   <span><span className="font-mono font-semibold text-foreground">en_US</span> — English (United States)</span>

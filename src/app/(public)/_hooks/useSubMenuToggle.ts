@@ -1,35 +1,15 @@
 "use client";
+import { useState } from "react";
 
 const useSubMenuToggle = () => {
-  const toggleSubMenu = (e: React.MouseEvent<HTMLAnchorElement>) => {
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+
+  const toggleSubMenu = (index: number) => (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
-    const listItem = e.currentTarget.parentElement;
-    if (!listItem) return;
-
-    const subMenu = listItem.querySelector("ul.dropdown-menu") as HTMLUListElement | null;
-    if (!subMenu) return;
-
-    const isOpen = listItem.classList.contains("on");
-
-    const siblings = listItem.parentElement?.querySelectorAll("li.dropdown.on");
-    siblings?.forEach((sib) => {
-      if (sib !== listItem) {
-        sib.classList.remove("on");
-        const sibMenu = sib.querySelector("ul.dropdown-menu") as HTMLUListElement | null;
-        if (sibMenu) sibMenu.style.maxHeight = "0";
-      }
-    });
-
-    if (isOpen) {
-      listItem.classList.remove("on");
-      subMenu.style.maxHeight = "0";
-    } else {
-      listItem.classList.add("on");
-      subMenu.style.maxHeight = "20000px";
-    }
+    setOpenIndex((prev) => (prev === index ? null : index));
   };
 
-  return toggleSubMenu;
+  return { openIndex, toggleSubMenu };
 };
 
 export default useSubMenuToggle;

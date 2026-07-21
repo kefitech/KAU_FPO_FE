@@ -33,7 +33,7 @@ const Banner = () => {
                     </h2>
                     <p>{banner.description}</p>
                     <div className="button" style={{ display: "flex", gap: "15px", flexWrap: "wrap" }}>
-                      <a className="btn btn-theme secondary btn-md radius animation" href="/register">
+                      <a className="btn btn-theme secondary btn-md radius animation" href="/about-us">
                         {banner.buttonText}
                       </a>
                       <a className="btn btn-md radius animation" href="/v1/login"

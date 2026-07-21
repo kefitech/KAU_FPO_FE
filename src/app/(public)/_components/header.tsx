@@ -12,7 +12,7 @@ import HeaderTop, { LangToggle } from "./header-top";
 import MainMenu from "./main-menu";
 
 const Header = () => {
-  const toggleSubMenu = useSubMenuToggle();
+  const { openIndex, toggleSubMenu } = useSubMenuToggle();
   const { isOpen, openMenu, closeMenu } = useSidebarMenu();
   const isMenuSticky = useStickyMenu();
   const pathname = usePathname();
@@ -58,7 +58,7 @@ const Header = () => {
                     </button>
                   </div>
                 </div>
-                <MainMenu navbarPlacement="navbar-right" toggleSubMenu={toggleSubMenu} />
+                <MainMenu navbarPlacement="navbar-right" openIndex={openIndex} toggleSubMenu={toggleSubMenu} />
                 <div className="sidebar-info">
                   <ul>
                     <li>

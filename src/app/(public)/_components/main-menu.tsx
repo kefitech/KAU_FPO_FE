@@ -2,22 +2,23 @@
 import Link from "next/link";
 
 interface Props {
-  toggleSubMenu?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
+  openIndex?: number | null;
+  toggleSubMenu?: (index: number) => (e: React.MouseEvent<HTMLAnchorElement>) => void;
   navbarPlacement?: string;
 }
 
 const MainMenu = ({ toggleSubMenu, navbarPlacement }: Props) => {
   return (
     <ul className={`nav navbar-nav ${navbarPlacement} navbar-right`} data-in="fadeInDown" data-out="fadeOutUp">
-      <li className="dropdown">
-        <Link href="#" className="dropdown-toggle" data-toggle="dropdown" onClick={toggleSubMenu}>Home</Link>
+      <li className={"dropdown ${openIndex ===0 ?"}>
+        <Link href="#" className="dropdown-toggle" data-toggle="dropdown" onClick={toggleSubMenu?.(0)}>Home</Link>
         <ul className="dropdown-menu">
           <li><a href="/v1/login">Sign In</a></li>
           <li><a href="/register">Register</a></li>
         </ul>
       </li>
       <li className="dropdown">
-        <Link href="#" className="dropdown-toggle" data-toggle="dropdown" onClick={toggleSubMenu}>Pages</Link>
+        <Link href="#" className="dropdown-toggle" data-toggle="dropdown" onClick={toggleSubMenu?.(1)}>Pages</Link>
         <ul className="dropdown-menu">
           <li><Link href="/about-us">About Us</Link></li>
           <li><Link href="/team">Team</Link></li>

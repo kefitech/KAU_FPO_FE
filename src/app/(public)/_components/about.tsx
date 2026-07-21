@@ -79,20 +79,22 @@ export default function About() {
           </div>
         </div>
         </div>
-        <div className="row">
+        <div className="row align-items-center">
         <div className="col-xl-4 col-lg-5 col-3 about-style-one pr-50 pr-md-15 pr-xs-15 pt-xl-5">
           <div className="thumb">
-            <img src="/assets/img/about/2.jpeg" alt="About" />
-              <div className="sub-item">
-                <img src="/assets/img/logoblack.png" alt="About" />
-              </div>
+            <img src="/assets/img/about/2.jpeg" alt="About" className="about-thumb-img max-[990px]:hidden" />
+            <div className="sub-item">
+              <img src="/assets/img/logoblack.png" alt="About" className="max-[990px]:hidden" />
             </div>
+          </div>
+
+          
           </div>
           <div className="col-xl-8 col-lg-7 about-style-one">
             <div className="row align-center">
               </div>
               <div className="col-xl-12 col-lg-12">
-                <h2 className="heading pt-4 justify-text">{data.about_title}</h2> 
+                <h2 className="heading pt-4 text-center">{data.about_title}</h2> 
                 
                 <div
                   className="justify-text"

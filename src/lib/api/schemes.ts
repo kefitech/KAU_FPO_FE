@@ -4,7 +4,7 @@ import type { FpoScheme } from "@/types/fpo";
 type ListResponse = { status: string; data: FpoScheme[] };
 
 export const schemesApi = {
-  list: (params?: { category?: string; search?: string }): Promise<FpoScheme[]> =>
+  list: (params?: { locale?: string; category?: string; search?: string }): Promise<FpoScheme[]> =>
     api.get<ListResponse>("/fpo/schemes/", { params }).then((r) => r.data.data),
 
   get: (id: number): Promise<FpoScheme> =>

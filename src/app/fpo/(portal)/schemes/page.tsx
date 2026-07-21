@@ -106,19 +106,19 @@ function SchemeCard({ scheme, t, onViewDetails }: { scheme: FpoScheme; t: T; onV
           <p className="text-xs text-muted-foreground line-clamp-2">{scheme.benefit_details}</p>
         </div>
       )}
-      <div className="mt-auto pt-2 flex items-center gap-2">
-        <Button variant="outline" size="sm" onClick={onViewDetails}>
-          {t.btn_view_details ?? "View Details"}
+      <div className="mt-auto pt-2 flex flex-wrap items-center gap-2">
+      <Button variant="outline" size="sm" onClick={onViewDetails}>
+        {t.btn_view_details ?? "View Details"}
+      </Button>
+      {scheme.official_link && (
+        <Button variant="ghost" size="sm" asChild className="h-auto min-w-0 max-w-full whitespace-normal">
+          <a href={scheme.official_link} target="_blank" rel="noopener noreferrer">
+            <ExternalLink className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+            <span className="min-w-0 break-words">{t.btn_visit ?? "Website"}</span>
+          </a>
         </Button>
-        {scheme.official_link && (
-          <Button variant="ghost" size="sm" asChild>
-            <a href={scheme.official_link} target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-              {t.btn_visit ?? "Website"}
-            </a>
-          </Button>
-        )}
-      </div>
+      )}
+    </div>
     </div>
   );
 }
@@ -146,10 +146,13 @@ export default function FpoSchemesPage() {
     return () => clearTimeout(handle);
   }, [searchInput]);
 
+  
+
   const { data: schemes, isLoading } = useQuery({
-    queryKey: ["fpo-schemes", activeCategory, search],
+    queryKey: ["fpo-schemes", locale, activeCategory, search],
     queryFn: () =>
       schemesApi.list({
+        locale,
         ...(activeCategory ? { category: activeCategory } : {}),
         ...(search ? { search } : {}),
       }),
