@@ -39,7 +39,7 @@ const schema = z
           const date = new Date(val);
           return date >= new Date("2004-01-01");
         },
-        { message: "Date of registration cannot be before 2004" }
+        { message: "Date of registration cannot be before 2004" },
       ),
     pan_number: z
       .string()
@@ -168,6 +168,17 @@ export function Step1BasicInfo({ profile, onSave, onSuccess }: Step1Props) {
     validateMutation.mutate({ field, value });
   }
 
+  function getAutofillProps(field: string, locked = false) {
+    return {
+      onBlur: () => !locked && handleBlurValidation(field),
+      onAnimationStart: (e: React.AnimationEvent<HTMLInputElement>) => {
+        if (e.animationName === "onAutoFillStart" && !locked) {
+          handleBlurValidation(field);
+        }
+      },
+    };
+  }
+
   const submitMutation = useMutation({
     mutationFn: (values: FormValues) => {
       const payload = {
@@ -190,7 +201,18 @@ export function Step1BasicInfo({ profile, onSave, onSuccess }: Step1Props) {
     },
     onSettled: () => setSaveMode(null),
     onError: (err: unknown) => {
-      const apiErr = err as { data?: { duplicate_detected?: boolean; duplicate_field?: string; existing_fpo_id?: number | null; fpo_name?: string; errors?: Record<string, string[]> }; message?: string } | undefined;
+      const apiErr = err as
+        | {
+            data?: {
+              duplicate_detected?: boolean;
+              duplicate_field?: string;
+              existing_fpo_id?: number | null;
+              fpo_name?: string;
+              errors?: Record<string, string[]>;
+            };
+            message?: string;
+          }
+        | undefined;
       if (apiErr?.data?.duplicate_detected) {
         setFieldErrors((prev) => ({
           ...prev,
@@ -294,18 +316,17 @@ export function Step1BasicInfo({ profile, onSave, onSuccess }: Step1Props) {
       <div className="grid gap-4 sm:grid-cols-2">
         <Field>
           <FieldLabel htmlFor="registration_number">
-            Registration Number{" "}
-            {selectedStructure !== "companies_act" && <span className="text-destructive">*</span>}
+            Registration Number {selectedStructure !== "companies_act" && <span className="text-destructive">*</span>}
             {isClaimedFpo && <span className="ml-1 text-muted-foreground text-xs">(locked)</span>}
           </FieldLabel>
-          
+
           <Input
             id="registration_number"
             placeholder="e.g. REG/2024/001"
             {...register("registration_number")}
             readOnly={isClaimedFpo}
             className={isClaimedFpo ? "bg-muted cursor-not-allowed opacity-70" : ""}
-            onBlur={() => !isClaimedFpo && handleBlurValidation("registration_number")}
+            {...getAutofillProps("registration_number", isClaimedFpo)}
           />
           {errors.registration_number && <FieldError errors={[errors.registration_number]} />}
           {!errors.registration_number && fieldErrors.registration_number?.error && (
@@ -328,7 +349,7 @@ export function Step1BasicInfo({ profile, onSave, onSuccess }: Step1Props) {
             {...register("cin_number")}
             readOnly={isClaimedFpo}
             className={isClaimedFpo ? "bg-muted cursor-not-allowed opacity-70" : ""}
-            onBlur={() => !isClaimedFpo && handleBlurValidation("cin_number")}
+            {...getAutofillProps("cin_number", isClaimedFpo)}
           />
           {errors.cin_number && <FieldError errors={[errors.cin_number]} />}
           {!errors.cin_number && fieldErrors.cin_number?.error && (
@@ -363,7 +384,7 @@ export function Step1BasicInfo({ profile, onSave, onSuccess }: Step1Props) {
             placeholder="e.g. AABCK1234D"
             className="uppercase"
             {...register("pan_number")}
-            onBlur={() => handleBlurValidation("pan_number")}
+            {...getAutofillProps("pan_number")}
           />
           {errors.pan_number && <FieldError errors={[errors.pan_number]} />}
           {!errors.pan_number && fieldErrors.pan_number?.error && (
@@ -378,7 +399,7 @@ export function Step1BasicInfo({ profile, onSave, onSuccess }: Step1Props) {
             placeholder="e.g. 32AABCK1234D1Z5"
             className="uppercase"
             {...register("gst_number")}
-            onBlur={() => handleBlurValidation("gst_number")}
+            {...getAutofillProps("gst_number")}
           />
           {fieldErrors.gst_number?.error && (
             <ServerFieldError error={fieldErrors.gst_number.error} duplicate={fieldErrors.gst_number.duplicate} />
