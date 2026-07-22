@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { useLocaleStore } from "@/stores/locale-store";
 import { publicFetch } from "../_lib/public-fetch";
 
 interface AboutData {
@@ -64,6 +65,7 @@ function parseHowToRegister(raw: string): Phase[] {
 }
 
 export default function HowToRegister() {
+  const locale = useLocaleStore((s) => s.locale);
   const [data, setData] = useState<AboutData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -71,6 +73,7 @@ export default function HowToRegister() {
   const [openStep, setOpenStep] = useState<number | null>(null);
 
   useEffect(() => {
+    if (!locale) return;
     publicFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/public/site-content/`)
       .then((res) => {
         if (!res.ok) throw new Error(`Request failed: ${res.status}`);
@@ -82,7 +85,7 @@ export default function HowToRegister() {
         setError("Unable to load page content. Please try again shortly.");
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [locale]);
 
   if (loading) {
     return <div className="flex min-h-[50vh] items-center justify-center">Loading…</div>;

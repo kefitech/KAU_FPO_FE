@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import AgrulLayout from "../_components/agrul-layout";
 import BreadCrumb from "../_components/bread-crumb";
 import { faqApi, type Faq } from "@/lib/api/faq";
-import { Color } from "@tiptap/extension-text-style";
+import { useLocaleStore } from "@/stores/locale-store";
 
 const CATEGORIES = [
   { label: "All", value: "" },
@@ -15,6 +15,7 @@ const CATEGORIES = [
 const PAGE_SIZE = 10;
 
 export default function FaqPage() {
+  const locale = useLocaleStore((s) => s.locale);
   const [faqs, setFaqs] = useState<Faq[]>([]);
   const [open, setOpen] = useState<number | null>(null);
   const [search, setSearch] = useState("");
@@ -39,10 +40,11 @@ export default function FaqPage() {
   }, []);
 
   useEffect(() => {
+    if (!locale) return;
     setPage(1);
     setOpen(null);
     fetchFaqs(1, category, true);
-  }, [category, fetchFaqs]);
+  }, [category, locale, fetchFaqs]);
 
   const handleLoadMore = () => {
     const nextPage = page + 1;
