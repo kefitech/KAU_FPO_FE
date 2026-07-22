@@ -178,7 +178,11 @@ export function MapPinPicker({ value, onChange, onGpsLocation, flyTo }: MapPinPi
           {!searchLoading && searchQuery && (
             <button
               type="button"
-              onClick={() => { setSearchQuery(""); setSearchResults([]); setShowResults(false); }}
+              onClick={() => {
+                setSearchQuery("");
+                setSearchResults([]);
+                setShowResults(false);
+              }}
               className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground"
             >
               <X className="h-3.5 w-3.5" />
@@ -281,7 +285,7 @@ export function MapPinPicker({ value, onChange, onGpsLocation, flyTo }: MapPinPi
           </button>
         </div>
       ) : (
-        <p className="text-muted-foreground text-xs">Optional — you can add this later</p>
+        <p className="text-muted-foreground text-xs">Coordinates will be displayed here</p>
       )}
     </div>
   );

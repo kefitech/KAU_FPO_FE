@@ -55,11 +55,20 @@ const schema = z
     const female = data.female_members ? Number(data.female_members) : 0;
     const scst = data.sc_st_members ? Number(data.sc_st_members) : 0;
 
-    if (male + female + scst !== total) {
-      const msg = `Total members is not tally with member count(${male + female + scst})`;
-      for (const path of ["male_members", "female_members", "sc_st_members"] as const) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: msg, path: ["total_members"] });
-      }
+    if (male + female !== total) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Total members is not tally with member count (${male + female})`,
+        path: ["total_members"],
+      });
+    }
+
+    if (scst > total) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "SC/ST members cannot exceed total members",
+        path: ["sc_st_members"],
+      });
     }
   });
 

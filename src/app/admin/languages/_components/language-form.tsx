@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Info } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -15,8 +16,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Info } from "lucide-react";
-
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Language } from "@/types";
@@ -71,7 +70,7 @@ export function LanguageForm({ mode, language, t = {}, tCommon = {} }: LanguageF
   const router = useRouter();
   const queryClient = useQueryClient();
   const isEdit = mode === "edit";
-
+  const [localeInfoOpen, setLocaleInfoOpen] = useState<boolean>(false);
   const {
     control,
     handleSubmit,
@@ -189,18 +188,29 @@ export function LanguageForm({ mode, language, t = {}, tCommon = {} }: LanguageF
                       <FieldLabel htmlFor="lang-locale">
                         {t.locale_label ?? "Locale"} <span className="text-destructive">*</span>
                         <TooltipProvider delayDuration={200}>
-                          <Tooltip>
-                            <TooltipTrigger type="button" tabIndex={-1} className="leading-none">
+                          <Tooltip open={localeInfoOpen} onOpenChange={setLocaleInfoOpen}>
+                            <TooltipTrigger
+                              type="button"
+                              tabIndex={-1}
+                              className="leading-none"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setLocaleInfoOpen((prev: boolean) => !prev);
+                              }}
+                            >
                               <Info className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground transition-colors" />
                             </TooltipTrigger>
                             <TooltipContent side="top" className="w-72 text-xs">
                               <div className="flex flex-col gap-1.5">
-                                <p>Enter a locale in the format language_REGION, using a language code followed by a country or region code.</p>
-                                <p className="text-muted-foreground">Example Format: <span className="font-mono font-semibold text-foreground">language_REGION</span></p>
+                                <p>
+                                  Enter a locale in the format language_REGION, using a language code followed by a
+                                  country or region code.
+                                </p>
+                                <p className="text-muted-foreground">Example Format: language_REGION</p>
                                 <div className="flex flex-col gap-0.5 text-muted-foreground">
-                                  <span><span className="font-mono font-semibold text-foreground">ml_IN</span> — Malayalam (India)</span>
-                                  <span><span className="font-mono font-semibold text-foreground">en_US</span> — English (United States)</span>
-                                  <span><span className="font-mono font-semibold text-foreground">ta_IN</span> — Tamil (India)</span>
+                                  <span>ml_IN — Malayalam (India)</span>
+                                  <span>en_US — English (United States)</span>
+                                  <span>ta_IN — Tamil (India)</span>
                                 </div>
                               </div>
                             </TooltipContent>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import dynamic from "next/dynamic";
+import { Ewert } from "next/font/google";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
@@ -68,7 +69,10 @@ const schema = z.object({
   pincode: z.string().refine((v) => /^\d{6}$/.test(v), { message: "Enter a valid 6-digit pincode" }),
   office_phone: z.string().refine((v) => /^\d{10}$/.test(v), { message: "Enter a valid 10-digit phone number" }),
   office_email: z.string().email({ message: "Enter a valid email address" }),
-  website: z.string().optional(),
+  website: z
+    .string()
+    .trim()
+    .refine((v) => v === "" || z.string().email().safeParse(v).success, { message: "Enter a valid email address" }),
   location: z.object({ lat: z.number(), lng: z.number() }).nullable().optional(),
 });
 
@@ -432,7 +436,19 @@ export function Step2Contact({ profile, onSave, onSuccess, onBack }: Step2Props)
 
       <Field>
         <FieldLabel htmlFor="website">Website</FieldLabel>
-        <Input id="website" placeholder="https://yourfpo.com (optional)" maxLength={60} {...register("website")} />
+        <Input
+          id="website"
+          placeholder="https://yourfpo.com (optional)"
+          maxLength={60}
+          {...register("website")}
+          onBlur={(e) => {
+            handleBlurValidation("website");
+          }}
+        />
+        {errors.website && <FieldError errors={[errors.website]} />}
+        {!errors.website && fieldErrors.website?.error && (
+          <p className="mt-1 text-destructive text-xs">{fieldErrors.website.error}</p>
+        )}
       </Field>
 
       {/* Map Pin Picker */}
