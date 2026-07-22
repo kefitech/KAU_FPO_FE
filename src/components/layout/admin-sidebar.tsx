@@ -95,7 +95,7 @@ export function AdminSidebar() {
                         <SidebarMenuButton
                           asChild
                           isActive={isActive}
-                          className={isActive ? "!bg-[#49a760]/15 !text-[#49a760] dark:!bg-[#49a760]/20 dark:!text-[#49a760]" : ""}
+                          className={isActive ? "!bg-slate-800 !text-white dark:!bg-slate-700 dark:!text-white" : ""}
                         >
                           <Link href={item.path} onClick={closeMobile}>
                             <Icon className="h-4 w-4 shrink-0" />
@@ -116,7 +116,7 @@ export function AdminSidebar() {
             <SidebarMenuButton
               asChild
               isActive={pathname.startsWith("/admin/settings")}
-              className={pathname.startsWith("/admin/settings") ? "!bg-[#49a760]/15 !text-[#49a760] dark:!bg-[#49a760]/20 dark:!text-[#49a760]" : ""}
+              className={pathname.startsWith("/admin/settings") ? "!bg-slate-800 !text-white dark:!bg-slate-700 dark:!text-white" : ""}
             >
               <Link href="/admin/settings/profile" onClick={closeMobile}>
                 <Settings className="h-4 w-4 shrink-0" />

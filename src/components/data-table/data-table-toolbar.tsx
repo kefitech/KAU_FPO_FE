@@ -75,7 +75,7 @@ export function DataTableToolbar<TData>({
   const hidableColumns = table.getAllColumns().filter((col) => col.getCanHide());
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2 border border-border bg-muted/30 px-4 py-3">
       {/* Search */}
       <div className="relative w-full sm:w-auto">
         <Search className="absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -83,7 +83,7 @@ export function DataTableToolbar<TData>({
           placeholder="Search..."
           value={localSearch}
           onChange={(e) => setLocalSearch(e.target.value)}
-          className="h-9 w-full sm:w-64 pr-8 pl-8"
+          className="h-9 w-full sm:w-64 pr-8 pl-8 bg-background"
         />
         {localSearch && (
           <button
@@ -133,7 +133,7 @@ export function DataTableToolbar<TData>({
 
       {/* Clear all filters */}
       {hasActiveFilters && (
-        <Button variant="ghost" size="sm" onClick={() => onClearFilters?.()} className="h-9 text-muted-foreground">
+        <Button variant="ghost" size="sm" onClick={() => onClearFilters?.()} className="h-9 text-muted-foreground hover:text-foreground">
           <X className="mr-1 h-3.5 w-3.5" />
           Clear
         </Button>
@@ -145,7 +145,7 @@ export function DataTableToolbar<TData>({
         {hidableColumns.length > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-9">
+              <Button variant="outline" size="sm" className="h-9 bg-background">
                 <Settings2 className="mr-1.5 h-4 w-4" />
                 Columns
               </Button>
@@ -169,7 +169,7 @@ export function DataTableToolbar<TData>({
 
         {/* Refresh */}
         {onRefresh && (
-          <Button variant="outline" size="icon" className="h-9 w-9" onClick={onRefresh} disabled={isRefreshing}>
+          <Button variant="outline" size="icon" className="h-9 w-9 bg-background" onClick={onRefresh} disabled={isRefreshing}>
             <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
           </Button>
         )}

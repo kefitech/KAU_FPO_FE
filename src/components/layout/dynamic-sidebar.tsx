@@ -83,7 +83,11 @@ function MenuItemComponent({
 
                 return (
                   <SidebarMenuSubItem key={child.id}>
-                    <SidebarMenuSubButton asChild isActive={isChildActive}>
+                    <SidebarMenuSubButton
+                      asChild
+                      isActive={isChildActive}
+                      className={isChildActive ? "!bg-slate-800 !text-white dark:!bg-slate-700 dark:!text-white" : ""}
+                    >
                       <Link href={child.url} onClick={closeMobile}>
                         <ChildIcon className="h-3.5 w-3.5" />
                         <span className="text-sm">{childTitle}</span>
@@ -106,7 +110,11 @@ function MenuItemComponent({
 
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton asChild isActive={isActive}>
+      <SidebarMenuButton
+        asChild
+        isActive={isActive}
+        className={isActive ? "!bg-slate-800 !text-white dark:!bg-slate-700 dark:!text-white" : ""}
+      >
         <Link href={item.url} onClick={closeMobile}>
           <Icon className="h-4 w-4 shrink-0" />
           <span className="text-sm group-data-[collapsible=icon]:hidden">{title}</span>

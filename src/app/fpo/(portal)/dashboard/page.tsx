@@ -241,56 +241,71 @@ export default function FpoDashboardPage() {
 
       {/* ── Stat cards ── */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="font-medium text-sm">{t.label_total_members ?? "Total Members"}</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="font-bold text-2xl">{profile.total_members}</div>
-            <p className="text-muted-foreground text-xs">
-              {team.active} {t.label_members_active ?? "active"} · {team.total - team.active}{" "}
-              {t.label_members_inactive ?? "inactive"}
-            </p>
-          </CardContent>
-        </Card>
+        {/* Total Members */}
+        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 p-5 text-white shadow-sm">
+          <div className="pointer-events-none absolute -right-5 -top-5 h-24 w-24 rounded-full bg-white/10" />
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-white/80">{t.label_total_members ?? "Total Members"}</p>
+              <p className="mt-1 font-bold text-3xl tabular-nums">{profile.total_members}</p>
+              <p className="mt-1 text-xs text-white/70">
+                {team.active} {t.label_members_active ?? "active"} · {team.total - team.active} {t.label_members_inactive ?? "inactive"}
+              </p>
+            </div>
+            <div className="mt-0.5 shrink-0 rounded-xl bg-white/20 p-2.5 backdrop-blur-sm">
+              <Users className="h-5 w-5 text-white" />
+            </div>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="font-medium text-sm">{t.label_documents ?? "Documents"}</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="font-bold text-2xl">{documents.uploaded}</div>
-            <p className="text-muted-foreground text-xs">
-              {documents.verified} {t.label_documents_verified ?? "verified"}
-            </p>
-          </CardContent>
-        </Card>
+        {/* Documents */}
+        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 p-5 text-white shadow-sm">
+          <div className="pointer-events-none absolute -right-5 -top-5 h-24 w-24 rounded-full bg-white/10" />
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-white/80">{t.label_documents ?? "Documents"}</p>
+              <p className="mt-1 font-bold text-3xl tabular-nums">{documents.uploaded}</p>
+              <p className="mt-1 text-xs text-white/70">
+                {documents.verified} {t.label_documents_verified ?? "verified"}
+              </p>
+            </div>
+            <div className="mt-0.5 shrink-0 rounded-xl bg-white/20 p-2.5 backdrop-blur-sm">
+              <FileText className="h-5 w-5 text-white" />
+            </div>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="font-medium text-sm">{t.card_tier_title ?? "Tier"}</CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="font-bold text-2xl">{tier.tier ?? "—"}</div>
-            <p className="text-muted-foreground text-xs">
-              {tier.financial_year ?? t.tier_not_assessed ?? "Not assigned yet"}
-            </p>
-          </CardContent>
-        </Card>
-      
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="font-medium text-sm flex-1 min-w-0">{t.card_notifications_title ?? "Notifications"}</CardTitle>
-            <Bell className="h-4 w-4 text-muted-foreground shrink-0 ml-2" />
-          </CardHeader>
-          <CardContent>
-            <div className="font-bold text-2xl">{notifications.unread_count}</div>
-            <p className="text-muted-foreground text-xs">{t.label_unread ?? "unread"}</p>
-          </CardContent>
-        </Card>
+        {/* Tier */}
+        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 p-5 text-white shadow-sm">
+          <div className="pointer-events-none absolute -right-5 -top-5 h-24 w-24 rounded-full bg-white/10" />
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-white/80">{t.card_tier_title ?? "Tier"}</p>
+              <p className="mt-1 font-bold text-3xl tabular-nums">{tier.tier ?? "—"}</p>
+              <p className="mt-1 text-xs text-white/70">
+                {tier.financial_year ?? t.tier_not_assessed ?? "Not assigned yet"}
+              </p>
+            </div>
+            <div className="mt-0.5 shrink-0 rounded-xl bg-white/20 p-2.5 backdrop-blur-sm">
+              <Building2 className="h-5 w-5 text-white" />
+            </div>
+          </div>
+        </div>
+
+        {/* Notifications */}
+        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 p-5 text-white shadow-sm">
+          <div className="pointer-events-none absolute -right-5 -top-5 h-24 w-24 rounded-full bg-white/10" />
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-white/80">{t.card_notifications_title ?? "Notifications"}</p>
+              <p className="mt-1 font-bold text-3xl tabular-nums">{notifications.unread_count}</p>
+              <p className="mt-1 text-xs text-white/70">{t.label_unread ?? "unread"}</p>
+            </div>
+            <div className="mt-0.5 shrink-0 rounded-xl bg-white/20 p-2.5 backdrop-blur-sm">
+              <Bell className="h-5 w-5 text-white" />
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* ── Main grid ── */}

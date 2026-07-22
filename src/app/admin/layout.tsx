@@ -10,6 +10,7 @@ import { ChevronLeft } from "lucide-react";
 
 import { AdminBreadcrumb } from "@/components/layout/admin-breadcrumb";
 import { AdminSidebar } from "@/components/layout/admin-sidebar";
+import { FontSizeControl } from "@/components/layout/font-size-control";
 import { LiveClock } from "@/components/layout/live-clock";
 import { LocaleSwitcher } from "@/components/layout/locale-switcher";
 import { NetworkStatus } from "@/components/layout/network-status";
@@ -151,6 +152,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <LiveClock />
               <Separator orientation="vertical" className="h-4" />
             </span>
+            <FontSizeControl />
             <NotificationBell />
             <span>
               <LocaleSwitcher />

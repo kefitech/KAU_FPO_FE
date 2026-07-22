@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 
-import Image from "next/image";
 import Link from "next/link";
 
 import { useQuery } from "@tanstack/react-query";
@@ -46,7 +45,7 @@ function getStatusConfig(t: T): Record<string, { label: string; color: string }>
     submitted:    { label: t.status_submitted      ?? "Submitted",     color: "#3b82f6" },
     under_review: { label: t.status_under_review   ?? "Under Review",  color: "#f97316" },
     info_required:{ label: t.status_info_required  ?? "Info Required", color: "#eab308" },
-    approved:     { label: t.status_approved       ?? "Approved",      color: "#22c55e" },
+    approved:     { label: t.status_approved       ?? "Approved",      color: "#0ea5e9" },
     rejected:     { label: t.status_rejected       ?? "Rejected",      color: "#ef4444" },
     suspended:    { label: t.status_suspended      ?? "Suspended",     color: "#7f1d1d" },
     claimed:      { label: t.status_claimed        ?? "Claimed",       color: "#6E18D9" },
@@ -55,7 +54,7 @@ function getStatusConfig(t: T): Record<string, { label: string; color: string }>
 
 function getTierConfig(t: T): Record<string, { label: string; color: string }> {
   return {
-    A:            { label: t.tier_a            ?? "Tier A",        color: "#22c55e" },
+    A:            { label: t.tier_a            ?? "Tier A",        color: "#0ea5e9" },
     B:            { label: t.tier_b            ?? "Tier B",        color: "#3b82f6" },
     C:            { label: t.tier_c            ?? "Tier C",        color: "#eab308" },
     D:            { label: t.tier_d            ?? "Tier D",        color: "#f97316" },
@@ -71,37 +70,48 @@ function formatRole(role: string) {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
+type StatCardVariant = "blue" | "purple" | "green" | "amber" | "red" | "gray";
+
+const CARD_VARIANTS: Record<StatCardVariant, string> = {
+  blue:   "from-blue-500 to-indigo-600",
+  purple: "from-violet-500 to-purple-600",
+  green:  "from-emerald-500 to-green-600",
+  amber:  "from-amber-400 to-orange-500",
+  red:    "from-red-500 to-rose-600",
+  gray:   "from-slate-400 to-slate-500",
+};
+
 function StatCard({
   title,
   value,
   icon: Icon,
-  valueClass = "",
-  image,
+  variant = "gray",
+  description,
 }: {
   title: string;
   value: number | undefined;
   icon: React.ElementType;
-  valueClass?: string;
-  image?: string;
+  variant?: StatCardVariant;
+  description?: string;
 }) {
   return (
-    <Card className="relative overflow-hidden">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="font-medium text-sm">{title}</CardTitle>
-        {image ? (
-          <Image src={image} alt={title} width={48} height={48} className="object-contain" />
-        ) : (
-          <Icon className="h-4 w-4 text-muted-foreground" />
-        )}
-      </CardHeader>
-      <CardContent>
-        {value === undefined ? (
-          <Skeleton className="h-8 w-16" />
-        ) : (
-          <div className={`font-bold text-2xl tabular-nums ${valueClass}`}>{value.toLocaleString()}</div>
-        )}
-      </CardContent>
-    </Card>
+    <div className={`relative overflow-hidden rounded-xl bg-gradient-to-br ${CARD_VARIANTS[variant]} p-5 text-white shadow-sm`}>
+      <div className="pointer-events-none absolute -right-5 -top-5 h-24 w-24 rounded-full bg-white/10" />
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium text-white/80">{title}</p>
+          {value === undefined ? (
+            <Skeleton className="mt-2 h-9 w-20 bg-white/20" />
+          ) : (
+            <p className="mt-1 font-bold text-3xl tabular-nums">{value.toLocaleString()}</p>
+          )}
+          {description && <p className="mt-1 text-xs text-white/70">{description}</p>}
+        </div>
+        <div className="mt-0.5 shrink-0 rounded-xl bg-white/20 p-2.5 backdrop-blur-sm">
+          <Icon className="h-5 w-5 text-white" />
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -225,26 +235,33 @@ export default function AdminDashboardPage() {
           title={t.stat_total_registrations ?? "Total Registrations"}
           value={stats?.stat_cards.total_registrations}
           icon={Users}
+          variant="purple"
+          description={t.stat_total_desc ?? "Across all statuses"}
         />
         <StatCard
           title={t.stat_approved_fpos ?? "Approved FPOs"}
           value={stats?.stat_cards.approved_fpos}
           icon={CheckCircle}
-          // valueClass="text-green-600 dark:text-green-400"
-          // image="/images/dashboard/approved.png"
+          variant="green"
+          description={t.stat_approved_desc ?? "Active & operational"}
         />
         <StatCard
           title={t.stat_pending_applications ?? "Pending Applications"}
           value={stats?.stat_cards.pending_applications}
           icon={AlertCircle}
-          // valueClass="text-yellow-600 dark:text-yellow-400"
-          // image="/images/dashboard/pending.png"
+          variant="amber"
+          description={t.stat_pending_desc ?? "Awaiting review"}
         />
         <StatCard
           title={t.stat_suspended ?? "Suspended"}
           value={stats?.stat_cards.suspended_fpos}
           icon={ShieldOff}
-          valueClass={stats?.stat_cards.suspended_fpos ? "text-destructive" : ""}
+          variant={stats?.stat_cards.suspended_fpos ? "red" : "gray"}
+          description={
+            stats?.stat_cards.suspended_fpos
+              ? (t.stat_suspended_desc ?? "Requires attention")
+              : (t.stat_suspended_ok ?? "None suspended")
+          }
         />
       </div>
 
@@ -280,7 +297,7 @@ export default function AdminDashboardPage() {
                     contentStyle={{ fontSize: 12, borderRadius: 8 }}
                     formatter={(v) => [v ?? 0, "Registrations"] as [number, string]}
                   />
-                  <Bar dataKey="count" fill="#22c55e" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="count" fill="#6366f1" radius={[3, 3, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}

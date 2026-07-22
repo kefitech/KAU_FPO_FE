@@ -194,38 +194,43 @@ export function DataTable<TData>({
         table={table}
       />
 
-      <div className="relative overflow-x-auto rounded-lg border border-border/70 shadow-xs">
+      <div className="relative overflow-x-auto border border-border shadow-sm">
         {isFetching && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-[1px]">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
         )}
         <Table className="min-w-full">
-          <TableHeader className="border-border/70 border-b bg-muted/60">
+          <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
+              <TableRow key={headerGroup.id} className="border-b border-slate-700 bg-slate-800 hover:bg-slate-800 dark:bg-slate-900 dark:border-slate-700">
                 {headerGroup.headers.map((header) => {
                   const canSort = header.column.getCanSort();
                   const sorted = header.column.getIsSorted();
                   const width = header.column.columnDef.meta?.width;
+                  const isSlNo = header.id === "_slno";
                   return (
                     <TableHead
                       key={header.id}
                       style={width ? { width } : undefined}
                       onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
-                      className={canSort ? "cursor-pointer select-none" : ""}
+                      className={[
+                        "text-xs font-semibold uppercase tracking-wider text-slate-300",
+                        canSort ? "cursor-pointer select-none hover:text-white" : "",
+                        isSlNo ? "text-center" : "",
+                      ].join(" ")}
                     >
                       {header.isPlaceholder ? null : (
-                        <div className="flex items-center gap-1.5">
+                        <div className={`flex items-center gap-1.5 ${isSlNo ? "justify-center" : ""}`}>
                           {flexRender(header.column.columnDef.header, header.getContext())}
                           {canSort && (
-                            <span className="text-muted-foreground">
+                            <span>
                               {sorted === "asc" ? (
-                                <ArrowUp className="h-3.5 w-3.5" />
+                                <ArrowUp className="h-3 w-3 text-violet-400" />
                               ) : sorted === "desc" ? (
-                                <ArrowDown className="h-3.5 w-3.5" />
+                                <ArrowDown className="h-3 w-3 text-violet-400" />
                               ) : (
-                                <ArrowUpDown className="h-3.5 w-3.5 opacity-40" />
+                                <ArrowUpDown className="h-3 w-3 opacity-30" />
                               )}
                             </span>
                           )}
@@ -240,7 +245,7 @@ export function DataTable<TData>({
           <TableBody>
             {isLoading ? (
               Array.from({ length: params.page_size }).map((_, i) => (
-                <TableRow key={i}>
+                <TableRow key={i} className={i % 2 === 1 ? "bg-slate-50 dark:bg-slate-900/40" : "bg-white dark:bg-background"}>
                   {Array.from({ length: colSpan }).map((_, j) => (
                     <TableCell key={j}>
                       <Skeleton className="h-4 w-full" />
@@ -249,7 +254,7 @@ export function DataTable<TData>({
                 </TableRow>
               ))
             ) : table.getRowModel().rows.length ? (
-              table.getRowModel().rows.map((row) => (
+              table.getRowModel().rows.map((row, i) => (
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() ? "selected" : undefined}
@@ -259,14 +264,24 @@ export function DataTable<TData>({
                     if (target.closest("button, a, input, [role='menuitem'], [role='checkbox']")) return;
                     onRowClick(row.original);
                   }}
-                  className={
+                  className={[
+                    "border-b border-border/50 transition-colors",
+                    i % 2 === 1 ? "bg-slate-50 dark:bg-slate-900/40" : "bg-white dark:bg-background",
                     onRowClick
-                      ? "cursor-pointer transition-colors hover:bg-muted/40"
-                      : "transition-colors hover:bg-muted/20"
-                  }
+                      ? "cursor-pointer hover:bg-violet-50 hover:border-l-2 hover:border-l-violet-400 dark:hover:bg-violet-950/20"
+                      : "hover:bg-slate-100 dark:hover:bg-slate-800/40",
+                  ].join(" ")}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="overflow-hidden">
+                    <TableCell
+                      key={cell.id}
+                      className={[
+                        "overflow-hidden",
+                        cell.column.id === "_slno"
+                          ? "text-center text-xs font-medium text-muted-foreground/60 bg-slate-50 dark:bg-slate-900/20"
+                          : "",
+                      ].join(" ")}
+                    >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
