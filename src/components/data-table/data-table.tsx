@@ -64,9 +64,9 @@ export function DataTable<TData>({
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const tableRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, []);
+  // useEffect(() => {
+  //   tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  // }, []);
 
   const extraParams = useMemo(() => {
     const p: Record<string, string> = {};

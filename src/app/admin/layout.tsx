@@ -54,16 +54,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     onExpire: () => logout(),
   });
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+    useEffect(() => {
+      setMounted(true);
+    }, []);
 
-  useEffect(() => {
-    if (!mounted) return;
-    if (!isAuthenticated) {
-      router.replace(`/v1/login?next=${encodeURIComponent(pathname)}`);
-    }
-  }, [mounted, isAuthenticated, pathname, router]);
+    useEffect(() => { 
+      window.scrollTo(0, 0);
+    }, [pathname]);
+
+    useEffect(() => {
+      if (!mounted) return;
+      if (!isAuthenticated) {
+        router.replace(`/v1/login?next=${encodeURIComponent(pathname)}`);
+      }
+    }, [mounted, isAuthenticated, pathname, router]);
 
   useEffect(() => {
     if (isPoppingRef.current) {
