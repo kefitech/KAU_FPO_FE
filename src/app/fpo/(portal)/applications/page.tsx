@@ -73,7 +73,10 @@ function getStatusConfig(t: T) {
       icon: XCircle,
       description: t.status_suspended_desc ?? "Your FPO account has been suspended. Please contact KAU Admin.",
     },
-  } satisfies Record<FpoStatus, { label: string; bg: string; text: string; icon: React.ElementType; description: string }>;
+  } satisfies Record<
+    FpoStatus,
+    { label: string; bg: string; text: string; icon: React.ElementType; description: string }
+  >;
 }
 
 function formatDate(iso: string) {
@@ -211,7 +214,7 @@ function StatusTab({
       )}
 
       {data.timeline.length > 0 && (
-        <div className="rounded-xl border bg-card p-4 sm:p-6 shadow-sm">
+        <div className="rounded-xl max-h-96 border bg-card p-4 sm:p-6 shadow-sm overflow-y-auto">
           <p className="mb-5 font-semibold">{t.timeline_title ?? "Activity Timeline"}</p>
           <ol className="relative ml-2 flex flex-col border-muted border-l">
             {[...data.timeline].reverse().map((entry) => (
@@ -254,7 +257,10 @@ function ApplicationTab({ profile, t }: { profile: FpoProfile; t: T }) {
         {profile.name_ml && <InfoRow label={t.field_fpo_name_ml ?? "FPO Name (Malayalam)"} value={profile.name_ml} />}
         <InfoRow label={t.field_legal_structure ?? "Legal Structure"} value={humanize(profile.legal_structure)} />
         {profile.legal_structure_detail && (
-          <InfoRow label={t.field_legal_structure_detail ?? "Legal Structure Detail"} value={profile.legal_structure_detail} />
+          <InfoRow
+            label={t.field_legal_structure_detail ?? "Legal Structure Detail"}
+            value={profile.legal_structure_detail}
+          />
         )}
         <InfoRow label={t.field_reg_number ?? "Registration Number"} value={profile.registration_number} />
         {profile.cin_number && <InfoRow label={t.field_cin_number ?? "CIN Number"} value={profile.cin_number} />}
@@ -268,40 +274,64 @@ function ApplicationTab({ profile, t }: { profile: FpoProfile; t: T }) {
         <SectionTitle>{t.section_location ?? "Location & Contact"}</SectionTitle>
         <InfoRow label={t.field_district ?? "District"} value={profile.district_display || profile.district} />
         <InfoRow label={t.field_block_taluk ?? "Block / Taluk"} value={profile.block_taluk} />
-        {profile.village_town && <InfoRow label={t.field_village_town ?? "Village / Town"} value={profile.village_town} />}
-        <InfoRow label={t.field_address ?? "Address"} value={[profile.address_line1, profile.address_line2].filter(Boolean).join(", ")} />
+        {profile.village_town && (
+          <InfoRow label={t.field_village_town ?? "Village / Town"} value={profile.village_town} />
+        )}
+        <InfoRow
+          label={t.field_address ?? "Address"}
+          value={[profile.address_line1, profile.address_line2].filter(Boolean).join(", ")}
+        />
         <InfoRow label={t.field_pincode ?? "Pincode"} value={profile.pincode} />
         <InfoRow label={t.field_office_phone ?? "Office Phone"} value={profile.office_phone} />
         <InfoRow label={t.field_office_email ?? "Office Email"} value={profile.office_email} />
         {profile.website && <InfoRow label={t.field_website ?? "Website"} value={profile.website} />}
-        {profile.latitude && <InfoRow label={t.field_gps ?? "GPS Coordinates"} value={`${profile.latitude}, ${profile.longitude}`} />}
+        {profile.latitude && (
+          <InfoRow label={t.field_gps ?? "GPS Coordinates"} value={`${profile.latitude}, ${profile.longitude}`} />
+        )}
 
         <SectionTitle>{t.section_signatory ?? "Signatory & Members"}</SectionTitle>
         <InfoRow label={t.field_signatory_name ?? "Signatory Name"} value={profile.signatory_name} />
         <InfoRow label={t.field_designation ?? "Designation"} value={humanize(profile.signatory_designation)} />
         <InfoRow label={t.field_signatory_phone ?? "Signatory Phone"} value={profile.signatory_phone} />
-        {profile.signatory_email && <InfoRow label={t.field_signatory_email ?? "Signatory Email"} value={profile.signatory_email} />}
+        {profile.signatory_email && (
+          <InfoRow label={t.field_signatory_email ?? "Signatory Email"} value={profile.signatory_email} />
+        )}
         {profile.signatory_aadhaar_last4 && (
           <InfoRow label={t.field_aadhaar_last4 ?? "Aadhaar (last 4)"} value={profile.signatory_aadhaar_last4} />
         )}
         <InfoRow label={t.field_total_members ?? "Total Members"} value={profile.total_members} />
         <InfoRow label={t.field_male_members ?? "Male Members"} value={profile.male_members} />
         <InfoRow label={t.field_female_members ?? "Female Members"} value={profile.female_members} />
-        {profile.sc_st_members != null && <InfoRow label={t.field_sc_st_members ?? "SC/ST Members"} value={profile.sc_st_members} />}
+        {profile.sc_st_members != null && (
+          <InfoRow label={t.field_sc_st_members ?? "SC/ST Members"} value={profile.sc_st_members} />
+        )}
         <InfoRow label={t.field_total_directors ?? "Total Directors"} value={profile.total_directors} />
         <InfoRow label={t.field_women_directors ?? "Women Directors"} value={profile.women_directors} />
         <InfoRow label={t.field_directors_under35 ?? "Directors Under 35"} value={profile.directors_under_35} />
-        <InfoRow label={t.field_ceo_available ?? "CEO Available"} value={profile.ceo_available ? (t.field_yes ?? "Yes") : (t.field_no ?? "No")} />
-        <InfoRow label={t.field_accountant_available ?? "Accountant Available"} value={profile.accountant_available ? (t.field_yes ?? "Yes") : (t.field_no ?? "No")} />
-        {profile.promoting_agency && <InfoRow label={t.field_promoting_agency ?? "Promoting Agency"} value={humanize(profile.promoting_agency)} />}
+        <InfoRow
+          label={t.field_ceo_available ?? "CEO Available"}
+          value={profile.ceo_available ? (t.field_yes ?? "Yes") : (t.field_no ?? "No")}
+        />
+        <InfoRow
+          label={t.field_accountant_available ?? "Accountant Available"}
+          value={profile.accountant_available ? (t.field_yes ?? "Yes") : (t.field_no ?? "No")}
+        />
+        {profile.promoting_agency && (
+          <InfoRow label={t.field_promoting_agency ?? "Promoting Agency"} value={humanize(profile.promoting_agency)} />
+        )}
         {profile.facilitating_agency_name && (
-          <InfoRow label={t.field_facilitating_agency ?? "Facilitating Agency"} value={profile.facilitating_agency_name} />
+          <InfoRow
+            label={t.field_facilitating_agency ?? "Facilitating Agency"}
+            value={profile.facilitating_agency_name}
+          />
         )}
 
         <SectionTitle>{t.section_business ?? "Business & Banking"}</SectionTitle>
         {profile.primary_commodities?.length > 0 && (
           <div className="py-2.5 border-b border-border/50 grid grid-cols-1 gap-2 items-start">
-            <p className="text-xs text-muted-foreground font-medium">{t.field_primary_commodities ?? "Primary Commodities"}</p>
+            <p className="text-xs text-muted-foreground font-medium">
+              {t.field_primary_commodities ?? "Primary Commodities"}
+            </p>
             <div className="flex flex-wrap gap-1 justify-start">
               {profile.primary_commodities.map((c) => (
                 <Badge key={c} variant="secondary" className="text-[10px]">
@@ -313,7 +343,9 @@ function ApplicationTab({ profile, t }: { profile: FpoProfile; t: T }) {
         )}
         {profile.secondary_commodities?.length > 0 && (
           <div className="py-2.5 border-b border-border/50 grid grid-cols-1 gap-2 items-start">
-            <p className="text-xs text-muted-foreground font-medium">{t.field_secondary_commodities ?? "Secondary Commodities"}</p>
+            <p className="text-xs text-muted-foreground font-medium">
+              {t.field_secondary_commodities ?? "Secondary Commodities"}
+            </p>
             <div className="flex flex-wrap gap-1 justify-start">
               {profile.secondary_commodities.map((c) => (
                 <Badge key={c} variant="secondary" className="text-[10px]">
