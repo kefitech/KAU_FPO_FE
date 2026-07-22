@@ -150,11 +150,39 @@ export function ClaimReviewDialog({ claim, onOpenChange }: ClaimReviewDialogProp
             </span>
           </div>
 
+          {/* Dispute / conflict warning */}
+          {claim.has_conflict && (
+            <div className="rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 dark:border-orange-900/40 dark:bg-orange-900/10">
+              <p className="text-sm font-medium text-orange-700 dark:text-orange-400">
+                ⚠ Dispute — {claim.conflict_count} other active {claim.conflict_count === 1 ? "claim" : "claims"} exist for this FPO
+              </p>
+              <p className="mt-0.5 text-xs text-orange-600 dark:text-orange-500">
+                Review all claims for this FPO before approving.
+              </p>
+            </div>
+          )}
+
           {/* FPO info */}
           <div className="rounded-lg border bg-muted/30 p-4">
             <p className="mb-2 font-medium text-xs text-muted-foreground uppercase tracking-wide">FPO</p>
             <p className="font-semibold">{claim.fpo_name}</p>
             <p className="text-muted-foreground text-xs">ID: {claim.fpo_id}</p>
+            {claim.fpo_identity && (
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                {claim.fpo_identity.pan_number && (
+                  <span className="text-xs text-muted-foreground">PAN: <span className="font-mono text-foreground">{claim.fpo_identity.pan_number}</span></span>
+                )}
+                {claim.fpo_identity.gst_number && (
+                  <span className="text-xs text-muted-foreground">GST: <span className="font-mono text-foreground">{claim.fpo_identity.gst_number}</span></span>
+                )}
+                {claim.fpo_identity.cin_number && (
+                  <span className="text-xs text-muted-foreground">CIN: <span className="font-mono text-foreground">{claim.fpo_identity.cin_number}</span></span>
+                )}
+                {!claim.fpo_identity.cin_number && claim.fpo_identity.registration_number && (
+                  <span className="text-xs text-muted-foreground">Reg No: <span className="font-mono text-foreground">{claim.fpo_identity.registration_number}</span></span>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Claimant info */}

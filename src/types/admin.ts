@@ -531,10 +531,18 @@ export interface AdminOwnershipClaimDoc {
   uploaded_at: string;
 }
 
+export interface AdminOwnershipClaimIdentity {
+  pan_number: string;
+  gst_number: string;
+  cin_number: string;
+  registration_number: string;
+}
+
 export interface AdminOwnershipClaim {
   id: number;
   fpo_id: number;
   fpo_name: string;
+  fpo_identity: AdminOwnershipClaimIdentity;
   claimant_name: string;
   claimant_email: string;
   claimant_phone: string;
@@ -545,6 +553,8 @@ export interface AdminOwnershipClaim {
   review_notes: string | null;
   reviewed_by: string | null;
   reviewed_at: string | null;
+  conflict_count: number;
+  has_conflict: boolean;
   created_at: string;
 }
 

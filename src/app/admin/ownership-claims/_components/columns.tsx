@@ -50,15 +50,35 @@ export function getOwnershipClaimColumns(
       accessorKey: "status",
       header: t.col_status ?? "Status",
       cell: ({ row }) => (
-        <Badge variant="secondary" className={STATUS_BADGE[row.original.status]}>
-          {STATUS_LABEL[row.original.status]}
-        </Badge>
+        <div className="flex flex-col gap-1">
+          <Badge variant="secondary" className={STATUS_BADGE[row.original.status]}>
+            {STATUS_LABEL[row.original.status]}
+          </Badge>
+          {row.original.has_conflict && (
+            <Badge variant="secondary" className="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 text-xs">
+              Dispute
+            </Badge>
+          )}
+        </div>
       ),
     },
     {
       accessorKey: "fpo_name",
       header: t.col_fpo ?? "FPO",
-      cell: ({ row }) => <TextCell value={row.original.fpo_name} maxWidth="max-w-[140px]" />,
+      cell: ({ row }) => {
+        const identity = row.original.fpo_identity;
+        const parts = [
+          identity?.pan_number && `PAN: ${identity.pan_number}`,
+          identity?.cin_number && `CIN: ${identity.cin_number}`,
+          !identity?.cin_number && identity?.registration_number && `Reg: ${identity.registration_number}`,
+        ].filter(Boolean).join(" · ");
+        return (
+          <div className="flex flex-col gap-0.5 max-w-[160px]">
+            <span className="truncate text-sm font-medium">{row.original.fpo_name}</span>
+            {parts && <span className="truncate text-xs text-muted-foreground">{parts}</span>}
+          </div>
+        );
+      },
     },
 
     {
