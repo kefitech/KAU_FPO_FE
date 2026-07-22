@@ -249,7 +249,7 @@ const Footer = () => {
                       <i className="fas fa-home" />
                     </div>
                     <div className="content">
-                      <strong>Address:</strong>Kerala Agricultural University, Mannuthy P.O, Pin- 680651.
+                      <strong>Address:</strong><a href="https://maps.app.goo.gl/4FXjLWkpN5jvM8N17">Kerala Agricultural University, Mannuthy P.O, Pin- 680651.</a> 
                     </div>
                   </li>
                   <li>

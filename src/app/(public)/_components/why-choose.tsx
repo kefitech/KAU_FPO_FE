@@ -50,7 +50,7 @@ const WhyChoose = () => {
                     <div className="timer">
                       <CountUp end={totalCount} enableScrollSpy scrollSpyOnce />
                     </div>
-                    <div className="operator"> FAQs</div>
+                    <div className="operator"> &nbsp;FAQs</div>
                   </div>
                   <span className="medium">Have query? Check FAQ</span>
                 </div>
