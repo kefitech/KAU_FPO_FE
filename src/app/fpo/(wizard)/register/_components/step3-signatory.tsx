@@ -96,6 +96,7 @@ interface Step3Props {
   onSave?: () => void;
   onSuccess: () => void;
   onBack: () => void;
+  t: Record<string, string>;
 }
 
 const FIELD_LABELS: Partial<Record<keyof FormValues, string>> = {
@@ -112,7 +113,7 @@ const FIELD_LABELS: Partial<Record<keyof FormValues, string>> = {
   facilitating_agency_name: "Facilitating Agency Name",
 };
 
-export function Step3Signatory({ profile, onSave, onSuccess, onBack }: Step3Props) {
+export function Step3Signatory({ profile, onSave, onSuccess, onBack, t }: Step3Props) {
   const { speak } = useVoiceGuidance();
   const [designations, setDesignations] = useState<MasterDataItem[]>([]);
   const [saveMode, setSaveMode] = useState<"save" | "next" | null>(null);
@@ -235,18 +236,18 @@ export function Step3Signatory({ profile, onSave, onSuccess, onBack }: Step3Prop
   return (
     <form onSubmit={(e) => e.preventDefault()} className="flex flex-col gap-5">
       <div>
-        <h2 className="font-semibold text-lg">Signatory & Members</h2>
-        <p className="mt-0.5 text-muted-foreground text-sm">Authorized signatory details and membership information</p>
+        <h2 className="font-semibold text-lg">{t.step3_heading ?? "Signatory & Members"}</h2>
+        <p className="mt-0.5 text-muted-foreground text-sm">{t.step3_subheading ?? "Authorized signatory details and membership information"}</p>
       </div>
 
       {/* Authorized Signatory */}
       <div className="flex flex-col gap-4 rounded-lg border p-4">
-        <p className="font-medium text-muted-foreground text-sm">Authorized Signatory</p>
+        <p className="font-medium text-muted-foreground text-sm">{t.step3_signatory_section ?? "Authorized Signatory"}</p>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field>
             <FieldLabel htmlFor="signatory_name">
-              Full Name <span className="text-destructive">*</span>
+              {t.step3_full_name ?? "Full Name"} <span className="text-destructive">*</span>
             </FieldLabel>
             <Input id="signatory_name" placeholder="e.g. Rajan Kumar" maxLength={100} {...register("signatory_name")} />
             {errors.signatory_name && <FieldError errors={[errors.signatory_name]} />}
@@ -254,7 +255,7 @@ export function Step3Signatory({ profile, onSave, onSuccess, onBack }: Step3Prop
 
           <Field>
             <FieldLabel htmlFor="signatory_designation">
-              Designation <span className="text-destructive">*</span>
+              {t.step3_designation ?? "Designation"} <span className="text-destructive">*</span>
             </FieldLabel>
             {designationsLoaded ? (
               <Controller
@@ -279,7 +280,7 @@ export function Step3Signatory({ profile, onSave, onSuccess, onBack }: Step3Prop
         <div className="grid gap-4 sm:grid-cols-2">
           <Field>
             <FieldLabel htmlFor="signatory_phone">
-              Phone <span className="text-destructive">*</span>
+              {t.step3_phone ?? "Phone"} <span className="text-destructive">*</span>
             </FieldLabel>
             <Input id="signatory_phone" placeholder="10-digit mobile" maxLength={10} {...register("signatory_phone")} />
             {errors.signatory_phone && <FieldError errors={[errors.signatory_phone]} />}
@@ -287,7 +288,7 @@ export function Step3Signatory({ profile, onSave, onSuccess, onBack }: Step3Prop
 
           <Field>
             <FieldLabel htmlFor="signatory_email">
-              Email <span className="text-destructive">*</span>
+              {t.step3_email ?? "Email"} <span className="text-destructive">*</span>
             </FieldLabel>
             <Input
               id="signatory_email"
@@ -301,7 +302,7 @@ export function Step3Signatory({ profile, onSave, onSuccess, onBack }: Step3Prop
 
         <Field>
           <FieldLabel htmlFor="signatory_aadhaar_last4">
-            Aadhaar Last 4 Digits <span className="text-destructive">*</span>
+            {t.step3_aadhaar ?? "Aadhaar Last 4 Digits"} <span className="text-destructive">*</span>
           </FieldLabel>
           <Input
             id="signatory_aadhaar_last4"
@@ -316,11 +317,11 @@ export function Step3Signatory({ profile, onSave, onSuccess, onBack }: Step3Prop
 
       {/* Membership */}
       <div className="flex flex-col gap-4 rounded-lg border p-4">
-        <p className="font-medium text-muted-foreground text-sm">Membership Details</p>
+        <p className="font-medium text-muted-foreground text-sm">{t.step3_membership_section ?? "Membership Details"}</p>
 
         <Field>
           <FieldLabel htmlFor="total_members">
-            Total Members <span className="text-destructive">*</span>
+            {t.step3_total_members ?? "Total Members"} <span className="text-destructive">*</span>
           </FieldLabel>
           <Input
             id="total_members"
@@ -335,19 +336,19 @@ export function Step3Signatory({ profile, onSave, onSuccess, onBack }: Step3Prop
 
         <div className="grid gap-4 sm:grid-cols-3">
           <Field>
-            <FieldLabel htmlFor="male_members">Male Members</FieldLabel>
+            <FieldLabel htmlFor="male_members">{t.step3_male_members ?? "Male Members"}</FieldLabel>
             <Input id="male_members" type="number" min={0} placeholder="0" {...register("male_members")} />
             {errors.male_members && <FieldError errors={[errors.male_members]} />}
           </Field>
 
           <Field>
-            <FieldLabel htmlFor="female_members">Female Members</FieldLabel>
+            <FieldLabel htmlFor="female_members">{t.step3_female_members ?? "Female Members"}</FieldLabel>
             <Input id="female_members" type="number" min={0} placeholder="0" {...register("female_members")} />
             {errors.female_members && <FieldError errors={[errors.female_members]} />}
           </Field>
 
           <Field>
-            <FieldLabel htmlFor="sc_st_members">SC / ST Members</FieldLabel>
+            <FieldLabel htmlFor="sc_st_members">{t.step3_sc_st_members ?? "SC / ST Members"}</FieldLabel>
             <Input id="sc_st_members" type="number" min={0} placeholder="0" {...register("sc_st_members")} />
             {errors.sc_st_members && <FieldError errors={[errors.sc_st_members]} />}
           </Field>
@@ -356,12 +357,12 @@ export function Step3Signatory({ profile, onSave, onSuccess, onBack }: Step3Prop
 
       {/* Governance */}
       <div className="flex flex-col gap-4 rounded-lg border p-4">
-        <p className="font-medium text-muted-foreground text-sm">Governance & Agencies</p>
+        <p className="font-medium text-muted-foreground text-sm">{t.step3_governance_section ?? "Governance & Agencies"}</p>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field>
             <FieldLabel htmlFor="promoting_agency">
-              Promoting Agency <span className="text-destructive">*</span>
+              {t.step3_promoting_agency ?? "Promoting Agency"} <span className="text-destructive">*</span>
             </FieldLabel>
             {agenciesLoaded ? (
               <Controller
@@ -384,7 +385,7 @@ export function Step3Signatory({ profile, onSave, onSuccess, onBack }: Step3Prop
 
           <Field>
             <FieldLabel htmlFor="facilitating_agency_name">
-              Facilitating Agency Name <span className="text-destructive">*</span>
+              {t.step3_facilitating_agency ?? "Facilitating Agency Name"} <span className="text-destructive">*</span>
             </FieldLabel>
             <Input
               id="facilitating_agency_name"
@@ -399,7 +400,7 @@ export function Step3Signatory({ profile, onSave, onSuccess, onBack }: Step3Prop
         <div className="grid gap-4 sm:grid-cols-3">
           <Field>
             <FieldLabel htmlFor="total_directors">
-              Total Directors <span className="text-destructive">*</span>
+              {t.step3_total_directors ?? "Total Directors"} <span className="text-destructive">*</span>
             </FieldLabel>
             <Input id="total_directors" type="number" min={0} placeholder="0" {...register("total_directors")} />
             {errors.total_directors && errors.total_directors.type !== "server" && (
@@ -408,13 +409,13 @@ export function Step3Signatory({ profile, onSave, onSuccess, onBack }: Step3Prop
           </Field>
 
           <Field>
-            <FieldLabel htmlFor="women_directors">Women Directors</FieldLabel>
+            <FieldLabel htmlFor="women_directors">{t.step3_women_directors ?? "Women Directors"}</FieldLabel>
             <Input id="women_directors" type="number" min={0} placeholder="0" {...register("women_directors")} />
             {errors.women_directors && <FieldError errors={[errors.women_directors]} />}
           </Field>
 
           <Field>
-            <FieldLabel htmlFor="directors_under_35">Directors Under 35</FieldLabel>
+            <FieldLabel htmlFor="directors_under_35">{t.step3_directors_u35 ?? "Directors Under 35"}</FieldLabel>
             <Input id="directors_under_35" type="number" min={0} placeholder="0" {...register("directors_under_35")} />
             {errors.directors_under_35 && <FieldError errors={[errors.directors_under_35]} />}
           </Field>
@@ -433,8 +434,8 @@ export function Step3Signatory({ profile, onSave, onSuccess, onBack }: Step3Prop
                   className="h-4 w-4 cursor-pointer accent-foreground"
                 />
                 <div>
-                  <p className="font-medium text-sm">CEO Available</p>
-                  <p className="text-muted-foreground text-xs">FPO has a dedicated CEO</p>
+                  <p className="font-medium text-sm">{t.step3_ceo_available ?? "CEO Available"}</p>
+                  <p className="text-muted-foreground text-xs">{t.step3_ceo_label ?? "FPO has a dedicated CEO"}</p>
                 </div>
               </label>
             )}
@@ -452,8 +453,8 @@ export function Step3Signatory({ profile, onSave, onSuccess, onBack }: Step3Prop
                   className="h-4 w-4 cursor-pointer accent-foreground"
                 />
                 <div>
-                  <p className="font-medium text-sm">Accountant Available</p>
-                  <p className="text-muted-foreground text-xs">FPO has a dedicated accountant</p>
+                  <p className="font-medium text-sm">{t.step3_accountant_available ?? "Accountant Available"}</p>
+                  <p className="text-muted-foreground text-xs">{t.step3_accountant_label ?? "FPO has a dedicated accountant"}</p>
                 </div>
               </label>
             )}
@@ -463,7 +464,7 @@ export function Step3Signatory({ profile, onSave, onSuccess, onBack }: Step3Prop
 
       <div className="flex items-center justify-between pt-2">
         <Button type="button" variant="outline" onClick={onBack}>
-          ← Back
+          {t.btn_back ?? "← Back"}
         </Button>
         <div className="flex gap-2">
           <Button
@@ -475,7 +476,7 @@ export function Step3Signatory({ profile, onSave, onSuccess, onBack }: Step3Prop
               submitMutation.mutate(v, { onSuccess: () => onSave?.() });
             }, handleInvalidSubmit)}
           >
-            {submitMutation.isPending && saveMode === "save" ? "Saving…" : "Save"}
+            {submitMutation.isPending && saveMode === "save" ? (t.btn_saving ?? "Saving…") : (t.btn_save ?? "Save")}
           </Button>
           <Button
             type="button"
@@ -485,7 +486,7 @@ export function Step3Signatory({ profile, onSave, onSuccess, onBack }: Step3Prop
               submitMutation.mutate(v, { onSuccess: () => onSuccess() });
             }, handleInvalidSubmit)}
           >
-            {submitMutation.isPending && saveMode === "next" ? "Saving…" : "Next →"}
+            {submitMutation.isPending && saveMode === "next" ? (t.btn_saving ?? "Saving…") : (t.btn_next ?? "Next →")}
           </Button>
         </div>
       </div>

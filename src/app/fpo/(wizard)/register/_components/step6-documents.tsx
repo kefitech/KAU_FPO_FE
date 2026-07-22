@@ -26,9 +26,10 @@ interface DocRowProps {
   onDelete: (docId: string) => void;
   isUploading: boolean;
   isDeleting: boolean;
+  t: Record<string, string>;
 }
 
-function DocRow({ label, docType, maxSizeMB, uploaded, onUpload, onDelete, isUploading, isDeleting }: DocRowProps) {
+function DocRow({ label, docType, maxSizeMB, uploaded, onUpload, onDelete, isUploading, isDeleting, t }: DocRowProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -101,7 +102,7 @@ function DocRow({ label, docType, maxSizeMB, uploaded, onUpload, onDelete, isUpl
               className="h-7 text-xs"
             >
               <Upload className="mr-1.5 h-3 w-3" />
-              {isUploading ? "Uploading…" : "Upload"}
+              {isUploading ? (t.step6_btn_uploading ?? "Uploading…") : (t.step6_btn_upload ?? "Upload")}
             </Button>
           </>
         )}
@@ -113,9 +114,10 @@ function DocRow({ label, docType, maxSizeMB, uploaded, onUpload, onDelete, isUpl
 interface Step6Props {
   onSuccess: () => void;
   onBack: () => void;
+  t: Record<string, string>;
 }
 
-export function Step6Documents({ onSuccess, onBack }: Step6Props) {
+export function Step6Documents({ onSuccess, onBack, t }: Step6Props) {
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -157,18 +159,18 @@ export function Step6Documents({ onSuccess, onBack }: Step6Props) {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h2 className="font-semibold text-lg">Upload Documents</h2>
+        <h2 className="font-semibold text-lg">{t.step6_heading ?? "Upload Documents"}</h2>
         <p className="mt-0.5 text-muted-foreground text-sm">
           {allRequiredDone
-            ? "All required documents uploaded."
+            ? (t.step6_docs_complete ?? "All required documents uploaded.")
             : `${requiredUploaded} of ${REQUIRED_DOC_CONFIG.length} required documents uploaded.`}
         </p>
       </div>
 
       {/* Required */}
       <div className="rounded-lg border p-4">
-        <p className="mb-1 font-medium text-sm">Required Documents</p>
-        <p className="mb-3 text-muted-foreground text-xs">All 3 must be uploaded before submission</p>
+        <p className="mb-1 font-medium text-sm">{t.step6_required_section ?? "Required Documents"}</p>
+        <p className="mb-3 text-muted-foreground text-xs">{t.step6_required_note ?? "All 3 must be uploaded before submission"}</p>
 
         {isLoading ? (
           <div className="flex flex-col gap-3">
@@ -188,6 +190,7 @@ export function Step6Documents({ onSuccess, onBack }: Step6Props) {
               onDelete={(id) => deleteMutation.mutate(id)}
               isUploading={uploadMutation.isPending && uploadMutation.variables?.type === cfg.type}
               isDeleting={deleteMutation.isPending}
+              t={t}
             />
           ))
         )}
@@ -195,8 +198,8 @@ export function Step6Documents({ onSuccess, onBack }: Step6Props) {
 
       {/* Optional */}
       <div className="rounded-lg border p-4">
-        <p className="mb-1 font-medium text-sm">Optional Documents</p>
-        <p className="mb-3 text-muted-foreground text-xs">Upload if available — helps with faster review</p>
+        <p className="mb-1 font-medium text-sm">{t.step6_optional_section ?? "Optional Documents"}</p>
+        <p className="mb-3 text-muted-foreground text-xs">{t.step6_optional_note ?? "Upload if available — helps with faster review"}</p>
 
         {isLoading ? (
           <div className="flex flex-col gap-3">
@@ -216,6 +219,7 @@ export function Step6Documents({ onSuccess, onBack }: Step6Props) {
               onDelete={(id) => deleteMutation.mutate(id)}
               isUploading={uploadMutation.isPending && uploadMutation.variables?.type === cfg.type}
               isDeleting={deleteMutation.isPending}
+              t={t}
             />
           ))
         )}
@@ -223,7 +227,7 @@ export function Step6Documents({ onSuccess, onBack }: Step6Props) {
 
       <div className="flex items-center justify-between pt-2">
         <Button type="button" variant="outline" onClick={onBack}>
-          ← Back
+          {t.btn_back ?? "← Back"}
         </Button>
         <Button
           type="button"
@@ -235,7 +239,7 @@ export function Step6Documents({ onSuccess, onBack }: Step6Props) {
             onSuccess();
           }}
         >
-          Continue to Review →
+          {t.step6_btn_continue ?? "Continue to Review →"}
         </Button>
       </div>
     </div>

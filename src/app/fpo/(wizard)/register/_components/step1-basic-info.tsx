@@ -70,6 +70,7 @@ interface Step1Props {
   profile?: FpoProfile;
   onSave?: (profile: FpoProfile) => void;
   onSuccess: (profile: FpoProfile) => void;
+  t?: Record<string, string>;
 }
 
 const FIELD_LABELS: Partial<Record<keyof FormValues, string>> = {
@@ -80,7 +81,7 @@ const FIELD_LABELS: Partial<Record<keyof FormValues, string>> = {
   pan_number: "PAN Number",
 };
 
-export function Step1BasicInfo({ profile, onSave, onSuccess }: Step1Props) {
+export function Step1BasicInfo({ profile, onSave, onSuccess, t = {} }: Step1Props) {
   const isEdit = !!profile;
   // Fields locked when FPO was created from a claim approval — claimant cannot change identifiers
   const isClaimedFpo = !!profile?.origin_claim_id;
@@ -242,22 +243,22 @@ export function Step1BasicInfo({ profile, onSave, onSuccess }: Step1Props) {
   return (
     <form onSubmit={(e) => e.preventDefault()} className="flex flex-col gap-5">
       <div>
-        <h2 className="font-semibold text-lg">Basic Information</h2>
-        <p className="mt-0.5 text-muted-foreground text-sm">Enter your FPO's legal registration details</p>
+        <h2 className="font-semibold text-lg">{t.step1_heading ?? "Basic Information"}</h2>
+        <p className="mt-0.5 text-muted-foreground text-sm">{t.step1_subheading ?? "Enter your FPO's legal registration details"}</p>
       </div>
 
       {/* FPO Name */}
       <div className="grid gap-4 sm:grid-cols-2">
         <Field>
           <FieldLabel htmlFor="name">
-            FPO Name (English) <span className="text-destructive">*</span>
+            {t.step1_fpo_name_en ?? "FPO Name (English)"} <span className="text-destructive">*</span>
           </FieldLabel>
           <Input id="name" placeholder="e.g. Kerala Farmers FPO" maxLength={80} {...register("name")} />
           {errors.name && <FieldError errors={[errors.name]} />}
         </Field>
 
         <Field>
-          <FieldLabel htmlFor="name_ml">FPO Name (Malayalam)</FieldLabel>
+          <FieldLabel htmlFor="name_ml">{t.step1_fpo_name_ml ?? "FPO Name (Malayalam)"}</FieldLabel>
           <Input id="name_ml" placeholder="e.g. കേരള കർഷകർ FPO" maxLength={80} {...register("name_ml")} />
         </Field>
       </div>
@@ -265,7 +266,7 @@ export function Step1BasicInfo({ profile, onSave, onSuccess }: Step1Props) {
       {/* Legal Structure */}
       <Field>
         <FieldLabel htmlFor="legal_structure">
-          Registered Under <span className="text-destructive">*</span>
+          {t.step1_registered_under ?? "Registered Under"} <span className="text-destructive">*</span>
         </FieldLabel>
         {legalStructuresLoaded ? (
           <Controller
@@ -290,7 +291,7 @@ export function Step1BasicInfo({ profile, onSave, onSuccess }: Step1Props) {
       {hasSubDropdown && (
         <Field>
           <FieldLabel htmlFor="legal_structure_detail">
-            State CSA Act <span className="text-destructive">*</span>
+            {t.step1_state_csa_act ?? "State CSA Act"} <span className="text-destructive">*</span>
           </FieldLabel>
           {subOptionsLoaded ? (
             <Controller
@@ -316,8 +317,8 @@ export function Step1BasicInfo({ profile, onSave, onSuccess }: Step1Props) {
       <div className="grid gap-4 sm:grid-cols-2">
         <Field>
           <FieldLabel htmlFor="registration_number">
-            Registration Number {selectedStructure !== "companies_act" && <span className="text-destructive">*</span>}
-            {isClaimedFpo && <span className="ml-1 text-muted-foreground text-xs">(locked)</span>}
+            {t.step1_reg_number ?? "Registration Number"} {selectedStructure !== "companies_act" && <span className="text-destructive">*</span>}
+            {isClaimedFpo && <span className="ml-1 text-muted-foreground text-xs">{t.step1_locked ?? "(locked)"}</span>}
           </FieldLabel>
 
           <Input
@@ -339,9 +340,9 @@ export function Step1BasicInfo({ profile, onSave, onSuccess }: Step1Props) {
 
         <Field>
           <FieldLabel htmlFor="cin_number">
-            CIN Number{" "}
+            {t.step1_cin_number ?? "CIN Number"}{" "}
             {CIN_REQUIRED_STRUCTURES.includes(selectedStructure) && <span className="text-destructive">*</span>}
-            {isClaimedFpo && <span className="ml-1 text-muted-foreground text-xs">(locked)</span>}
+            {isClaimedFpo && <span className="ml-1 text-muted-foreground text-xs">{t.step1_locked ?? "(locked)"}</span>}
           </FieldLabel>
           <Input
             id="cin_number"
@@ -361,7 +362,7 @@ export function Step1BasicInfo({ profile, onSave, onSuccess }: Step1Props) {
       {/* Date of Registration */}
       <Field>
         <FieldLabel htmlFor="date_of_registration">
-          Date of Registration <span className="text-destructive">*</span>
+          {t.step1_date_reg ?? "Date of Registration"} <span className="text-destructive">*</span>
         </FieldLabel>
         <Input
           id="date_of_registration"
@@ -377,7 +378,7 @@ export function Step1BasicInfo({ profile, onSave, onSuccess }: Step1Props) {
       <div className="grid gap-4 sm:grid-cols-2">
         <Field>
           <FieldLabel htmlFor="pan_number">
-            PAN Number <span className="text-destructive">*</span>
+            {t.step1_pan_number ?? "PAN Number"} <span className="text-destructive">*</span>
           </FieldLabel>
           <Input
             id="pan_number"
@@ -393,7 +394,7 @@ export function Step1BasicInfo({ profile, onSave, onSuccess }: Step1Props) {
         </Field>
 
         <Field>
-          <FieldLabel htmlFor="gst_number">GST Number</FieldLabel>
+          <FieldLabel htmlFor="gst_number">{t.step1_gst_number ?? "GST Number"}</FieldLabel>
           <Input
             id="gst_number"
             placeholder="e.g. 32AABCK1234D1Z5"
@@ -412,10 +413,10 @@ export function Step1BasicInfo({ profile, onSave, onSuccess }: Step1Props) {
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
           <div className="flex flex-col gap-1">
             <p className="font-medium text-amber-700 text-sm dark:text-amber-300">
-              An FPO with these details already exists
+              {t.step1_duplicate_alert ?? "An FPO with these details already exists"}
             </p>
             <p className="text-amber-600 text-xs dark:text-amber-400">
-              If this is your FPO, you can claim it instead of creating a new one.
+              {t.step1_duplicate_msg ?? "If this is your FPO, you can claim it instead of creating a new one."}
             </p>
             <button
               type="button"
@@ -429,7 +430,7 @@ export function Step1BasicInfo({ profile, onSave, onSuccess }: Step1Props) {
                 router.push(`/fpo/claim?${params.toString()}`);
               }}
             >
-              Claim Your Business <ExternalLink className="h-3 w-3" />
+              {t.step1_claim_btn ?? "Claim Your Business"} <ExternalLink className="h-3 w-3" />
             </button>
           </div>
         </div>
@@ -447,7 +448,7 @@ export function Step1BasicInfo({ profile, onSave, onSuccess }: Step1Props) {
               submitMutation.mutate(v, { onSuccess: (data) => onSave?.(data) });
             }, handleInvalidSubmit)}
           >
-            {submitMutation.isPending && saveMode === "save" ? "Saving…" : "Save"}
+            {submitMutation.isPending && saveMode === "save" ? (t.btn_saving ?? "Saving…") : (t.btn_save ?? "Save")}
           </Button>
           <Button
             type="button"
@@ -457,7 +458,7 @@ export function Step1BasicInfo({ profile, onSave, onSuccess }: Step1Props) {
               submitMutation.mutate(v, { onSuccess: (data) => onSuccess(data) });
             }, handleInvalidSubmit)}
           >
-            {submitMutation.isPending && saveMode === "next" ? "Saving…" : isEdit ? "Next →" : "Get Started →"}
+            {submitMutation.isPending && saveMode === "next" ? (t.btn_saving ?? "Saving…") : isEdit ? (t.btn_next ?? "Next →") : (t.btn_get_started ?? "Get Started →")}
           </Button>
         </div>
       </div>

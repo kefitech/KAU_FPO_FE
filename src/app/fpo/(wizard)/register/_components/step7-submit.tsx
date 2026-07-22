@@ -14,9 +14,10 @@ import type { FpoProfile } from "@/types/fpo";
 interface Step7Props {
   profile: FpoProfile;
   onBack: () => void;
+  t: Record<string, string>;
 }
 
-export function Step7Submit({ profile, onBack }: Step7Props) {
+export function Step7Submit({ profile, onBack, t }: Step7Props) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const canSubmit = profile.submission_errors.length === 0;
@@ -43,21 +44,21 @@ export function Step7Submit({ profile, onBack }: Step7Props) {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h2 className="font-semibold text-lg">Review & Submit</h2>
+        <h2 className="font-semibold text-lg">{t.step7_heading ?? "Review & Submit"}</h2>
         <p className="mt-0.5 text-muted-foreground text-sm">
-          Review the checklist below before submitting your application.
+          {t.step7_subheading ?? "Review the checklist below before submitting your application."}
         </p>
       </div>
 
       {/* Checklist */}
       <div className="flex flex-col gap-2.5 rounded-lg border p-4">
-        <p className="mb-1 font-medium text-sm">Submission Checklist</p>
+        <p className="mb-1 font-medium text-sm">{t.step7_checklist_section ?? "Submission Checklist"}</p>
 
         {canSubmit ? (
           <div className="flex items-center gap-2.5 py-2">
             <CheckCircle2 className="h-5 w-5 shrink-0 text-green-600 dark:text-green-400" />
             <p className="font-medium text-green-700 text-sm dark:text-green-300">
-              All requirements met. Ready to submit!
+              {t.step7_ready ?? "All requirements met. Ready to submit!"}
             </p>
           </div>
         ) : (
@@ -73,7 +74,7 @@ export function Step7Submit({ profile, onBack }: Step7Props) {
       {/* Server-side submit errors */}
       {submitErrors.length > 0 && (
         <div className="flex flex-col gap-2 rounded-lg border border-destructive/40 bg-destructive/5 p-4">
-          <p className="font-medium text-destructive text-sm">Submission failed</p>
+          <p className="font-medium text-destructive text-sm">{t.step7_failed_heading ?? "Submission failed"}</p>
           {submitErrors.map((err, i) => (
             <div key={i} className="flex items-start gap-2">
               <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
@@ -85,26 +86,25 @@ export function Step7Submit({ profile, onBack }: Step7Props) {
 
       {/* Summary */}
       <div className="flex flex-col gap-3 rounded-lg border p-4">
-        <p className="font-medium text-sm">Application Summary</p>
+        <p className="font-medium text-sm">{t.step7_summary_section ?? "Application Summary"}</p>
         <div className="grid gap-1.5 text-sm">
-          <SummaryRow label="FPO Name" value={profile.name} />
-          <SummaryRow label="Registration No." value={profile.registration_number} />
-          <SummaryRow label="District" value={profile.district_display} />
-          <SummaryRow label="Total Members" value={profile.total_members?.toString() ?? "—"} />
-          <SummaryRow label="Primary Commodities" value={profile.primary_commodities.join(", ") || "—"} />
-          <SummaryRow label="Bank" value={profile.bank_name || "—"} />
-          <SummaryRow label="IFSC" value={profile.ifsc_code || "—"} />
+          <SummaryRow label={t.step7_summary_fpo_name ?? "FPO Name"} value={profile.name} />
+          <SummaryRow label={t.step7_summary_reg ?? "Registration No."} value={profile.registration_number} />
+          <SummaryRow label={t.step7_summary_district ?? "District"} value={profile.district_display} />
+          <SummaryRow label={t.step7_summary_members ?? "Total Members"} value={profile.total_members?.toString() ?? "—"} />
+          <SummaryRow label={t.step7_summary_commodities ?? "Primary Commodities"} value={profile.primary_commodities.join(", ") || "—"} />
+          <SummaryRow label={t.step7_summary_bank ?? "Bank"} value={profile.bank_name || "—"} />
+          <SummaryRow label={t.step7_summary_ifsc ?? "IFSC"} value={profile.ifsc_code || "—"} />
         </div>
       </div>
 
       <p className="text-muted-foreground text-xs">
-        By submitting, you confirm that all information provided is accurate. The application will be reviewed by the
-        KAU team.
+        {t.step7_disclaimer ?? "By submitting, you confirm that all information provided is accurate. The application will be reviewed by the KAU team."}
       </p>
 
       <div className="flex items-center justify-between pt-2">
         <Button type="button" variant="outline" onClick={onBack}>
-          ← Back
+          {t.btn_back ?? "← Back"}
         </Button>
         <Button
           type="button"
@@ -112,7 +112,7 @@ export function Step7Submit({ profile, onBack }: Step7Props) {
           disabled={!canSubmit || submitMutation.isPending}
           className="min-w-32"
         >
-          {submitMutation.isPending ? "Submitting…" : "Submit Application"}
+          {submitMutation.isPending ? (t.step7_btn_submitting ?? "Submitting…") : (t.step7_btn_submit ?? "Submit Application")}
         </Button>
       </div>
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 
 import dynamic from "next/dynamic";
 import { Ewert } from "next/font/google";
@@ -32,6 +32,14 @@ const MapPinPicker = dynamic(() => import("./map-pin-picker").then((m) => ({ def
     </div>
   ),
 });
+
+function MapLoadingShell({ text }: { text: string }) {
+  return (
+    <div className="flex h-72 items-center justify-center rounded-lg border bg-muted/30">
+      <p className="text-muted-foreground text-sm">{text}</p>
+    </div>
+  );
+}
 
 // District name → code mapping for auto-fill from pincode/GPS APIs
 const DISTRICT_NAME_TO_CODE: Record<string, string> = {
@@ -85,6 +93,7 @@ interface Step2Props {
   onSave?: () => void;
   onSuccess: () => void;
   onBack: () => void;
+  t: Record<string, string>;
 }
 
 const FIELD_LABELS: Partial<Record<keyof FormValues, string>> = {
@@ -97,7 +106,7 @@ const FIELD_LABELS: Partial<Record<keyof FormValues, string>> = {
   office_email: "Office Email",
 };
 
-export function Step2Contact({ profile, onSave, onSuccess, onBack }: Step2Props) {
+export function Step2Contact({ profile, onSave, onSuccess, onBack, t }: Step2Props) {
   const { speak } = useVoiceGuidance();
   const [fieldErrors, setFieldErrors] = useState<FieldValidationState>({});
   const [saveMode, setSaveMode] = useState<"save" | "next" | null>(null);
@@ -188,7 +197,7 @@ export function Step2Contact({ profile, onSave, onSuccess, onBack }: Step2Props)
       if (data[0]?.Status === "Success" && data[0]?.PostOffice?.length > 0) {
         const po = data[0].PostOffice[0];
         if (po.State !== "Kerala") {
-          setPincodeError("Only Kerala pincodes are supported");
+          setPincodeError(t.step2_pincode_note ?? "Only Kerala pincodes are supported");
           return;
         }
         const distCode = resolveDistrictCode(po.District);
@@ -214,9 +223,9 @@ export function Step2Contact({ profile, onSave, onSuccess, onBack }: Step2Props)
           // silently skip — map centering is optional
         }
 
-        toast.success("Location auto-filled from pincode");
+        toast.success(t.step2_location_filled ?? "Location auto-filled from pincode");
       } else {
-        setPincodeError("Pincode not found");
+        setPincodeError(t.step2_pincode_not_found ?? "Pincode not found");
       }
     } catch {
       // silently skip on network error
@@ -249,7 +258,7 @@ export function Step2Contact({ profile, onSave, onSuccess, onBack }: Step2Props)
         if (village && !getValues("village_town")) setValue("village_town", village, { shouldValidate: true });
       }
 
-      toast.success("Location fields auto-filled from GPS");
+      toast.success(t.step2_location_gps ?? "Location fields auto-filled from GPS");
     } catch {
       // silently skip — GPS pin is still set on the map
     }
@@ -291,14 +300,14 @@ export function Step2Contact({ profile, onSave, onSuccess, onBack }: Step2Props)
   return (
     <form onSubmit={(e) => e.preventDefault()} className="flex flex-col gap-5">
       <div>
-        <h2 className="font-semibold text-lg">Contact & Location</h2>
-        <p className="mt-0.5 text-muted-foreground text-sm">Office address, contact information and map location</p>
+        <h2 className="font-semibold text-lg">{t.step2_heading ?? "Contact & Location"}</h2>
+        <p className="mt-0.5 text-muted-foreground text-sm">{t.step2_subheading ?? "Office address, contact information and map location"}</p>
       </div>
 
       {/* District */}
       <Field>
         <FieldLabel htmlFor="district">
-          District <span className="text-destructive">*</span>
+          {t.step2_district ?? "District"} <span className="text-destructive">*</span>
         </FieldLabel>
         <Controller
           control={control}
@@ -319,7 +328,7 @@ export function Step2Contact({ profile, onSave, onSuccess, onBack }: Step2Props)
       <div className="grid gap-4 sm:grid-cols-2">
         <Field>
           <FieldLabel htmlFor="block_taluk">
-            Block / Taluk <span className="text-destructive">*</span>
+            {t.step2_block ?? "Block / Taluk"} <span className="text-destructive">*</span>
           </FieldLabel>
           {selectedDistrict && !blocksLoaded ? (
             <Skeleton className="h-9 w-full" />
@@ -332,7 +341,7 @@ export function Step2Contact({ profile, onSave, onSuccess, onBack }: Step2Props)
                   value={field.value}
                   onChange={field.onChange}
                   options={blocks.map((b) => ({ value: b.code, label: b.name }))}
-                  placeholder={selectedDistrict ? "Search block…" : "Select district first…"}
+                  placeholder={selectedDistrict ? "Search block…" : (t.step2_district_first ?? "Select district first…")}
                   disabled={!selectedDistrict}
                 />
               )}
@@ -343,7 +352,7 @@ export function Step2Contact({ profile, onSave, onSuccess, onBack }: Step2Props)
 
         <Field>
           <FieldLabel htmlFor="village_town">
-            Village / Town <span className="text-destructive">*</span>
+            {t.step2_village ?? "Village / Town"} <span className="text-destructive">*</span>
           </FieldLabel>
           <Input id="village_town" placeholder="e.g. Irinjalakuda" {...register("village_town")} />
           {errors.village_town && <FieldError errors={[errors.village_town]} />}
@@ -353,7 +362,7 @@ export function Step2Contact({ profile, onSave, onSuccess, onBack }: Step2Props)
       {/* Address */}
       <Field>
         <FieldLabel htmlFor="address_line1">
-          Address Line 1 <span className="text-destructive">*</span>
+          {t.step2_address1 ?? "Address Line 1"} <span className="text-destructive">*</span>
         </FieldLabel>
         <Input
           id="address_line1"
@@ -366,13 +375,13 @@ export function Step2Contact({ profile, onSave, onSuccess, onBack }: Step2Props)
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field>
-          <FieldLabel htmlFor="address_line2">Address Line 2</FieldLabel>
+          <FieldLabel htmlFor="address_line2">{t.step2_address2 ?? "Address Line 2"}</FieldLabel>
           <Input id="address_line2" placeholder="Landmark, area (optional)" {...register("address_line2")} />
         </Field>
 
         <Field>
           <FieldLabel htmlFor="pincode">
-            Pincode <span className="text-destructive">*</span>
+            {t.step2_pincode ?? "Pincode"} <span className="text-destructive">*</span>
           </FieldLabel>
           <div className="relative">
             <Input
@@ -401,7 +410,7 @@ export function Step2Contact({ profile, onSave, onSuccess, onBack }: Step2Props)
       <div className="grid gap-4 sm:grid-cols-2">
         <Field>
           <FieldLabel htmlFor="office_phone">
-            Office Phone <span className="text-destructive">*</span>
+            {t.step2_phone ?? "Office Phone"} <span className="text-destructive">*</span>
           </FieldLabel>
           <Input
             id="office_phone"
@@ -418,7 +427,7 @@ export function Step2Contact({ profile, onSave, onSuccess, onBack }: Step2Props)
 
         <Field>
           <FieldLabel htmlFor="office_email">
-            Office Email <span className="text-destructive">*</span>
+            {t.step2_email ?? "Office Email"} <span className="text-destructive">*</span>
           </FieldLabel>
           <Input
             id="office_email"
@@ -435,13 +444,13 @@ export function Step2Contact({ profile, onSave, onSuccess, onBack }: Step2Props)
       </div>
 
       <Field>
-        <FieldLabel htmlFor="website">Website</FieldLabel>
+        <FieldLabel htmlFor="website">{t.step2_website ?? "Website"}</FieldLabel>
         <Input
           id="website"
           placeholder="https://yourfpo.com (optional)"
           maxLength={60}
           {...register("website")}
-          onBlur={(e) => {
+          onBlur={() => {
             handleBlurValidation("website");
           }}
         />
@@ -458,14 +467,16 @@ export function Step2Contact({ profile, onSave, onSuccess, onBack }: Step2Props)
         render={({ field }) => (
           <Field>
             <FieldLabel>
-              FPO Location on Map <span className="text-destructive">*</span>
+              {t.step2_map ?? "FPO Location on Map"} <span className="text-destructive">*</span>
             </FieldLabel>
-            <MapPinPicker
-              value={field.value as LatLng | null}
-              onChange={field.onChange}
-              onGpsLocation={handleGpsLocation}
-              flyTo={mapFlyTarget}
-            />
+            <Suspense fallback={<MapLoadingShell text={t.step2_map_loading ?? "Loading map…"} />}>
+              <MapPinPicker
+                value={field.value as LatLng | null}
+                onChange={field.onChange}
+                onGpsLocation={handleGpsLocation}
+                flyTo={mapFlyTarget}
+              />
+            </Suspense>
             {errors.location && <FieldError errors={[errors.location]} />}
           </Field>
         )}
@@ -473,7 +484,7 @@ export function Step2Contact({ profile, onSave, onSuccess, onBack }: Step2Props)
 
       <div className="flex items-center justify-between pt-2">
         <Button type="button" variant="outline" onClick={onBack}>
-          ← Back
+          {t.btn_back ?? "← Back"}
         </Button>
         <div className="flex gap-2">
           <Button
@@ -482,28 +493,28 @@ export function Step2Contact({ profile, onSave, onSuccess, onBack }: Step2Props)
             disabled={submitMutation.isPending || hasDuplicate}
             onClick={handleSubmit((v) => {
               if (!v.location) {
-                setError("location", { type: "manual", message: "Please pin your FPO location on the map" });
+                setError("location", { type: "manual", message: t.step2_map_required ?? "Please pin your FPO location on the map" });
                 return;
               }
               setSaveMode("save");
               submitMutation.mutate(v, { onSuccess: () => onSave?.() });
             }, handleInvalidSubmit)}
           >
-            {submitMutation.isPending && saveMode === "save" ? "Saving…" : "Save"}
+            {submitMutation.isPending && saveMode === "save" ? (t.btn_saving ?? "Saving…") : (t.btn_save ?? "Save")}
           </Button>
           <Button
             type="button"
             disabled={submitMutation.isPending || hasDuplicate}
             onClick={handleSubmit((v) => {
               if (!v.location) {
-                setError("location", { type: "manual", message: "Please pin your FPO location on the map" });
+                setError("location", { type: "manual", message: t.step2_map_required ?? "Please pin your FPO location on the map" });
                 return;
               }
               setSaveMode("next");
               submitMutation.mutate(v, { onSuccess: () => onSuccess() });
             }, handleInvalidSubmit)}
           >
-            {submitMutation.isPending && saveMode === "next" ? "Saving…" : "Next →"}
+            {submitMutation.isPending && saveMode === "next" ? (t.btn_saving ?? "Saving…") : (t.btn_next ?? "Next →")}
           </Button>
         </div>
       </div>

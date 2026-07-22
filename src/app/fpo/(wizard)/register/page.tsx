@@ -11,6 +11,8 @@ import { fpoClaimApi } from "@/app/fpo/_api/claim";
 import { fpoRegistrationApi } from "@/app/fpo/_api/fpo-registration";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useVoiceGuidance } from "@/hooks/use-voice-guidance";
+import { translationsApi } from "@/lib/api/translations";
+import { useLocaleStore } from "@/stores/locale-store";
 import type { FpoProfile } from "@/types/fpo";
 
 import { StepIndicator } from "./_components/step-indicator";
@@ -41,6 +43,15 @@ function FpoRegisterPageInner() {
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const { voiceEnabled, toggleVoice } = useVoiceGuidance();
+  const locale = useLocaleStore((s) => s.locale);
+  const [t, setT] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!locale) return;
+    translationsApi.getPublic(locale, "wizard").then((data) => {
+      setT(data.wizard ?? {});
+    });
+  }, [locale]);
 
   // Skip GET /api/fpo/me/ only on the true first visit right after account creation.
   // The register flow sets "fpo_first_visit" in sessionStorage; we consume it once here.
@@ -153,7 +164,7 @@ function FpoRegisterPageInner() {
         <button
           type="button"
           onClick={toggleVoice}
-          title={voiceEnabled ? "Mute voice guidance" : "Enable voice guidance"}
+          title={voiceEnabled ? (t.mute_voice ?? "Mute voice guidance") : (t.enable_voice ?? "Enable voice guidance")}
           className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           {voiceEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
@@ -163,6 +174,7 @@ function FpoRegisterPageInner() {
       <div className="rounded-xl border bg-card p-4 sm:p-6 shadow-sm">
         {displayStep === 1 && (
           <Step1BasicInfo
+            t={t}
             profile={profile ?? undefined}
             onSave={(savedProfile) => {
               queryClient.setQueryData(["fpo-me"], savedProfile);
@@ -177,24 +189,24 @@ function FpoRegisterPageInner() {
         )}
 
         {displayStep === 2 && profile && (
-          <Step2Contact profile={profile} onSave={handleSaveOnly} onSuccess={handleStepSuccess} onBack={handleBack} />
+          <Step2Contact t={t} profile={profile} onSave={handleSaveOnly} onSuccess={handleStepSuccess} onBack={handleBack} />
         )}
 
         {displayStep === 3 && profile && (
-          <Step3Signatory profile={profile} onSave={handleSaveOnly} onSuccess={handleStepSuccess} onBack={handleBack} />
+          <Step3Signatory t={t} profile={profile} onSave={handleSaveOnly} onSuccess={handleStepSuccess} onBack={handleBack} />
         )}
 
         {displayStep === 4 && profile && (
-          <Step4Business profile={profile} onSave={handleSaveOnly} onSuccess={handleStepSuccess} onBack={handleBack} />
+          <Step4Business t={t} profile={profile} onSave={handleSaveOnly} onSuccess={handleStepSuccess} onBack={handleBack} />
         )}
 
         {displayStep === 5 && profile && (
-          <Step5Verification profile={profile} onSuccess={handleStepSuccess} onBack={handleBack} />
+          <Step5Verification t={t} profile={profile} onSuccess={handleStepSuccess} onBack={handleBack} />
         )}
 
-        {displayStep === 6 && <Step6Documents onSuccess={handleStepSuccess} onBack={handleBack} />}
+        {displayStep === 6 && <Step6Documents t={t} onSuccess={handleStepSuccess} onBack={handleBack} />}
 
-        {displayStep === 7 && profile && <Step7Submit profile={profile} onBack={handleBack} />}
+        {displayStep === 7 && profile && <Step7Submit t={t} profile={profile} onBack={handleBack} />}
       </div>
     </div>
   );

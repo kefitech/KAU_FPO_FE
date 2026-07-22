@@ -111,9 +111,10 @@ interface Step4Props {
   onSave?: () => void;
   onSuccess: () => void;
   onBack: () => void;
+  t?: Record<string, string>;
 }
 
-export function Step4Business({ profile, onSave, onSuccess, onBack }: Step4Props) {
+export function Step4Business({ profile, onSave, onSuccess, onBack, t = {} }: Step4Props) {
   const [fieldErrors, setFieldErrors] = useState<FieldValidationState>({});
   const { speak } = useVoiceGuidance();
   const [saveMode, setSaveMode] = useState<"save" | "next" | null>(null);
@@ -225,13 +226,13 @@ export function Step4Business({ profile, onSave, onSuccess, onBack }: Step4Props
   return (
     <form onSubmit={(e) => e.preventDefault()} className="flex flex-col gap-5">
       <div>
-        <h2 className="font-semibold text-lg">Business & Bank Details</h2>
-        <p className="mt-0.5 text-muted-foreground text-sm">Commodities, financial overview and banking information</p>
+        <h2 className="font-semibold text-lg">{t.step4_heading ?? "Business & Bank Details"}</h2>
+        <p className="mt-0.5 text-muted-foreground text-sm">{t.step4_subheading ?? "Commodities, financial overview and banking information"}</p>
       </div>
 
       {/* Commodities */}
       <div className="flex flex-col gap-4 rounded-lg border p-4">
-        <p className="font-medium text-muted-foreground text-sm">Commodities</p>
+        <p className="font-medium text-muted-foreground text-sm">{t.step4_commodities_section ?? "Commodities"}</p>
 
         <Controller
           control={control}
@@ -239,7 +240,7 @@ export function Step4Business({ profile, onSave, onSuccess, onBack }: Step4Props
           render={({ field }) => (
             <Field>
               <FieldLabel>
-                Primary Commodities <span className="text-destructive">*</span>
+                {t.step4_primary_commodities ?? "Primary Commodities"} <span className="text-destructive">*</span>
               </FieldLabel>
               <CommodityInput
                 value={field.value}
@@ -261,7 +262,7 @@ export function Step4Business({ profile, onSave, onSuccess, onBack }: Step4Props
           name="secondary_commodities"
           render={({ field }) => (
             <Field>
-              <FieldLabel>Secondary Commodities</FieldLabel>
+              <FieldLabel>{t.step4_secondary_commodities ?? "Secondary Commodities"}</FieldLabel>
               <CommodityInput
                 value={field.value}
                 onChange={field.onChange}
@@ -275,7 +276,7 @@ export function Step4Business({ profile, onSave, onSuccess, onBack }: Step4Props
 
       {/* Financial */}
       <Field>
-        <FieldLabel htmlFor="annual_turnover">Annual Turnover (Lakhs ₹)</FieldLabel>
+        <FieldLabel htmlFor="annual_turnover">{t.step4_turnover ?? "Annual Turnover (Lakhs ₹)"}</FieldLabel>
         <Input
           id="annual_turnover"
           type="number"
@@ -304,7 +305,7 @@ export function Step4Business({ profile, onSave, onSuccess, onBack }: Step4Props
       </Field>
 
       <Field>
-        <FieldLabel htmlFor="description">About the FPO</FieldLabel>
+        <FieldLabel htmlFor="description">{t.step4_about ?? "About the FPO"}</FieldLabel>
         <Textarea
           id="description"
           placeholder="Brief description of your FPO's activities and goals (optional)"
@@ -315,12 +316,12 @@ export function Step4Business({ profile, onSave, onSuccess, onBack }: Step4Props
 
       {/* Bank Details */}
       <div className="flex flex-col gap-4 rounded-lg border p-4">
-        <p className="font-medium text-muted-foreground text-sm">Bank Details</p>
+        <p className="font-medium text-muted-foreground text-sm">{t.step4_bank_section ?? "Bank Details"}</p>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field>
             <FieldLabel htmlFor="bank_name">
-              Bank Name <span className="text-destructive">*</span>
+              {t.step4_bank_name ?? "Bank Name"} <span className="text-destructive">*</span>
             </FieldLabel>
             {bankNamesLoaded ? (
               <Controller
@@ -343,7 +344,7 @@ export function Step4Business({ profile, onSave, onSuccess, onBack }: Step4Props
 
           <Field>
             <FieldLabel htmlFor="bank_branch">
-              Branch <span className="text-destructive">*</span>
+              {t.step4_branch ?? "Branch"} <span className="text-destructive">*</span>
             </FieldLabel>
             <Input id="bank_branch" placeholder="e.g. Irinjalakuda" maxLength={60} {...register("bank_branch")} />
             {errors.bank_branch && <FieldError errors={[errors.bank_branch]} />}
@@ -353,7 +354,7 @@ export function Step4Business({ profile, onSave, onSuccess, onBack }: Step4Props
         <div className="grid gap-4 sm:grid-cols-2">
           <Field>
             <FieldLabel htmlFor="account_number">
-              Account Number <span className="text-destructive">*</span>
+              {t.step4_account_number ?? "Account Number"} <span className="text-destructive">*</span>
             </FieldLabel>
             <Input
               id="account_number"
@@ -369,7 +370,7 @@ export function Step4Business({ profile, onSave, onSuccess, onBack }: Step4Props
 
           <Field>
             <FieldLabel htmlFor="ifsc_code">
-              IFSC Code <span className="text-destructive">*</span>
+              {t.step4_ifsc ?? "IFSC Code"} <span className="text-destructive">*</span>
             </FieldLabel>
             <Input
               id="ifsc_code"
@@ -388,7 +389,7 @@ export function Step4Business({ profile, onSave, onSuccess, onBack }: Step4Props
 
       <div className="flex items-center justify-between pt-2">
         <Button type="button" variant="outline" onClick={onBack}>
-          ← Back
+          {t.btn_back ?? "← Back"}
         </Button>
         <div className="flex gap-2">
           <Button
@@ -400,7 +401,7 @@ export function Step4Business({ profile, onSave, onSuccess, onBack }: Step4Props
               submitMutation.mutate(v, { onSuccess: () => onSave?.() });
             }, handleInvalidSubmit)}
           >
-            {submitMutation.isPending && saveMode === "save" ? "Saving…" : "Save"}
+            {submitMutation.isPending && saveMode === "save" ? (t.btn_saving ?? "Saving…") : (t.btn_save ?? "Save")}
           </Button>
           <Button
             type="button"
@@ -410,7 +411,7 @@ export function Step4Business({ profile, onSave, onSuccess, onBack }: Step4Props
               submitMutation.mutate(v, { onSuccess: () => onSuccess() });
             }, handleInvalidSubmit)}
           >
-            {submitMutation.isPending && saveMode === "next" ? "Saving…" : "Next →"}
+            {submitMutation.isPending && saveMode === "next" ? (t.btn_saving ?? "Saving…") : (t.btn_next ?? "Next →")}
           </Button>
         </div>
       </div>

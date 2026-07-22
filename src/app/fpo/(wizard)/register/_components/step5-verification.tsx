@@ -16,9 +16,10 @@ interface OtpSectionProps {
   contact: string;
   verified: boolean;
   onVerified: () => void;
+  t: Record<string, string>;
 }
 
-function OtpSection({ type, contact, verified, onVerified }: OtpSectionProps) {
+function OtpSection({ type, contact, verified, onVerified, t }: OtpSectionProps) {
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState("");
 
@@ -49,14 +50,16 @@ function OtpSection({ type, contact, verified, onVerified }: OtpSectionProps) {
   });
 
   const Icon = type === "email" ? Mail : Phone;
-  const label = type === "email" ? "Office Email" : "Office Phone";
+  const label = type === "email" ? (t.step5_email_label ?? "Office Email") : (t.step5_phone_label ?? "Office Phone");
 
   if (verified) {
     return (
       <div className="flex items-center gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3 dark:border-green-800 dark:bg-green-950/30">
         <CheckCircle2 className="h-5 w-5 shrink-0 text-green-600 dark:text-green-400" />
         <div>
-          <p className="font-medium text-green-700 text-sm dark:text-green-300">{label} Verified</p>
+          <p className="font-medium text-green-700 text-sm dark:text-green-300">
+            {label} {t.step5_verified ?? "Verified"}
+          </p>
           <p className="text-green-600 text-xs dark:text-green-400">{contact}</p>
         </div>
       </div>
@@ -80,12 +83,16 @@ function OtpSection({ type, contact, verified, onVerified }: OtpSectionProps) {
           onClick={() => sendMutation.mutate()}
           disabled={sendMutation.isPending}
         >
-          {sendMutation.isPending ? "Sending…" : `Send OTP to ${type === "email" ? "email" : "phone"}`}
+          {sendMutation.isPending
+            ? (t.step5_btn_sending ?? "Sending…")
+            : type === "email"
+              ? (t.step5_btn_send_email ?? "Send OTP to email")
+              : (t.step5_btn_send_phone ?? "Send OTP to phone")}
         </Button>
       ) : (
         <div className="flex flex-col gap-2">
           <label htmlFor={`otp-${type}`} className="text-muted-foreground text-xs">
-            Enter 6-digit OTP
+            {t.step5_otp_label ?? "Enter 6-digit OTP"}
           </label>
           <div className="flex items-center gap-2">
             <Input
@@ -102,7 +109,7 @@ function OtpSection({ type, contact, verified, onVerified }: OtpSectionProps) {
               onClick={() => confirmMutation.mutate()}
               disabled={otp.length !== 6 || confirmMutation.isPending}
             >
-              {confirmMutation.isPending ? "Verifying…" : "Verify"}
+              {confirmMutation.isPending ? (t.step5_btn_verifying ?? "Verifying…") : (t.step5_btn_verify ?? "Verify")}
             </Button>
             <Button
               type="button"
@@ -111,7 +118,7 @@ function OtpSection({ type, contact, verified, onVerified }: OtpSectionProps) {
               onClick={() => sendMutation.mutate()}
               disabled={sendMutation.isPending}
             >
-              Resend
+              {t.step5_btn_resend ?? "Resend"}
             </Button>
           </div>
         </div>
@@ -124,9 +131,10 @@ interface Step5Props {
   profile: FpoProfile;
   onSuccess: () => void;
   onBack: () => void;
+  t: Record<string, string>;
 }
 
-export function Step5Verification({ profile, onSuccess, onBack }: Step5Props) {
+export function Step5Verification({ profile, onSuccess, onBack, t }: Step5Props) {
   const [emailVerified, setEmailVerified] = useState(profile.email_verified);
   const [phoneVerified, setPhoneVerified] = useState(profile.phone_verified);
 
@@ -135,9 +143,9 @@ export function Step5Verification({ profile, onSuccess, onBack }: Step5Props) {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h2 className="font-semibold text-lg">Verify Contact Details</h2>
+        <h2 className="font-semibold text-lg">{t.step5_heading ?? "Verify Contact Details"}</h2>
         <p className="mt-0.5 text-muted-foreground text-sm">
-          Verify your office email and phone to continue. OTPs are valid for 10 minutes.
+          {t.step5_subheading ?? "Verify your office email and phone to continue. OTPs are valid for 10 minutes."}
         </p>
       </div>
 
@@ -146,6 +154,7 @@ export function Step5Verification({ profile, onSuccess, onBack }: Step5Props) {
         contact={profile.office_email}
         verified={emailVerified}
         onVerified={() => setEmailVerified(true)}
+        t={t}
       />
 
       <OtpSection
@@ -153,14 +162,15 @@ export function Step5Verification({ profile, onSuccess, onBack }: Step5Props) {
         contact={profile.office_phone}
         verified={phoneVerified}
         onVerified={() => setPhoneVerified(true)}
+        t={t}
       />
 
       <div className="flex items-center justify-between pt-2">
         <Button type="button" variant="outline" onClick={onBack}>
-          ← Back
+          {t.btn_back ?? "← Back"}
         </Button>
         <Button type="button" onClick={onSuccess} disabled={!bothVerified}>
-          Continue →
+          {t.step5_btn_continue ?? "Continue →"}
         </Button>
       </div>
     </div>
