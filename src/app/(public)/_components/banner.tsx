@@ -1,16 +1,28 @@
 "use client";
+import { useEffect, useState } from "react";
 
+import { Autoplay, EffectFade, Navigation, Pagination } from "swiper/modules";
 import { Swiper, SwiperSlide } from "swiper/react";
-import {
-  Pagination,
-  Navigation,
-  Autoplay,
-  EffectFade,
-} from "swiper/modules";
 
-import { bannerData } from "../_data/banner";
+import { translationsApi } from "@/lib/api/translations";
+import { useLocaleStore } from "@/stores/locale-store";
+
+const SLIDES = [
+  { id: 1, bgThumb: "17.jpg", subtitleKey: "slide1_subtitle", titleKey: "slide1_title", descKey: "slide1_desc", btnKey: "slide1_btn" },
+  { id: 2, bgThumb: "2.jpg",  subtitleKey: "slide2_subtitle", titleKey: "slide2_title", descKey: "slide2_desc", btnKey: "slide2_btn" },
+];
 
 const Banner = () => {
+  const locale = useLocaleStore((s) => s.locale);
+  const [t, setT] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!locale) return;
+    translationsApi.getPublic(locale, "banner").then((data) => {
+      setT(data.banner ?? {});
+    });
+  }, [locale]);
+
   return (
     <div className="banner-area text-light banner-style-one zoom-effect overflow-hidden">
       <Swiper
@@ -35,63 +47,49 @@ const Banner = () => {
         }}
         modules={[Navigation, Pagination, Autoplay, EffectFade]}
       >
-        {bannerData.map((banner, index) => (
-          <SwiperSlide key={banner.id} className="banner-style-one">
-            <div
-              className="banner-thumb bg-cover shadow dark"
-              style={{
-                background: `url(/assets/img/banner/${banner.bgThumb})`,
-              }}
-            />
+        {SLIDES.map((slide) => {
+          const subtitle = t[slide.subtitleKey] ?? "";
+          const title    = t[slide.titleKey]    ?? "";
+          const desc     = t[slide.descKey]     ?? "";
+          const btnText  = t[slide.btnKey]      ?? "";
+          const words    = title.split(" ");
+          const titleBold = words.slice(0, 2).join(" ");
+          const titleRest = words.slice(2).join(" ");
 
-            <div className="container">
-              <div className="row align-center">
-                <div className="col-xl-7">
-                  <div className="content">
-                    <h4>{banner.subtitle}</h4>
-
-                    <h2>
-                      <strong>
-                        {banner.title?.split(" ").slice(0, 2).join(" ")}
-                      </strong>{" "}
-                      {banner.title?.split(" ").slice(2).join(" ")}
-                    </h2>
-
-                    <p>{banner.description}</p>
-
-                    <div
-                      className="button"
-                      style={{
-                        display: "flex",
-                        gap: "15px",
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      <a
-                        className="btn btn-theme secondary btn-md radius animation"
-                        href={index === 0 ? "/about-us" : "/register"} // Change if your register route is different
-                      >
-                        {index === 0 ? "About Us" : "Get Started"}
-                      </a>     
-                      <a
-                        className="btn btn-md radius animation"
-                        href="/v1/login"
-                        style={{
-                          background: "transparent",
-                          border: "2px solid #fff",
-                          color: "#fff",
-                        }}
-                      >
-                        Login
-                      </a>
+          return (
+            <SwiperSlide key={slide.id} className="banner-style-one">
+              <div
+                className="banner-thumb bg-cover shadow dark"
+                style={{ background: `url(/assets/img/banner/${slide.bgThumb})` }}
+              />
+              <div className="container">
+                <div className="row align-center">
+                  <div className="col-xl-7">
+                    <div className="content">
+                      <h4>{subtitle}</h4>
+                      <h2>
+                        <strong>{titleBold}</strong> {titleRest}
+                      </h2>
+                      <p>{desc}</p>
+                      <div className="button" style={{ display: "flex", gap: "15px", flexWrap: "wrap" }}>
+                        <a className="btn btn-theme secondary btn-md radius animation" href="/about-us">
+                          {btnText}
+                        </a>
+                        <a
+                          className="btn btn-md radius animation"
+                          href="/v1/login"
+                          style={{ background: "transparent", border: "2px solid #fff", color: "#fff" }}
+                        >
+                          {t.login_btn ?? "Login"}
+                        </a>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </SwiperSlide>
-        ))}
-
+            </SwiperSlide>
+          );
+        })}
         <div className="swiper-button-prev" />
         <div className="swiper-button-next" />
         <div className="swiper-pagination" />

@@ -5,7 +5,11 @@ import { publicFetch } from "../_lib/public-fetch";
 
 const EMPTY = { name: "", email: "", phone: "", subject: "", message: "" };
 
-const Contact = () => {
+interface ContactProps {
+  t: Record<string, string>;
+}
+
+const Contact = ({ t }: ContactProps) => {
   const [formData, setFormData] = useState(EMPTY);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -31,17 +35,17 @@ const Contact = () => {
 
   const validate = (): Record<string, string> => {
     const errs: Record<string, string> = {};
-    if (!formData.name.trim()) errs.name = "Name is required.";
+    if (!formData.name.trim()) errs.name = t.error_name ?? "Name is required.";
     if (!formData.email.trim()) {
-      errs.email = "Email is required.";
+      errs.email = t.error_email_req ?? "Email is required.";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
-      errs.email = "Enter a valid email address.";
+      errs.email = t.error_email_inv ?? "Enter a valid email address.";
     }
     if (formData.phone && formData.phone.length !== 10) {
-      errs.phone = "Phone number must be exactly 10 digits.";
+      errs.phone = t.error_phone ?? "Phone number must be exactly 10 digits.";
     }
-    if (!formData.subject.trim()) errs.subject = "Subject is required.";
-    if (!formData.message.trim()) errs.message = "Message is required.";
+    if (!formData.subject.trim()) errs.subject = t.error_subject ?? "Subject is required.";
+    if (!formData.message.trim()) errs.message = t.error_message ?? "Message is required.";
     return errs;
   };
 
@@ -79,20 +83,18 @@ const Contact = () => {
         if (errors) {
           const flattened = Object.fromEntries(Object.entries(errors).map(([field, messages]) => [field, messages[0]]));
           setFieldErrors(flattened);
-
           const firstField = Object.keys(flattened)[0];
           fieldRefs[firstField]?.current?.focus();
-
           return;
         }
 
-        throw new Error(data?.message ?? "Something went wrong. Please try again.");
+        throw new Error(data?.message ?? (t.error_generic ?? "Something went wrong. Please try again."));
       }
 
       setSuccess(true);
       setFormData(EMPTY);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+      setError(err instanceof Error ? err.message : (t.error_generic ?? "Something went wrong. Please try again."));
     } finally {
       setSubmitting(false);
     }
@@ -104,8 +106,8 @@ const Contact = () => {
         <div className="row align-center">
           <div className="col-tact-stye-one col-lg-7">
             <div className="contact-form-style-one mb-md-50">
-              <h5 className="sub-title">Have Questions?</h5>
-              <h2 className="heading">Send us a Message</h2>
+              <h5 className="sub-title">{t.have_questions ?? "Have Questions?"}</h5>
+              <h2 className="heading">{t.send_message ?? "Send us a Message"}</h2>
 
               {success ? (
                 <div
@@ -122,10 +124,10 @@ const Contact = () => {
                     style={{ fontSize: 40, color: "#2d9c5a", marginBottom: 14, display: "block" }}
                   />
                   <h4 style={{ color: "#1a6636", fontFamily: "var(--font-default)", marginBottom: 8 }}>
-                    Message Sent!
+                    {t.message_sent ?? "Message Sent!"}
                   </h4>
                   <p style={{ color: "#3a7d52", fontFamily: "var(--font-default)", fontSize: 14, margin: 0 }}>
-                    Thank you for reaching out. We'll get back to you shortly.
+                    {t.message_thanks ?? "Thank you for reaching out. We'll get back to you shortly."}
                   </p>
                   <button
                     type="button"
@@ -141,7 +143,7 @@ const Contact = () => {
                       cursor: "pointer",
                     }}
                   >
-                    Send another message
+                    {t.send_another ?? "Send another message"}
                   </button>
                 </div>
               ) : (
@@ -152,7 +154,7 @@ const Contact = () => {
                         <input
                           ref={nameRef}
                           className="form-control"
-                          placeholder="Name *"
+                          placeholder={t.name_placeholder ?? "Name *"}
                           type="text"
                           value={formData.name}
                           onChange={set("name")}
@@ -170,7 +172,7 @@ const Contact = () => {
                         <input
                           ref={emailRef}
                           className="form-control"
-                          placeholder="Email *"
+                          placeholder={t.email_placeholder ?? "Email *"}
                           type="text"
                           value={formData.email}
                           onChange={set("email")}
@@ -186,7 +188,7 @@ const Contact = () => {
                         <input
                           ref={phoneRef}
                           className="form-control"
-                          placeholder="Phone (optional)"
+                          placeholder={t.phone_placeholder ?? "Phone (optional)"}
                           type="text"
                           inputMode="numeric"
                           maxLength={10}
@@ -208,7 +210,7 @@ const Contact = () => {
                         <input
                           ref={subjectRef}
                           className="form-control"
-                          placeholder="Subject *"
+                          placeholder={t.subject_placeholder ?? "Subject *"}
                           type="text"
                           value={formData.subject}
                           onChange={set("subject")}
@@ -226,7 +228,7 @@ const Contact = () => {
                         <textarea
                           ref={messageRef}
                           className="form-control"
-                          placeholder="Your Message *"
+                          placeholder={t.message_placeholder ?? "Your Message *"}
                           value={formData.message}
                           onChange={set("message")}
                           required
@@ -250,11 +252,11 @@ const Contact = () => {
                       <button type="submit" disabled={submitting}>
                         {submitting ? (
                           <>
-                            <i className="fas fa-spinner fa-spin" /> Sending…
+                            <i className="fas fa-spinner fa-spin" /> {t.sending ?? "Sending…"}
                           </>
                         ) : (
                           <>
-                            <i className="fa fa-paper-plane" /> Get in Touch
+                            <i className="fa fa-paper-plane" /> {t.get_in_touch ?? "Get in Touch"}
                           </>
                         )}
                       </button>
@@ -267,10 +269,10 @@ const Contact = () => {
           <div className="col-tact-stye-one col-lg-5 pl-60 pl-md-15 pl-xs-15">
             <div className="contact-style-one-info">
               <h2>
-                Contact <span>Information</span>
+                {t.contact_information ?? "Contact Information"}
               </h2>
               <p>
-                Strengthening Farmer Producer Organizations through knowledge, technology, and institutional support.
+                {t.contact_desc ?? "Strengthening Farmer Producer Organizations through knowledge, technology, and institutional support."}
               </p>
               <ul>
                 <li data-aos="fade-up" data-aos-delay="100">
@@ -278,7 +280,7 @@ const Contact = () => {
                     <i className="fas fa-phone-alt" />
                   </div>
                   <div className="content">
-                    <h5 className="title">Hotline</h5>
+                    <h5 className="title">{t.hotline ?? "Hotline"}</h5>
                     <a href="tel:+914872370509">+91 487 237 0509</a>
                   </div>
                 </li>
@@ -287,7 +289,7 @@ const Contact = () => {
                     <i className="fas fa-map-marker-alt" />
                   </div>
                   <div className="info">
-                    <h5 className="title">Our Location</h5>
+                    <h5 className="title">{t.our_location ?? "Our Location"}</h5>
                     <p>
                       Kerala Agricultural University, KAU P.O.,
                       <br />
@@ -300,7 +302,7 @@ const Contact = () => {
                     <i className="fas fa-envelope-open-text" />
                   </div>
                   <div className="info">
-                    <h5 className="title">Official Email</h5>
+                    <h5 className="title">{t.official_email ?? "Official Email"}</h5>
                     <a href="mailto:registrar@kau.in">registrar@kau.in</a>
                   </div>
                 </li>

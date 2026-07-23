@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 
 import { siteContentApi } from "@/lib/api/site-content";
+import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 
 interface Lang {
@@ -62,13 +63,23 @@ export function LangToggle({ variant }: { variant?: "dark" }) {
 }
 
 const HeaderTop = () => {
+  const locale = useLocaleStore((s) => s.locale);
+  const [t, setT] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!locale) return;
+    translationsApi.getPublic(locale, "nav").then((data) => {
+      setT(data.nav ?? {});
+    });
+  }, [locale]);
+
   return (
     <div className="top-bar-area text-light">
       <div className="container">
         <div className="row align-center">
           <div className="col-lg-9">
             <div className="flex-item left">
-              <p>Smart &amp; Empowered Farmers</p>
+              <p>{t.tagline ?? "Smart & Empowered Farmers"}</p>
               <ul>
                 <li>
                   <i className="fas fa-map-marker-alt" /> <a href="https://maps.app.goo.gl/4FXjLWkpN5jvM8N17">Kerala Agricultural University, Mannuthy P.O, Pin- 680651.</a> 

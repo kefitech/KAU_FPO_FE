@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Autoplay, Navigation } from "swiper/modules";
 import { Swiper, SwiperSlide } from "swiper/react";
 
+import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 
 import { publicFetch } from "../_lib/public-fetch";
@@ -66,9 +67,17 @@ function PartnerBox({ link }: { link: QuickLink }) {
 }
 
 const Footer = () => {
-  const [email, setEmail] = useState("");
   const [quickLinks, setQuickLinks] = useState<QuickLink[]>([]);
   const locale = useLocaleStore((s) => s.locale);
+  const [t, setT] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!locale) return;
+    translationsApi.getPublic(locale, "nav").then((data) => {
+      setT(data.nav ?? {});
+    });
+  }, [locale]);
+
   // biome-ignore lint/correctness/useExhaustiveDependencies: locale intentionally kept to allow future locale-based refetch
   useEffect(() => {
     publicFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/public/quick-links/`)
@@ -78,12 +87,6 @@ const Footer = () => {
         // intentionally ignored
       });
   }, [locale]);
-
-  const handleNewsletter = (e: { preventDefault(): void }) => {
-    e.preventDefault();
-    setEmail("");
-    alert("Thanks For Subscribing!");
-  };
 
   return (
     <footer className="bg-dark text-light" style={{ backgroundImage: "url(/assets/img/shape/brush-down.png)" }}>
@@ -101,7 +104,7 @@ const Footer = () => {
                 fontFamily: "var(--font-default)",
               }}
             >
-              Our Partners
+              {t.our_partners ?? "Our Partners"}
             </p>
             <div style={{ position: "relative", padding: quickLinks.length > 4 ? "0 48px" : "0" }}>
               {quickLinks.length > 4 ? (
@@ -191,20 +194,19 @@ const Footer = () => {
 
             <div className="col-lg-2 col-md-6 item">
               <div className="footer-item link">
-                <h4 className="widget-title">Explore</h4>
+                <h4 className="widget-title">{t.explore ?? "Explore"}</h4>
                 <ul>
                   <li>
-                    <Link href="/about-us">About Us</Link>
+                    <Link href="/about-us">{t.about_us ?? "About Us"}</Link>
                   </li>
                   <li>
-                    <Link href="/team">Meet Our Team</Link>
+                    <Link href="/team">{t.meet_our_team ?? "Meet Our Team"}</Link>
                   </li>
                   <li>
-                    <Link href="/news-events">News &amp; Media</Link>
+                    <Link href="/news-events">{t.news_media ?? "News & Media"}</Link>
                   </li>
-                  {/* <li><Link href="/services">Services</Link></li> */}
                   <li>
-                    <Link href="/contact-us">Contact Us</Link>
+                    <Link href="/contact-us">{t.contact_us ?? "Contact Us"}</Link>
                   </li>
                 </ul>
               </div>
@@ -242,14 +244,14 @@ const Footer = () => {
 
             <div className="col-lg-3 col-md-6 item">
               <div className="footer-item contact">
-                <h4 className="widget-title">Contact Info</h4>
+                <h4 className="widget-title">{t.contact_info ?? "Contact Info"}</h4>
                 <ul>
                   <li>
                     <div className="icon">
                       <i className="fas fa-home" />
                     </div>
                     <div className="content">
-                      <strong>Address:</strong><a href="https://maps.app.goo.gl/4FXjLWkpN5jvM8N17">Kerala Agricultural University, Mannuthy P.O, Pin- 680651.</a> 
+                      <strong>{t.address ?? "Address"}:</strong><a href="https://maps.app.goo.gl/4FXjLWkpN5jvM8N17">Kerala Agricultural University, Mannuthy P.O, Pin- 680651.</a>
                     </div>
                   </li>
                   <li>
@@ -289,7 +291,7 @@ const Footer = () => {
                 {/* <li><Link href="/about-us">Terms</Link></li>
                 <li><Link href="/about-us">Privacy</Link></li> */}
                 <li>
-                  <Link href="/contact-us">Support</Link>
+                  <Link href="/contact-us">{t.support ?? "Support"}</Link>
                 </li>
               </ul>
             </div>
