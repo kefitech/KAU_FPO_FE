@@ -10,7 +10,12 @@ interface Props {
 const MainMenu = ({ openIndex, toggleSubMenu, navbarPlacement }: Props) => {
   return (
     <ul className={`nav navbar-nav ${navbarPlacement} navbar-right`} data-in="fadeInDown" data-out="fadeOutUp">
+      <li>
+        <a href="#">HOME</a>
+      </li>
       <li className={`dropdown ${openIndex === 0 ? "on" : ""}`}>
+        
+      
         <Link href="#" className="dropdown-toggle" data-toggle="dropdown" onClick={toggleSubMenu?.(0)}>Get Started</Link>
         <ul className="dropdown-menu">
           <li><a href="/v1/login">Sign In</a></li>

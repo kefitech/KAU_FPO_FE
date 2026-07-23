@@ -188,14 +188,15 @@ export function LanguageForm({ mode, language, t = {}, tCommon = {} }: LanguageF
                       <FieldLabel htmlFor="lang-locale">
                         {t.locale_label ?? "Locale"} <span className="text-destructive">*</span>
                         <TooltipProvider delayDuration={200}>
-                          <Tooltip open={localeInfoOpen} onOpenChange={setLocaleInfoOpen}>
+                          <Tooltip open={localeInfoOpen} >
                             <TooltipTrigger
                               type="button"
                               tabIndex={-1}
                               className="leading-none"
                               onClick={(e) => {
                                 e.preventDefault();
-                                setLocaleInfoOpen((prev: boolean) => !prev);
+                                e.stopPropagation();
+                                setLocaleInfoOpen((prev) => !prev);
                               }}
                             >
                               <Info className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground transition-colors" />

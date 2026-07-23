@@ -416,6 +416,7 @@ function RequestInfoDialog({
               {t.req_info_notes_label ?? "Notes for FPO"} <span className="text-destructive">*</span>
             </FieldLabel>
             <Textarea
+              className="max-h-62 overflow-y-auto"
               id="notes"
               placeholder={t.req_info_notes_hint ?? "Describe what is needed"}
               rows={4}
@@ -472,7 +473,7 @@ function InfoResponseDialog({
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5 rounded-lg border border-orange-200 bg-orange-50 p-4 dark:border-orange-800 dark:bg-orange-950/20">
             <p className="font-semibold text-orange-800 text-xs dark:text-orange-300">Admin Request</p>
-            <p className="text-sm">{infoEntry?.notes || "—"}</p>
+            <p className="text-sm  max-h-32 overflow-y-auto">{infoEntry?.notes || "—"}</p>
             <p className="text-muted-foreground text-xs">
               {infoEntry?.changed_by_name ?? "Admin"} ·{" "}
               {infoEntry
@@ -489,7 +490,7 @@ function InfoResponseDialog({
           {infoReply && (
             <div className="flex flex-col gap-1.5 rounded-lg border bg-muted/40 p-4">
               <p className="font-semibold text-xs">FPO Response</p>
-              <p className="text-sm">{infoReply.notes || "—"}</p>
+              <p className="text-sm  max-h-32 overflow-y-auto">{infoReply.notes || "—"}</p>
               <p className="text-muted-foreground text-xs">
                 {infoReply.changed_by_name ?? "FPO"} ·{" "}
                 {new Date(infoReply.created_at).toLocaleString("en-IN", {

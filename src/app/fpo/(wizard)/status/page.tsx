@@ -180,7 +180,7 @@ export default function FpoStatusPage() {
                 <p className="font-semibold text-sm">Action Required</p>
               </div>
               {adminNote?.notes && (
-                <p className="text-sm text-orange-900 dark:text-orange-200 whitespace-pre-line">
+                <p className="text-sm text-orange-900 dark:text-orange-200 whitespace-pre-line max-h-62 overflow-y-auto">
                   {adminNote.notes}
                 </p>
               )}
@@ -200,7 +200,7 @@ export default function FpoStatusPage() {
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Describe the additional information or clarification you are providing…"
                   rows={4}
-                  className="resize-none"
+                  className="max-h-62 overflow-y-auto"
                 />
                 {notes.length > 0 && notes.length < 10 && (
                   <p className="text-destructive text-xs">Minimum 10 characters required</p>

@@ -30,12 +30,21 @@ const STATUS_BADGE: Record<AdminOwnershipClaim["status"], { label: string; class
 
 type ActionMode = "decide" | "request_docs";
 
-function InfoRow({ label, value }: { label: string; value: string | null | undefined }) {
+function InfoRow({
+  label,
+  value,
+  valueClassName,
+}: {
+  label: string;
+  value: string | null | undefined;
+  valueClassName?: string;
+}) {
   if (!value) return null;
+
   return (
     <div className="flex flex-col gap-0.5">
       <span className="text-muted-foreground text-xs">{label}</span>
-      <span className="text-sm">{value}</span>
+      <span className={`text-sm ${valueClassName ?? ""}`}>{value}</span>
     </div>
   );
 }
@@ -190,7 +199,7 @@ export function ClaimReviewDialog({ claim, onOpenChange }: ClaimReviewDialogProp
             <p className="mb-3 font-medium text-xs text-muted-foreground uppercase tracking-wide">Claimant</p>
             <div className="grid grid-cols-2 gap-3">
               <InfoRow label="Name" value={claim.claimant_name} />
-              <InfoRow label="Email" value={claim.claimant_email} />
+              <InfoRow label="Email" value={claim.claimant_email} valueClassName="break-all"/>
               <InfoRow label="Phone" value={claim.claimant_phone} />
             </div>
           </div>
