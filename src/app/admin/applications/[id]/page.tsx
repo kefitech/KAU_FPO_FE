@@ -1458,7 +1458,7 @@ function ApplicationDetailContent() {
                   label={t.field_registered_under ?? "Registered Under"}
                   value={formatDocType(app.legal_structure ?? app.registered_under)}
                 />
-                {app.legal_structure === "state_specific_csa" && (
+                {app.legal_structure_detail && (
                   <InfoRow
                     label={t.field_state_csa_act ?? "State CSA Act"}
                     value={formatDocType(app.legal_structure_detail)}

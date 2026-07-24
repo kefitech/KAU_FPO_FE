@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
@@ -38,9 +38,12 @@ function EligibilityStep({ onPass, t }: { onPass: (token: string) => void; t: T 
   const [errors, setErrors] = useState<string[]>([]);
   const [districtQuery, setDistrictQuery] = useState("");
   const skipNextInputChange = useRef(false);
-
-  const filteredDistricts = DISTRICT_OPTIONS.filter((o) =>
-    o.label.toLowerCase().includes(districtQuery.toLowerCase())
+  const translatedDistrictOptions = useMemo(
+    () => DISTRICT_OPTIONS.map((o) => ({ ...o, label: t[`district_${o.value}`] ?? o.label })),
+    [t],
+  );
+  const filteredDistricts = translatedDistrictOptions.filter((o) =>
+    o.label.toLowerCase().includes(districtQuery.toLowerCase()),
   );
 
   const schema = z.object({
@@ -76,7 +79,11 @@ function EligibilityStep({ onPass, t }: { onPass: (token: string) => void; t: T 
       }
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : (t.eligibility_err_failed ?? "Eligibility check failed. Please try again."));
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : (t.eligibility_err_failed ?? "Eligibility check failed. Please try again."),
+      );
     },
   });
 
@@ -123,7 +130,7 @@ function EligibilityStep({ onPass, t }: { onPass: (token: string) => void; t: T 
               value={field.value}
               onValueChange={(v) => {
                 field.onChange(v);
-                const label = DISTRICT_OPTIONS.find((o) => o.value === v)?.label ?? "";
+                const label = translatedDistrictOptions.find((o) => o.value === v)?.label ?? "";
                 skipNextInputChange.current = true;
                 setDistrictQuery(label);
               }}
@@ -183,9 +190,7 @@ function EligibilityStep({ onPass, t }: { onPass: (token: string) => void; t: T 
 
       <div className="flex flex-col gap-3 rounded-lg border p-4">
         <div className="flex items-center justify-between">
-          <p className="font-medium text-muted-foreground text-sm">
-            {t.eligibility_requirements ?? "Requirements"}
-          </p>
+          <p className="font-medium text-muted-foreground text-sm">{t.eligibility_requirements ?? "Requirements"}</p>
           <button
             type="button"
             className="text-green-600 text-xs hover:underline"
@@ -202,7 +207,9 @@ function EligibilityStep({ onPass, t }: { onPass: (token: string) => void; t: T 
           [
             {
               name: "registered_under_act" as const,
-              label: t.eligibility_req1 ?? "Registered under an applicable Act (Companies / Cooperative / Producer Companies / Societies)",
+              label:
+                t.eligibility_req1 ??
+                "Registered under an applicable Act (Companies / Cooperative / Producer Companies / Societies)",
             },
             {
               name: "has_valid_registration" as const,
@@ -266,7 +273,11 @@ function PhoneOtpStep({
     },
     onError: (err: unknown) => {
       const axiosErr = err as { response?: { data?: { message?: string } }; message?: string } | undefined;
-      const msg = axiosErr?.response?.data?.message ?? axiosErr?.message ?? (t.phone_err_send_failed ?? "Failed to send OTP. Please try again.");
+      const msg =
+        axiosErr?.response?.data?.message ??
+        axiosErr?.message ??
+        t.phone_err_send_failed ??
+        "Failed to send OTP. Please try again.";
       setPhoneError(msg);
     },
   });
@@ -278,7 +289,11 @@ function PhoneOtpStep({
     },
     onError: (err: unknown) => {
       const axiosErr = err as { response?: { data?: { message?: string } }; message?: string } | undefined;
-      const msg = axiosErr?.response?.data?.message ?? axiosErr?.message ?? (t.phone_err_invalid_otp ?? "Invalid OTP. Please try again.");
+      const msg =
+        axiosErr?.response?.data?.message ??
+        axiosErr?.message ??
+        t.phone_err_invalid_otp ??
+        "Invalid OTP. Please try again.";
       setOtpError(msg);
     },
   });
@@ -330,8 +345,8 @@ function PhoneOtpStep({
             {sendMutation.isPending
               ? (t.phone_btn_sending ?? "Sending…")
               : otpSent
-              ? (t.phone_btn_resend ?? "Resend")
-              : (t.phone_btn_send ?? "Send OTP")}
+                ? (t.phone_btn_resend ?? "Resend")
+                : (t.phone_btn_send ?? "Send OTP")}
           </Button>
         </div>
         {phoneError && <p className="mt-1 text-destructive text-xs">{phoneError}</p>}
@@ -342,8 +357,7 @@ function PhoneOtpStep({
           <div className="flex items-start gap-2.5 rounded-lg border border-green-200 bg-green-50 px-3 py-2.5 dark:border-green-800 dark:bg-green-950/30">
             <Smartphone className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
             <p className="text-green-700 text-xs dark:text-green-300">
-              {t.phone_otp_sent ?? "OTP sent to"}{" "}
-              <span className="font-medium font-mono">{maskedPhone}</span>
+              {t.phone_otp_sent ?? "OTP sent to"} <span className="font-medium font-mono">{maskedPhone}</span>
             </p>
           </div>
 
@@ -502,9 +516,7 @@ function AccountStep({
         "password",
         "confirm_password",
       ]);
-      const fieldErrors = Object.entries(serverErrors ?? {}).filter(([f]) =>
-        FORM_FIELDS.has(f as keyof AccountValues)
-      );
+      const fieldErrors = Object.entries(serverErrors ?? {}).filter(([f]) => FORM_FIELDS.has(f as keyof AccountValues));
 
       if (fieldErrors.length > 0) {
         fieldErrors.forEach(([field, messages]) => {
@@ -514,7 +526,8 @@ function AccountStep({
         toast.error(
           axiosErr?.response?.data?.message ??
             axiosErr?.message ??
-            (t.account_err_failed ?? "Registration failed. Please try again.")
+            t.account_err_failed ??
+            "Registration failed. Please try again.",
         );
       }
     },
@@ -561,12 +574,7 @@ function AccountStep({
         <FieldLabel htmlFor="email">
           {t.account_email ?? "Email Address"} <span className="text-destructive">*</span>
         </FieldLabel>
-        <Input
-          id="email"
-          type="email"
-          placeholder={t.account_email_ph ?? "rajan@example.com"}
-          {...register("email")}
-        />
+        <Input id="email" type="email" placeholder={t.account_email_ph ?? "rajan@example.com"} {...register("email")} />
         {errors.email && <FieldError errors={[errors.email]} />}
       </Field>
 
@@ -576,9 +584,7 @@ function AccountStep({
           <span className="font-mono">{verifiedPhone}</span>
           <CheckCircle2 className="ml-auto h-3.5 w-3.5 text-green-600" />
         </div>
-        <p className="text-muted-foreground text-xs">
-          {t.account_phone_verified ?? "Verified in previous step"}
-        </p>
+        <p className="text-muted-foreground text-xs">{t.account_phone_verified ?? "Verified in previous step"}</p>
       </Field>
 
       <Field>
@@ -609,7 +615,10 @@ function AccountStep({
               { label: t.account_pwd_uppercase ?? "One uppercase letter (A–Z)", met: /[A-Z]/.test(passwordVal) },
               { label: t.account_pwd_lowercase ?? "One lowercase letter (a–z)", met: /[a-z]/.test(passwordVal) },
               { label: t.account_pwd_number ?? "One number (0–9)", met: /[0-9]/.test(passwordVal) },
-              { label: t.account_pwd_special ?? "One special character (!@#$…)", met: /[^A-Za-z0-9]/.test(passwordVal) },
+              {
+                label: t.account_pwd_special ?? "One special character (!@#$…)",
+                met: /[^A-Za-z0-9]/.test(passwordVal),
+              },
             ].map(({ label, met }) => (
               <p
                 key={label}
@@ -694,8 +703,8 @@ export default function RegisterPage() {
 
   useEffect(() => {
     if (!locale) return;
-    translationsApi.getPublic(locale, "register").then((data) => {
-      setT(data.register ?? {});
+    translationsApi.getPublic(locale, "register,districts").then((data) => {
+      setT({ ...(data.districts ?? {}), ...(data.register ?? {}) });
     });
   }, [locale]);
 

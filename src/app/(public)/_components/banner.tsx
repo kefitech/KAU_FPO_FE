@@ -8,8 +8,24 @@ import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 
 const SLIDES = [
-  { id: 1, bgThumb: "17.jpg", subtitleKey: "slide1_subtitle", titleKey: "slide1_title", descKey: "slide1_desc", btnKey: "slide1_btn" },
-  { id: 2, bgThumb: "2.jpg",  subtitleKey: "slide2_subtitle", titleKey: "slide2_title", descKey: "slide2_desc", btnKey: "slide2_btn" },
+  {
+    id: 1,
+    bgThumb: "17.jpg",
+    subtitleKey: "slide1_subtitle",
+    titleKey: "slide1_title",
+    descKey: "slide1_desc",
+    btnKey: "slide1_btn",
+    btnHref: "/register",
+  },
+  {
+    id: 2,
+    bgThumb: "2.jpg",
+    subtitleKey: "slide2_subtitle",
+    titleKey: "slide2_title",
+    descKey: "slide2_desc",
+    btnKey: "slide2_btn",
+    btnHref: "/about-us",
+  },
 ];
 
 const Banner = () => {
@@ -49,10 +65,10 @@ const Banner = () => {
       >
         {SLIDES.map((slide) => {
           const subtitle = t[slide.subtitleKey] ?? "";
-          const title    = t[slide.titleKey]    ?? "";
-          const desc     = t[slide.descKey]     ?? "";
-          const btnText  = t[slide.btnKey]      ?? "";
-          const words    = title.split(" ");
+          const title = t[slide.titleKey] ?? "";
+          const desc = t[slide.descKey] ?? "";
+          const btnText = t[slide.btnKey] ?? "";
+          const words = title.split(" ");
           const titleBold = words.slice(0, 2).join(" ");
           const titleRest = words.slice(2).join(" ");
 
@@ -72,7 +88,7 @@ const Banner = () => {
                       </h2>
                       <p>{desc}</p>
                       <div className="button" style={{ display: "flex", gap: "15px", flexWrap: "wrap" }}>
-                        <a className="btn btn-theme secondary btn-md radius animation" href="/about-us">
+                        <a className="btn btn-theme secondary btn-md radius animation" href={slide.btnHref}>
                           {btnText}
                         </a>
                         <a

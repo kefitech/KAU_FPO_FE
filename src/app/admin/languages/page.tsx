@@ -38,38 +38,6 @@ const NAV: { key: Tab; label: string; fallback: string; icon: React.ElementType 
   { key: "translations", label: "", fallback: "Translations", icon: Languages },
   { key: "menu", label: "", fallback: "Menu Items", icon: Menu },
 ];
-
-const LANGUAGE_FILTERS = [
-  {
-    key: "is_active",
-    label: "Status",
-    options: [
-      { label: "Active", value: "true" },
-      { label: "Inactive", value: "false" },
-    ],
-  },
-];
-
-const MENU_FILTERS = [
-  {
-    key: "is_active",
-    label: "Status",
-    options: [
-      { label: "Active", value: "true" },
-      { label: "Inactive", value: "false" },
-    ],
-  },
-];
-
-const TRANSLATION_VERIFIED_FILTER = {
-  key: "is_verified",
-  label: "Verified",
-  options: [
-    { label: "Verified", value: "true" },
-    { label: "Unverified", value: "false" },
-  ],
-};
-
 export default function LanguagesPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -102,6 +70,43 @@ export default function LanguagesPage() {
         setTCommon(data.common ?? {});
       });
   }, [locale]);
+  const LANGUAGE_FILTERS = useMemo(
+    () => [
+      {
+        key: "is_active",
+        label: tCommon.status ?? "Status",
+        options: [
+          { label: tCommon.badge_active ?? "Active", value: "true" },
+          { label: tCommon.badge_inactive ?? "Inactive", value: "false" },
+        ],
+      },
+    ],
+    [tCommon],
+  );
+  const MENU_FILTERS = useMemo(
+    () => [
+      {
+        key: "is_active",
+        label: tCommon.status ?? "Status",
+        options: [
+          { label: tCommon.badge_active ?? "Active", value: "true" },
+          { label: tCommon.badge_inactive ?? "Inactive", value: "false" },
+        ],
+      },
+    ],
+    [tCommon],
+  );
+  const TRANSLATION_VERIFIED_FILTER = useMemo(
+    () => ({
+      key: "is_verified",
+      label: tTransTable.col_verified ?? "Verified",
+      options: [
+        { label: tCommon.badge_verified ?? "Verified", value: "true" },
+        { label: tCommon.badge_unverified ?? "Unverified", value: "false" },
+      ],
+    }),
+    [tCommon, tTransTable],
+  );
 
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -222,7 +227,7 @@ export default function LanguagesPage() {
       },
       TRANSLATION_VERIFIED_FILTER,
     ],
-    [languagesData, categoriesData],
+    [languagesData, categoriesData, TRANSLATION_VERIFIED_FILTER],
   );
 
   const navLabels: Record<Tab, string> = {
@@ -288,6 +293,10 @@ export default function LanguagesPage() {
               columns={getLanguageColumns(tLangTable, tCommon)}
               filters={LANGUAGE_FILTERS}
               onRowClick={(row) => setLangView({ open: true, row })}
+              columnsLabel={tCommon.columns_header}
+              toggleColumnsLabel={tCommon.columns_toggle_columns}
+              searchPlaceholder={tCommon.search_placeholder}
+              clearLabel={tCommon.clear_filters}
             />
           </Suspense>
         )}
@@ -298,6 +307,10 @@ export default function LanguagesPage() {
               queryFn={translationCategoryApi.getAll}
               columns={getCategoryColumns(tCatTable, tCommon)}
               onRowClick={(row) => setCatView({ open: true, row })}
+              columnsLabel={tCommon.columns_header}
+              toggleColumnsLabel={tCommon.col_toggle_columns}
+              searchPlaceholder={tCommon.search_placeholder}
+              clearLabel={tCommon.clear_filters}
             />
           </Suspense>
         )}
@@ -311,6 +324,10 @@ export default function LanguagesPage() {
               onRowClick={(row) => setTransView({ open: true, row })}
               onSelectionChange={setSelectedTranslations}
               extra={translationBulkExtra}
+              columnsLabel={tCommon.columns_header}
+              toggleColumnsLabel={tCommon.col_toggle_columns}
+              searchPlaceholder={tCommon.search_placeholder}
+              clearLabel={tCommon.clear_filters}
             />
           </Suspense>
         )}
@@ -322,6 +339,10 @@ export default function LanguagesPage() {
               columns={getMenuColumns(tMenuTable, tCommon)}
               filters={MENU_FILTERS}
               onRowClick={(row) => setMenuView({ open: true, row })}
+              columnsLabel={tCommon.columns_header}
+              toggleColumnsLabel={tCommon.col_toggle_columns}
+              searchPlaceholder={tCommon.search_placeholder}
+              clearLabel={tCommon.clear_filters}
             />
           </Suspense>
         )}
