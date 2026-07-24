@@ -9,14 +9,10 @@ import { reportsApi } from "@/app/admin/_api/reports";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DISTRICT_OPTIONS } from "@/types/fpo";
+
+const ALL_VALUE = "all";
 
 const STATUSES = [
   { label: "Draft", value: "draft" },
@@ -43,8 +39,9 @@ export function FpoReportCard() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [loading, setLoading] = useState(false);
+  const isSet = (v: string) => !!v && v !== ALL_VALUE;
+  const hasFilters = !!(isSet(status) || isSet(district) || isSet(tier) || fromDate || toDate);
 
-  const hasFilters = !!(status || district || tier || fromDate || toDate);
   const today = new Date().toISOString().split("T")[0];
 
   async function handleDownload() {
@@ -52,9 +49,9 @@ export function FpoReportCard() {
     try {
       await reportsApi.downloadFpoSummary({
         file_format: format,
-        status: status || undefined,
-        district: district || undefined,
-        tier: tier || undefined,
+        status: isSet(status) ? status : undefined,
+        district: isSet(district) ? district : undefined,
+        tier: isSet(tier) ? tier : undefined,
         from_date: fromDate || undefined,
         to_date: toDate || undefined,
       });
@@ -80,9 +77,7 @@ export function FpoReportCard() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle className="text-base">FPO Summary Report</CardTitle>
-            <p className="text-muted-foreground text-xs mt-0.5">
-              Download filtered FPO data as Excel or PDF
-            </p>
+            <p className="text-muted-foreground text-xs mt-0.5">Download filtered FPO data as Excel or PDF</p>
           </div>
 
           {/* Format toggle */}
@@ -91,9 +86,7 @@ export function FpoReportCard() {
               type="button"
               onClick={() => setFormat("excel")}
               className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                format === "excel"
-                  ? "bg-green-600 text-white"
-                  : "text-muted-foreground hover:text-foreground"
+                format === "excel" ? "bg-green-600 text-white" : "text-muted-foreground hover:text-foreground"
               }`}
             >
               <FileSpreadsheet className="h-3.5 w-3.5" />
@@ -103,9 +96,7 @@ export function FpoReportCard() {
               type="button"
               onClick={() => setFormat("pdf")}
               className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                format === "pdf"
-                  ? "bg-red-600 text-white"
-                  : "text-muted-foreground hover:text-foreground"
+                format === "pdf" ? "bg-red-600 text-white" : "text-muted-foreground hover:text-foreground"
               }`}
             >
               <FileText className="h-3.5 w-3.5" />
@@ -122,9 +113,10 @@ export function FpoReportCard() {
             <Label className="text-xs text-muted-foreground">Status</Label>
             <Select value={status} onValueChange={setStatus}>
               <SelectTrigger className="h-8 text-sm">
-                <SelectValue placeholder="All statuses" />
+                <SelectValue placeholder="All" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value={ALL_VALUE}>All</SelectItem>
                 {STATUSES.map((s) => (
                   <SelectItem key={s.value} value={s.value}>
                     {s.label}
@@ -138,9 +130,10 @@ export function FpoReportCard() {
             <Label className="text-xs text-muted-foreground">District</Label>
             <Select value={district} onValueChange={setDistrict}>
               <SelectTrigger className="h-8 text-sm">
-                <SelectValue placeholder="All districts" />
+                <SelectValue placeholder="All" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value={ALL_VALUE}>All</SelectItem>
                 {DISTRICT_OPTIONS.map((d) => (
                   <SelectItem key={d.value} value={d.value}>
                     {d.label}
@@ -154,9 +147,10 @@ export function FpoReportCard() {
             <Label className="text-xs text-muted-foreground">Tier</Label>
             <Select value={tier} onValueChange={setTier}>
               <SelectTrigger className="h-8 text-sm">
-                <SelectValue placeholder="All tiers" />
+                <SelectValue placeholder="All" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value={ALL_VALUE}>All</SelectItem>
                 {TIERS.map((t) => (
                   <SelectItem key={t.value} value={t.value}>
                     {t.label}

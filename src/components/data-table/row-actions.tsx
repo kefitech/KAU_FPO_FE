@@ -32,14 +32,14 @@ export function RowActions({ actions }: { actions: RowAction[] }) {
           <MoreHorizontal className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent align="end" className="w-auto min-w-[5rem] max-w-[10rem]">
         {visible.map((action, i) => (
           <Fragment key={i}>
             {action.separator && <DropdownMenuSeparator />}
             <DropdownMenuItem
               onClick={action.onClick}
               disabled={action.disabled}
-              className={action.destructive ? "text-destructive" : undefined}
+              className={`whitespace-normal ${action.destructive ? "text-destructive" : ""}`}
             >
               {action.label}
             </DropdownMenuItem>
