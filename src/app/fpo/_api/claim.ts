@@ -2,8 +2,8 @@ import { api } from "@/lib/api/client";
 import type { FpoClaim } from "@/types/fpo";
 
 export const fpoClaimApi = {
-  submit: (fpoId: number, reason: string): Promise<FpoClaim> =>
-    api.post("/fpo/claim/", { fpo_id: fpoId, reason, supporting_doc_ids: [] }).then((r) => {
+  submit: (fpoId: number, reason: string, matchedField?: string): Promise<FpoClaim> =>
+    api.post("/fpo/claim/", { fpo_id: fpoId, reason, supporting_doc_ids: [], matched_field: matchedField ?? "" }).then((r) => {
       const d = r.data as Record<string, unknown>;
       return (d.data ?? d) as FpoClaim;
     }),

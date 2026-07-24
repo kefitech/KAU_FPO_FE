@@ -89,7 +89,7 @@ export function Step1BasicInfo({ profile, onSave, onSuccess, t = {} }: Step1Prop
   const { speak } = useVoiceGuidance();
   const [fieldErrors, setFieldErrors] = useState<FieldValidationState>({});
   const [saveMode, setSaveMode] = useState<"save" | "next" | null>(null);
-  const [duplicateFpo, setDuplicateFpo] = useState<{ id: number; name: string } | null>(null);
+  const [duplicateFpo, setDuplicateFpo] = useState<{ id: number; name: string; matchedField: string } | null>(null);
   const [legalStructures, setLegalStructures] = useState<MasterDataItem[]>([]);
   const [legalStructuresLoaded, setLegalStructuresLoaded] = useState(false);
   const [subOptions, setSubOptions] = useState<MasterDataItem[]>([]);
@@ -149,8 +149,9 @@ export function Step1BasicInfo({ profile, onSave, onSuccess, t = {} }: Step1Prop
     onSuccess: (data) => {
       setFieldErrors((prev) => ({ ...prev, [data.field]: { error: data.error, duplicate: data.duplicate } }));
       if (data.duplicate && data.existing_fpo_id) {
-        setDuplicateFpo({ id: data.existing_fpo_id, name: data.fpo_name ?? "" });
+        setDuplicateFpo({ id: data.existing_fpo_id, name: data.fpo_name ?? "", matchedField: data.field ?? "" });
       }
+
     },
   });
 
@@ -223,7 +224,7 @@ export function Step1BasicInfo({ profile, onSave, onSuccess, t = {} }: Step1Prop
           },
         }));
         if (apiErr.data?.existing_fpo_id) {
-          setDuplicateFpo({ id: apiErr.data.existing_fpo_id, name: apiErr.data.fpo_name ?? "" });
+          setDuplicateFpo({ id: apiErr.data.existing_fpo_id, name: apiErr.data.fpo_name ?? "", matchedField: apiErr.data.duplicate_field ?? "" });
         }
         return;
       }
@@ -426,6 +427,7 @@ export function Step1BasicInfo({ profile, onSave, onSuccess, t = {} }: Step1Prop
                 if (duplicateFpo) {
                   params.set("fpo_id", String(duplicateFpo.id));
                   params.set("fpo_name", duplicateFpo.name);
+                  if (duplicateFpo.matchedField) params.set("matched_field", duplicateFpo.matchedField);
                 }
                 router.push(`/fpo/claim?${params.toString()}`);
               }}

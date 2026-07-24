@@ -67,15 +67,26 @@ export function getOwnershipClaimColumns(
       header: t.col_fpo ?? "FPO",
       cell: ({ row }) => {
         const identity = row.original.fpo_identity;
-        const parts = [
+        const matched = identity?.matched_label && identity?.matched_value
+          ? `${identity.matched_label}: ${identity.matched_value}`
+          : null;
+        const allParts = [
           identity?.pan_number && `PAN: ${identity.pan_number}`,
+          identity?.gst_number && `GST: ${identity.gst_number}`,
           identity?.cin_number && `CIN: ${identity.cin_number}`,
           !identity?.cin_number && identity?.registration_number && `Reg: ${identity.registration_number}`,
         ].filter(Boolean).join(" · ");
         return (
-          <div className="flex flex-col gap-0.5 max-w-[160px]">
+          <div className="flex flex-col gap-0.5 max-w-[180px]">
             <span className="truncate text-sm font-medium">{row.original.fpo_name}</span>
-            {parts && <span className="truncate text-xs text-muted-foreground">{parts}</span>}
+            {matched && (
+              <span className="truncate text-xs font-medium text-amber-700 dark:text-amber-400">
+                Claimed via {matched}
+              </span>
+            )}
+            {!matched && allParts && (
+              <span className="truncate text-xs text-muted-foreground">{allParts}</span>
+            )}
           </div>
         );
       },

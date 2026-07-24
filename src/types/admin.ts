@@ -536,6 +536,9 @@ export interface AdminOwnershipClaimIdentity {
   gst_number: string;
   cin_number: string;
   registration_number: string;
+  matched_field: string;
+  matched_label: string;
+  matched_value: string;
 }
 
 export interface AdminOwnershipClaim {

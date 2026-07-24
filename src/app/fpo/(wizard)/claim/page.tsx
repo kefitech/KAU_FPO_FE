@@ -16,13 +16,14 @@ function ClaimPageInner() {
   const searchParams = useSearchParams();
   const fpoId = Number(searchParams.get("fpo_id") ?? 0);
   const fpoName = searchParams.get("fpo_name") ?? "this FPO";
+  const matchedField = searchParams.get("matched_field") ?? "";
 
   const [reason, setReason] = useState("");
   const reasonTrimmed = reason.trim();
   const reasonValid = reasonTrimmed.length >= 20;
 
   const submitMutation = useMutation({
-    mutationFn: () => fpoClaimApi.submit(fpoId, reasonTrimmed),
+    mutationFn: () => fpoClaimApi.submit(fpoId, reasonTrimmed, matchedField),
     onSuccess: () => {
       toast.success("Claim submitted. We'll review it shortly.");
       router.push("/fpo/claim/status");

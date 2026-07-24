@@ -1458,6 +1458,12 @@ function ApplicationDetailContent() {
                   label={t.field_registered_under ?? "Registered Under"}
                   value={formatDocType(app.legal_structure ?? app.registered_under)}
                 />
+                {app.legal_structure === "state_specific_csa" && (
+                  <InfoRow
+                    label={t.field_state_csa_act ?? "State CSA Act"}
+                    value={formatDocType(app.legal_structure_detail)}
+                  />
+                )}
                 <InfoRow label={t.field_reg_number ?? "Registration Number"} value={app.registration_number} />
                 <InfoRow label={t.field_cin ?? "CIN Number"} value={app.cin_number} />
                 <InfoRow label={t.field_reg_date ?? "Date of Registration"} value={app.date_of_registration} />
