@@ -545,6 +545,7 @@ export interface AdminOwnershipClaim {
   id: number;
   fpo_id: number;
   fpo_name: string;
+  fpo_email: string;
   fpo_identity: AdminOwnershipClaimIdentity;
   claimant_name: string;
   claimant_email: string;

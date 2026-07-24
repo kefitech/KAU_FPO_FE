@@ -129,7 +129,7 @@ nav.navbar.validnavs .navbar-brand > img {
 }
 
 /* ---- Sticky navbar on mobile ---- */
-@media (max-width: 1023px) {
+@media (max-width: 1023.98px) {
   nav.navbar.validnavs {
     position: fixed;
     width: 100%;
@@ -145,7 +145,7 @@ nav.navbar.validnavs .navbar-brand > img {
 }
 
 /* ---- Banner: give the fade-mode swiper a real height on mobile ---- */
-@media (max-width: 1023px) {
+@media (max-width: 1023.98px) {
 
   .banner-area .swiper,
   .banner-area .swiper-wrapper,

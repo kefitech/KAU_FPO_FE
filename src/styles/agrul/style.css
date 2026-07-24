@@ -2873,7 +2873,7 @@ nav.navbar.validnavs.inc-shape::after {
 	position: relative;
 }
 
-@media (max-width: 1023px) {
+@media (max-width: 1023.98px) {
 	.banner-area {
 		height: auto;
 	}
@@ -2891,7 +2891,7 @@ nav.navbar.validnavs.inc-shape::after {
 	padding-top: 80px;
 }
 
-@media (max-width: 1023px) {
+@media (max-width: 1023.98px) {
 	.banner-area.top-pad-80 .content {
 		padding-top: 200px;
 	}
@@ -2907,7 +2907,7 @@ nav.navbar.validnavs.inc-shape::after {
 	padding-top: 90px;
 }
 
-@media (max-width: 1023px) {
+@media (max-width: 1023.98px) {
 	.banner-area.top-pad-90 .content {
 		padding-top: 200px;
 	}
@@ -2923,7 +2923,7 @@ nav.navbar.validnavs.inc-shape::after {
 	padding-top: 100px;
 }
 
-@media (max-width: 1023px) {
+@media (max-width: 1023.98px) {
 	.banner-area.top-pad-100 .content {
 		padding-top: 200px;
 	}
@@ -2939,7 +2939,7 @@ nav.navbar.validnavs.inc-shape::after {
 	padding-top: 110px;
 }
 
-@media (max-width: 1023px) {
+@media (max-width: 1023.98px) {
 	.banner-area.top-pad-110 .content {
 		padding-top: 200px;
 	}
@@ -2955,7 +2955,7 @@ nav.navbar.validnavs.inc-shape::after {
 	padding-top: 120px;
 }
 
-@media (max-width: 1023px) {
+@media (max-width: 1023.98px) {
 	.banner-area.top-pad-120 .content {
 		padding-top: 200px;
 	}
@@ -2971,7 +2971,7 @@ nav.navbar.validnavs.inc-shape::after {
 	padding-top: 130px;
 }
 
-@media (max-width: 1023px) {
+@media (max-width: 1023.98px) {
 	.banner-area.top-pad-130 .content {
 		padding-top: 200px;
 	}
@@ -2987,7 +2987,7 @@ nav.navbar.validnavs.inc-shape::after {
 	padding-top: 150px;
 }
 
-@media (max-width: 1023px) {
+@media (max-width: 1023.98px) {
 	.banner-area.top-pad-150 .content {
 		padding-top: 200px;
 	}
@@ -3077,7 +3077,7 @@ nav.navbar.validnavs.inc-shape::after {
 	transition: all 500ms ease;
 }
 
-@media (max-width: 1023px) {
+@media (max-width: 1023.98px) {
 	.banner-area .content {
 		padding: 120px 0;
 	}
@@ -3119,7 +3119,7 @@ nav.navbar.validnavs.inc-shape::after {
 	visibility: hidden;
 }
 
-@media (max-width: 1023px) {
+@media (max-width: 1023.98px) {
 	.banner-area p {
 		padding-right: 0;
 	}
@@ -3130,7 +3130,7 @@ nav.navbar.validnavs.inc-shape::after {
 	padding-right: 13%;
 }
 
-@media (max-width: 1023px) {
+@media (max-width: 1023.98px) {
 	.banner-area.text-center p {
 		padding: 0;
 	}
@@ -3408,7 +3408,7 @@ nav.navbar.validnavs.inc-shape::after {
 	padding-bottom: 105px;
 }
 
-@media only screen and (min-width: 829px) and (max-width: 1023px) {
+@media only screen and (min-width: 829px) and (max-width: 1023.98px) {
 	.banner-area.navigation-between-bottom .content {
 		padding-bottom: 220px;
 	}
@@ -5549,11 +5549,11 @@ ul.counter-list li:nth-child(2) {
 
 .team-swiper-prev,
 .team-swiper-next {
-  width: 44px;
-  height: 44px;
+  width: 44px !important;
+  height: 44px !important;
   border-radius:50%;
   border: 2px solid var(--color-primary);
-  color: var(--color-primary);
+  color: var(--color-primary) !important;
   background: #fff;
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
   top: 100px !important; /* half of the 200px image height */
@@ -5561,7 +5561,7 @@ ul.counter-list li:nth-child(2) {
 }
 .team-swiper-prev::after,
 .team-swiper-next::after {
-  font-size: 16px; /* shrink default arrow icon */
+  font-size: 16px !important; /* shrink default arrow icon */ 
 }
 
 
@@ -7053,7 +7053,7 @@ footer {
 
 
 /* Tablet Layout: 768px.*/
-@media only screen and (min-width: 768px) and (max-width: 991px) {
+@media only screen and (min-width: 768px) and (max-width: 1023.98px) {
 	.top-bar-area {
 		display: none !important;
 		}
@@ -8252,7 +8252,7 @@ ul.list-heading-title li p {
 	flex-shrink: 0;
 }
 
-@media (max-width: 1023px) {
+@media (max-width: 1023.98px) {
   .navbar-container-fix .navbar-brand {
     position: static;
     top: auto;
@@ -9239,7 +9239,7 @@ ul.list-two li i {
 	}
 }
 
-@media only screen and (max-width: 1023px) {
+@media only screen and (max-width: 1023.98px) {
 
 	nav.navbar.validnavs.navbar-fixed.no-background,
 	nav.navbar.validnavs.navbar-fixed {
@@ -9548,4 +9548,119 @@ ul.list-two li i {
 	background: var(--color-secondary);
 	border-color: var(--color-secondary);
 	color: #ffffff;
+}
+
+.service-card {
+    background: #fff;
+    border-radius: 14px;
+    border: 1px solid #e6e6e6;
+    padding: 12px;
+    height: 220px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+ 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08),
+	0 8px 20px rgba(0,0,0,.08);
+
+    transition: all .35s ease;
+}
+
+
+.service-card:hover {
+    transform: translateY(-10px) rotate(2deg) scale(1.03);
+    
+    border-color: #2f8f2f;
+    background: #fcfffc;
+	box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18),
+	0 6px 12px rgba(47, 143, 47, 0.12);
+}
+
+/* Alternate rotation direction */
+.row > div:nth-child(even) .service-card:hover {
+    transform: translateY(-10px) rotate(-2deg) scale(1.03);
+}
+
+.service-image {
+    width: 120px;
+    height: 120px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 10px;
+    flex-shrink: 0;
+}
+
+.service-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+
+.service-card:hover .service-img {
+    transform: scale(1.1);
+}
+.service-title {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.2;
+
+    text-align: center;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 42px;
+}
+.service-card:hover .service-title {
+    color: #2f8f2f;
+}
+
+/* Tablet */
+@media (max-width: 992px) {
+    .service-image {
+        height: 120px;
+    }
+
+    .service-img {
+        max-width: 110px;
+        max-height: 110px;
+    }
+
+    .service-title {
+        font-size: 15px;
+    }
+}
+
+/* Mobile */
+@media (max-width: 576px) {
+    .service-card {
+        padding: 10px;
+    }
+
+    .service-image {
+        height: 95px;
+        margin-bottom: 6px;
+    }
+
+    .service-img {
+        max-width: 85px;
+        max-height: 85px;
+    }
+
+    .service-title {
+        font-size: 13px;
+        line-height: 1.25;
+    }
+
+    .service-card:hover {
+        transform: translateY(-6px) rotate(1.5deg) scale(1.02);
+    }
+
+    .row > div:nth-child(even) .service-card:hover {
+        transform: translateY(-6px) rotate(-1.5deg) scale(1.02);
+    }
 }

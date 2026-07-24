@@ -81,6 +81,7 @@ const Documents = () => {
         display: "flex",
         flexDirection: "row",
         alignItems: "flex-start",
+        pointerEvents: "none",
       }}
       // Hide on small screens via inline media — handled via className below
       className="documents-sticky-panel"
@@ -109,6 +110,7 @@ const Documents = () => {
           writingMode: "vertical-rl",
           alignSelf: "center",
           boxShadow: "-3px 0 12px rgba(0,0,0,0.15)",
+          pointerEvents: "auto",
         }}
       >
         <i className={collapsed ? "fas fa-chevron-left" : "fas fa-chevron-right"} style={{ fontSize: 11 }} />
@@ -141,6 +143,7 @@ const Documents = () => {
           overflow: "hidden",
           opacity: collapsed ? 0 : 1,
           transition: "width 0.3s ease, opacity 0.25s ease, box-shadow 0.3s ease",
+          pointerEvents: "auto",
         }}
       >
         {/* Header */}

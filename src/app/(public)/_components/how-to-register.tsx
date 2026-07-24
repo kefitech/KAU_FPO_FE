@@ -119,7 +119,7 @@ export default function HowToRegister() {
         <div className="row">
           <div className="col-lg-8 offset-lg-2">
             <div className="site-heading text-center">
-              <h2 className="title">How to Register</h2>
+              <h2 className="title">How to Register FPO</h2>
               <div className="devider" />
             </div>
             <div style={{ marginTop: 24 }}>

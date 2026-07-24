@@ -328,7 +328,7 @@ Version: 1.0
 	color: var(--color-primary);
 }
 
-@media (max-width: 1023px) {
+@media (max-width: 1023.98px) {
 	.navbar .attr-right .attr-nav li .call h5 a {
 		color: var(--color-heading);
 	}
@@ -1876,7 +1876,7 @@ nav.navbar.validnavs.brand-center {
 	}
 }
 
-@media (max-width: 1023px) {
+@media (max-width: 1023.98px) {
 	a.navbar-brand {
 		position: absolute;
 		left: 50%;
@@ -2449,11 +2449,20 @@ nav.navbar.validnavs.brand-center {
 
 @media only screen and (min-width: 1024px) and (max-width: 1199px) {
 	nav.navbar ul.nav>li>a {
-		padding: 30px 12px;
+		padding: 30px 6px;
+		font-size: 13px;
 	}
 
 	.navbar .attr-right {
 		margin-left: 0;
+	}
+
+	nav.navbar.validnavs ul.nav.navbar-nav {
+		flex-wrap: nowrap;
+ 	}
+
+	.navbar-logos .logo {
+		height: 36px;
 	}
 }
 
@@ -2525,7 +2534,7 @@ nav.validnavs.navbar-full .navbar-toggle:hover span {
 	}
 }
 
-@media only screen and (min-width: 992px) and (max-width: 1023px) {
+@media only screen and (min-width: 992px) and (max-width: 1023.98px) {
 	.col-lg-3.brand-item {
 		width: 100%;
 		max-width: 100%;
@@ -2540,7 +2549,7 @@ nav.validnavs.navbar-full .navbar-toggle:hover span {
 	position: relative;
 }
 
-@media only screen and (max-width: 1023px) {
+@media only screen and (max-width: 1023.98px) {
 	nav.navbar.validnavs .navbar-collapse.collapse.collapse-mobile.show {
 		position: absolute;
 		left: 0;
@@ -2604,7 +2613,7 @@ nav.navbar.validnavs.navbar-fixed {
 	}
 }
 
-@media only screen and (max-width: 1023px) {
+@media only screen and (max-width: 1023.98px) {
 	nav.navbar.validnavs.mobile-sidenav .navbar-collapse.collapse.collapse-mobile {
 		position: fixed;
 		left: -485px;
@@ -2683,7 +2692,7 @@ nav.navbar.validnavs .navbar-collapse.collapse button i {
 	font-size: 15px;
 }
 
-@media only screen and (max-width: 1023px) {
+@media only screen and (max-width: 1023.98px) {
 	nav.navbar.validnavs .navbar-collapse.collapse.show img {
 		display: inline-block;
 		height: 60px;

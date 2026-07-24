@@ -26,7 +26,7 @@ const MainMenu = ({ openIndex, toggleSubMenu, navbarPlacement }: Props) => {
   return (
     <ul className={`nav navbar-nav ${navbarPlacement} navbar-right`} data-in="fadeInDown" data-out="fadeOutUp">
       <li>
-        <a href="#">{t.home ?? "HOME"}</a>
+        <a href="/">{t.home ?? "HOME"}</a>
       </li>
       <li className={`dropdown ${openIndex === 0 ? "on" : ""}`}>
         <Link href="#" className="dropdown-toggle" data-toggle="dropdown" onClick={toggleSubMenu?.(0)}>

@@ -109,21 +109,30 @@ const Footer = () => {
             <div style={{ position: "relative", padding: quickLinks.length > 4 ? "0 48px" : "0" }}>
               {quickLinks.length > 4 ? (
                 <>
+                {(() => {
+                const swiperLinks =
+                  quickLinks.length < 10
+                    ? Array(Math.ceil(10 / quickLinks.length)).fill(quickLinks).flat()
+                    : quickLinks;
+                return (
                   <Swiper
                     modules={[Navigation, Autoplay]}
-                    loop={quickLinks.length > 4}
+                    loop={quickLinks.length > 1}
                     autoplay={{ delay: 3000, disableOnInteraction: false }}
                     navigation={{ nextEl: ".ql-swiper-next", prevEl: ".ql-swiper-prev" }}
                     spaceBetween={16}
-                    slidesPerView={2}
-                    breakpoints={{ 576: { slidesPerView: 3 }, 992: { slidesPerView: 4 }, 1200: { slidesPerView: 5 } }}
-                  >
-                    {quickLinks.map((link) => (
-                      <SwiperSlide key={link.id} style={{ width: "auto" }}>
+                    slidesPerView={1}
+                    centeredSlides={true}
+                    style={{ width: "100%" }}
+                    breakpoints={{ 576: { slidesPerView: 2 }, 992: { slidesPerView: 3 }, 1200: { slidesPerView: 4 } }}
+                  >{swiperLinks.map((link, i) => (
+                      <SwiperSlide key={`${link.id}-${i}`} style={{ display: "flex", justifyContent: "center" }}>
                         <PartnerBox link={link} />
                       </SwiperSlide>
                     ))}
                   </Swiper>
+                );
+              })()}
                   <button
                     type="button"
                     className="ql-swiper-prev"
@@ -282,7 +291,7 @@ const Footer = () => {
               <p>
                 &copy; Copyright {new Date().getFullYear()}. All Rights Reserved by{" "}
                 <a href="https://www.kefitech.com/" target="_blank" rel="noopener noreferrer">
-                  Kefitech Solution
+                  Kefi Tech Solutions Pvt Ltd
                 </a>
               </p>
             </div>

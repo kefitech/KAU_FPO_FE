@@ -7,6 +7,7 @@ import Documents from "./_components/documents";
 import Facts from "./_components/facts";
 import Gallery from "./_components/gallery";
 import HowToRegister from "./_components/how-to-register";
+import AgriTechServicesGrid from "./_components/more-info";
 import MoreInformantion from "./_components/more-info";
 import NewsSourcesStrip from "./_components/news-sources";
 import Services from "./_components/services";

@@ -3,23 +3,35 @@ const nextConfig = {
   output: "standalone",
   allowedDevOrigins: ["mayme-historiographic-joette.ngrok-free.dev"],
   reactCompiler: true,
+
   compiler: {
     removeConsole: process.env.NODE_ENV === "production",
   },
+
   experimental: {
     webpackBuildWorker: false,
   },
-  // Turbopack config (dev server, Next.js 16+)
+
   turbopack: {},
-  // Webpack config applies to production builds only (Turbopack handles dev)
+
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "celkau.in",
+      },
+    ],
+  },
+
   webpack: (config) => {
     config.cache = {
-      type: "filesystem", // persist to disk instead of holding in RAM
+      type: "filesystem",
       buildDependencies: { config: [import.meta.url] },
       maxMemoryGenerations: 1,
     };
     return config;
   },
+
   async rewrites() {
     return [
       {
@@ -32,6 +44,7 @@ const nextConfig = {
       },
     ];
   },
+
   async redirects() {
     return [
       {

@@ -55,56 +55,57 @@ export default function About() {
   }
 
   return (
+
     <div className="default-padding ">
       <div className="container">
-      <div className="shape-right-top">
-        <img src="/assets/img/shape/leaf.png" alt="leaf shape" />
-      </div>
-      <div className="container p-5">
-      <div className="banner-thumb bg-cover shadow dark"
+        <div className="shape-right-top">
+          <img src="/assets/img/shape/leaf.png" alt="leaf shape" />
+        </div>
+        <div className="container p-5">
+          <div
+            className="banner-thumb bg-cover shadow dark"
             style={{
-            background: 'url(/assets/img/about/3.jpeg)',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            aspectRatio: '16 / 5', // match this to your actual image's ratio
-          }}
-        >
-          <div className="banner-style-one">
-            <h2 style={{ textAlign: "center", paddingTop:55 }}>
-            <strong>{data.hero_headline?.split(" ").slice(0, 2).join(" ")}</strong>{" "}
-            <span style={{ color: "var(--white)" }}>
-              {data.hero_headline?.split(" ").slice(2).join(" ")}
-            </span>
-          </h2>
+              background: 'url(/assets/img/about/3.jpeg)',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              aspectRatio: '16 / 5', // match this to your actual image's ratio
+            }}
+          >
+            <div className="banner-style-one">
+              <h2 style={{ textAlign: "center", padding: 25, fontSize: "clamp(1.75rem, 5vw, 4rem)" }}>
+                <strong>{data.hero_headline?.split(" ").slice(0, 2).join(" ")}</strong>{" "}
+                <span style={{ color: "var(--white)" }}>
+                  {data.hero_headline?.split(" ").slice(2).join(" ")}
+                </span>
+              </h2>
+            </div>
           </div>
         </div>
-        </div>
+
         <div className="row align-items-center">
-        <div className="col-xl-4 col-lg-5 col-3 about-style-one pr-50 pr-md-15 pr-xs-15 pt-xl-5">
-          <div className="thumb">
-            <img src="/assets/img/about/2.jpeg" alt="About" className="about-thumb-img max-[990px]:hidden" />
-            <div className="sub-item">
-              <img src="/assets/img/logoblack.png" alt="About" className="max-[990px]:hidden" />
+          <div className="col-xl-4 col-lg-5 col-3 about-style-one pr-50 pr-md-15 pr-xs-15 pt-xl-5">
+            <div className="thumb">
+              <img src="/assets/img/about/2.jpeg" alt="About" className="about-thumb-img max-[990px]:hidden" />
+              <div className="sub-item">
+                <img src="/assets/img/logoblack.png" alt="About" className="max-[990px]:hidden" />
+              </div>
             </div>
           </div>
 
-          
-          </div>
           <div className="col-xl-8 col-lg-7 about-style-one">
             <div className="row align-center">
-              </div>
               <div className="col-xl-12 col-lg-12">
-                <h2 className="heading pt-4 text-center">{data.about_title}</h2> 
-                
+                <h2 className="heading pt-4 text-center">{data.about_title}</h2>
+
                 <div
                   className="justify-text"
                   dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(data.about_body) }}
                 />
               </div>
-              </div>
-                                                                                                                        
-            
             </div>
+          </div>
+        
+          </div>
             <div className="row align-center">
               <div className="col-xl-7 col-md-6 col-lg-6 col-sm-7">
                 <h3>The Mission</h3>
