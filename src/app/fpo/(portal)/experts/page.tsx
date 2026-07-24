@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 
 import { useQuery } from "@tanstack/react-query";
 import { MapPin, Search, X } from "lucide-react";
@@ -74,7 +74,7 @@ function ExpertCard({
     <div className="rounded-xl border bg-card shadow-sm hover:shadow-md transition-shadow flex flex-col gap-3 p-5">
       <div className="flex flex-col gap-1.5">
         <Badge className={`w-fit text-xs font-medium border ${badgeClass}`} variant="outline">
-          {expert.category_display}
+          {t[`filter_${expert.category}`] ?? expert.category_display}
         </Badge>
         <div className="flex flex-col gap-0.5 min-w-0">
           <h3 className="font-semibold text-base leading-snug">{expert.name}</h3>
@@ -127,10 +127,19 @@ export default function FpoExpertsPage() {
   const [district, setDistrict] = useState("");
 
   useEffect(() => {
-    translationsApi.getPublic(locale, "fpo_experts,common")
-      .then((data) => setT(data.fpo_experts ?? {}))
+    translationsApi.getPublic(locale, "fpo_experts,districts,common")
+      .then((data) => setT({ ...(data.districts ?? {}), ...(data.fpo_experts ?? {}) }))
       .catch(() => undefined);
   }, [locale]);
+  const districtSelectOptions = useMemo(
+    () =>
+      DISTRICT_OPTIONS.map((d) => ({
+        value: d.value,
+        label: t[`district_${d.value}`] ?? d.label,
+      })),
+    [t]
+  );
+
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [enquiryDialog, setEnquiryDialog] = useState<{ open: boolean; expert: FpoExpert | null }>({
@@ -210,7 +219,7 @@ export default function FpoExpertsPage() {
             <SearchableSelect
               value={district}
               onChange={setDistrict}
-              options={DISTRICT_SELECT_OPTIONS}
+              options={districtSelectOptions}
               placeholder={t.district_placeholder ?? "All Districts"}
             />
           </div>

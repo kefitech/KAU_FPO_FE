@@ -51,11 +51,11 @@ function fullName(m: FpoTeamMember) {
 // hidden/table-cell classes) — on small screens the table scrolls
 // horizontally instead of auto-hiding columns.
 const TOGGLEABLE_COLUMNS = [
-  { key: "email", label: "Email" },
-  { key: "phone", label: "Phone" },
-  { key: "role", label: "Role" },
-  { key: "joined", label: "Joined" },
-] as const;
+  { key: "email", label: "Email", tKey: "col_email" },
+  { key: "phone", label: "Phone", tKey: "col_phone" },
+  { key: "role", label: "Role", tKey: "col_role" },
+  { key: "joined", label: "Joined", tKey: "col_joined" },
+  ] as const;
 
 type ColumnKey = (typeof TOGGLEABLE_COLUMNS)[number]["key"];
 
@@ -190,8 +190,8 @@ export default function FpoTeamPage() {
             {isLoading
               ? "Loading…"
               : isSearching
-                ? `${filteredMembers.length} of ${members.length} member${members.length !== 1 ? "s" : ""}`
-                : `${members.length} member${members.length !== 1 ? "s" : ""}`}
+                ? `${filteredMembers.length} / ${members.length} ${t.team_memebers ?? "members"}`
+                : `${members.length} ${t.team_memebers ?? "members"}`}
           </p>
         </div>
 
@@ -218,7 +218,7 @@ export default function FpoTeamPage() {
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by name, email, phone, or role…"
+            placeholder={t.search_placehldr ?? "Search by name, email, phone, or role…"}
             className="pl-8 pr-8"
           />
           {isSearching && (
@@ -237,7 +237,7 @@ export default function FpoTeamPage() {
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm">
               <Columns3 className="mr-1.5 h-4 w-4" />
-              Columns
+              {t.col_header ?? "Columns"}
               {visibleColumnCount < TOGGLEABLE_COLUMNS.length && (
                 <Badge variant="secondary" className="ml-1.5 h-5 px-1.5">
                   {visibleColumnCount}/{TOGGLEABLE_COLUMNS.length}
@@ -246,7 +246,7 @@ export default function FpoTeamPage() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44">
-            <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
+            <DropdownMenuLabel>{t.col_toggle_columns ?? "Toggle columns"}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {TOGGLEABLE_COLUMNS.map((col) => (
               <DropdownMenuCheckboxItem
@@ -255,7 +255,7 @@ export default function FpoTeamPage() {
                 onCheckedChange={() => toggleColumn(col.key)}
                 onSelect={(e) => e.preventDefault()}
               >
-                {col.label}
+                {t[col.tKey] ?? col.label}
               </DropdownMenuCheckboxItem>
             ))}
           </DropdownMenuContent>
@@ -300,7 +300,7 @@ export default function FpoTeamPage() {
               {visibleColumns.role && <TableHead>{t.col_role ?? "Role"}</TableHead>}
               <TableHead>{t.col_status ?? "Status"}</TableHead>
               {visibleColumns.joined && <TableHead>{t.col_joined ?? "Joined"}</TableHead>}
-              {isPrimary && <TableHead className="w-28 text-right">Action</TableHead>}
+              {/* {isPrimary && <TableHead className="w-28 text-right">Action</TableHead>} */}
             </TableRow>
           </TableHeader>
 

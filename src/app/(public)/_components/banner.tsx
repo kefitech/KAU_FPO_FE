@@ -3,13 +3,14 @@ import { useEffect, useState } from "react";
 
 import { Autoplay, EffectFade, Navigation, Pagination } from "swiper/modules";
 import { Swiper, SwiperSlide } from "swiper/react";
+
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
+
 const SLIDES = [
   { id: 1, bgThumb: "17.jpg", subtitleKey: "slide1_subtitle", titleKey: "slide1_title", descKey: "slide1_desc", btnKey: "slide1_btn" },
   { id: 2, bgThumb: "2.jpg",  subtitleKey: "slide2_subtitle", titleKey: "slide2_title", descKey: "slide2_desc", btnKey: "slide2_btn" },
 ];
-import { bannerData } from "../_data/banner";
 
 const Banner = () => {
   const locale = useLocaleStore((s) => s.locale);
@@ -27,17 +28,24 @@ const Banner = () => {
       <Swiper
         className="banner-fade"
         direction="horizontal"
-        loop={true}
+        loop
         effect="fade"
         fadeEffect={{ crossFade: true }}
         speed={3000}
-        autoplay={{ delay: 5000, disableOnInteraction: false }}
+        autoplay={{
+          delay: 5000,
+          disableOnInteraction: false,
+        }}
         pagination={{
           el: ".swiper-pagination",
           type: "bullets",
           clickable: true,
         }}
-        modules={[Pagination, Autoplay, EffectFade]}
+        navigation={{
+          nextEl: ".swiper-button-next",
+          prevEl: ".swiper-button-prev",
+        }}
+        modules={[Navigation, Pagination, Autoplay, EffectFade]}
       >
         {SLIDES.map((slide) => {
           const subtitle = t[slide.subtitleKey] ?? "";
@@ -84,6 +92,7 @@ const Banner = () => {
         })}
         <div className="swiper-button-prev" />
         <div className="swiper-button-next" />
+        <div className="swiper-pagination" />
       </Swiper>
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState, useMemo } from "react";
 
 import { useRouter } from "next/navigation";
 
@@ -61,6 +61,20 @@ export default function SchemesPage() {
       .catch(() => undefined);
   }, [locale]);
 
+  const filters = useMemo(
+    () => [
+      {
+        ...FILTERS[0],
+        label: t.col_category ?? FILTERS[0].label,
+        options: FILTERS[0].options.map((o) => ({
+          ...o,
+          label: t[`cat_${o.value}`] ?? o.label,
+        })),
+      },
+    ],
+    [t]
+   );
+
   const s = sheet.scheme;
 
   return (
@@ -83,7 +97,8 @@ export default function SchemesPage() {
           queryKey="schemes"
           queryFn={adminSchemesApi.getAll}
           columns={getSchemeColumns(t, tCommon)}
-          filters={FILTERS}
+          // filters={FILTERS}
+          filters={filters}
           onRowClick={(row) => setSheet({ open: true, scheme: row })}
         />
       </Suspense>
@@ -119,7 +134,7 @@ export default function SchemesPage() {
                   className={`text-xs font-medium ${CATEGORY_BADGE_COLORS[s.category] ?? "bg-muted text-muted-foreground"}`}
                   variant="secondary"
                 >
-                  {s.category_display}
+                  {t[`cat_${s.category}`] ?? s.category_display}
                 </Badge>
               ),
             },

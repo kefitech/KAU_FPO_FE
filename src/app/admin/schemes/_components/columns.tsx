@@ -97,7 +97,7 @@ export function getSchemeColumns(t: T = {}, tCommon: T = {}): ColumnDef<AdminSch
         const color = CATEGORY_BADGE_COLORS[row.original.category] ?? "bg-muted text-muted-foreground";
         return (
           <Badge className={`text-xs font-medium ${color}`} variant="secondary">
-            {row.original.category_display}
+            {t[`cat_${row.original.category}`] ?? row.original.category_display}
           </Badge>
         );
       },
