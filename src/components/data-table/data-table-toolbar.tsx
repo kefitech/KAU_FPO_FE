@@ -39,6 +39,10 @@ interface DataTableToolbarProps<TData> {
   onRefresh?: () => void;
   isRefreshing?: boolean;
   table: Table<TData>;
+  columnsLabel?: string;
+  toggleColumnsLabel?: string;
+  searchPlaceholder?: string;
+  clearLabel?: string;
 }
 
 export function DataTableToolbar<TData>({
@@ -52,6 +56,10 @@ export function DataTableToolbar<TData>({
   onRefresh,
   isRefreshing,
   table,
+  columnsLabel = "Columns",
+  toggleColumnsLabel = "Toggle columns",
+  searchPlaceholder = "Search...",
+  clearLabel = "Clear",
 }: DataTableToolbarProps<TData>) {
   const [localSearch, setLocalSearch] = useState(search);
 
@@ -80,7 +88,7 @@ export function DataTableToolbar<TData>({
       <div className="relative w-full sm:w-auto">
         <Search className="absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Search..."
+          placeholder={searchPlaceholder}
           value={localSearch}
           onChange={(e) => setLocalSearch(e.target.value)}
           className="h-9 w-full sm:w-64 pr-8 pl-8 bg-background"
@@ -133,9 +141,14 @@ export function DataTableToolbar<TData>({
 
       {/* Clear all filters */}
       {hasActiveFilters && (
-        <Button variant="ghost" size="sm" onClick={() => onClearFilters?.()} className="h-9 text-muted-foreground hover:text-foreground">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onClearFilters?.()}
+          className="h-9 text-muted-foreground hover:text-foreground"
+        >
           <X className="mr-1 h-3.5 w-3.5" />
-          Clear
+          {clearLabel}
         </Button>
       )}
 
@@ -147,11 +160,11 @@ export function DataTableToolbar<TData>({
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="h-9 bg-background">
                 <Settings2 className="mr-1.5 h-4 w-4" />
-                Columns
+                {columnsLabel}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-44">
-              <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
+              <DropdownMenuLabel>{toggleColumnsLabel}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {hidableColumns.map((column) => (
                 <DropdownMenuCheckboxItem
@@ -169,7 +182,13 @@ export function DataTableToolbar<TData>({
 
         {/* Refresh */}
         {onRefresh && (
-          <Button variant="outline" size="icon" className="h-9 w-9 bg-background" onClick={onRefresh} disabled={isRefreshing}>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-9 w-9 bg-background"
+            onClick={onRefresh}
+            disabled={isRefreshing}
+          >
             <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
           </Button>
         )}

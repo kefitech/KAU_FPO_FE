@@ -24,12 +24,14 @@ function ExpertActions({ expert, t, tCommon }: { expert: AdminExpert; t: T; tCom
   const activateMutation = useMutation({
     mutationFn: () => (expert.is_active ? adminExpertsApi.deactivate(expert.id) : adminExpertsApi.activate(expert.id)),
     onSuccess: () => {
-      toast.success(expert.is_active ? (t.toast_deactivated ?? "Expert deactivated") : (t.toast_activated ?? "Expert activated"));
+      toast.success(
+        expert.is_active ? (t.toast_deactivated ?? "Expert deactivated") : (t.toast_activated ?? "Expert activated"),
+      );
       queryClient.invalidateQueries({ queryKey: ["experts"] });
     },
     onError: (error: unknown) => {
       const msg = (error as { message?: string })?.message;
-      toast.error(msg ?? (tCommon.update_failed ?? "Failed to update expert status"));
+      toast.error(msg ?? tCommon.update_failed ?? "Failed to update expert status");
     },
   });
 
@@ -41,14 +43,16 @@ function ExpertActions({ expert, t, tCommon }: { expert: AdminExpert; t: T; tCom
     },
     onError: (error: unknown) => {
       const msg = (error as { message?: string })?.message;
-      toast.error(msg ?? (tCommon.delete_failed ?? "Failed to delete expert"));
+      toast.error(msg ?? tCommon.delete_failed ?? "Failed to delete expert");
     },
   });
 
   function handleDelete() {
     confirm({
       title: t.delete_title ?? "Delete Expert",
-      description: (t.delete_description ?? 'Are you sure you want to delete "{name}"? This action cannot be undone.').replace("{name}", expert.name_en ?? ""),
+      description: (
+        t.delete_description ?? 'Are you sure you want to delete "{name}"? This action cannot be undone.'
+      ).replace("{name}", expert.name_en ?? ""),
       onConfirm: () => deleteMutation.mutateAsync(),
     });
   }
@@ -101,7 +105,7 @@ export function getExpertColumns(t: T = {}, tCommon: T = {}): ColumnDef<AdminExp
         const color = CATEGORY_BADGE_COLORS[row.original.category] ?? "bg-muted text-muted-foreground";
         return (
           <Badge className={`text-xs font-medium ${color}`} variant="secondary">
-            {row.original.category_display}
+            {t[`cat_${row.original.category}`] ?? row.original.category_display}
           </Badge>
         );
       },
@@ -111,7 +115,7 @@ export function getExpertColumns(t: T = {}, tCommon: T = {}): ColumnDef<AdminExp
       header: t.col_district ?? "District",
       meta: { hideOnMobile: true },
       cell: ({ row }) => {
-        const label = DISTRICT_OPTIONS.find((d) => d.value === row.original.district)?.label ?? row.original.district;
+        const label = t[`district_${row.original.district}`] ?? row.original.district;
         return <span className="text-sm text-muted-foreground">{label || "—"}</span>;
       },
     },

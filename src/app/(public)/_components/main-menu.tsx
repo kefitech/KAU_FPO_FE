@@ -33,8 +33,12 @@ const MainMenu = ({ openIndex, toggleSubMenu, navbarPlacement }: Props) => {
           {t.get_started ?? "Get Started"}
         </Link>
         <ul className="dropdown-menu">
-          <li><a href="/v1/login">{t.sign_in ?? "Sign In"}</a></li>
-          <li><a href="/register">{t.register ?? "Register"}</a></li>
+          <li>
+            <a href="/v1/login">{t.sign_in ?? "Sign In"}</a>
+          </li>
+          <li>
+            <a href="/register">{t.register ?? "Register FPO"}</a>
+          </li>
         </ul>
       </li>
       <li className={`dropdown ${openIndex === 1 ? "on" : ""}`}>
@@ -42,12 +46,24 @@ const MainMenu = ({ openIndex, toggleSubMenu, navbarPlacement }: Props) => {
           {t.pages ?? "Pages"}
         </Link>
         <ul className="dropdown-menu">
-          <li><Link href="/about-us">{t.about_us ?? "About Us"}</Link></li>
-          <li><Link href="/team">{t.team ?? "Team"}</Link></li>
-          <li><Link href="/howtoregister">{t.how_to_register ?? "How To Register"}</Link></li>
-          <li><Link href="/news-sources">{t.in_the_news ?? "In the News"}</Link></li>
-          <li><Link href="/faq">{t.faqs ?? "FAQs"}</Link></li>
-          <li><Link href="/contact-us">{t.contact_us ?? "Contact Us"}</Link></li>
+          <li>
+            <Link href="/about-us">{t.about_us ?? "About Us"}</Link>
+          </li>
+          <li>
+            <Link href="/team">{t.team ?? "Team"}</Link>
+          </li>
+          <li>
+            <Link href="/howtoregister">{t.how_to_register ?? "How To Register"}</Link>
+          </li>
+          <li>
+            <Link href="/news-sources">{t.in_the_news ?? "In the News"}</Link>
+          </li>
+          <li>
+            <Link href="/faq">{t.faqs ?? "FAQs"}</Link>
+          </li>
+          <li>
+            <Link href="/contact-us">{t.contact_us ?? "Contact Us"}</Link>
+          </li>
         </ul>
       </li>
       <li>

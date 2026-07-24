@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState, useMemo } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
@@ -72,8 +72,8 @@ export default function SchemesPage() {
         })),
       },
     ],
-    [t]
-   );
+    [t],
+  );
 
   const s = sheet.scheme;
 
@@ -100,6 +100,10 @@ export default function SchemesPage() {
           // filters={FILTERS}
           filters={filters}
           onRowClick={(row) => setSheet({ open: true, scheme: row })}
+          columnsLabel={tCommon.col_header ?? "Columns"}
+          toggleColumnsLabel={tCommon.col_toggle_columns ?? "Toggle columns"}
+          searchPlaceholder={tCommon.search_placeholder ?? "Search..."}
+          clearLabel={tCommon.cancel ?? "Clear"}
         />
       </Suspense>
 

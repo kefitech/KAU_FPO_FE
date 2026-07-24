@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
@@ -63,13 +63,26 @@ export default function ExpertsPage() {
 
   useEffect(() => {
     translationsApi
-      .getPublic(locale, "admin_experts,common")
+      .getPublic(locale, "admin_experts,districts,common")
       .then((data) => {
-        setT(data.admin_experts ?? {});
+        setT({ ...(data.districts ?? {}), ...(data.admin_experts ?? {}) });
         setTCommon(data.common ?? {});
       })
       .catch(() => undefined);
   }, [locale]);
+
+  const filters = useMemo(
+    () =>
+      FILTERS.map((f) => ({
+        ...f,
+        label: f.key === "category" ? (t.col_category ?? f.label) : (t.col_district ?? f.label),
+        options: f.options.map((o) => ({
+          ...o,
+          label: f.key === "category" ? (t[`cat_${o.value}`] ?? o.label) : (t[`district_${o.value}`] ?? o.label),
+        })),
+      })),
+    [t],
+  );
 
   return (
     <div className="flex flex-col gap-6 py-6">
@@ -91,8 +104,13 @@ export default function ExpertsPage() {
           queryKey="experts"
           queryFn={adminExpertsApi.getAll}
           columns={getExpertColumns(t, tCommon)}
-          filters={FILTERS}
+          // filters={FILTERS}
+          filters={filters}
           onRowClick={(row) => setDetailDialog({ open: true, expert: row })}
+          columnsLabel={tCommon.col_header ?? "Columns"}
+          toggleColumnsLabel={tCommon.col_toggle_columns ?? "Toggle columns"}
+          searchPlaceholder={tCommon.search_placeholder ?? "Search..."}
+          clearLabel={tCommon.cancel ?? "Clear"}
         />
       </Suspense>
 
@@ -100,6 +118,8 @@ export default function ExpertsPage() {
         open={detailDialog.open}
         onOpenChange={(open) => setDetailDialog((s) => ({ ...s, open }))}
         expert={detailDialog.expert}
+        t={t}
+        tCommon={tCommon}
       />
     </div>
   );

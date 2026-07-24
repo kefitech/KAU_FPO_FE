@@ -16,6 +16,8 @@ interface ExpertDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   expert: AdminExpert | null;
+  t: Record<string, string>;
+  tCommon: Record<string, string>;
 }
 
 const CATEGORY_BADGE_COLORS: Record<string, string> = {
@@ -35,8 +37,8 @@ function InfoRow({ label, value }: { label: string; value?: string | null }) {
   );
 }
 
-function DetailsTab({ expert }: { expert: AdminExpert }) {
-  const districtLabel = DISTRICT_OPTIONS.find((d) => d.value === expert.district)?.label ?? expert.district;
+function DetailsTab({ expert, t }: { expert: AdminExpert; t: Record<string, string> }) {
+  const districtLabel = t[`district_${expert.district}`] ?? expert.district;
   const badgeClass = CATEGORY_BADGE_COLORS[expert.category] ?? "bg-muted text-muted-foreground";
 
   return (
@@ -49,17 +51,17 @@ function DetailsTab({ expert }: { expert: AdminExpert }) {
           <p className="font-semibold">{expert.name_en}</p>
           {expert.name_ml && <p className="text-sm text-muted-foreground">{expert.name_ml}</p>}
           <Badge className={`mt-1 w-fit text-xs font-medium border ${badgeClass}`} variant="outline">
-            {expert.category_display}
+            {t[`cat_${expert.category}`] ?? expert.category_display}
           </Badge>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <InfoRow label="Designation" value={expert.designation} />
-        <InfoRow label="Organisation" value={expert.organisation} />
-        <InfoRow label="Primary Expertise" value={expert.primary_expertise} />
-        <InfoRow label="Secondary Expertise" value={expert.secondary_expertise} />
-        {districtLabel && <InfoRow label="District" value={districtLabel} />}
+        <InfoRow label={t.field_designation ?? "Designation"} value={expert.designation} />
+        <InfoRow label={t.field_organisation ?? "Organisation"} value={expert.organisation} />
+        <InfoRow label={t.field_primary_expertise ?? "Primary Expertise"} value={expert.primary_expertise} />
+        <InfoRow label={t.field_secondary_expertise ?? "Secondary Expertise"} value={expert.secondary_expertise} />
+        {districtLabel && <InfoRow label={t.field_district ?? "District"} value={districtLabel} />}
       </div>
 
       <div className="flex flex-col gap-2">
@@ -88,7 +90,7 @@ function DetailsTab({ expert }: { expert: AdminExpert }) {
   );
 }
 
-function EnquiriesTab({ expertId }: { expertId: number }) {
+function EnquiriesTab({ expertId, t }: { expertId: number; t: Record<string, string> }) {
   const { data: enquiries, isLoading } = useQuery({
     queryKey: ["expert-enquiries", expertId],
     queryFn: () => adminExpertsApi.getEnquiries(expertId),
@@ -113,7 +115,7 @@ function EnquiriesTab({ expertId }: { expertId: number }) {
   if (!enquiries || enquiries.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center gap-2">
-        <p className="text-muted-foreground text-sm">No enquiries received yet.</p>
+        <p className="text-muted-foreground text-sm">{t.empty_enquiries ?? "No enquiries received yet."}</p>
       </div>
     );
   }
@@ -124,9 +126,7 @@ function EnquiriesTab({ expertId }: { expertId: number }) {
         <div key={enq.id} className="rounded-lg border p-3 flex flex-col gap-1.5">
           <div className="flex items-start justify-between gap-2">
             <div className="flex flex-col gap-0.5">
-              {enq.fpo_name && (
-                <span className="font-medium text-sm">{enq.fpo_name}</span>
-              )}
+              {enq.fpo_name && <span className="font-medium text-sm">{enq.fpo_name}</span>}
               {enq.user_name && (
                 <span className="text-xs text-muted-foreground">
                   {enq.user_name}
@@ -152,7 +152,7 @@ function EnquiriesTab({ expertId }: { expertId: number }) {
   );
 }
 
-export function ExpertDetailDialog({ open, onOpenChange, expert }: ExpertDetailDialogProps) {
+export function ExpertDetailDialog({ open, onOpenChange, expert, t, tCommon }: ExpertDetailDialogProps) {
   const [activeTab, setActiveTab] = useState<"details" | "enquiries">("details");
 
   if (!expert) return null;
@@ -161,7 +161,7 @@ export function ExpertDetailDialog({ open, onOpenChange, expert }: ExpertDetailD
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Expert Details</DialogTitle>
+          <DialogTitle>{t.view_title ?? "Expert Details"}</DialogTitle>
         </DialogHeader>
 
         {/* Tabs */}
@@ -177,17 +177,13 @@ export function ExpertDetailDialog({ open, onOpenChange, expert }: ExpertDetailD
                   : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
-              {tab}
+              {tab === "details" ? (t.tab_details ?? "Details") : (t.tab_enquiries ?? "Enquiries")}
             </button>
           ))}
         </div>
 
         <div className="mt-2 max-h-[50vh] overflow-y-auto">
-          {activeTab === "details" ? (
-            <DetailsTab expert={expert} />
-          ) : (
-            <EnquiriesTab expertId={expert.id} />
-          )}
+          {activeTab === "details" ? <DetailsTab expert={expert} t={t} /> : <EnquiriesTab expertId={expert.id} t={t} />}
         </div>
       </DialogContent>
     </Dialog>

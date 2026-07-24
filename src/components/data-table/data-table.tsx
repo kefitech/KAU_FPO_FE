@@ -34,6 +34,10 @@ interface DataTableProps<TData> {
   extra?: React.ReactNode;
   onSelectionChange?: (rows: TData[]) => void;
   onRowClick?: (row: TData) => void;
+  columnsLabel?: string;
+  toggleColumnsLabel?: string;
+  searchPlaceholder?: string;
+  clearLabel?: string;
 }
 
 export function DataTable<TData>({
@@ -45,6 +49,10 @@ export function DataTable<TData>({
   extra,
   onSelectionChange,
   onRowClick,
+  columnsLabel,
+  toggleColumnsLabel,
+  searchPlaceholder,
+  clearLabel,
 }: DataTableProps<TData>) {
   const { params, setPage, setPageSize, setSearch, setFilter, clearFilters, setOrdering, searchParams } = useDataTable({
     defaultPageSize,
@@ -192,6 +200,10 @@ export function DataTable<TData>({
         isRefreshing={isFetching}
         extra={extra}
         table={table}
+        columnsLabel={columnsLabel}
+        toggleColumnsLabel={toggleColumnsLabel}
+        searchPlaceholder={searchPlaceholder}
+        clearLabel={clearLabel}
       />
 
       <div className="relative overflow-x-auto border border-border shadow-sm">
@@ -203,7 +215,10 @@ export function DataTable<TData>({
         <Table className="min-w-full">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="border-b border-slate-700 bg-slate-800 hover:bg-slate-800 dark:bg-slate-900 dark:border-slate-700">
+              <TableRow
+                key={headerGroup.id}
+                className="border-b border-slate-700 bg-slate-800 hover:bg-slate-800 dark:bg-slate-900 dark:border-slate-700"
+              >
                 {headerGroup.headers.map((header) => {
                   const canSort = header.column.getCanSort();
                   const sorted = header.column.getIsSorted();
@@ -245,7 +260,10 @@ export function DataTable<TData>({
           <TableBody>
             {isLoading ? (
               Array.from({ length: params.page_size }).map((_, i) => (
-                <TableRow key={i} className={i % 2 === 1 ? "bg-slate-50 dark:bg-slate-900/40" : "bg-white dark:bg-background"}>
+                <TableRow
+                  key={i}
+                  className={i % 2 === 1 ? "bg-slate-50 dark:bg-slate-900/40" : "bg-white dark:bg-background"}
+                >
                   {Array.from({ length: colSpan }).map((_, j) => (
                     <TableCell key={j}>
                       <Skeleton className="h-4 w-full" />
