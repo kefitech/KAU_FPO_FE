@@ -30,8 +30,8 @@ export default function EditChannelSettingsPage() {
   const [tCommon, setTCommon] = useState<T>({});
 
   useEffect(() => {
-    translationsApi.getPublic(locale, "channel_settings_dialog,common").then((data) => {
-      setTForm(data.channel_settings_dialog ?? {});
+    translationsApi.getPublic(locale, "channel_settings_dialog,tmpl_code_dialog,common").then((data) => {
+      setTForm({ ...(data.tmpl_code_dialog ?? {}), ...(data.channel_settings_dialog ?? {}) });
       setTCommon(data.common ?? {});
     });
   }, [locale]);
@@ -63,7 +63,7 @@ export default function EditChannelSettingsPage() {
   }
 
   const channelLabel =
-    channelSetting.channel_display ?? CHANNEL_LABELS[channelSetting.channel] ?? channelSetting.channel;
+    tForm[`channel_${channelSetting.channel}`] ?? channelSetting.channel_display ?? CHANNEL_LABELS[channelSetting.channel] ?? channelSetting.channel;
 
   return (
     <div className="flex flex-col gap-6 px-8 py-6">

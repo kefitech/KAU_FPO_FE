@@ -117,7 +117,7 @@ export function getTemplateColumns(
       header: t.col_channel ?? "Channel",
       cell: ({ row }) => (
         <Badge variant="outline" className={CHANNEL_STYLES[row.original.channel] ?? ""}>
-          {row.original.channel_display}
+          {t[`channel_${row.original.channel}`] ?? row.original.channel_display}
         </Badge>
       ),
     },

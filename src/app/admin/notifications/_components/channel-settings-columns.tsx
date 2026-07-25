@@ -110,8 +110,8 @@ export function getChannelSettingsColumns(
       header: t.col_channel ?? "Channel",
       cell: ({ row }) => (
         <Badge variant="outline" className={CHANNEL_STYLES[row.original.channel] ?? ""}>
-          {row.original.channel_display ?? CHANNEL_LABELS[row.original.channel] ?? row.original.channel}
-        </Badge>
+          {t[`channel_${row.original.channel}`] ?? row.original.channel_display}
+         </Badge>
       ),
     },
     {

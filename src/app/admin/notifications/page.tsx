@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState,useMemo } from "react";
 
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -33,47 +33,8 @@ const NAV: { key: Tab; fallback: string; icon: React.ElementType }[] = [
   { key: "templates", fallback: "Templates", icon: FileText },
   { key: "channels", fallback: "Channel Settings", icon: Radio },
 ];
-
-const CODE_FILTERS = [
-  {
-    key: "channel",
-    label: "Channel",
-    options: [
-      { label: "Email", value: "email" },
-      { label: "SMS", value: "sms" },
-      { label: "In-App", value: "in_app" },
-      { label: "Push", value: "push" },
-    ],
-  },
-  {
-    key: "is_active",
-    label: "Status",
-    options: [
-      { label: "Active", value: "true" },
-      { label: "Inactive", value: "false" },
-    ],
-  },
-];
-
-const CHANNEL_SETTINGS_FILTERS = [
-  {
-    key: "channel",
-    label: "Channel",
-    options: [
-      { label: "Email", value: "email" },
-      { label: "SMS", value: "sms" },
-      { label: "In-App", value: "in_app" },
-    ],
-  },
-  {
-    key: "is_active",
-    label: "Status",
-    options: [
-      { label: "Active", value: "true" },
-      { label: "Inactive", value: "false" },
-    ],
-  },
-];
+const CHANNEL_OPTIONS = ["email", "sms", "in_app", "push"] as const;
+const CHANNEL_SETTINGS_CHANNEL_OPTIONS = ["email", "sms", "in_app"] as const;
 
 export default function NotificationsPage() {
   const router = useRouter();
@@ -94,14 +55,14 @@ export default function NotificationsPage() {
     translationsApi
       .getPublic(
         locale,
-        "admin_notifications,tmpl_code_table,tmpl_table,test_render_dialog,channel_settings_table,channel_settings_test_dialog,confirm_dialog,common",
+        "admin_notifications,tmpl_code_table,tmpl_code_dialog,tmpl_table,test_render_dialog,channel_settings_table,channel_settings_test_dialog,confirm_dialog,common",
       )
       .then((data) => {
         setTPage(data.admin_notifications ?? {});
-        setTCodeTable(data.tmpl_code_table ?? {});
-        setTTmplTable(data.tmpl_table ?? {});
+        setTCodeTable({ ...(data.tmpl_code_table ?? {}), ...(data.tmpl_code_dialog ?? {}) });
+        setTTmplTable({ ...(data.tmpl_code_dialog ?? {}), ...(data.tmpl_table ?? {}) });
         setTTestRender(data.test_render_dialog ?? {});
-        setTChannelTable(data.channel_settings_table ?? {});
+        setTChannelTable({ ...(data.tmpl_code_dialog ?? {}), ...(data.tmpl_code_table ?? {}), ...(data.channel_settings_table ?? {}) });
         setTChannelTest(data.channel_settings_test_dialog ?? {});
         setTConfirm(data.confirm_dialog ?? {});
         setTCommon(data.common ?? {});
@@ -136,25 +97,69 @@ export default function NotificationsPage() {
     enabled: activeTab === "templates",
   });
 
+  const codeFilters = useMemo(
+    () => [
+      {
+        key: "channel",
+        label: tCodeTable.col_channel ?? "Channel",
+        options: CHANNEL_OPTIONS.map((c) => ({
+          label: tCodeTable[`channel_${c}`] ?? c,
+          value: c,
+        })),
+      },
+      {
+        key: "is_active",
+        label: tCodeTable.filter_status ?? "Status",
+        options: [
+          { label: tCommon.badge_active ?? "Active", value: "true" },
+          { label: tCommon.badge_inactive ?? "Inactive", value: "false" },
+        ],
+      },
+    ],
+    [tCodeTable, tCommon]
+  );
+ 
+  const channelSettingsFilters = useMemo(
+    () => [
+      {
+        key: "channel",
+        label: tChannelTable.channel_label ?? "Channel",
+        options: CHANNEL_SETTINGS_CHANNEL_OPTIONS.map((c) => ({
+          label: tChannelTable[`channel_${c}`] ?? c,
+          value: c,
+        })),
+      },
+      {
+        key: "is_active",
+        label: tChannelTable.filter_status ?? "Status",
+        options: [
+          { label: tCommon.badge_active ?? "Active", value: "true" },
+          { label: tCommon.badge_inactive ?? "Inactive", value: "false" },
+        ],
+      },
+    ],
+    [tChannelTable, tCommon]
+  );
+
   const templateFilters = [
     {
       key: "template_code",
-      label: "Template Code",
+      label: tTmplTable.col_code ?? "Template Code",
       options: (codesData?.data ?? []).map((c) => ({ label: `${c.name} (${c.code})`, value: String(c.id) })),
     },
     {
       key: "language",
-      label: "Language",
+      label: tTmplTable.col_language ?? "Language",
       options: (languagesData?.data ?? [])
         .filter((l) => l.is_active)
         .map((l) => ({ label: `${l.name} (${l.code})`, value: String(l.id) })),
     },
     {
       key: "is_active",
-      label: "Status",
+      label: tCodeTable.filter_status ?? "Status",
       options: [
-        { label: "Active", value: "true" },
-        { label: "Inactive", value: "false" },
+        { label: tCommon.badge_active ?? "Active", value: "true" },
+        { label: tCommon.badge_inactive ?? "Inactive", value: "false" },
       ],
     },
   ];
@@ -199,8 +204,13 @@ export default function NotificationsPage() {
               queryKey="notification-template-codes"
               queryFn={notificationTemplateCodeApi.getAll}
               columns={getTemplateCodeColumns(tCodeTable, tConfirm, tCommon)}
-              filters={CODE_FILTERS}
+              filters={codeFilters}
               onRowClick={(row) => setCodeView({ open: true, row })}
+              columnsLabel={tCommon.col_header ?? "Columns"}
+              toggleColumnsLabel={tCommon.col_toggle_columns ?? "Toggle columns"}
+              searchPlaceholder={tCommon.search_placeholder ?? "Search..."}
+              clearLabel={tCommon.cancel ?? "Clear"}
+              
             />
           </Suspense>
         )}
@@ -212,6 +222,10 @@ export default function NotificationsPage() {
               columns={getTemplateColumns(setTestRenderTemplate, tTmplTable, tConfirm, tCommon)}
               filters={templateFilters}
               onRowClick={(row) => setTmplView({ open: true, row })}
+              columnsLabel={tCommon.col_header ?? "Columns"}
+              toggleColumnsLabel={tCommon.col_toggle_columns ?? "Toggle columns"}
+              searchPlaceholder={tCommon.search_placeholder ?? "Search..."}
+              clearLabel={tCommon.cancel ?? "Clear"}
             />
           </Suspense>
         )}
@@ -221,8 +235,12 @@ export default function NotificationsPage() {
               queryKey="channel-settings"
               queryFn={channelSettingsApi.getAll}
               columns={getChannelSettingsColumns(setTestingChannel, tChannelTable, tConfirm, tCommon)}
-              filters={CHANNEL_SETTINGS_FILTERS}
+              filters={channelSettingsFilters}
               onRowClick={(row) => setChannelView({ open: true, row })}
+              columnsLabel={tCommon.col_header ?? "Columns"}
+              toggleColumnsLabel={tCommon.col_toggle_columns ?? "Toggle columns"}
+              searchPlaceholder={tCommon.search_placeholder ?? "Search..."}
+              clearLabel={tCommon.cancel ?? "Clear"}
             />
           </Suspense>
         )}
@@ -357,7 +375,7 @@ export default function NotificationsPage() {
         fields={
           channelView.row
             ? [
-                { label: tChannelTable.col_channel ?? "Channel", value: channelView.row.channel },
+                { label: tChannelTable.col_channel ?? "Channel", value: tChannelTable[`channel_${channelView.row.channel}`] ?? channelView.row.channel },
                 {
                   label: tChannelTable.col_status ?? "Status",
                   type: "status",

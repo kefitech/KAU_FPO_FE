@@ -99,10 +99,10 @@ export default function LanguagesPage() {
   const TRANSLATION_VERIFIED_FILTER = useMemo(
     () => ({
       key: "is_verified",
-      label: tTransTable.col_verified ?? "Verified",
+      label: tTransTable.col_status ?? "Status",
       options: [
-        { label: tCommon.badge_verified ?? "Verified", value: "true" },
-        { label: tCommon.badge_unverified ?? "Unverified", value: "false" },
+        { label: tTransTable.badge_verified ?? "Verified", value: "true" },
+        { label: tTransTable.badge_unverified ?? "Unverified", value: "false" },
       ],
     }),
     [tCommon, tTransTable],
@@ -217,17 +217,17 @@ export default function LanguagesPage() {
     () => [
       {
         key: "language",
-        label: "Language",
+        label: tTransTable.col_language ?? "Language",
         options: (languagesData?.data ?? []).map((l) => ({ label: `${l.name} (${l.code})`, value: String(l.id) })),
       },
       {
         key: "category",
-        label: "Category",
+        label: tTransTable.col_category ?? "Category",
         options: (categoriesData?.data ?? []).map((c) => ({ label: c.name, value: String(c.id) })),
       },
       TRANSLATION_VERIFIED_FILTER,
     ],
-    [languagesData, categoriesData, TRANSLATION_VERIFIED_FILTER],
+    [languagesData, categoriesData, TRANSLATION_VERIFIED_FILTER, tTransTable],
   );
 
   const navLabels: Record<Tab, string> = {
@@ -325,7 +325,7 @@ export default function LanguagesPage() {
               onSelectionChange={setSelectedTranslations}
               extra={translationBulkExtra}
               columnsLabel={tCommon.columns_header}
-              toggleColumnsLabel={tCommon.col_toggle_columns}
+              toggleColumnsLabel={tCommon.columns_toggle_columns}
               searchPlaceholder={tCommon.search_placeholder}
               clearLabel={tCommon.clear_filters}
             />

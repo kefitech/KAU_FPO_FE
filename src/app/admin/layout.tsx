@@ -30,6 +30,8 @@ const STRUCTURAL_PARENT_OVERRIDES: Record<string, string> = {
   "/admin/notification-templates": "/admin/notifications?tab=templates",
   "/admin/notification-template-codes": "/admin/notifications?tab=codes",
   "/admin/notification-channel-settings": "/admin/notifications?tab=channels",
+  "/admin/categories": "/admin/languages?tab=categories",
+  "/admin/menu-items": "/admin/languages?tab=menu",
 };
 
 function getStructuralParent(pathname: string): string {
