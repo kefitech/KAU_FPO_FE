@@ -32,7 +32,7 @@ export function getOwnershipClaimColumns(
   return [
     {
       accessorKey: "claimant_name",
-      header: t.col_claimant ?? "Claimant",
+      header: t.col_user ?? "Claimant",
       cell: ({ row }) => <TextCell value={row.original.claimant_name} maxWidth="max-w-[160px]" />,
     },
     {
@@ -52,11 +52,11 @@ export function getOwnershipClaimColumns(
       cell: ({ row }) => (
         <div className="flex flex-col gap-1">
           <Badge variant="secondary" className={STATUS_BADGE[row.original.status]}>
-            {STATUS_LABEL[row.original.status]}
+            {t[`status_${row.original.status}`] ?? STATUS_LABEL[row.original.status]}
           </Badge>
           {row.original.has_conflict && (
             <Badge variant="secondary" className="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 text-xs">
-              Dispute
+              {t.badge_dispute ?? "Dispute"}
             </Badge>
           )}
         </div>

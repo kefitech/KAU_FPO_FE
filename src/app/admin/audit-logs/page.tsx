@@ -1,7 +1,5 @@
 "use client";
-
-import { Suspense, useEffect, useState } from "react";
-
+import { Suspense, useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 
 import { auditLogsApi } from "@/app/admin/_api/audit-logs";
@@ -12,6 +10,7 @@ import { ViewSheet } from "@/components/ui/view-sheet";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 import { type AuditLog, getChangesDisplay, getObjectInfoDisplay, getPerformedByName } from "@/types/admin";
+import { Fish } from "lucide-react";
 
 type T = Record<string, string>;
 
@@ -39,16 +38,6 @@ const ACTION_TYPES = [
   "fpo_user_deactivate",
 ];
 
-const FILTERS: FilterConfig[] = [
-  {
-    key: "action",
-    label: "Action",
-    type: "select",
-    options: ACTION_TYPES.map((a) => ({ label: a.replace(/_/g, " "), value: a })),
-  },
-  { key: "from_date", label: "From date", type: "date" },
-  { key: "to_date", label: "To date", type: "date" },
-];
 
 const METHOD_COLORS: Record<string, string> = {
   GET: "border-blue-500/40 bg-blue-500/10 text-blue-700 dark:text-blue-400",
@@ -75,7 +64,7 @@ function getColumns(t: T): ColumnDef<AuditLog>[] {
       enableSorting: false,
       cell: ({ row }) => (
         <Badge variant="secondary" className="text-[11px] font-medium">
-          {row.original.action_display || row.original.action}
+         {t[`action_${row.original.action}`] ?? (row.original.action_display || row.original.action)}
         </Badge>
       ),
     },
@@ -121,16 +110,36 @@ function getColumns(t: T): ColumnDef<AuditLog>[] {
 
 export default function AuditLogsPage() {
   const locale = useLocaleStore((s) => s.locale);
-
+  const [tCommon, setTCommon] = useState<T>({});
   const [tTable, setTTable] = useState<T>({});
   const [logView, setLogView] = useState<{ open: boolean; row: AuditLog | null }>({ open: false, row: null });
 
   useEffect(() => {
     translationsApi
       .getPublic(locale, "audit_logs_table,common")
-      .then((data) => setTTable(data.audit_logs_table ?? {}))
+      .then((data) => {
+        setTTable(data.audit_logs_table ?? {});
+        setTCommon(data.common ?? {});
+      })
       .catch(() => undefined);
   }, [locale]);
+
+  const filters: FilterConfig[] = useMemo(
+    () => [
+      {
+        key: "action",
+        label: tTable.filter_action ?? "Action",
+        type: "select",
+        options: ACTION_TYPES.map((a) => ({
+          label: tTable[`action_${a}`] ?? a.replace(/_/g, " "),
+          value: a,
+        })),
+      },
+      { key: "from_date", label: tTable.filter_from_date ?? "From date", type: "date" },
+      { key: "to_date", label: tTable.filter_to_date ?? "To date", type: "date" },
+    ],
+    [tTable]
+  );
 
   const columns = getColumns(tTable);
 
@@ -148,8 +157,12 @@ export default function AuditLogsPage() {
           queryKey="audit-logs"
           queryFn={auditLogsApi.getAll}
           columns={columns}
-          filters={FILTERS}
+          filters={filters}
           onRowClick={(row) => setLogView({ open: true, row })}
+          columnsLabel={tCommon.col_header ?? "Columns"}
+          toggleColumnsLabel={tCommon.col_toggle_columns ?? "Toggle columns"}
+          searchPlaceholder={tCommon.search_placeholder ?? "Search..."}
+          clearLabel={tCommon.cancel ?? "Clear"}
         />
       </Suspense>
 
@@ -160,24 +173,24 @@ export default function AuditLogsPage() {
         fields={
           logView.row
             ? [
-                { label: tTable.col_action ?? "Action", type: "section" },
+                { label: tTable.section_action ?? "Action", type: "section" },
                 {
-                  label: tTable.col_action ?? "Action",
+                  label: tTable.label_action ?? "Action",
                   value: logView.row.action_display || logView.row.action,
                 },
                 {
-                  label: tTable.col_performed_by ?? "Performed By",
+                  label: tTable.label_performed_by ?? "Performed By",
                   value: getPerformedByName(logView.row.performed_by),
                 },
-                { label: tTable.col_time ?? "Time", type: "date", value: logView.row.created_at },
-                { label: tTable.col_object ?? "Object", type: "section" },
-                { label: tTable.col_object ?? "Object Info", value: getObjectInfoDisplay(logView.row.object_info) },
-                { label: tTable.col_changes ?? "Changes", value: getChangesDisplay(logView.row.changes) },
-                { label: tTable.col_request ?? "Request", type: "section" },
-                { label: tTable.col_method ?? "Method", value: logView.row.request_method },
-                { label: tTable.col_path ?? "Path", value: logView.row.request_path },
-                { label: tTable.col_ip ?? "IP Address", value: logView.row.ip_address },
-                { label: tTable.col_user_agent ?? "User Agent", value: logView.row.user_agent },
+                { label: tTable.label_time ?? "Time", type: "date", value: logView.row.created_at },
+                { label: tTable.section_object ?? "Object", type: "section" },
+                { label: tTable.label_object ?? "Object Info", value: getObjectInfoDisplay(logView.row.object_info) },
+                { label: tTable.label_changes ?? "Changes", value: getChangesDisplay(logView.row.changes) },
+                { label: tTable.section_request ?? "Request", type: "section" },
+                { label: tTable.label_method ?? "Method", value: logView.row.request_method },
+                { label: tTable.label_path ?? "Path", value: logView.row.request_path },
+                { label: tTable.label_ip ?? "IP Address", value: logView.row.ip_address },
+                { label: tTable.label_user_agent ?? "User Agent", value: logView.row.user_agent },
               ]
             : []
         }

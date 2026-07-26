@@ -467,12 +467,15 @@ export default function SiteContentPage() {
   const searchParams = useSearchParams();
   const tab = (searchParams.get("tab") ?? "content-blocks") as TabKey;
   const locale = useLocaleStore((s) => s.locale);
-  const [t, setT] = useState<T>({});
-
+  const [t, setT] = useState<T>({});  
+  const [tCommon, setTCommon] = useState<T>({});
   useEffect(() => {
     translationsApi
       .getPublic(locale, "admin_site_content,common")
-      .then((data) => setT(data.admin_site_content ?? {}))
+      .then((data) => {
+        setT(data.admin_site_content ?? {});
+        setTCommon(data.common ?? {});
+      })
       .catch(() => undefined);
   }, [locale]);
 
@@ -540,7 +543,7 @@ export default function SiteContentPage() {
           {tab === "team" && <TeamTab t={t} />}
           {tab === "quick-links" && <QuickLinksTab t={t} />}
           {tab === "news-sources" && <NewsSourcesTab t={t} />}
-          {tab === "feedback" && <FeedbackTab t={t} />}
+          {tab === "feedback" && <FeedbackTab t={t} tCommon={tCommon} />}
         </div>
       </div>
     </div>

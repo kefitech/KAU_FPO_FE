@@ -170,11 +170,21 @@ export function getApplicationColumns(t: T, tCommon: T): ColumnDef<ApplicationLi
       accessorKey: "district_display",
       header: t.col_district ?? "District",
       meta: { hideOnMobile: true },
+      cell: ({ row }) => (
+      <span className="text-sm text-muted-foreground">
+        {t[`district_${row.original.district}`] ?? row.original.district_display}
+      </span>
+    ),
     },
     {
       accessorKey: "status",
       header: t.col_status ?? "Status",
-      cell: ({ row }) => <StatusBadge status={row.original.status} label={row.original.status_display} />,
+      cell: ({ row }) => (
+        <StatusBadge
+          status={row.original.status}
+          label={t[`status_${row.original.status}`] ?? row.original.status_display}
+        />
+      ),
     },
     {
       accessorKey: "primary_user_name",

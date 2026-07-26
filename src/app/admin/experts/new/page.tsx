@@ -16,9 +16,9 @@ export default function NewExpertPage() {
 
   useEffect(() => {
     translationsApi
-      .getPublic(locale, "admin_experts,common")
+      .getPublic(locale, "admin_experts,districts,common")
       .then((data) => {
-        setT(data.admin_experts ?? {});
+        setT({ ...(data.districts ?? {}), ...(data.admin_experts ?? {}) });
         setTCommon(data.common ?? {});
       })
       .catch(() => undefined);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState,useMemo } from "react";
 
 import { useRouter } from "next/navigation";
 
@@ -40,6 +40,19 @@ export default function AnnouncementsPage() {
       })
       .catch(() => undefined);
   }, [locale]);
+  const filters = useMemo(
+    () => [
+      {
+        key: "category",
+        label: t.filter_category ?? "Category",
+        options: [
+          { label: t.cat_announcement ?? "Announcement", value: "announcement" },
+          { label: t.cat_news ?? "News", value: "news" },
+        ],
+      },
+    ],
+    [t]
+  );
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => adminAnnouncementsApi.delete(id),
@@ -90,27 +103,23 @@ export default function AnnouncementsPage() {
             {t.page_description ?? "Manage news and announcements shown on the landing page."}
           </p>
         </div>
-        <Button className="bg-green-600 hover:bg-green-700" onClick={() => router.push("/admin/announcements/new")}>
+        <Button className="bg-blue-700 hover:bg-blue-600" onClick={() => router.push("/admin/announcements/new")}>
           <Plus className="mr-2 h-4 w-4" />
           {t.btn_add ?? "Add Announcement"}
         </Button>
       </div>
 
+      
       <DataTable
         queryKey="announcements"
         queryFn={adminAnnouncementsApi.getAll}
         columns={columns}
-        filters={[
-          {
-            key: "category",
-            label: "Category",
-            options: [
-              { label: "Announcement", value: "announcement" },
-              { label: "News", value: "news" },
-            ],
-          },
-        ]}
+        filters={filters}
         onRowClick={(row) => setSheet({ open: true, item: row })}
+        columnsLabel={tCommon.col_header ?? "Columns"}
+        toggleColumnsLabel={tCommon.col_toggle_columns ?? "Toggle columns"}
+        searchPlaceholder={tCommon.search_placeholder ?? "Search..."}
+        clearLabel={tCommon.cancel ?? "Clear"}
       />
 
       {sheet.item && (
@@ -129,33 +138,33 @@ export default function AnnouncementsPage() {
             },
           ]}
           fields={[
-            { type: "section", label: "Details" },
+            { type: "section", label: t.section_details ?? "Details" },
             {
-              label: "Category",
+              label: t.filter_category ?? "Category",
               type: "node",
               node: (
                 <Badge variant="secondary" className="text-xs font-medium">
-                  {sheet.item.category}
+                  {t[`cat_${sheet.item.category}`] ?? sheet.item.category}
                 </Badge>
               ),
             },
             {
-              label: "Status",
+              label: t.field_status ?? "Status",
               type: "status",
               active: sheet.item.is_active,
               activeLabel: tCommon.badge_active ?? "Active",
               inactiveLabel: tCommon.badge_inactive ?? "Inactive",
             },
-            { label: "Published Date", type: "date", value: sheet.item.published_date },
-            { label: "Created", type: "date", value: sheet.item.created_at },
-            { type: "section", label: "Content (English)" },
-            { label: "Title (EN)", value: sheet.item.title?.en ?? Object.values(sheet.item.title ?? {})[0] },
-            { label: "Body (EN)", value: stripHtml(sheet.item.body?.en ?? Object.values(sheet.item.body ?? {})[0]) },
+            { label: t.field_published_date ?? "Published Date", type: "date", value: sheet.item.published_date },
+            { label: t.field_created ?? "Created", type: "date", value: sheet.item.created_at },
+            { type: "section", label: t.section_content_en ?? "Content (English)" },
+            { label: t.field_title_en ?? "Title (EN)", value: sheet.item.title?.en ?? Object.values(sheet.item.title ?? {})[0] },
+            { label: t.field_body_en ?? "Body (EN)", value: stripHtml(sheet.item.body?.en ?? Object.values(sheet.item.body ?? {})[0]) },
             ...(sheet.item.title?.ml
               ? [
-                  { type: "section" as const, label: "Content (Malayalam)" },
-                  { label: "Title (ML)", value: sheet.item.title.ml },
-                  { label: "Body (ML)", value: sheet.item.body?.ml },
+                 { type: "section" as const, label: t.section_content_ml ?? "Content (Malayalam)" },
+                 { label: t.field_title_ml ?? "Title (ML)", value: sheet.item.title.ml },
+                 { label: t.field_body_ml ?? "Body (ML)", value: sheet.item.body?.ml },
                 ]
               : []),
           ]}

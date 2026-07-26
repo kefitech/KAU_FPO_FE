@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState,useMemo } from "react";
 
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -94,6 +94,57 @@ export default function ApplicationsPage() {
   const [tCommon, setTCommon] = useState<T>({});
   const [downloading, setDownloading] = useState(false);
 
+
+
+  const filters = useMemo(
+    () => [
+      {
+        key: "status",
+        label: t.filter_all_status ?? "All Status",
+        options: [
+          { label: t.status_submitted ?? "Submitted", value: "submitted" },
+          { label: t.status_under_review ?? "Under Review", value: "under_review" },
+          { label: t.status_approved ?? "Approved", value: "approved" },
+          { label: t.status_rejected ?? "Rejected", value: "rejected" },
+          { label: t.status_info_required ?? "Info Required", value: "info_required" },
+          { label: t.status_draft ?? "Draft", value: "draft" },
+          { label: t.status_suspended ?? "Suspended", value: "suspended" },
+          { label: t.status_claimed ?? "Claimed", value: "claimed" },
+        ],
+      },
+      {
+        key: "district",
+        label: t.filter_all_district ?? "All District",
+        options: [
+          { value: "TVM", label: t.district_TVM ?? "Thiruvananthapuram" },
+          { value: "KLM", label: t.district_KLM ?? "Kollam" },
+          { value: "PTA", label: t.district_PTA ?? "Pathanamthitta" },
+          { value: "ALP", label: t.district_ALP ?? "Alappuzha" },
+          { value: "KTM", label: t.district_KTM ?? "Kottayam" },
+          { value: "IDK", label: t.district_IDK ?? "Idukki" },
+          { value: "EKM", label: t.district_EKM ?? "Ernakulam" },
+          { value: "TSR", label: t.district_TSR ?? "Thrissur" },
+          { value: "PKD", label: t.district_PKD ?? "Palakkad" },
+          { value: "MLP", label: t.district_MLP ?? "Malappuram" },
+          { value: "KZD", label: t.district_KZD ?? "Kozhikode" },
+          { value: "WYD", label: t.district_WYD ?? "Wayanad" },
+          { value: "KNR", label: t.district_KNR ?? "Kannur" },
+          { value: "KSD", label: t.district_KSD ?? "Kasaragod" },
+        ],
+      },
+      {
+        key: "tier",
+        label: t.filter_all_tier ?? "All Tier",
+        options: [
+          { label: t.tier_a ?? "Tier A", value: "A" },
+          { label: t.tier_b ?? "Tier B", value: "B" },
+          { label: t.tier_c ?? "Tier C", value: "C" },
+          { label: t.tier_d ?? "Tier D", value: "D" },
+        ],
+      },
+    ],
+    [t]
+  );
   async function handleDownload(format: "excel" | "pdf") {
     setDownloading(true);
     try {
@@ -120,9 +171,9 @@ export default function ApplicationsPage() {
 
   useEffect(() => {
     translationsApi
-      .getPublic(locale, "applications_table,common")
+      .getPublic(locale, "applications_table,admin_dashboard,districts,common")
       .then((data) => {
-        setT(data.applications_table ?? {});
+        setT({ ...(data.districts ?? {}), ...(data.admin_dashboard ?? {}), ...(data.applications_table ?? {}) });
         setTCommon(data.common ?? {});
       })
       .catch(() => undefined);
@@ -175,8 +226,12 @@ export default function ApplicationsPage() {
           queryKey="applications"
           queryFn={adminApplicationsApi.getAll}
           columns={getApplicationColumns(t, tCommon)}
-          filters={STATUS_FILTERS}
+          filters={filters}
           onRowClick={(row) => setSheet({ open: true, app: row })}
+          columnsLabel={tCommon.col_header ?? "Columns"}
+          toggleColumnsLabel={tCommon.col_toggle_columns ?? "Toggle columns"}
+          searchPlaceholder={tCommon.search_placeholder ?? "Search..."}
+          clearLabel={tCommon.cancel ?? "Clear"}
         />
       </Suspense>
 
@@ -187,38 +242,45 @@ export default function ApplicationsPage() {
           title={a.name}
           actions={[
             {
-              label: "View Full Details",
+              label: t.action_view_full ?? "View Full Details",
               icon: ExternalLink,
               onClick: () => router.push(`/admin/applications/${a.id}`),
             },
           ]}
           fields={[
-            { type: "section", label: "Application" },
-            { label: "Application ID", type: "code", value: a.application_id },
+            { type: "section", label: t.section_application ?? "Application" },
+            { label: t.field_application_id ?? "Application ID", type: "code", value: a.application_id },
             {
-              label: "Status",
+              label: t.field_status ?? "Status",
               type: "node",
               node: (
                 <Badge
                   className={`text-xs font-medium ${STATUS_COLORS[a.status] ?? "bg-muted text-muted-foreground"}`}
                   variant="secondary"
                 >
-                  {a.status_display}
+                  {t[`status_${a.status}`] ?? a.status_display}
                 </Badge>
               ),
             },
-            { label: "District", value: a.district_display },
-            { label: "Tier", value: a.tier ?? a.current_tier ?? "—" },
-            { label: "Total Members", value: a.total_members != null ? String(a.total_members) : "—" },
-            { label: "Submitted", type: "date", value: a.created_at },
-            { label: "Last Updated", type: "date", value: a.updated_at },
-            { type: "section", label: "Contact" },
-            { label: "Office Email", value: a.office_email },
-            { label: "Office Phone", value: a.office_phone },
-            { type: "section", label: "Primary User" },
-            { label: "Name", value: a.primary_user_name },
-            { label: "Email", value: a.primary_user_email },
-            { label: "Phone", value: a.primary_user_phone },
+            { label: t.field_district ?? "District", value: t[`district_${a.district}`] ?? a.district_display },
+            {
+              label: t.field_tier ?? "Tier",
+              value: a.tier
+                ? (t[`tier_${a.tier.toLowerCase()}`] ?? a.tier)
+                : a.current_tier
+                  ? (t[`tier_${a.current_tier.toLowerCase()}`] ?? a.current_tier)
+                  : (t.tier_not_assessed ?? "—"),
+            },
+            { label: t.field_total_members ?? "Total Members", value: a.total_members != null ? String(a.total_members) : "—" },
+            { label: t.field_submitted ?? "Submitted", type: "date", value: a.created_at },
+            { label: t.field_last_updated ?? "Last Updated", type: "date", value: a.updated_at },
+            { type: "section", label: t.section_contact ?? "Contact" },
+            { label: t.field_office_email ?? "Office Email", value: a.office_email },
+            { label: t.field_office_phone ?? "Office Phone", value: a.office_phone },
+            { type: "section", label: t.section_primary_user ?? "Primary User" },
+            { label: tCommon.field_name ?? "Name", value: a.primary_user_name },
+            { label: tCommon.field_email ?? "Email", value: a.primary_user_email },
+            { label: tCommon.field_phone ?? "Phone", value: a.primary_user_phone },
           ]}
         />
       )}

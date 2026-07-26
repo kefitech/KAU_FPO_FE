@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
-
+import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -103,6 +102,15 @@ export function ExpertForm({ mode, expert, t = {}, tCommon = {} }: ExpertFormPro
     if (expert) reset(expertToForm(expert));
   }, [expert?.id, expert, reset]);
 
+  const translatedCategories = useMemo(
+    () => EXPERT_CATEGORIES.map((c) => ({ ...c, label: t[`cat_${c.value}`] ?? c.label })),
+    [t]
+  );
+  const translatedDistricts = useMemo(
+    () => DISTRICT_SELECT_OPTIONS.map((d) => ({ ...d, label: t[`district_${d.value}`] ?? d.label })),
+    [t]
+  );
+
   const mutation = useMutation({
     mutationFn: (values: FormValues) => {
       const payload = {
@@ -201,7 +209,7 @@ export function ExpertForm({ mode, expert, t = {}, tCommon = {} }: ExpertFormPro
                       key={field.value}  // Add this line
                       value={field.value}
                       onChange={field.onChange}
-                      options={EXPERT_CATEGORIES}
+                      options={translatedCategories}
                       placeholder={t.placeholder_category ?? "Select category…"}
                     />
                   )}
@@ -249,7 +257,7 @@ export function ExpertForm({ mode, expert, t = {}, tCommon = {} }: ExpertFormPro
                         key={field.value}
                         value={field.value ?? ""}
                         onChange={field.onChange}
-                        options={DISTRICT_SELECT_OPTIONS}
+                        options={translatedDistricts}
                         placeholder={t.placeholder_district ?? "Select district…"}
                       />
                     )}

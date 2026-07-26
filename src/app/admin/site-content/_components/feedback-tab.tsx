@@ -26,28 +26,28 @@ type T = Record<string, string>;
 
 const STATUS_CONFIG: Record<AdminFeedback["status"], { label: string; className: string; icon: React.ElementType }> = {
   unread: {
-    label: "Unread",
+    label: "unread", // placeholder key, translated at render time
     className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
     icon: Clock,
   },
   read: {
-    label: "Read",
+    label: "read",
     className: "bg-muted text-muted-foreground",
     icon: Eye,
   },
   resolved: {
-    label: "Resolved",
+    label: "resolved",
     className: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
     icon: CheckCheck,
   },
 };
 
-function StatusBadge({ status }: { status: AdminFeedback["status"] }) {
+function StatusBadge({ status, t }: { status: AdminFeedback["status"]; t: T }) {
   const config = STATUS_CONFIG[status] ?? STATUS_CONFIG.unread;
   return (
     <Badge variant="secondary" className={`text-xs gap-1 ${config.className}`}>
       <config.icon className="h-3 w-3" />
-      {config.label}
+      {t[`feedback_status_${config.label}`] ?? config.label}
     </Badge>
   );
 }
@@ -58,10 +58,12 @@ function FeedbackDetailDialog({
   feedback,
   onClose,
   onStatusChange,
+  t,
 }: {
   feedback: AdminFeedback | null;
   onClose: () => void;
   onStatusChange: (id: number, status: AdminFeedback["status"]) => void;
+  t: T,
 }) {
   if (!feedback) return null;
 
@@ -76,7 +78,7 @@ function FeedbackDetailDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4 text-muted-foreground" />
-            Feedback from {feedback.name}
+            {(t.dialog_title ?? "Feedback from {name}").replace("{name}", feedback.name)}
           </DialogTitle>
         </DialogHeader>
 
@@ -108,18 +110,18 @@ function FeedbackDetailDialog({
 
           {/* Status + actions */}
           <div className="flex items-center justify-between border-t pt-3">
-            <StatusBadge status={feedback.status} />
+            <StatusBadge status={feedback.status} t={t} />
             <div className="flex items-center gap-2">
               {feedback.status !== "read" && (
                 <Button variant="outline" size="sm" onClick={() => onStatusChange(feedback.id, "read")}>
                   <Eye className="mr-1.5 h-3.5 w-3.5" />
-                  Mark as Read
+                  {t.btn_mark_read ?? "Mark as Read"}
                 </Button>
               )}
               {feedback.status !== "resolved" && (
                 <Button size="sm" onClick={() => onStatusChange(feedback.id, "resolved")}>
                   <CheckCheck className="mr-1.5 h-3.5 w-3.5" />
-                  Resolve
+                  {t.btn_resolve ?? "Resolve"}
                 </Button>
               )}
             </div>
@@ -132,7 +134,7 @@ function FeedbackDetailDialog({
 
 // ─── Feedback Tab ─────────────────────────────────────────────────────────────
 
-export function FeedbackTab({ t = {} }: { t?: T }) {
+export function FeedbackTab({ t = {}, tCommon = {} }: { t?: T; tCommon?: T }) {
   const queryClient = useQueryClient();
   const [viewing, setViewing] = useState<AdminFeedback | null>(null);
 
@@ -151,7 +153,8 @@ export function FeedbackTab({ t = {} }: { t?: T }) {
     mutationFn: ({ id, status }: { id: number; status: AdminFeedback["status"] }) =>
       feedbackApi.updateStatus(id, status),
     onSuccess: (updated) => {
-      toast.success(`Marked as ${STATUS_CONFIG[updated.status]?.label ?? updated.status}.`);
+      const label = t[`feedback_status_${updated.status}`] ?? updated.status;
+      toast.success((t.toast_status_updated ?? "Marked as {status}.").replace("{status}", label));
       queryClient.invalidateQueries({ queryKey: ["admin-feedback"] });
       // Update the viewing dialog if it's the same item
       setViewing((prev) => (prev?.id === updated.id ? updated : prev));
@@ -179,11 +182,11 @@ export function FeedbackTab({ t = {} }: { t?: T }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Message</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Date</TableHead>
+              <TableHead>{tCommon.field_name ?? "Name"}</TableHead>
+              <TableHead>{tCommon.field_email ?? "Email"}</TableHead>
+              <TableHead>{t.col_message ?? "Message"}</TableHead>
+              <TableHead>{t.col_status ?? "Status"}</TableHead>
+              <TableHead>{t.col_date ?? "Date"}</TableHead>
               <TableHead className="w-12" />
             </TableRow>
           </TableHeader>
@@ -203,7 +206,7 @@ export function FeedbackTab({ t = {} }: { t?: T }) {
             ) : feedbacks.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="py-12 text-center text-muted-foreground text-sm">
-                  No feedback submitted yet.
+                  {t.empty_state ?? "No feedback submitted yet."}
                 </TableCell>
               </TableRow>
             ) : (
@@ -219,7 +222,7 @@ export function FeedbackTab({ t = {} }: { t?: T }) {
                     <span className="line-clamp-1">{fb.message}</span>
                   </TableCell>
                   <TableCell>
-                    <StatusBadge status={fb.status} />
+                    <StatusBadge status={fb.status} t={t} />
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                     {new Date(fb.created_at).toLocaleDateString("en-IN", {
@@ -238,24 +241,24 @@ export function FeedbackTab({ t = {} }: { t?: T }) {
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => setViewing(fb)}>
                           <Eye className="mr-2 h-4 w-4" />
-                          View
+                          {tCommon.view ?? "View"}
                         </DropdownMenuItem>
                         {fb.status !== "read" && (
                           <DropdownMenuItem onClick={() => statusMutation.mutate({ id: fb.id, status: "read" })}>
                             <Eye className="mr-2 h-4 w-4" />
-                            Mark as Read
+                            {t.btn_mark_read ?? "Mark as Read"}
                           </DropdownMenuItem>
                         )}
                         {fb.status !== "resolved" && (
                           <DropdownMenuItem onClick={() => statusMutation.mutate({ id: fb.id, status: "resolved" })}>
                             <CheckCheck className="mr-2 h-4 w-4" />
-                            Resolve
+                            {t.btn_resolve ?? "Resolve"}
                           </DropdownMenuItem>
                         )}
                         {fb.status !== "unread" && (
                           <DropdownMenuItem onClick={() => statusMutation.mutate({ id: fb.id, status: "unread" })}>
                             <Clock className="mr-2 h-4 w-4" />
-                            Mark as Unread
+                            {t.btn_mark_unread ?? "Mark as Unread"}
                           </DropdownMenuItem>
                         )}
                       </DropdownMenuContent>
@@ -272,6 +275,7 @@ export function FeedbackTab({ t = {} }: { t?: T }) {
         feedback={viewing}
         onClose={() => setViewing(null)}
         onStatusChange={(id, status) => statusMutation.mutate({ id, status })}
+        t={t}
       />
     </div>
   );

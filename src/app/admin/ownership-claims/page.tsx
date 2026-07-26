@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState, useMemo } from "react";
 
 import { ClipboardCheck, ShieldAlert } from "lucide-react";
 
@@ -18,31 +18,39 @@ import { getOwnershipClaimColumns } from "./_components/columns";
 
 type T = Record<string, string>;
 
-const FILTERS: FilterConfig[] = [
-  {
-    key: "status",
-    label: "Status",
-    type: "select",
-    options: [
-      { label: "Pending", value: "pending" },
-      { label: "Approved", value: "approved" },
-      { label: "Rejected", value: "rejected" },
-    ],
-  },
-];
+const STATUS_VALUES = ["pending", "approved", "rejected"] as const;
 
 export default function OwnershipClaimsPage() {
   const locale = useLocaleStore((s) => s.locale);
   const [t, setT] = useState<T>({});
+  const [tCommon, setTCommon] = useState<T>({});
   const [reviewing, setReviewing] = useState<AdminOwnershipClaim | null>(null);
   const [sheet, setSheet] = useState<{ open: boolean; item: AdminOwnershipClaim | null }>({ open: false, item: null });
 
   useEffect(() => {
     translationsApi
       .getPublic(locale, "admin_ownership_claims,common")
-      .then((data) => setT(data.admin_ownership_claims ?? {}))
+      .then((data) => {
+        setT(data.admin_ownership_claims ?? {});
+        setTCommon(data.common ?? {});
+      })
       .catch(() => undefined);
   }, [locale]);
+  const filters: FilterConfig[] = useMemo(
+    () => [
+      {
+        key: "status",
+        label: t.col_status ?? "Status",
+        type: "select",
+        options: STATUS_VALUES.map((s) => ({
+          label: t[`status_${s}`] ?? s,
+          value: s,
+        })),
+      },
+    ],
+    [t]
+  );
+
 
   return (
     <div className="flex flex-col gap-6 px-8 py-6">
@@ -61,8 +69,12 @@ export default function OwnershipClaimsPage() {
           queryKey="ownership-claims"
           queryFn={adminOwnershipClaimsApi.list}
           columns={getOwnershipClaimColumns(t, setReviewing)}
-          filters={FILTERS}
+          filters={filters}
           onRowClick={(row) => setSheet({ open: true, item: row })}
+          columnsLabel={tCommon.col_header ?? "Columns"}
+          toggleColumnsLabel={tCommon.col_toggle_columns ?? "Toggle columns"}
+          searchPlaceholder={tCommon.search_placeholder ?? "Search..."}
+          clearLabel={tCommon.cancel ?? "Clear"}
         />
       </Suspense>
 
@@ -71,6 +83,7 @@ export default function OwnershipClaimsPage() {
         onOpenChange={(open) => {
           if (!open) setReviewing(null);
         }}
+        t={t}
       />
 
       {sheet.item && (
@@ -83,7 +96,7 @@ export default function OwnershipClaimsPage() {
               ? []
               : [
                   {
-                    label: t.action_review ?? "Review Claim",
+                    label: t.btn_review ?? "Review Claim",
                     icon: ClipboardCheck,
                     onClick: () => {
                       setSheet((prev) => ({ ...prev, open: false }));
@@ -93,14 +106,14 @@ export default function OwnershipClaimsPage() {
                 ]
           }
           fields={[
-            { type: "section", label: "Claimant" },
-            { label: "Name", value: sheet.item.claimant_name },
-            { label: "Email", value: sheet.item.claimant_email },
-            { label: "Phone", value: sheet.item.claimant_phone },
-            { type: "section", label: "Claim" },
-            { label: "FPO", value: sheet.item.fpo_name },
+            { type: "section", label: t.section_claimant ?? "Claimant" },
+            { label: t.label_claimant_name ?? "Name", value: sheet.item.claimant_name },
+            { label: t.label_claimant_email ?? "Email", value: sheet.item.claimant_email },
+            { label: t.label_claimant_phone ?? "Phone", value: sheet.item.claimant_phone },
+            { type: "section", label: t.section_fpo_info ?? "Claim" },
+            { label: t.col_fpo ?? "FPO", value: sheet.item.fpo_name },
             {
-              label: "Status",
+              label: t.col_status ?? "Status",
               type: "node",
               node: (
                 <Badge
@@ -113,18 +126,18 @@ export default function OwnershipClaimsPage() {
                         : "bg-amber-100 text-amber-700"
                   }`}
                 >
-                  {sheet.item.status.charAt(0).toUpperCase() + sheet.item.status.slice(1)}
+                  {t[`status_${sheet.item.status}`] ?? sheet.item.status}
                 </Badge>
               ),
             },
-            { label: "Reason", value: sheet.item.reason },
-            { label: "Submitted", type: "date", value: sheet.item.created_at },
+            { label: t.label_claim_notes ?? "Reason", value: sheet.item.reason },
+            { label: t.col_submitted ?? "Submitted", type: "date", value: sheet.item.created_at },
             ...(sheet.item.reviewed_by
               ? [
-                  { type: "section" as const, label: "Review" },
-                  { label: "Reviewed By", value: sheet.item.reviewed_by },
-                  { label: "Reviewed At", type: "date" as const, value: sheet.item.reviewed_at },
-                  { label: "Notes", value: sheet.item.review_notes },
+              { type: "section" as const, label: t.review_dialog_title ?? "Review" },
+              { label: t.col_reviewer ?? "Reviewed By", value: sheet.item.reviewed_by },
+              { label: t.col_reviewed ?? "Reviewed At", type: "date" as const, value: sheet.item.reviewed_at },
+              { label: t.label_admin_notes ?? "Notes", value: sheet.item.review_notes },
                 ]
               : []),
           ]}

@@ -161,13 +161,14 @@ export function SchemeForm({ mode, scheme, t = {}, tCommon = {} }: SchemeFormPro
 
               <Field>
                 <FieldLabel htmlFor="administering_body">
-                  {t.field_administering_body ?? "Administering Body"} <span className="text-destructive">*</span>
-                </FieldLabel>
+                  {t.field_administered_by ?? "Administering Body"} <span className="text-destructive">*</span>                </FieldLabel>
                 <Controller
                   control={control}
                   name="administering_body"
                   render={({ field }) => (
-                    <Input id="administering_body" placeholder="e.g. SFAC, NABARD, NCDC" {...field} />
+                    <Input id="administering_body" 
+                    placeholder={t.placeholder_administered_by ?? "e.g. SFAC, NABARD, NCDC..."}
+                     {...field} />
                   )}
                 />
                 {errors.administering_body && <FieldError errors={[errors.administering_body]} />}

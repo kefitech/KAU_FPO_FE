@@ -48,7 +48,9 @@ export function getAnnouncementColumns({
       accessorKey: "category",
       header: t.col_category ?? "Category",
       meta: { hideOnMobile: true },
-      cell: ({ row }) => <Badge variant="outline">{row.original.category_display ?? row.original.category}</Badge>,
+      cell: ({ row }) => (
+        <Badge variant="outline">{t[`cat_${row.original.category}`] ?? row.original.category_display ?? row.original.category}</Badge>
+      ),
     },
     {
       accessorKey: "published_date",
@@ -66,7 +68,9 @@ export function getAnnouncementColumns({
       header: t.col_status ?? "Status",
       cell: ({ row }) =>
         row.original.is_active ? (
-          <Badge className="bg-green-100 text-green-700 hover:bg-green-100">{tCommon.badge_active ?? "Active"}</Badge>
+          <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
+            {tCommon.badge_active ?? "Active"}
+          </Badge>
         ) : (
           <Badge variant="outline" className="text-muted-foreground">
             {tCommon.badge_inactive ?? "Inactive"}

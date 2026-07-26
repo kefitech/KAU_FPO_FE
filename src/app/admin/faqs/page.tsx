@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 
 import { useRouter } from "next/navigation";
 
@@ -44,6 +44,20 @@ export default function FaqsPage() {
       })
       .catch(() => undefined);
   }, [locale]);
+  const filters = useMemo(
+    () => [
+      {
+        key: "category",
+        label: t.col_category ?? "Category",
+        options: [
+          { label: t.cat_fpo_general ?? "FPO General", value: "fpo_general" },
+          { label: t.cat_schemes ?? "Schemes & Support", value: "schemes" },
+          { label: t.cat_platform_usage ?? "Platform Usage", value: "platform_usage" },
+        ],
+      },
+    ],
+    [t]
+  );
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => adminFaqsApi.delete(id),
@@ -88,7 +102,7 @@ export default function FaqsPage() {
           </p>
         </div>
         <Button
-          className="self-start sm:self-auto bg-green-600 hover:bg-green-700"
+          className="self-start sm:self-auto bg-blue-700 hover:bg-blue-600"
           onClick={() => router.push("/admin/faqs/new")}
         >
           <Plus className="mr-2 h-4 w-4" />
@@ -100,18 +114,12 @@ export default function FaqsPage() {
         queryKey="faqs"
         queryFn={adminFaqsApi.getAll}
         columns={columns}
-        filters={[
-          {
-            key: "category",
-            label: "Category",
-            options: [
-              { label: "FPO General", value: "fpo_general" },
-              { label: "Schemes & Support", value: "schemes" },
-              { label: "Platform Usage", value: "platform_usage" },
-            ],
-          },
-        ]}
+        filters={filters}
         onRowClick={(row) => setSheet({ open: true, item: row })}
+        columnsLabel={tCommon.col_header ?? "Columns"}
+        toggleColumnsLabel={tCommon.col_toggle_columns ?? "Toggle columns"}
+        searchPlaceholder={tCommon.search_placeholder ?? "Search..."}
+        clearLabel={tCommon.cancel ?? "Clear"}
       />
 
       {sheet.item && (
@@ -121,7 +129,7 @@ export default function FaqsPage() {
           title={sheet.item.question?.en ?? Object.values(sheet.item.question ?? {})[0] ?? "FAQ"}
           actions={[
             {
-              label: t.btn_edit ?? "Edit",
+              label: t.action_edit ?? "Edit",
               icon: Pencil,
               onClick: () => {
                 setSheet((prev) => ({ ...prev, open: false }));
@@ -130,41 +138,42 @@ export default function FaqsPage() {
             },
           ]}
           fields={[
-            { type: "section", label: "Details" },
+            { type: "section", label: t.section_details ?? "Details" },
             {
-              label: "Category",
+              label: t.field_category ?? "Category",
               type: "node",
               node: (
                 <Badge variant="secondary" className="text-xs font-medium">
-                  {sheet.item.category}
+                  {t[`cat_${sheet.item.category}`] ?? sheet.item.category}
                 </Badge>
               ),
             },
             {
-              label: "Status",
+              label: t.field_status ?? "Status",
               type: "status",
               active: sheet.item.is_active,
               activeLabel: tCommon.badge_active ?? "Active",
               inactiveLabel: tCommon.badge_inactive ?? "Inactive",
             },
-            { label: "Order", value: String(sheet.item.order) },
-            { label: "Created", type: "date", value: sheet.item.created_at },
-            { type: "section", label: "Content (English)" },
-            { label: "Question (EN)", value: sheet.item.question?.en ?? Object.values(sheet.item.question ?? {})[0] },
+            { label: t.field_order ?? "Order", value: String(sheet.item.order) },
+            { label: t.field_created ?? "Created", type: "date", value: sheet.item.created_at },
+            { type: "section", label: t.section_content_en ?? "Content (English)" },
+            { label: t.field_question_en ?? "Question (EN)", value: sheet.item.question?.en ?? Object.values(sheet.item.question ?? {})[0] },
             {
-              label: "Answer (EN)",
+              label: t.field_answer_en ?? "Answer (EN)",
               value: stripHtml(sheet.item.answer?.en ?? Object.values(sheet.item.answer ?? {})[0]),
             },
             ...(sheet.item.question?.ml
               ? [
-                  { type: "section" as const, label: "Content (Malayalam)" },
-                  { label: "Question (ML)", value: sheet.item.question.ml },
-                  { label: "Answer (ML)", value: stripHtml(sheet.item.answer?.ml) },
+                  { type: "section" as const, label: t.section_content_ml ?? "Content (Malayalam)" },
+                  { label: t.field_question_ml ?? "Question (ML)", value: sheet.item.question.ml },
+                  { label: t.field_answer_ml ?? "Answer (ML)", value: stripHtml(sheet.item.answer?.ml) },
                 ]
-              : []),
-          ]}
-        />
-      )}
-    </div>
+                : []
+              ),
+            ]}
+          />      
+        )}
+     </div>
   );
 }
