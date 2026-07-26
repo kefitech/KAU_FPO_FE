@@ -39,7 +39,7 @@ const BLOCK_LABEL_FALLBACKS: Record<string, string> = {
   hero_description: "Hero Description",
   about_title: "About Title",
   about_body: "About Body",
-  how_to_register: "How to Register",
+  how_to_register: "How to Register FPO",
 };
 
 const BLOCK_DESC_FALLBACKS: Record<string, string> = {
