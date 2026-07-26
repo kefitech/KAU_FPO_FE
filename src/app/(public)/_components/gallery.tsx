@@ -292,14 +292,7 @@ const Gallery = () => {
             width: 6%;
           }
         }
-        @media (min-width: 992px) {
-          .gallery-coverflow-wrap {
-            overflow: visible;
-          }
-          :global(.gallery-coverflow-swiper) {
-            overflow: visible !important;
-          }
-        }
+       
         @media (max-width: 1200px) {
           :global(.gallery-coverflow-swiper .gallery-coverflow-slide) {
             width: 350px;

@@ -1295,14 +1295,14 @@ function ApplicationDetailContent() {
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-start gap-3">
-          <Button
+          {/* <Button
             variant="ghost"
             size="icon"
             className="mt-0.5 h-8 w-8"
             onClick={() => router.push("/admin/applications")}
           >
             <ArrowLeft className="h-4 w-4" />
-          </Button>
+          </Button> */}
           <div>
             <div className="flex flex-wrap items-center gap-2.5">
               <h1 className="font-bold text-xl max-w-[800px] break-words whitespace-normal">{app.name}</h1>

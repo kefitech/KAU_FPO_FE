@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 
-import { Autoplay, EffectFade, Navigation, Pagination } from "swiper/modules";
+import { Autoplay, EffectFade} from "swiper/modules";
 import { Swiper, SwiperSlide } from "swiper/react";
 
 import { translationsApi } from "@/lib/api/translations";
@@ -52,16 +52,8 @@ const Banner = () => {
           delay: 5000,
           disableOnInteraction: false,
         }}
-        pagination={{
-          el: ".swiper-pagination",
-          type: "bullets",
-          clickable: true,
-        }}
-        navigation={{
-          nextEl: ".swiper-button-next",
-          prevEl: ".swiper-button-prev",
-        }}
-        modules={[Navigation, Pagination, Autoplay, EffectFade]}
+        
+        modules={[Autoplay, EffectFade]}
       >
         {SLIDES.map((slide) => {
           const subtitle = t[slide.subtitleKey] ?? "";
@@ -106,9 +98,7 @@ const Banner = () => {
             </SwiperSlide>
           );
         })}
-        <div className="swiper-button-prev" />
-        <div className="swiper-button-next" />
-        <div className="swiper-pagination" />
+
       </Swiper>
     </div>
   );

@@ -5564,6 +5564,14 @@ ul.counter-list li:nth-child(2) {
   font-size: 16px !important; /* shrink default arrow icon */ 
 }
 
+.team-swiper-pagination .swiper-pagination-bullet {
+  background: #ccc;
+  opacity: 1;
+}
+
+.team-swiper-pagination .swiper-pagination-bullet-active {
+  background: var(--color-primary);
+}
 
 .navigation-circle {
   padding: 0 50px; /* reserves 50px on each side for the 44px arrow + margin */
@@ -9550,6 +9558,13 @@ ul.list-two li i {
 	color: #ffffff;
 }
 
+.page-link{
+	color: var(--color-primary);	
+}
+.page-item.active .page-link {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+}
 .service-card {
     background: #fff;
     border-radius: 14px;
