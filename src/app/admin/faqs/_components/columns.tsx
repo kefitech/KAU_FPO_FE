@@ -26,10 +26,15 @@ export function getFaqColumns({ onEdit, onDelete, onToggleStatus, t, tCommon }: 
     {
       accessorKey: "question",
       header: t.col_question ?? "Question",
+      meta: { width: "55%" },
       cell: ({ row }) => {
         const question = row.original.question;
         const text = typeof question === "string" ? question : (Object.values(question)[0] ?? "—");
-        return <span className="line-clamp-2 max-w-xs text-sm">{text}</span>;
+        return (
+            <span className="block truncate text-sm" title={text}>
+              {text}
+            </span>
+          );
       },
     },
     {

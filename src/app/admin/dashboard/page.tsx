@@ -128,9 +128,15 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     translationsApi
-      .getPublic(locale, "admin_dashboard,common")
-      .then((data) => setT(data.admin_dashboard ?? {}))
-      .catch(() => undefined);
+      .getPublic(locale, "admin_dashboard,districts,common,fpo_report")
+      .then((data) =>
+        setT({
+          ...(data.districts ?? {}),
+          ...(data.common ?? {}),
+          ...(data.fpo_report ?? {}),
+          ...(data.admin_dashboard ?? {}),
+        })
+      )
   }, [locale]);
 
   const { data, isLoading } = useQuery({
@@ -456,7 +462,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* ── Row 4: Reports ───────────────────────────────────────────────────── */}
-      <FpoReportCard />
+      <FpoReportCard t={t} />
     </div>
   );
 }
