@@ -40,7 +40,7 @@ const Banner = () => {
   }, [locale]);
 
   return (
-    <div className="banner-area text-light banner-style-one zoom-effect overflow-hidden">
+    <div className="banner-area top-pad-150 text-light banner-style-one zoom-effect overflow-hidden">
       <Swiper
         className="banner-fade"
         direction="horizontal"

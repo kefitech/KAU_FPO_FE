@@ -254,3 +254,21 @@ nav.navbar.validnavs .navbar-brand > img {
     justify-content: center;
   }
 }
+
+/* ---- Medium desktop (1024–1366px): prevent banner content overflow ---- */
+/* Malayalam h2 at 80px wraps to 5+ lines at 768px height — reduce font + padding */
+@media (min-width: 1024px) and (max-width: 1366px) {
+  .banner-style-one h2 {
+    font-size: 56px;
+    margin-bottom: 15px;
+  }
+
+  .banner-area.top-pad-150 .content {
+    padding-top: 90px;
+  }
+
+  .banner-area h4 {
+    font-size: 16px;
+    margin-bottom: 10px;
+  }
+}
