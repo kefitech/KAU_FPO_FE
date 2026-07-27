@@ -277,12 +277,8 @@ export default function LanguagesPage() {
                 {tPage.add_translation_btn ?? "Add Translation"}
               </Button> */}
             </div>
-          ) : (
-            <Button size="sm" onClick={() => router.push("/admin/menu-items/new")}>
-              <Plus className="mr-1.5 h-4 w-4" />
-              {tMenuTable.add_button ?? "Add Menu Item"}
-            </Button>
-          )
+          ) : null
+           
         }
       >
         {activeTab === "languages" && (

@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-
+import { masterDataApi } from "@/lib/api/master-data";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -657,19 +657,19 @@ function AssignTierDialog({
   );
 }
 
-function TierHistorySection({ entries }: { entries: TierAuditLogEntry[] }) {
-  if (entries.length === 0) return <p className="text-muted-foreground text-sm">No tier history recorded yet.</p>;
+function TierHistorySection({ entries, t }: { entries: TierAuditLogEntry[]; t: Record<string, string> }) {
+  if (entries.length === 0) return <p className="text-muted-foreground text-sm">{t.no_tier_history ?? "No tier history recorded yet."}</p>;
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b text-left text-xs text-muted-foreground">
-            <th className="pb-2 pr-4 font-medium">Financial Year</th>
-            <th className="pb-2 pr-4 font-medium">Tier</th>
-            <th className="pb-2 pr-4 font-medium">Score</th>
-            <th className="pb-2 pr-4 font-medium">Type</th>
-            <th className="pb-2 pr-4 font-medium">By</th>
-            <th className="pb-2 font-medium">Date</th>
+           <th className="pb-2 pr-4 font-medium">{t.financial_year_column ?? "Financial Year"}</th>
+           <th className="pb-2 pr-4 font-medium">{t.tier_column ?? "Tier"}</th>
+           <th className="pb-2 pr-4 font-medium">{t.score_column ?? "Score"}</th>
+           <th className="pb-2 pr-4 font-medium">{t.type_column ?? "Type"}</th>
+           <th className="pb-2 pr-4 font-medium">{t.by_column ?? "By"}</th>
+           <th className="pb-2 font-medium">{t.date_column ?? "Date"}</th>
           </tr>
         </thead>
         <tbody className="divide-y">
@@ -683,7 +683,7 @@ function TierHistorySection({ entries }: { entries: TierAuditLogEntry[] }) {
                   <span
                     className={`inline-flex items-center rounded-full border px-2 py-0.5 font-bold text-xs ${tierBadgeClass(log.changes.tier)}`}
                   >
-                    Tier {log.changes.tier}
+                    {t.tier_label ?? "Tier"} {log.changes.tier}
                   </span>
                 </td>
                 <td className="py-2.5 pr-4 tabular-nums text-muted-foreground">
@@ -695,14 +695,14 @@ function TierHistorySection({ entries }: { entries: TierAuditLogEntry[] }) {
                       variant="secondary"
                       className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
                     >
-                      Manual
+                      {t.badge_manual ?? "Manual"}
                     </Badge>
                   ) : (
                     <Badge
                       variant="secondary"
                       className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
                     >
-                      Auto
+                      {t.badge_auto ?? "Auto"}
                     </Badge>
                   )}
                 </td>
@@ -1193,6 +1193,7 @@ function ApplicationDetailContent() {
   const [infoResponseOpen, setInfoResponseOpen] = useState(false);
   const [infoDetailsDoc, setInfoDetailsDoc] = useState<
     import("@/app/admin/_api/applications").ApplicationDocument | null
+    
   >(null);
 
   useEffect(() => {
@@ -1204,6 +1205,13 @@ function ApplicationDetailContent() {
       })
       .catch(() => undefined);
   }, [locale]);
+
+  const { data: commodities } = useQuery({
+    queryKey: ["master-data", "commodity", locale],
+    queryFn: () => masterDataApi.get("commodity"), // GET /api/public/master-data/?category=commodity
+  });
+  const commodityLabel = (code: string) =>
+    commodities?.find((c) => c.code === code)?.name ?? code; // fallback to code if not found
 
   const { data: app, isLoading } = useQuery({
     queryKey: ["application", fpoId],
@@ -1560,14 +1568,14 @@ function ApplicationDetailContent() {
                 <div className="col-span-2">
                   <InfoRow
                     label={t.field_primary_commodities ?? "Primary Commodities"}
-                    value={(app.primary_commodities ?? []).join(", ")}
+                    value={(app.primary_commodities ?? []).map(commodityLabel).join(", ")}
                   />
                 </div>
                 {(app.secondary_commodities ?? []).length > 0 && (
                   <div className="col-span-2">
                     <InfoRow
                       label={t.field_secondary_commodities ?? "Secondary Commodities"}
-                      value={(app.secondary_commodities ?? []).join(", ")}
+                      value={(app.secondary_commodities ?? []).map(commodityLabel).join(", ")}
                     />
                   </div>
                 )}
@@ -1601,27 +1609,27 @@ function ApplicationDetailContent() {
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Star className="h-4 w-4 text-muted-foreground" />
-                <h3 className="font-semibold text-sm">Tier Assessment</h3>
+                <h3 className="font-semibold text-sm">{t.tier_assessment_title ?? "Tier Assessment"}</h3>
               </div>
               {isSuperAdmin && app.status !== "draft" && (
                 <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setAssignTierOpen(true)}>
-                  Assign Tier
+                  {t.assign_tier_button ?? "Assign Tier"}
                 </Button>
               )}
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-muted-foreground text-sm">Current Tier:</span>
+              <span className="text-muted-foreground text-sm">{t.current_tier_label ?? "Current Tier:"}</span>
               {app.tier ? (
                 <span
                   className={`inline-flex items-center rounded-full border px-3 py-0.5 font-bold text-sm ${tierBadgeClass(app.tier)}`}
                 >
-                  Tier {app.tier}
+                  {(t.tier_label ?? "Tier")} {app.tier}
                 </span>
               ) : (
-                <span className="text-muted-foreground text-sm">Not Assessed</span>
+                <span className="text-muted-foreground text-sm">{t.not_assessed_label ?? "Not Assessed"}</span>
               )}
             </div>
-            <TierHistorySection entries={tierHistory} />
+            <TierHistorySection entries={tierHistory} t={t} />
           </div>
 
           {/* Status Timeline */}

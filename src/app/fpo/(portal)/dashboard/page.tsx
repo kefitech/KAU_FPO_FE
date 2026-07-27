@@ -85,6 +85,13 @@ const STATUS_CONFIG: Record<FpoStatus, { label: string; className: string }> = {
   },
 };
 
+const QUICK_LINK_KEYS: Record<string, string> = {
+  "/fpo/applications": "quick_link_application",
+  "/fpo/settings/profile": "quick_link_profile",
+  "/fpo/team": "quick_link_team",
+  "/fpo/schemes": "quick_link_schemes",
+};
+
 const DISTRICT_LABELS: Record<string, string> = {
   TVM: "Thiruvananthapuram",
   KLM: "Kollam",
@@ -197,11 +204,9 @@ export default function FpoDashboardPage() {
   }
 
   const { profile, tier, location, team, documents, notifications, quick_links } = data;
-  const statusCfg = STATUS_CONFIG[profile.status] ?? {
-    label: profile.status,
-    className: "bg-muted text-muted-foreground",
-  };
+  const statusCfg = STATUS_CONFIG[profile.status] ?? { className: "bg-muted text-muted-foreground" };
   const districtLabel = DISTRICT_LABELS[location.district] ?? location.district;
+  const statusLabel = t[`status_${profile.status}`] ?? STATUS_CONFIG[profile.status]?.label ?? profile.status;
 
   return (
     <div className="flex flex-col gap-6 px-3 sm:px-6 py-4 sm:py-6">
@@ -216,7 +221,7 @@ export default function FpoDashboardPage() {
         <span
           className={`inline-flex items-center rounded-full px-3 py-1 font-semibold text-xs ${statusCfg.className}`}
         >
-          {statusCfg.label}
+          {statusLabel}
         </span>
       </div>
 
@@ -417,7 +422,7 @@ export default function FpoDashboardPage() {
                   href={link.path}
                   className="flex items-center justify-between px-6 py-2.5 text-sm transition-colors hover:bg-muted"
                 >
-                  <span>{link.label}</span>
+                  <span>{t[QUICK_LINK_KEYS[link.path]] ?? link.label}</span>
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </Link>
               ))}
