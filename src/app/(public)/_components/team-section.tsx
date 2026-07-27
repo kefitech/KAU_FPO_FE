@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 
 import { Autoplay, Navigation, Pagination } from "swiper/modules";
 import { Swiper, SwiperSlide } from "swiper/react";
 
+import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 
 import { publicFetch } from "../_lib/public-fetch";
@@ -138,12 +139,19 @@ interface Props {
 const TeamSection = ({ showAll = false }: Props) => {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
+  const [t, setT] = useState<Record<string, string>>({});
   const locale = useLocaleStore((s) => s.locale);
 
   // Use STATE (not refs) so Swiper re-renders once these are set
   const [prevEl, setPrevEl] = useState<HTMLDivElement | null>(null);
   const [nextEl, setNextEl] = useState<HTMLDivElement | null>(null);
   const [paginationEl, setPaginationEl] = useState<HTMLDivElement | null>(null);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: locale intentionally triggers a refetch
+  useEffect(() => {
+    if (!locale) return;
+    translationsApi.getPublic(locale, "home").then((data) => setT(data.home ?? {}));
+  }, [locale]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: locale intentionally triggers a refetch
   useEffect(() => {
@@ -163,7 +171,7 @@ const TeamSection = ({ showAll = false }: Props) => {
             <img src="/assets/img/shape/leaf.png" alt="leaf shape" />
           </div>
           <div className="farmer-style-one">
-            <h2 className="heading">Our Team</h2>
+            <h2 className="heading">{t.team_page_heading ?? "Our Team"}</h2>
           </div>
           <div className="row">
             <div className="col-lg-10 offset-lg-1">
@@ -176,7 +184,7 @@ const TeamSection = ({ showAll = false }: Props) => {
                   ))
                 ) : members.length === 0 ? (
                   <div className="col-12 text-center" style={{ padding: "48px 0", color: "#888" }}>
-                    No team members available.
+                    {t.team_empty ?? "No team members available."}
                   </div>
                 ) : (
                   members.map((member) => (
@@ -205,8 +213,8 @@ const TeamSection = ({ showAll = false }: Props) => {
         <div className="row">
           <div className="col-lg-8 offset-lg-2">
             <div className="site-heading text-center">
-              <h5 className="sub-title">Our Team</h5>
-              <h2 className="title">Meet Our Leadership</h2>
+              <h5 className="sub-title">{t.team_subtitle ?? "Our Team"}</h5>
+              <h2 className="title">{t.team_title ?? "Meet Our Leadership"}</h2>
               <div className="devider" />
               
             </div>

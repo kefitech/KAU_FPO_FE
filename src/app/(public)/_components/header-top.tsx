@@ -76,49 +76,39 @@ const HeaderTop = () => {
   return (
     <div className="top-bar-area text-light">
       <div className="container">
-        <div className="row align-center">
-          <div className="col-lg-9">
-            <div className="flex-item left">
-              <p>{t.tagline ?? "Smart & Empowered Farmers"}</p>
-              <ul>
-                <li>
-                  <i className="fas fa-map-marker-alt" /> <a href="https://maps.app.goo.gl/4FXjLWkpN5jvM8N17">Kerala Agricultural University, Mannuthy P.O, Pin- 680651.</a> 
-                </li>
-                <li>
-                  <i className="fas fa-phone-alt" /> <a href="tel:+91 487 237 0509">+91 487 237 0509</a>
-                </li>
-              </ul>
-            </div>
-          </div>
-          <div className="col-lg-3 text-end">
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12 }}>
-              <LangToggle />
-              <div className="social">
-                <ul>
-                  <li>
-                    <a href="https://www.facebook.com/" target="_blank" rel="noopener noreferrer">
-                      <i className="fab fa-facebook-f" />
-                    </a>
-                  </li>
-                  <li>
-                    <a href="https://www.x.com/" target="_blank" rel="noopener noreferrer">
-                      <i className="fab fa-twitter" />
-                    </a>
-                  </li>
-                  <li>
-                    <a href="https://www.youtube.com/" target="_blank" rel="noopener noreferrer">
-                      <i className="fab fa-youtube" />
-                    </a>
-                  </li>
-                  <li>
-                    <a href="https://www.linkedin.com/" target="_blank" rel="noopener noreferrer">
-                      <i className="fab fa-linkedin-in" />
-                    </a>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "8px",
+            padding: "6px 0",
+          }}
+        >
+          <ul
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "20px",
+              listStyle: "none",
+              margin: 0,
+              padding: 0,
+              flexWrap: "wrap",
+            }}
+          >
+            <li>
+              <i className="fas fa-map-marker-alt" />{" "}
+              <a href="https://maps.app.goo.gl/4FXjLWkpN5jvM8N17">
+                {t.kau_address ?? "Kerala Agricultural University, Mannuthy P.O, Pin- 680651."}
+              </a>
+            </li>
+            <li>
+              <i className="fas fa-phone-alt" />{" "}
+              <a href="tel:+914872370509">+91 487 237 0509</a>
+            </li>
+          </ul>
+          <LangToggle />
         </div>
       </div>
     </div>

@@ -255,6 +255,37 @@ nav.navbar.validnavs .navbar-brand > img {
   }
 }
 
+/* ---- Top bar: full width with edge-to-edge dark background ---- */
+.top-bar-area .container {
+  max-width: 100% !important;
+  padding-left: 32px !important;
+  padding-right: 32px !important;
+}
+
+/* ---- Per-language font — applied at layout root via data-lang ---- */
+/* AgrulLayout sets data-lang={locale} on its wrapper div.             */
+/* Add a new block here whenever a new language is supported.          */
+
+/* Malayalam */
+[data-lang="ml"] {
+  font-family: var(--font-noto-sans-malayalam), sans-serif;
+}
+
+[data-lang="ml"] h1,
+[data-lang="ml"] h2,
+[data-lang="ml"] h3,
+[data-lang="ml"] h4,
+[data-lang="ml"] h5,
+[data-lang="ml"] h6 {
+  font-family: var(--font-noto-sans-malayalam), sans-serif;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+[data-lang="ml"] .banner-style-one h2 strong {
+  font-weight: 700;
+}
+
 /* ---- Medium desktop (1024–1366px): prevent banner content overflow ---- */
 /* Malayalam h2 at 80px wraps to 5+ lines at 768px height — reduce font + padding */
 @media (min-width: 1024px) and (max-width: 1366px) {

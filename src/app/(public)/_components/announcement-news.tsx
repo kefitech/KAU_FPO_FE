@@ -6,6 +6,7 @@ import Link from "next/link";
 
 import CountUp from "react-countup";
 
+import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 
 import { publicFetch } from "../_lib/public-fetch";
@@ -21,11 +22,6 @@ interface AnnouncementNews {
 
 type TabKey = "announcement" | "news";
 
-const TABS: { key: TabKey; label: string; icon: string }[] = [
-  { key: "announcement", label: "Announcements", icon: "fas fa-bullhorn" },
-  { key: "news", label: "News", icon: "fas fa-newspaper" },
-];
-
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", {
     month: "long",
@@ -40,7 +36,18 @@ const NewsWidget = () => {
   const [selected, setSelected] = useState<AnnouncementNews | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>("announcement");
   const [totalCount, setTotalCount] = useState(0);
+  const [t, setT] = useState<Record<string, string>>({});
   const locale = useLocaleStore((s) => s.locale);
+
+  const TABS: { key: TabKey; label: string; icon: string }[] = [
+    { key: "announcement", label: t.news_tab_announcements ?? "Announcements", icon: "fas fa-bullhorn" },
+    { key: "news",         label: t.news_tab_news         ?? "News",            icon: "fas fa-newspaper" },
+  ];
+
+  useEffect(() => {
+    if (!locale) return;
+    translationsApi.getPublic(locale, "home").then((res) => setT(res.home ?? {}));
+  }, [locale]);
 
   useEffect(() => {
     setLoading(true);
@@ -71,7 +78,7 @@ const NewsWidget = () => {
             gap: 16,
           }}
         >
-          <h3 style={{ fontSize: 32, fontWeight: 700, color: "#1a1a1a", margin: 0 }}>News and Announcements</h3>
+          <h3 style={{ fontSize: 32, fontWeight: 700, color: "#1a1a1a", margin: 0 }}>{t.news_title ?? "News and Announcements"}</h3>
           <Link
             href="/news-events"
             style={{
@@ -86,7 +93,7 @@ const NewsWidget = () => {
               paddingBottom: 2,
             }}
           >
-            See More <i className="fas fa-arrow-right" style={{ fontSize: 13 }} />
+            {t.news_see_more ?? "See More"} <i className="fas fa-arrow-right" style={{ fontSize: 13 }} />
           </Link>
         </div>
 
@@ -163,7 +170,7 @@ const NewsWidget = () => {
                         </div>
                         <div className="operator" />
                       </div>
-                      <span className="medium">{activeTab === "announcement" ? "Announcements" : "News"}</span>
+                      <span className="medium">{activeTab === "announcement" ? (t.news_tab_announcements ?? "Announcements") : (t.news_tab_news ?? "News")}</span>
                     </div>
                   </div>
                 </div>
@@ -199,7 +206,7 @@ const NewsWidget = () => {
                   ))
                 ) : items.length === 0 ? (
                   <div style={{ padding: "60px 0", textAlign: "center", color: "#888", fontSize: 15 }}>
-                    No {activeTab === "announcement" ? "announcements" : "news"} available at the moment.
+                    {activeTab === "announcement" ? (t.news_empty_announcements ?? "No announcements available at the moment.") : (t.news_empty_news ?? "No news available at the moment.")}
                   </div>
                 ) : (
                   items.map((item, idx) => (
@@ -242,7 +249,7 @@ const NewsWidget = () => {
                           }}
                         >
                           <span style={{ fontSize: 13, color: "#888" }}>
-                            Last Updated on {formatDate(item.published_date)}
+                            {t.news_last_updated ?? "Last Updated on"} {formatDate(item.published_date)}
                           </span>
 
                           <button
@@ -263,7 +270,7 @@ const NewsWidget = () => {
                               marginTop: 4,
                             }}
                           >
-                            Read More <i className="fas fa-arrow-right" style={{ fontSize: 12 }} />
+                            {t.news_read_more ?? "Read More"} <i className="fas fa-arrow-right" style={{ fontSize: 12 }} />
                           </button>
                         </div>
                       </div>

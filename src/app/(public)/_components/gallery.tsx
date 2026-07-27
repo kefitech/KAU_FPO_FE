@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 import { publicFetch } from "../_lib/public-fetch";
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -18,9 +19,15 @@ interface GalleryPhoto {
 const Gallery = () => {
   const [photos, setPhotos] = useState<GalleryPhoto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [t, setT] = useState<Record<string, string>>({});
   const locale = useLocaleStore((s) => s.locale);
   const prevRef = useRef<HTMLButtonElement>(null);
   const nextRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!locale) return;
+    translationsApi.getPublic(locale, "home").then((res) => setT(res.home ?? {}));
+  }, [locale]);
 
   useEffect(() => {
     publicFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/public/gallery/`)
@@ -38,8 +45,8 @@ const Gallery = () => {
         <div className="row">
           <div className="col-lg-8 offset-lg-2">
             <div className="site-heading text-center">
-              <h5 className="sub-title">Capture The Moments</h5>
-              <h2 className="title">Gallery</h2>
+              <h5 className="sub-title">{t.gallery_subtitle ?? "Capture The Moments"}</h5>
+              <h2 className="title">{t.gallery_title ?? "Gallery"}</h2>
               <div className="devider" />
             </div>
           </div>

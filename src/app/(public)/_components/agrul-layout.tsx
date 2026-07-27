@@ -1,6 +1,7 @@
 "use client";
 import { useEffect } from "react";
 import AOS from "aos";
+import { useLocaleStore } from "@/stores/locale-store";
 import Header from "./header";
 import Footer from "./footer";
 import ScrollToTop from "./scroll-to-top";
@@ -11,6 +12,8 @@ interface Props {
 }
 
 const AgrulLayout = ({ children }: Props) => {
+  const locale = useLocaleStore((s) => s.locale);
+
   useEffect(() => {
     AOS.init({
       easing: "ease-out-back",
@@ -27,13 +30,13 @@ const AgrulLayout = ({ children }: Props) => {
   }, []);
 
   return (
-    <>
+    <div data-lang={locale || "en"}>
       <PageLoader />
       <Header />
       {children}
       <Footer />
       <ScrollToTop />
-    </>
+    </div>
   );
 };
 

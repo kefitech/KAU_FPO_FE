@@ -7,14 +7,21 @@ import DOMPurify from "isomorphic-dompurify";
 import CountUp from "react-countup";
 
 import { type Faq, faqApi } from "@/lib/api/faq";
+import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 
 const WhyChoose = () => {
   const [faqItems, setFaqItems] = useState<Faq[]>([]);
   const [openItem, setOpenItem] = useState<number | null>(null);
+  const [t, setT] = useState<Record<string, string>>({});
   const locale = useLocaleStore((s) => s.locale);
   const [totalCount, setTotalCount] = useState<number>(0);
   const toggle = (id: number) => setOpenItem(openItem === id ? null : id);
+
+  useEffect(() => {
+    if (!locale) return;
+    translationsApi.getPublic(locale, "home").then((res) => setT(res.home ?? {}));
+  }, [locale]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: refetch intentionally triggered on locale change
   useEffect(() => {
@@ -50,17 +57,17 @@ const WhyChoose = () => {
                     <div className="timer">
                       <CountUp end={totalCount} enableScrollSpy scrollSpyOnce />
                     </div>
-                    <div className="operator"> &nbsp;FAQs</div>
+                    <div className="operator"> &nbsp;{t.why_faq_counter_label ?? "FAQs"}</div>
                   </div>
-                  <span className="medium">Have query? Check FAQ</span>
+                  <span className="medium">{t.why_faq_counter_sub ?? "Have query? Check FAQ"}</span>
                 </div>
               </div>
             </div>
           </div>
           <div className="col-lg-6 choose-us-style-one">
-            <h5 className="sub-title">Get to know us</h5>
+            <h5 className="sub-title">{t.why_subtitle ?? "Get to know us"}</h5>
             <h2 className="title">
-              Agriculture matters to <br /> the future of development
+              {t.why_title ?? "Agriculture matters to the future of development"}
             </h2>
             <div className="accordion accordion-regular mt-35" id="faqAccordion">
               {faqItems.map((item) => (
@@ -88,7 +95,7 @@ const WhyChoose = () => {
             </div>
             <div className="mt-30">
               <Link className="btn btn-theme secondary btn-md radius animation" href="/faq">
-                View All FAQs <i className="fas fa-arrow-right ms-1" />
+                {t.why_view_all_faqs ?? "View All FAQs"} <i className="fas fa-arrow-right ms-1" />
               </Link>
             </div>
           </div>

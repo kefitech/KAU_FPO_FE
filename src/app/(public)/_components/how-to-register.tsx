@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 import { publicFetch } from "../_lib/public-fetch";
 
@@ -67,10 +68,16 @@ function parseHowToRegister(raw: string): Phase[] {
 export default function HowToRegister() {
   const locale = useLocaleStore((s) => s.locale);
   const [data, setData] = useState<AboutData | null>(null);
+  const [t, setT] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [openPhase, setOpenPhase] = useState<number | null>(0);
   const [openStep, setOpenStep] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!locale) return;
+    translationsApi.getPublic(locale, "home").then((res) => setT(res.home ?? {}));
+  }, [locale]);
 
   useEffect(() => {
     if (!locale) return;
@@ -119,7 +126,7 @@ export default function HowToRegister() {
         <div className="row">
           <div className="col-lg-8 offset-lg-2">
             <div className="site-heading text-center">
-              <h2 className="title">How to Register FPO</h2>
+              <h2 className="title">{t.how_to_register_title ?? "How to Register FPO"}</h2>
               <div className="devider" />
             </div>
             <div style={{ marginTop: 24 }}>

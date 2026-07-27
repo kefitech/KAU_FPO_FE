@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import CountUp from "react-countup";
+import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 import { publicFetch } from "../_lib/public-fetch";
 
@@ -14,15 +15,21 @@ interface Stats {
   total_visitors: number;
 }
 
-const STAT_CONFIG: { key: keyof Stats; label: string; unit: string }[] = [
-  { key: "total_visitors",      label: "Platform Visitors",  unit: "+" },
-  { key: "total_registrations", label: "FPO Registrations",  unit: "+" },
-  { key: "total_experts",       label: "Empanelled Experts", unit: "+" },
+const STAT_KEYS: { key: keyof Stats; tKey: string; fallback: string; unit: string }[] = [
+  { key: "total_visitors",      tKey: "stats_visitors",      fallback: "Platform Visitors",  unit: "+" },
+  { key: "total_registrations", tKey: "stats_registrations", fallback: "FPO Registrations",  unit: "+" },
+  { key: "total_experts",       tKey: "stats_experts",       fallback: "Empanelled Experts", unit: "+" },
 ];
 
 const Facts = () => {
   const [stats, setStats] = useState<Stats | null>(null);
+  const [t, setT] = useState<Record<string, string>>({});
   const locale = useLocaleStore((s) => s.locale);
+
+  useEffect(() => {
+    if (!locale) return;
+    translationsApi.getPublic(locale, "home").then((res) => setT(res.home ?? {}));
+  }, [locale]);
 
   useEffect(() => {
     publicFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/public/stats/`)
@@ -41,15 +48,15 @@ const Facts = () => {
             {/* Left heading */}
             <div className="col-lg-4 fun-fact-style-one">
               <div className="heading">
-                <div className="sub-title">Platform Stats</div>
-                <h2 className="title">KAU–FPO <br /> Linkage in Numbers</h2>
+                <div className="sub-title">{t.stats_subtitle ?? "Platform Stats"}</div>
+                <h2 className="title">{t.stats_title ?? "KAU–FPO Linkage in Numbers"}</h2>
               </div>
             </div>
 
             {/* Right counters */}
             <div className="col-lg-8 fun-fact-style-one text-end">
               <div className="row">
-                {STAT_CONFIG.map(({ key, label, unit }) => (
+                {STAT_KEYS.map(({ key, tKey, fallback, unit }) => (
                   <div key={key} className="col-lg-4 col-md-4 item">
                     <div className="fun-fact">
                       <div className="counter">
@@ -62,7 +69,7 @@ const Facts = () => {
                         </div>
                         <div className="operator">{unit}</div>
                       </div>
-                      <span className="medium">{label}</span>
+                      <span className="medium">{t[tKey] ?? fallback}</span>
                     </div>
                   </div>
                 ))}
