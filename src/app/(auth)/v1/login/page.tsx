@@ -1,9 +1,25 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
 import { LocaleSwitcher } from "@/components/layout/locale-switcher";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { translationsApi } from "@/lib/api/translations";
+import { useLocaleStore } from "@/stores/locale-store";
 
 import { LoginForm } from "../../_components/login-form";
 
 export default function LoginV1() {
+  const locale = useLocaleStore((s) => s.locale);
+  const [t, setT] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!locale) return;
+    translationsApi.getPublic(locale, "login").then((data) => {
+      setT(data.login ?? {});
+    });
+  }, [locale]);
+
   return (
     <div
       className="relative flex h-svh items-center justify-center overflow-hidden p-4"
@@ -26,21 +42,21 @@ export default function LoginV1() {
         </a>
 
         <div className="flex flex-col gap-1">
-          <h1 className="font-bold text-2xl">Login to your account</h1>
-          <p className="text-muted-foreground text-sm">Enter your email below to login to your account</p>
+          <h1 className="font-bold text-2xl">{t.title ?? "Login to your account"}</h1>
+          <p className="text-muted-foreground text-sm">{t.subtitle ?? "Enter your email below to login to your account"}</p>
         </div>
 
-        <LoginForm />
+        <LoginForm t={t} />
 
         <p className="text-center text-muted-foreground text-sm">
-          Don&apos;t have an account?{" "}
+          {t.no_account ?? "Don't have an account?"}{" "}
           <a href="/register" className="underline underline-offset-4 hover:text-foreground">
-            Sign up
+            {t.sign_up ?? "Sign up"}
           </a>
         </p>
 
         <a href="/" className="flex items-center justify-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
-          ← Back to Home
+          {t.back_to_home ?? "← Back to Home"}
         </a>
       </div>
     </div>

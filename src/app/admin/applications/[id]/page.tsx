@@ -943,6 +943,18 @@ function AuditLogTab({ fpoId }: { fpoId: number }) {
                       {getObjectInfoDisplay(log.object_info)}
                     </span>
                   )}
+                  {log.action === "fpo_status_change" && log.changes && typeof log.changes === "object" && (() => {
+                    const c = log.changes as Record<string, string>;
+                    const from = (c.from_status ?? c.from)?.replace(/_/g, " ");
+                    const to   = (c.to_status   ?? c.to  )?.replace(/_/g, " ");
+                    if (!to) return null;
+                    const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+                    return (
+                      <span className="text-xs font-semibold mt-0.5" style={{ color: "var(--color-primary)" }}>
+                        {from ? `${cap(from)} → ${cap(to)}` : `→ ${cap(to)}`}
+                      </span>
+                    );
+                  })()}
                 </div>
               </div>
             ))}

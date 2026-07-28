@@ -27,20 +27,22 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-export function LoginForm() {
+export function LoginForm({ t: tProp }: { t?: Record<string, string> }) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const setUser = useAuthStore((state) => state.setUser);
 
   const locale = useLocaleStore((s) => s.locale);
-  const [t, setT] = useState<Record<string, string>>({});
+  const [tLocal, setTLocal] = useState<Record<string, string>>({});
+  const t = tProp ?? tLocal;
 
   useEffect(() => {
+    if (tProp) return; // parent already fetched
     translationsApi.getPublic(locale, "login").then((data) => {
-      setT(data.login ?? {});
+      setTLocal(data.login ?? {});
     });
-  }, [locale]);
+  }, [locale, tProp]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -124,7 +126,7 @@ export function LoginForm() {
                   href="/forgot-password"
                   className="text-muted-foreground text-xs underline underline-offset-4 hover:text-foreground"
                 >
-                  Forgot password?
+                  {t.forgot_password ?? "Forgot password?"}
                 </Link>
               </div>
             </Field>
@@ -132,7 +134,7 @@ export function LoginForm() {
         />
       </FieldGroup>
       <Button className="w-full" type="submit" disabled={isLoading}>
-        {isLoading ? "Signing in..." : (t.submit_btn ?? "Sign In")}
+        {isLoading ? (t.signing_in ?? "Signing in...") : (t.submit_btn ?? "Sign In")}
       </Button>
     </form>
   );
