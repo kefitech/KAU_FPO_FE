@@ -71,8 +71,9 @@ const CATEGORIES = [
 
 type CategoryValue = (typeof CATEGORIES)[number]["value"];
 
-function getCategoryLabel(value: string): string {
-  return CATEGORIES.find((c) => c.value === value)?.label ?? value;
+function getCategoryLabel(value: string, t: T): string {
+  const fallback = CATEGORIES.find((c) => c.value === value)?.label ?? value;
+  return t[`category_${value}`] ?? fallback;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -101,11 +102,13 @@ function NewsSourceDialog({
   onOpenChange,
   editing,
   onSuccess,
+  t,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   editing: AdminNewsSource | null;
   onSuccess: () => void;
+  t:T;
 }) {
   const [name, setName] = useState("");
   const [nameError, setNameError] = useState<string | null>(null);
@@ -135,7 +138,10 @@ function NewsSourceDialog({
 
   const validateUrl = (value: string) => {
     const result = urlSchema.safeParse(value);
-    return result.success ? null : result.error.issues[0].message;
+    if (result.success) return null;
+    const issue = result.error.issues[0];
+    if (issue.code === "too_small") return t.err_url_required ?? "URL is required";
+    return t.err_url_protocol ?? "URL must start with http:// or https://";
   };
 
   const mutation = useMutation({
@@ -149,7 +155,7 @@ function NewsSourceDialog({
       return editing ? newsSourcesApi.update(editing.id, formData) : newsSourcesApi.create(formData);
     },
     onSuccess: () => {
-      toast.success(editing ? "News source updated." : "News source added.");
+      toast.success(editing ? (t.toast_updated ?? "News source updated.") : (t.toast_added ?? "News source added."));
       onSuccess();
       onOpenChange(false);
     },
@@ -162,14 +168,15 @@ function NewsSourceDialog({
           .join("\n");
         toast.error(messages);
       } else {
-        toast.error(e?.message ?? "Failed to save news source.");
+        toast.error(e?.message ?? t.toast_save_failed ?? "Failed to save news source.");
       }
     },
   });
 
   const validateName = (value: string) => {
-    if (!value.trim()) return "Name is required.";
-    if (value.trim().length > NAME_MAX) return `Name must be ${NAME_MAX} characters or fewer.`;
+    if (!value.trim()) return t.err_name_required ?? "Name is required.";
+    if (value.trim().length > NAME_MAX)
+      return (t.err_name_max ?? "Name must be {max} characters or fewer.").replace("{max}", String(NAME_MAX));
     return null;
   };
 
@@ -188,14 +195,14 @@ function NewsSourceDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{editing ? "Edit News Source" : "Add News Source"}</DialogTitle>
+          <DialogTitle>{editing ? (t.dialog_edit_title ?? "Edit News Source") : (t.dialog_add_title ?? "Add News Source")}</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col gap-4 py-2">
           {/* Name */}
           <div className="flex flex-col gap-1.5">
             <label htmlFor="news-source-name" className="font-medium text-sm">
-              Name <span className="text-destructive">*</span>
+              {t.field_name ?? "Name"} <span className="text-destructive">*</span>
             </label>
             <Input
               id="news-source-name"
@@ -205,7 +212,7 @@ function NewsSourceDialog({
                 if (nameError) setNameError(validateName(e.target.value));
               }}
               onBlur={() => setNameError(validateName(name))}
-              placeholder="e.g. Mathrubhumi"
+              placeholder={t.field_source_name_placeholder ?? "e.g. Mathrubhumi"}
               maxLength={NAME_MAX}
               aria-invalid={!!nameError}
               className={nameError ? "border-destructive focus-visible:ring-destructive/20" : ""}
@@ -223,7 +230,7 @@ function NewsSourceDialog({
           {/* URL */}
           <div className="flex flex-col gap-1.5">
             <label htmlFor="news-source-url" className="font-medium text-sm">
-              URL <span className="text-destructive">*</span>
+              {t.field_url ?? "URL"} <span className="text-destructive">*</span>
             </label>
             <Input
               id="news-source-url"
@@ -244,16 +251,16 @@ function NewsSourceDialog({
           {/* Category */}
           <div className="flex flex-col gap-1.5">
             <label htmlFor="news-source-category" className="font-medium text-sm">
-              Category
+              {t.field_category ?? "Category"}
             </label>
             <Select value={category} onValueChange={(v) => setCategory(v as CategoryValue)}>
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select a category" />
+                <SelectValue placeholder={t.field_category_placeholder ?? "Select a category"} />
               </SelectTrigger>
               <SelectContent>
                 {CATEGORIES.map((cat) => (
                   <SelectItem key={cat.value} value={cat.value}>
-                    {cat.label}
+                    {t[`category_${cat.value}`] ?? cat.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -263,7 +270,7 @@ function NewsSourceDialog({
           {/* Logo */}
           <div className="flex flex-col gap-1.5">
             <p className="font-medium text-sm">
-              Logo <span className="text-muted-foreground text-xs">(optional)</span>
+               {t.field_logo ?? "Logo"} <span className="text-muted-foreground text-xs">{t.label_optional ?? "(optional)"}</span>
             </p>
 
             {/* Existing logo (edit mode, no new file yet) */}
@@ -282,10 +289,10 @@ function NewsSourceDialog({
                 )}
                 <div className="flex flex-col gap-1 min-w-0 flex-1">
                   <span className="text-xs text-muted-foreground">
-                    {editing.logo_url ? "Current logo" : "No logo set"}
+                    {editing.logo_url ? (t.field_current_logo ?? "Current logo") : (t.field_no_logo ?? "No logo set")}
                   </span>
                   <label className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer w-fit">
-                    {editing.logo_url ? "Replace" : "Upload logo"}
+                    {editing.logo_url ? (t.action_replace ?? "Replace") : (t.action_upload_logo ?? "Upload logo")}
                     <input
                       id="news-source-logo"
                       ref={fileInputRef}
@@ -320,12 +327,12 @@ function NewsSourceDialog({
                     }}
                     className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
                   >
-                    {editing ? <span className="text-xs">Cancel</span> : <X className="h-4 w-4" />}
+                    {editing ? <span className="text-xs">{t.action_cancel ?? "Cancel"}</span> : <X className="h-4 w-4" />}
                   </button>
                 </div>
                 {editing && (
                   <p className="text-xs text-muted-foreground">
-                    This will replace the existing logo. Click Cancel to keep the original.
+                    {t.logo_replace_hint ?? "This will replace the existing logo. Click Cancel to keep the original."}
                   </p>
                 )}
               </div>
@@ -341,17 +348,17 @@ function NewsSourceDialog({
                 onChange={(e) => setLogo(e.target.files?.[0] ?? null)}
               />
             )}
-            <p className="text-xs text-muted-foreground">JPG, PNG, WebP or SVG</p>
+            <p className="text-xs text-muted-foreground">{t.file_type_hint_svg ?? "JPG, PNG, WebP or SVG"}</p>
           </div>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={mutation.isPending}>
-            Cancel
+            {t.action_cancel ?? "Cancel"}
           </Button>
 
           <Button onClick={handleSubmit} disabled={!canSubmit || mutation.isPending}>
-            {mutation.isPending ? "Saving…" : editing ? "Save Changes" : "Add Source"}
+            {mutation.isPending ? (t.action_saving ?? "Saving…") : editing ? (t.action_save_changes ?? "Save Changes") : (t.action_add_source ?? "Add Source")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -435,10 +442,10 @@ export function NewsSourcesTab({ t = {} }: { t?: T }) {
           <TableHeader>
             <TableRow>
               <TableHead className="w-10" />
-              <TableHead>Name</TableHead>
-              <TableHead>URL</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>{t.col_name ?? "Name"}</TableHead>
+              <TableHead>{t.col_url ?? "URL"}</TableHead>
+              <TableHead>{t.col_category ?? "Category"}</TableHead>
+              <TableHead>{t.col_status ?? "Status"}</TableHead>
               <TableHead className="w-12" />
             </TableRow>
           </TableHeader>
@@ -458,7 +465,7 @@ export function NewsSourcesTab({ t = {} }: { t?: T }) {
             ) : sources.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="py-12 text-center text-muted-foreground text-sm">
-                  No news sources added yet.
+                  {t.empty_state_sources ?? "No news sources added yet."}
                 </TableCell>
               </TableRow>
             ) : (
@@ -482,7 +489,7 @@ export function NewsSourcesTab({ t = {} }: { t?: T }) {
                   </TableCell>
                   <TableCell>
                     <Badge variant="secondary" className="text-xs capitalize">
-                      {getCategoryLabel(source.category)}
+                      {getCategoryLabel(source.category, t)}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -494,7 +501,7 @@ export function NewsSourcesTab({ t = {} }: { t?: T }) {
                           : "bg-muted text-muted-foreground"
                       }
                     >
-                      {source.is_active ? "Active" : "Inactive"}
+                    {source.is_active ? (t.badge_active ?? "Active") : (t.badge_inactive ?? "Inactive")}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -504,7 +511,7 @@ export function NewsSourcesTab({ t = {} }: { t?: T }) {
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
+                      <DropdownMenuContent align="end" className="min-w-[190]">
                         <DropdownMenuItem
                           onClick={() => {
                             setEditing(source);
@@ -512,7 +519,7 @@ export function NewsSourcesTab({ t = {} }: { t?: T }) {
                           }}
                         >
                           <Pencil className="mr-2 h-4 w-4" />
-                          Edit
+                          {t.action_edit ?? "Edit"}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => toggleMutation.mutate({ id: source.id, active: !source.is_active })}
@@ -520,19 +527,19 @@ export function NewsSourcesTab({ t = {} }: { t?: T }) {
                           {source.is_active ? (
                             <>
                               <EyeOff className="mr-2 h-4 w-4" />
-                              Deactivate
+                              {t.action_deactivate ?? "Deactivate"}
                             </>
                           ) : (
                             <>
                               <Eye className="mr-2 h-4 w-4" />
-                              Activate
+                              {t.action_activate ?? "Activate"}
                             </>
                           )}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(source)}>
                           <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
+                          {t.action_delete ?? "Delete"}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -549,6 +556,7 @@ export function NewsSourcesTab({ t = {} }: { t?: T }) {
         onOpenChange={setDialogOpen}
         editing={editing}
         onSuccess={() => queryClient.invalidateQueries({ queryKey: ["admin-news-sources"] })}
+        t={t}
       />
     </div>
   );

@@ -301,7 +301,7 @@ export default function LanguagesPage() {
             <DataTable
               queryKey="translation-categories"
               queryFn={translationCategoryApi.getAll}
-              columns={getCategoryColumns(tCatTable, tCommon)}
+              columns={getCategoryColumns(tCatTable, tCommon, tCatTable)}
               onRowClick={(row) => setCatView({ open: true, row })}
               columnsLabel={tCommon.columns_header}
               toggleColumnsLabel={tCommon.col_toggle_columns}

@@ -88,11 +88,13 @@ function DocumentDialog({
   onOpenChange,
   editing,
   onSuccess,
+  t,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   editing: AdminDocument | null;
   onSuccess: () => void;
+  t:T;
 }) {
   const { data: languages = [], isLoading: langsLoading } = useQuery<PublicLanguage[]>({
     queryKey: ["public-languages"],
@@ -155,7 +157,7 @@ function DocumentDialog({
       return editing ? documentsApi.update(editing.id, formData) : documentsApi.create(formData);
     },
     onSuccess: () => {
-      toast.success(editing ? "Document updated." : "Document uploaded.");
+      toast.success(editing ? (t.toast_updated ?? "Document updated.") : (t.toast_uploaded ?? "Document uploaded."));
       onSuccess();
       onOpenChange(false);
     },
@@ -163,7 +165,7 @@ function DocumentDialog({
       const errorMsg = error.data?.errors?.file?.[0] || error.data?.message || "Failed to save document.";
 
       toast.error(errorMsg);
-      toast.error("Failed to save file");
+      toast.error(t.toast_save_failed ?? "Failed to save file");
     },
   });
 
@@ -174,7 +176,7 @@ function DocumentDialog({
       <DialogContent className="flex flex-col max-h-[90vh] sm:max-w-md gap-0 p-0">
         {/* Sticky header */}
         <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
-          <DialogTitle>{editing ? "Edit Document" : "Upload Document"}</DialogTitle>
+          <DialogTitle>{editing ? (t.dialog_edit_title ?? "Edit Document") : (t.dialog_upload_title ?? "Upload Document")}</DialogTitle>
         </DialogHeader>
 
         {/* Scrollable body */}
@@ -184,7 +186,7 @@ function DocumentDialog({
             <div className="flex items-center justify-between gap-2">
               {/* biome-ignore lint/a11y/noLabelWithoutControl: label is visually associated with dynamically rendered inputs */}
               <label className="text-sm font-medium shrink-0">
-                Title <span className="text-destructive">*</span>
+                {t.field_title ?? "Title"} <span className="text-destructive">*</span>
               </label>
               {langsLoading && <Skeleton className="h-8 w-32" />}
               {!langsLoading && languages.length > 1 && (
@@ -215,8 +217,8 @@ function DocumentDialog({
             </div>
             {!langsLoading && activeLang && activeLang !== defaultLang?.code && (
               <p className="text-xs text-muted-foreground">
-                Optional — leave blank to show {defaultLang?.name} as fallback.
-              </p>
+                {(t.field_title_optional_hint ?? "Optional — leave blank to show {name} as fallback.").replace("{name}", defaultLang?.name ?? "")}
+               </p>
             )}
             {langsLoading ? (
               <Skeleton className="h-10 w-full" />
@@ -224,7 +226,7 @@ function DocumentDialog({
               <Input
                 value={titleValues[activeLang] ?? ""}
                 onChange={(e) => setTitleValues((prev) => ({ ...prev, [activeLang]: e.target.value }))}
-                placeholder={`Document title in ${languages.find((l) => l.code === activeLang)?.name ?? activeLang}`}
+                placeholder={`${t.field_title_placeholder ?? "Document title in"} ${languages.find((l) => l.code === activeLang)?.name ?? activeLang}`}
                 maxLength={100}
               />
             )}
@@ -234,7 +236,7 @@ function DocumentDialog({
           <div className="flex flex-col gap-1.5">
             {/* biome-ignore lint/a11y/noLabelWithoutControl: label is visually associated with file input below */}
             <label className="text-sm font-medium">
-              PDF File {!editing && <span className="text-destructive">*</span>}
+              {t.field_pdf_file ?? "PDF File"} {!editing && <span className="text-destructive">*</span>}
             </label>
 
             {/* Existing file row (edit mode, no new file chosen yet) */}
@@ -253,10 +255,10 @@ function DocumentDialog({
                     className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
-                    View
+                    {t.action_view_short ?? "View"}
                   </a>
                   <label className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
-                    Replace
+                    {t.action_replace ?? "Replace"}
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -288,7 +290,7 @@ function DocumentDialog({
                       className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
                     >
                       <ExternalLink className="h-3.5 w-3.5" />
-                      View
+                      {t.action_view_short ?? "View"}
                     </button>
                     <button
                       type="button"
@@ -298,13 +300,13 @@ function DocumentDialog({
                       }}
                       className="text-xs text-muted-foreground hover:text-destructive transition-colors"
                     >
-                      {editing ? "Cancel" : <X className="h-4 w-4" />}
+                      {editing ? (t.action_cancel ?? "Cancel") : <X className="h-4 w-4" />}
                     </button>
                   </div>
                 </div>
                 {editing && (
                   <p className="text-xs text-muted-foreground">
-                    This will replace the existing file. Click Cancel to keep the original.
+                    {t.file_replace_hint ?? "This will replace the existing file. Click Cancel to keep the original."}
                   </p>
                 )}
               </div>
@@ -330,7 +332,7 @@ function DocumentDialog({
                 onChange={(e) => setIsViewOnly(e.target.checked)}
                 className="h-4 w-4 rounded border-input accent-green-600"
               />
-              <span className="text-sm">View only (no download)</span>
+              <span className="text-sm">{t.field_view_only ?? "View only (no download)"}</span>
             </label>
           </div>
         </div>
@@ -338,10 +340,10 @@ function DocumentDialog({
         {/* Sticky footer */}
         <div className="shrink-0 border-t px-6 py-4 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 bg-background">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={mutation.isPending}>
-            Cancel
+            {t.action_cancel ?? "Cancel"}
           </Button>
           <Button onClick={() => mutation.mutate()} disabled={!canSubmit || mutation.isPending}>
-            {mutation.isPending ? "Saving…" : editing ? "Save Changes" : "Upload"}
+            {mutation.isPending ? (t.action_saving ?? "Saving…") : editing ? (t.action_save_changes ?? "Save Changes") : (t.action_upload ?? "Upload")}
           </Button>
         </div>
       </DialogContent>
@@ -432,11 +434,11 @@ export function DocumentsTab({ t = {} }: { t?: T }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[35%]">Title</TableHead>
-              <TableHead>Size</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Uploaded</TableHead>
+              <TableHead className="w-[35%]">{t.col_title ?? "Title"}</TableHead>
+              <TableHead>{t.col_size ?? "Size"}</TableHead>
+              <TableHead>{t.col_type ?? "Type"}</TableHead>
+              <TableHead>{t.col_status ?? "Status"}</TableHead>
+              <TableHead>{t.col_uploaded ?? "Uploaded"}</TableHead>
               <TableHead className="w-12" />
             </TableRow>
           </TableHeader>
@@ -515,14 +517,14 @@ export function DocumentsTab({ t = {} }: { t?: T }) {
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
+                        <DropdownMenuContent align="end" className="min-w-[200px]">
                           <DropdownMenuItem onClick={() => setPreviewDoc(doc)}>
                             <ZoomIn className="mr-2 h-4 w-4" />
-                            View PDF
+                            {t.action_view ?? "View PDF"}
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => openEdit(doc)}>
                             <Pencil className="mr-2 h-4 w-4" />
-                            Edit
+                            {t.action_edit ?? "Edit"}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => toggleMutation.mutate({ id: doc.id, active: !doc.is_active })}
@@ -530,19 +532,19 @@ export function DocumentsTab({ t = {} }: { t?: T }) {
                             {doc.is_active ? (
                               <>
                                 <EyeOff className="mr-2 h-4 w-4" />
-                                Deactivate
+                                {t.action_deactivate ?? "Deactivate"}
                               </>
                             ) : (
                               <>
                                 <Eye className="mr-2 h-4 w-4" />
-                                Activate
+                                {t.action_activate ?? "Activate"}
                               </>
                             )}
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(doc)}>
                             <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
+                            {t.action_delete ?? "Delete"}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -560,6 +562,7 @@ export function DocumentsTab({ t = {} }: { t?: T }) {
         onOpenChange={setDialogOpen}
         editing={editing}
         onSuccess={() => queryClient.invalidateQueries({ queryKey: ["admin-documents"] })}
+        t={t}
       />
 
       {/* PDF Preview Dialog */}

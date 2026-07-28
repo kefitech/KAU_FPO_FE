@@ -44,8 +44,8 @@ function MenuItemActions({ item, t, tCommon }: { item: AdminMenuItem; t: T; tCom
 
   function handleDelete() {
     confirm({
-      title: "Delete Menu Item",
-      description: `Are you sure you want to delete "${item.label_key}"? This action cannot be undone.`,
+      title: t.delete_title ?? "Delete Menu Item",
+      description: `${t.delete_confirm_prefix ?? "Are you sure you want to delete"} "${item.label_key}"? ${t.delete_confirm_suffix ?? "This action cannot be undone."}`,
       onConfirm: () => deleteMutation.mutateAsync(),
     });
   }

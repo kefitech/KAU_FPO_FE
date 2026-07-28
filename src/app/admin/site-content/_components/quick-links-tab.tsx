@@ -82,11 +82,13 @@ function QuickLinkDialog({
   onOpenChange,
   editing,
   onSuccess,
+  t,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   editing: AdminQuickLink | null;
   onSuccess: () => void;
+  t:T;
 }) {
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
@@ -112,17 +114,20 @@ function QuickLinkDialog({
 
   const validateUrl = (value: string) => {
     const result = urlSchema.safeParse(value);
-    return result.success ? null : result.error.issues[0].message;
+    if (result.success) return null;
+    const issue = result.error.issues[0];
+    if (issue.code === "too_small") return t.err_url_required ?? "URL is required";
+    return t.err_url_protocol ?? "URL must start with http:// or https://";
   };
 
   const ALLOWED_LOGO_TYPES = ["image/jpeg", "image/png", "image/webp"];
   const MAX_LOGO_SIZE = 5 * 1024 * 1024; // 5 MB, matches backend limit
   const validateLogo = (file: File): string | null => {
     if (!ALLOWED_LOGO_TYPES.includes(file.type)) {
-      return "Only JPG, PNG or WebP files are allowed.";
+      return t.err_logo_type ?? "Only JPG, PNG or WebP files are allowed.";
     }
     if (file.size > MAX_LOGO_SIZE) {
-      return "Logo must not exceed 5 MB.";
+      return t.err_logo_size ?? "Logo must not exceed 5 MB.";
     }
     return null;
   };
@@ -137,12 +142,12 @@ function QuickLinkDialog({
       return editing ? quickLinksApi.update(editing.id, formData) : quickLinksApi.create(formData);
     },
     onSuccess: () => {
-      toast.success(editing ? "Quick link updated." : "Quick link added.");
+      toast.success(editing ? (t.toast_updated ?? "Quick link updated.") : (t.toast_added ?? "Quick link added."));
       onSuccess();
       onOpenChange(false);
     },
-    onError: () => toast.error("Failed to save quick link."),
-  });
+    onError: () => toast.error(t.toast_save_failed ?? "Failed to save quick link."),
+    });
 
   const handleSubmit = () => {
     const error = validateUrl(url);
@@ -167,27 +172,29 @@ function QuickLinkDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{editing ? "Edit Quick Link" : "Add Quick Link"}</DialogTitle>
+          <DialogTitle>{editing ? (t.dialog_edit_title ?? "Edit Quick Link") : (t.dialog_add_title ?? "Add Quick Link")}</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col gap-4 py-2">
           {/* Name */}
           <div className="flex flex-col gap-1.5">
             <p className="text-sm font-medium">
-              Name <span className="text-destructive">*</span>
+              {t.field_name ?? "Name"} <span className="text-destructive">*</span>
+
             </p>
             <Input
               id="quick-link-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Kerala Agricultural University"
+              placeholder={t.field_link_name_placeholder ?? "e.g. Kerala Agricultural University"}
+
             />
           </div>
 
           {/* URL */}
           <div className="flex flex-col gap-1.5">
             <p className="text-sm font-medium">
-              URL <span className="text-destructive">*</span>
+              {t.field_url ?? "URL"} <span className="text-destructive">*</span>
             </p>
             <Input
               id="quick-link-url"
@@ -208,7 +215,7 @@ function QuickLinkDialog({
           {/* Logo */}
           <div className="flex flex-col gap-1.5">
             <p className="font-medium text-sm">
-              Logo <span className="text-destructive">*</span>
+              {t.field_logo ?? "Logo"} <span className="text-destructive">*</span>
             </p>
 
             {/* Existing logo (edit, no replacement yet) */}
@@ -227,10 +234,10 @@ function QuickLinkDialog({
                 )}
                 <div className="flex flex-col gap-1 min-w-0 flex-1">
                   <span className="text-xs text-muted-foreground">
-                    {editing.logo_url ? "Current logo" : "No logo set"}
+                    {editing.logo_url ? (t.field_current_logo ?? "Current logo") : (t.field_no_logo ?? "No logo set")}
                   </span>
                   <label className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer w-fit">
-                    {editing.logo_url ? "Replace" : "Upload logo"}
+                    {editing.logo_url ? (t.action_replace ?? "Replace") : (t.action_upload_logo ?? "Upload logo")}
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -274,12 +281,12 @@ function QuickLinkDialog({
                     }}
                     className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
                   >
-                    {editing ? <span className="text-xs">Cancel</span> : <X className="h-4 w-4" />}
+                    {editing ? <span className="text-xs">{t.action_cancel ?? "Cancel"}</span> : <X className="h-4 w-4" />}
                   </button>
                 </div>
                 {editing && (
                   <p className="text-xs text-muted-foreground">
-                    This will replace the existing logo. Click Cancel to keep the original.
+                    {t.logo_replace_hint ?? "This will replace the existing logo. Click Cancel to keep the original."}
                   </p>
                 )}
               </div>
@@ -305,17 +312,17 @@ function QuickLinkDialog({
                 }}
               />
             )}
-            <p className="text-xs text-muted-foreground">JPG, PNG, or WebP</p>
+            <p className="text-xs text-muted-foreground">{t.file_type_hint_plain ?? "JPG, PNG, or WebP"}</p>
             {logoError && <p className="text-xs text-destructive">{logoError}</p>}
           </div>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={mutation.isPending}>
-            Cancel
+            {t.action_cancel ?? "Cancel"}
           </Button>
           <Button onClick={handleSubmit} disabled={!canSubmit || mutation.isPending}>
-            {mutation.isPending ? "Saving…" : editing ? "Save Changes" : "Add Link"}
+            {mutation.isPending ? (t.action_saving ?? "Saving…") : editing ? (t.action_save_changes ?? "Save Changes") : (t.action_add_link ?? "Add Link")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -399,9 +406,9 @@ export function QuickLinksTab({ t = {} }: { t?: T }) {
           <TableHeader>
             <TableRow>
               <TableHead className="w-10" />
-              <TableHead>Name</TableHead>
-              <TableHead>URL</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>{t.col_name ?? "Name"}</TableHead>
+              <TableHead>{t.col_url ?? "URL"}</TableHead>
+              <TableHead>{t.col_status ?? "Status"}</TableHead>
               <TableHead className="w-12" />
             </TableRow>
           </TableHeader>
@@ -421,7 +428,7 @@ export function QuickLinksTab({ t = {} }: { t?: T }) {
             ) : links.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="py-12 text-center text-muted-foreground text-sm">
-                  No quick links added yet.
+                  {t.empty_state_links ?? "No quick links added yet."}
                 </TableCell>
               </TableRow>
             ) : (
@@ -451,7 +458,7 @@ export function QuickLinksTab({ t = {} }: { t?: T }) {
                           : "bg-muted text-muted-foreground"
                       }
                     >
-                      {link.is_active ? "Active" : "Inactive"}
+                      {link.is_active ? (t.badge_active ?? "Active") : (t.badge_inactive ?? "Inactive")}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -461,7 +468,7 @@ export function QuickLinksTab({ t = {} }: { t?: T }) {
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
+                      <DropdownMenuContent align="end" className="min-w-[190]">
                         <DropdownMenuItem
                           onClick={() => {
                             setEditing(link);
@@ -469,7 +476,7 @@ export function QuickLinksTab({ t = {} }: { t?: T }) {
                           }}
                         >
                           <Pencil className="mr-2 h-4 w-4" />
-                          Edit
+                          {t.action_edit ?? "Edit"}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => toggleMutation.mutate({ id: link.id, active: !link.is_active })}
@@ -477,19 +484,19 @@ export function QuickLinksTab({ t = {} }: { t?: T }) {
                           {link.is_active ? (
                             <>
                               <EyeOff className="mr-2 h-4 w-4" />
-                              Deactivate
+                              {t.action_deactivate ?? "Deactivate"}
                             </>
                           ) : (
                             <>
                               <Eye className="mr-2 h-4 w-4" />
-                              Activate
+                              {t.action_activate ?? "Activate"}
                             </>
                           )}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(link)}>
                           <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
+                          {t.action_delete ?? "Delete"}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -506,6 +513,7 @@ export function QuickLinksTab({ t = {} }: { t?: T }) {
         onOpenChange={setDialogOpen}
         editing={editing}
         onSuccess={() => queryClient.invalidateQueries({ queryKey: ["admin-quick-links"] })}
+        t={t}
       />
     </div>
   );

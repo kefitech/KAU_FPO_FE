@@ -24,25 +24,25 @@ function TranslationActions({ translation, t, tCommon }: { translation: Translat
   const verifyMutation = useMutation({
     mutationFn: () => translationApi.verify(translation.id),
     onSuccess: () => {
-      toast.success("Translation marked as verified");
+      toast.success(t.verify_success ?? "Translation marked as verified");
       queryClient.invalidateQueries({ queryKey: ["translations"] });
     },
-    onError: () => toast.error("Failed to verify"),
+    onError: () => toast.error(t.verify_failed ?? "Failed to verify"),
   });
 
   const deleteMutation = useMutation({
     mutationFn: () => translationApi.delete(translation.id),
     onSuccess: () => {
-      toast.success("Translation deleted");
-      queryClient.invalidateQueries({ queryKey: ["translations"] });
+     toast.success(t.delete_success ?? "Translation deleted");
+     queryClient.invalidateQueries({ queryKey: ["translations"] });
     },
     onError: () => toast.error(tCommon.delete_failed ?? "Failed to delete"),
   });
 
   function handleDelete() {
     confirm({
-      title: "Delete Translation",
-      description: `Are you sure you want to delete the translation for "${translation.full_key}"? This action cannot be undone.`,
+      title: t.delete_title ?? "Delete Translation",
+      description: `${t.delete_confirm_prefix ?? "Are you sure you want to delete the translation for"} "${translation.full_key}"? ${t.delete_confirm_suffix ?? "This action cannot be undone."}`,
       onConfirm: () => deleteMutation.mutateAsync(),
     });
   }

@@ -15,7 +15,7 @@ import type { TranslationCategory } from "@/types";
 
 type T = Record<string, string>;
 
-function CategoryActions({ category, tCommon }: { category: TranslationCategory; tCommon: T }) {
+function CategoryActions({ category, tCommon, t }: { category: TranslationCategory; tCommon: T; t: T }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const confirm = useConfirmStore((s) => s.confirm);
@@ -31,8 +31,8 @@ function CategoryActions({ category, tCommon }: { category: TranslationCategory;
 
   function handleDelete() {
     confirm({
-      title: "Delete Category",
-      description: `Are you sure you want to delete "${category.name}"? All translations in this category will also be removed. This action cannot be undone.`,
+      title: t.delete_title ?? "Delete Category",
+      description: `${t.delete_confirm_prefix ?? "Are you sure you want to delete"} "${category.name}"? ${t.delete_confirm_suffix ?? "All translations in this category will also be removed. This action cannot be undone."}`,
       onConfirm: () => deleteMutation.mutateAsync(),
     });
   }
@@ -47,8 +47,7 @@ function CategoryActions({ category, tCommon }: { category: TranslationCategory;
   );
 }
 
-export function getCategoryColumns(t: T = {}, tCommon: T = {}): ColumnDef<TranslationCategory>[] {
-  return [
+export function getCategoryColumns(t: T = {}, tCommon: T = {}, tCatTable: T = {}): ColumnDef<TranslationCategory>[] {  return [
     {
       accessorKey: "name",
       header: t.col_name ?? "Name",
@@ -82,7 +81,7 @@ export function getCategoryColumns(t: T = {}, tCommon: T = {}): ColumnDef<Transl
     {
       id: "actions",
       header: "",
-      cell: ({ row }) => <CategoryActions category={row.original} tCommon={tCommon} />,
+      cell: ({ row }) => <CategoryActions category={row.original} tCommon={tCommon} t={t} />
     },
   ];
 }

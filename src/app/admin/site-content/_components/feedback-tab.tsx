@@ -74,7 +74,7 @@ function FeedbackDetailDialog({
         if (!v) onClose();
       }}
     >
-      <DialogContent className="max-w-lg">
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4 text-muted-foreground" />
@@ -102,8 +102,8 @@ function FeedbackDetailDialog({
           </div>
 
           {/* Message */}
-          <div className="rounded-md border bg-muted/30 px-4 py-3">
-            <p className="text-sm leading-relaxed whitespace-pre-wrap min-w-0 break-all h-38 overflow-y-auto">
+          <div className="min-w-0 rounded-md border bg-muted/30 px-4 py-3">
+            <p className="text-sm leading-relaxed whitespace-pre-wrap min-w-0 w-full break-all max-h-40 overflow-y-auto pr-2 [scrollbar-gutter:stable]">
               {feedback.message}
             </p>
           </div>
@@ -170,7 +170,11 @@ export function FeedbackTab({ t = {}, tCommon = {} }: { t?: T; tCommon?: T }) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h2 className="text-base font-semibold">{t.feedback_section_title ?? "Feedback"}</h2>
-          {unreadCount > 0 && <Badge className="bg-blue-600 text-white text-xs">{unreadCount} unread</Badge>}
+          {unreadCount > 0 && (
+            <Badge className="bg-blue-600 text-white text-xs">
+              {unreadCount} {t.label_unread ?? "unread"}
+            </Badge>
+          )}
         </div>
         <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
           <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
@@ -238,7 +242,7 @@ export function FeedbackTab({ t = {}, tCommon = {} }: { t?: T; tCommon?: T }) {
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
+                      <DropdownMenuContent align="end" className="min-w-[200]">
                         <DropdownMenuItem onClick={() => setViewing(fb)}>
                           <Eye className="mr-2 h-4 w-4" />
                           {tCommon.view ?? "View"}

@@ -68,11 +68,13 @@ function TeamDialog({
   onOpenChange,
   editing,
   onSuccess,
+  t,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   editing: AdminTeamMember | null;
   onSuccess: () => void;
+  t: T;
 }) {
   const [name, setName] = useState("");
   const [designation, setDesignation] = useState("");
@@ -106,11 +108,11 @@ function TeamDialog({
       return editing ? teamApi.update(editing.id, formData) : teamApi.create(formData);
     },
     onSuccess: () => {
-      toast.success(editing ? "Member updated." : "Member added.");
+      toast.success(editing ? (t.toast_updated ?? "Member updated.") : (t.toast_added ?? "Member added."));
       onSuccess();
       onOpenChange(false);
     },
-    onError: () => toast.error("Failed to save member."),
+    onError: () => toast.error(t.toast_save_failed ?? "Failed to save member."),
   });
 
   const canSubmit = !!name.trim() && !!designation.trim() && (editing ? true : !!photo);
@@ -119,24 +121,23 @@ function TeamDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{editing ? "Edit Member" : "Add Team Member"}</DialogTitle>
+          <DialogTitle>{editing ? (t.dialog_edit_title ?? "Edit Member") : (t.dialog_add_title ?? "Add Team Member")}</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col gap-4 py-2">
           {/* Photo */}
           <div className="flex flex-col gap-1.5">
-            <p className="text-sm font-medium">Photo {!editing && <span className="text-destructive">*</span>}</p>
-
+            <p className="text-sm font-medium">{t.field_photo ?? "Photo"} {!editing && <span className="text-destructive">*</span>}</p>
             {/* Existing photo (edit, no replacement yet) */}
             {editing && !photo && (
               <div className="flex items-center gap-3 rounded-md border bg-muted/40 p-2">
                 <MemberAvatar photo_url={editing.photo_url} name={editing.name} size="sm" />
                 <div className="flex flex-col gap-1 min-w-0 flex-1">
                   <span className="text-xs text-muted-foreground">
-                    {editing.photo_url ? "Current photo" : "No photo set"}
+                    {editing.photo_url ? (t.field_current_photo ?? "Current photo") : (t.field_no_photo ?? "No photo set")}
                   </span>
                   <label className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer w-fit">
-                    {editing.photo_url ? "Replace" : "Upload photo"}
+                    {editing.photo_url ? (t.action_replace ?? "Replace") : (t.action_upload_photo ?? "Upload photo")}
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -170,7 +171,7 @@ function TeamDialog({
                     }}
                     className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
                   >
-                    {editing ? <span className="text-xs">Cancel</span> : <X className="h-4 w-4" />}
+                    {editing ? <span className="text-xs">{t.action_cancel ?? "Cancel"}</span> : <X className="h-4 w-4" />}
                   </button>
                 </div>
                 {editing && (
@@ -190,19 +191,19 @@ function TeamDialog({
                 onChange={(e) => setPhoto(e.target.files?.[0] ?? null)}
               />
             )}
-            <p className="text-xs text-muted-foreground">JPG, PNG or WebP — square crop recommended</p>
+            <p className="text-xs text-muted-foreground">{t.file_type_hint_square ?? "JPG, PNG or WebP — square crop recommended"}</p>
           </div>
 
           {/* Name */}
           <div className="flex flex-col gap-1.5">
             <label htmlFor="member-name" className="text-sm font-medium">
-              Name <span className="text-destructive">*</span>
+              {t.field_name ?? "Name"} <span className="text-destructive">*</span>
             </label>
             <Input
               id="member-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Full name"
+              placeholder={t.field_name_placeholder ?? "Full name"}
               maxLength={25}
             />
           </div>
@@ -210,13 +211,13 @@ function TeamDialog({
           {/* Designation */}
           <div className="flex flex-col gap-1.5">
             <label htmlFor="member-designation" className="text-sm font-medium">
-              Designation <span className="text-destructive">*</span>
+              {t.field_designation ?? "Designation"} <span className="text-destructive">*</span>
             </label>
             <Input
               id="member-designation"
               value={designation}
               onChange={(e) => setDesignation(e.target.value)}
-              placeholder="e.g. Vice Chancellor, KAU"
+              placeholder={t.field_designation_placeholder ?? "e.g. Vice Chancellor, KAU"}
               maxLength={80}
             />
           </div>
@@ -224,7 +225,7 @@ function TeamDialog({
           {/* Order */}
           <div className="flex flex-col gap-1.5">
             <label htmlFor="member-order" className="text-sm font-medium">
-              Display Order
+              {t.field_display_order ?? "Display Order"}
             </label>
             <Input
               id="member-order"
@@ -239,10 +240,10 @@ function TeamDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={mutation.isPending}>
-            Cancel
+            {t.action_cancel ?? "Cancel"}
           </Button>
           <Button onClick={() => mutation.mutate()} disabled={!canSubmit || mutation.isPending}>
-            {mutation.isPending ? "Saving…" : editing ? "Save Changes" : "Add Member"}
+            {mutation.isPending ? (t.action_saving ?? "Saving…") : editing ? (t.action_save_changes ?? "Save Changes") : (t.action_add_member ?? "Add Member")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -335,7 +336,7 @@ export function TeamTab({ t = {} }: { t?: T }) {
       ) : members.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-2 rounded-lg border py-16 text-muted-foreground">
           <UserRound className="h-8 w-8 opacity-40" />
-          <p className="text-sm">No team members added yet.</p>
+          <p className="text-sm">{t.empty_state_team ?? "No team members added yet."}</p>
         </div>
       ) : (
         <div
@@ -370,7 +371,7 @@ export function TeamTab({ t = {} }: { t?: T }) {
                       : "bg-muted text-muted-foreground"
                   }`}
                 >
-                  {member.is_active ? "Active" : "Inactive"}
+                  {member.is_active ? (t.badge_active ?? "Active") : (t.badge_inactive ?? "Inactive")}
                 </Badge>
               </div>
 
@@ -382,7 +383,7 @@ export function TeamTab({ t = {} }: { t?: T }) {
                       <MoreHorizontal className="h-3.5 w-3.5" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
+                  <DropdownMenuContent align="end" className="min-w-[190]">
                     <DropdownMenuItem
                       onClick={() => {
                         setEditing(member);
@@ -390,7 +391,7 @@ export function TeamTab({ t = {} }: { t?: T }) {
                       }}
                     >
                       <Pencil className="mr-2 h-4 w-4" />
-                      Edit
+                      {t.action_edit ?? "Edit"}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => toggleMutation.mutate({ id: member.id, active: !member.is_active })}
@@ -398,19 +399,19 @@ export function TeamTab({ t = {} }: { t?: T }) {
                       {member.is_active ? (
                         <>
                           <EyeOff className="mr-2 h-4 w-4" />
-                          Deactivate
+                          {t.action_deactivate ?? "Deactivate"}
                         </>
                       ) : (
                         <>
                           <Eye className="mr-2 h-4 w-4" />
-                          Activate
+                          {t.action_activate ?? "Activate"}
                         </>
                       )}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(member)}>
                       <Trash2 className="mr-2 h-4 w-4" />
-                      Delete
+                      {t.action_delete ?? "Delete"}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -425,6 +426,7 @@ export function TeamTab({ t = {} }: { t?: T }) {
         onOpenChange={setDialogOpen}
         editing={editing}
         onSuccess={() => queryClient.invalidateQueries({ queryKey: ["admin-team"] })}
+        t={t}
       />
     </div>
   );

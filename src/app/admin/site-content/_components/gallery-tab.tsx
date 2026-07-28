@@ -80,11 +80,13 @@ function GalleryDialog({
   onOpenChange,
   editing,
   onSuccess,
+  t,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   editing: AdminGalleryPhoto | null;
   onSuccess: () => void;
+  t:T;
 }) {
   const { data: languages = [], isLoading: langsLoading } = useQuery<PublicLanguage[]>({
     queryKey: ["public-languages"],
@@ -127,11 +129,11 @@ function GalleryDialog({
       return editing ? galleryApi.update(editing.id, formData) : galleryApi.create(formData);
     },
     onSuccess: () => {
-      toast.success(editing ? "Photo updated." : "Photo uploaded.");
+      toast.success(editing ? (t.toast_updated ?? "Photo updated.") : (t.toast_uploaded ?? "Photo uploaded."));
       onSuccess();
       onOpenChange(false);
     },
-    onError: () => toast.error("Failed to save photo."),
+    onError: () => toast.error(t.toast_save_failed ?? "Failed to save photo."),
   });
 
   const canSubmit = editing ? true : !!photo;
@@ -140,14 +142,14 @@ function GalleryDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{editing ? "Edit Photo" : "Upload Photo"}</DialogTitle>
+          <DialogTitle>{editing ? (t.dialog_edit_title ?? "Edit Photo") : (t.dialog_upload_title ?? "Upload Photo")}</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col gap-4 py-2">
           {/* Photo upload */}
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium">
-              Photo {!editing && <span className="text-destructive">*</span>}
+              {t.field_photo ?? "Photo"} {!editing && <span className="text-destructive">*</span>}
             </label>
 
             {/* Existing photo (edit mode, no new file) */}
@@ -159,9 +161,9 @@ function GalleryDialog({
                   className="h-14 w-20 rounded object-cover shrink-0"
                 />
                 <div className="flex flex-col gap-1 min-w-0 flex-1">
-                  <span className="text-xs text-muted-foreground">Current photo</span>
+                  <span className="text-xs text-muted-foreground">{t.field_current_photo ?? "Current photo"}</span>
                   <label className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer w-fit">
-                    Replace
+                    {t.action_replace ?? "Replace"}
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -196,7 +198,7 @@ function GalleryDialog({
                     className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
                   >
                     {editing ? (
-                      <span className="text-xs">Cancel</span>
+                       <span className="text-xs">{t.action_cancel ?? "Cancel"}</span>
                     ) : (
                       <X className="h-4 w-4" />
                     )}
@@ -204,7 +206,7 @@ function GalleryDialog({
                 </div>
                 {editing && (
                   <p className="text-xs text-muted-foreground">
-                    This will replace the existing photo. Click Cancel to keep the original.
+                    {t.photo_replace_hint ?? "This will replace the existing photo. Click Cancel to keep the original."}
                   </p>
                 )}
               </div>
@@ -219,13 +221,14 @@ function GalleryDialog({
                 onChange={(e) => setPhoto(e.target.files?.[0] ?? null)}
               />
             )}
-            <p className="text-xs text-muted-foreground">JPG, PNG or WebP — max 5 MB</p>
-          </div>
+            <p className="text-xs text-muted-foreground">{t.file_type_hint ?? "JPG, PNG or WebP — max 5 MB"}</p>          </div>
 
           {/* Caption (optional, multi-language) */}
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
-              <label className="text-sm font-medium">Caption <span className="text-muted-foreground text-xs">(optional)</span></label>
+              <label className="text-sm font-medium"> 
+                {t.field_caption ?? "Caption"} <span className="text-muted-foreground text-xs">{t.label_optional ?? "(optional)"}</span>
+              </label>
               {!langsLoading && languages.length > 1 && (
                 <Select value={activeLang} onValueChange={setActiveLang}>
                   <SelectTrigger className="h-8 w-44 text-sm">
@@ -244,7 +247,7 @@ function GalleryDialog({
                             )}
                             {lang.native_name}
                             {lang.is_default && (
-                              <span className="text-muted-foreground text-xs">(default)</span>
+                              <span className="text-muted-foreground text-xs">{t.label_default ?? "(default)"}</span>
                             )}
                           </span>
                         </SelectItem>
@@ -263,18 +266,18 @@ function GalleryDialog({
                 onChange={(e) =>
                   setCaptionValues((prev) => ({ ...prev, [activeLang]: e.target.value }))
                 }
-                placeholder={`Caption in ${languages.find((l) => l.code === activeLang)?.name ?? activeLang} (optional)`}
-              />
+                placeholder={`${t.field_caption_placeholder ?? "Caption in"} ${languages.find((l) => l.code === activeLang)?.name ?? activeLang} ${t.label_optional ?? "(optional)"}`}
+             />
             )}
           </div>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={mutation.isPending}>
-            Cancel
+            {t.action_cancel ?? "Cancel"}
           </Button>
           <Button onClick={() => mutation.mutate()} disabled={!canSubmit || mutation.isPending}>
-            {mutation.isPending ? "Saving…" : editing ? "Save Changes" : "Upload"}
+            {mutation.isPending ? (t.action_saving ?? "Saving…") : editing ? (t.action_save_changes ?? "Save Changes") : (t.action_upload ?? "Upload")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -360,7 +363,7 @@ export function GalleryTab({ t = {} }: { t?: T }) {
       ) : photos.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-2 rounded-lg border py-16 text-muted-foreground">
           <ImageIcon className="h-8 w-8 opacity-40" />
-          <p className="text-sm">No photos uploaded yet.</p>
+          <p className="text-sm">{t.empty_state ?? "No photos uploaded yet."}</p>
         </div>
       ) : (
         <div className={`grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 transition-opacity ${isFetching ? "opacity-60" : ""}`}>
@@ -387,7 +390,7 @@ export function GalleryTab({ t = {} }: { t?: T }) {
                       : "bg-muted text-muted-foreground text-xs"
                   }
                 >
-                  {photo.is_active ? "Active" : "Inactive"}
+                  {photo.is_active ? (t.badge_active ?? "Active") : (t.badge_inactive ?? "Inactive")}
                 </Badge>
               </div>
 
@@ -399,14 +402,14 @@ export function GalleryTab({ t = {} }: { t?: T }) {
                       <MoreHorizontal className="h-3.5 w-3.5" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
+                  <DropdownMenuContent align="end" className="min-w-[190]">
                     <DropdownMenuItem onClick={() => setPreviewPhoto(photo)}>
                       <ZoomIn className="mr-2 h-4 w-4" />
-                      View
+                      {t.action_view_img ?? "View"}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => openEdit(photo)}>
                       <Pencil className="mr-2 h-4 w-4" />
-                      Edit
+                      {t.action_edit ?? "Edit"}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => toggleMutation.mutate({ id: photo.id, active: !photo.is_active })}
@@ -414,12 +417,12 @@ export function GalleryTab({ t = {} }: { t?: T }) {
                       {photo.is_active ? (
                         <>
                           <EyeOff className="mr-2 h-4 w-4" />
-                          Deactivate
+                          {t.action_deactivate ?? "Deactivate"}
                         </>
                       ) : (
                         <>
                           <Eye className="mr-2 h-4 w-4" />
-                          Activate
+                          {t.action_activate ?? "Activate"}
                         </>
                       )}
                     </DropdownMenuItem>
@@ -429,7 +432,7 @@ export function GalleryTab({ t = {} }: { t?: T }) {
                       onClick={() => handleDelete(photo)}
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
-                      Delete
+                      {t.action_delete ?? "Delete"}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -451,6 +454,7 @@ export function GalleryTab({ t = {} }: { t?: T }) {
         onOpenChange={setDialogOpen}
         editing={editing}
         onSuccess={() => queryClient.invalidateQueries({ queryKey: ["admin-gallery"] })}
+        t={t}
       />
 
       {/* Photo Preview Dialog */}
@@ -458,7 +462,7 @@ export function GalleryTab({ t = {} }: { t?: T }) {
         <DialogContent className="max-w-3xl p-0">
           <DialogHeader className="px-6 pt-5 pb-3 border-b">
             <DialogTitle className="text-base">
-              {getCaptionDisplay(previewPhoto?.caption ?? null) || "Photo Preview"}
+              {getCaptionDisplay(previewPhoto?.caption ?? null) || (t.dialog_preview_title ?? "Photo Preview")}
             </DialogTitle>
           </DialogHeader>
           <div className="bg-muted/30">
