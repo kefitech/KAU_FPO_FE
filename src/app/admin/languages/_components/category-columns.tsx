@@ -23,7 +23,7 @@ function CategoryActions({ category, tCommon, t }: { category: TranslationCatego
   const deleteMutation = useMutation({
     mutationFn: () => translationCategoryApi.delete(category.id),
     onSuccess: () => {
-      toast.success(`"${category.name}" deleted`);
+      toast.success(`"${category.name}" ${t.toast_deleted_suffix ?? "deleted"}`);
       queryClient.invalidateQueries({ queryKey: ["translation-categories"] });
     },
     onError: () => toast.error(tCommon.delete_failed ?? "Failed to delete"),

@@ -61,9 +61,9 @@ export function TranslationImportDialog({ open, onClose, t, tCommon }: Translati
         category_code: categoryCode || undefined,
         file_format: format,
       });
-      toast.success("Template downloaded");
+      toast.success(t.toast_template_downloaded ?? "Template downloaded");
     } catch {
-      toast.error("Failed to download template");
+      toast.error(t.toast_download_failed ?? "Failed to download template");
     } finally {
       setIsDownloading(false);
     }
@@ -104,7 +104,7 @@ export function TranslationImportDialog({ open, onClose, t, tCommon }: Translati
     setIsUploading(true);
     try {
       await translationApi.importFile(formData);
-      toast.success("Translations imported successfully");
+      toast.success(t.toast_imported ?? "Translations imported successfully");
       queryClient.invalidateQueries({ queryKey: ["translations"] });
       handleClose();
     } catch {
@@ -135,7 +135,7 @@ export function TranslationImportDialog({ open, onClose, t, tCommon }: Translati
           {/* Step 1 */}
           <div className="flex flex-col gap-3">
             <p className="font-semibold text-muted-foreground text-xs uppercase tracking-wide">
-              Step 1 — Select Language & Category
+              {t.step1_title ?? "Step 1 — Select Language & Category"}
             </p>
             <div className="grid grid-cols-2 gap-3">
               <Field>
@@ -148,7 +148,7 @@ export function TranslationImportDialog({ open, onClose, t, tCommon }: Translati
                   onChange={(e) => setLanguageCode(e.target.value)}
                   className="h-9 w-full rounded-md border bg-background px-3 text-foreground text-sm shadow-xs focus:outline-none focus:ring-1 focus:ring-ring"
                 >
-                  <option value="">Select</option>
+                  <option value="">{t.select_placeholder ?? "Select"}</option>
                   {languages.map((l) => (
                     <option key={l.id} value={l.code}>
                       {l.name} ({l.code})
@@ -164,10 +164,10 @@ export function TranslationImportDialog({ open, onClose, t, tCommon }: Translati
                   onChange={(e) => setCategoryCode(e.target.value)}
                   className="h-9 w-full rounded-md border bg-background px-3 text-foreground text-sm shadow-xs focus:outline-none focus:ring-1 focus:ring-ring"
                 >
-                  <option value="">All categories</option>
+                  <option value="">{t.all_categories ?? "All categories"}</option>
                   {categories.map((c) => (
                     <option key={c.id} value={c.code}>
-                      {c.name}
+                      {t[`category_name_${c.code}`] ?? c.name}
                     </option>
                   ))}
                 </select>
@@ -178,7 +178,7 @@ export function TranslationImportDialog({ open, onClose, t, tCommon }: Translati
           {/* Step 2 */}
           <div className="flex flex-col gap-3">
             <p className="font-semibold text-muted-foreground text-xs uppercase tracking-wide">
-              Step 2 — Download Template
+              {t.step2_title ?? "Step 2 — Download Template"}
             </p>
             <div className="flex gap-2">
               <Button
@@ -190,7 +190,7 @@ export function TranslationImportDialog({ open, onClose, t, tCommon }: Translati
                 onClick={() => handleDownload("xlsx")}
               >
                 <Download className="mr-1.5 h-4 w-4" />
-                Excel (.xlsx)
+                {t.format_xlsx ?? "Excel (.xlsx)"}
               </Button>
               <Button
                 type="button"
@@ -201,13 +201,13 @@ export function TranslationImportDialog({ open, onClose, t, tCommon }: Translati
                 onClick={() => handleDownload("csv")}
               >
                 <Download className="mr-1.5 h-4 w-4" />
-                CSV (.csv)
+                {t.format_csv ?? "CSV (.csv)"}
               </Button>
             </div>
-            {!languageCode && <p className="text-muted-foreground text-xs">Select a language to enable download</p>}
+            {!languageCode && <p className="text-muted-foreground text-xs">{t.hint_select_to_enable ?? "Select a language to enable download"}</p>}
             {languageCode && (
               <p className="text-muted-foreground text-xs">
-                Downloads missing keys for <span className="font-medium text-foreground">{selectedLanguageName}</span>
+                {t.hint_downloads_missing_for ?? "Downloads missing keys for"} <span className="font-medium text-foreground">{selectedLanguageName}</span>
               </p>
             )}
           </div>
@@ -215,7 +215,7 @@ export function TranslationImportDialog({ open, onClose, t, tCommon }: Translati
           {/* Step 3 */}
           <div className="flex flex-col gap-3">
             <p className="font-semibold text-muted-foreground text-xs uppercase tracking-wide">
-              Step 3 — Upload Filled File
+              {t.step3_title ?? "Step 3 — Upload Filled File"}
             </p>
             {/*biome-ignore lint/a11y/useSemanticElements: dropzone needs div for drag-and-drop events */}
             <div
@@ -269,8 +269,8 @@ export function TranslationImportDialog({ open, onClose, t, tCommon }: Translati
                 <>
                   <Upload className="h-6 w-6 text-muted-foreground" />
                   <div className="text-center">
-                    <p className="font-medium text-sm">Drop file here or click to browse</p>
-                    <p className="text-muted-foreground text-xs">.xlsx or .csv</p>
+                    <p className="font-medium text-sm">{t.dropzone_text ?? "Drop file here or click to browse"}</p>
+                    <p className="text-muted-foreground text-xs">{t.dropzone_formats ?? ".xlsx or .csv"}</p>
                   </div>
                 </>
               )}
@@ -283,7 +283,7 @@ export function TranslationImportDialog({ open, onClose, t, tCommon }: Translati
                 onChange={(e) => setOverwrite(e.target.checked)}
                 className="h-4 w-4 rounded border"
               />
-              <span className="text-sm">Overwrite existing translations</span>
+              <span className="text-sm">{t.overwrite_label ?? "Overwrite existing translations"}</span>
             </label>
           </div>
         </div>
@@ -294,7 +294,7 @@ export function TranslationImportDialog({ open, onClose, t, tCommon }: Translati
           </Button>
           <Button onClick={handleUpload} disabled={isUploading || !languageCode || !file}>
             <Upload className="mr-1.5 h-4 w-4" />
-            {isUploading ? "Uploading..." : (t.import_btn ?? "Import")}
+            {isUploading ? (t.uploading ?? "Uploading...") : (t.import_btn ?? "Import")}
           </Button>
         </DialogFooter>
       </DialogContent>

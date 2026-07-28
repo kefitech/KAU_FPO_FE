@@ -44,7 +44,7 @@ function TemplateActions({
     mutationFn: () =>
       item.is_active ? notificationTemplateApi.deactivate(item.id) : notificationTemplateApi.activate(item.id),
     onSuccess: () => {
-      toast.success(`Template ${item.is_active ? "deactivated" : "activated"}`);
+      toast.success(item.is_active ? (tConfirm.toast_template_deactivated ?? "Template deactivated") : (tConfirm.toast_template_activated ?? "Template activated"));
       queryClient.invalidateQueries({ queryKey: ["notification-templates"] });
     },
     onError: () => toast.error(tCommon.action_failed ?? "Action failed"),
@@ -53,7 +53,7 @@ function TemplateActions({
   const deleteMutation = useMutation({
     mutationFn: () => notificationTemplateApi.delete(item.id),
     onSuccess: () => {
-      toast.success("Template deleted");
+      toast.success(tConfirm.toast_template_deleted ?? "Template deleted");
       queryClient.invalidateQueries({ queryKey: ["notification-templates"] });
       queryClient.invalidateQueries({ queryKey: ["notification-template-codes"] });
     },
@@ -63,7 +63,7 @@ function TemplateActions({
   function handleDelete() {
     confirm({
       title: tConfirm.delete_template ?? "Delete Template",
-      description: `Are you sure you want to delete the ${item.language_name} version of "${item.template_code_detail.code}"? This action cannot be undone.`,
+      description: `${tConfirm.delete_confirm_prefix ?? "Are you sure you want to delete"} ${(tConfirm.delete_template_note ?? "the {lang} version of").replace("{lang}", item.language_name)} "${item.template_code_detail.code}"? ${tConfirm.delete_confirm_suffix ?? "This action cannot be undone."}`,
       onConfirm: () => deleteMutation.mutateAsync(),
     });
   }
@@ -82,7 +82,7 @@ function TemplateActions({
           onClick: () => onTestRender(item),
         },
         {
-          label: item.is_active ? "Deactivate" : "Activate",
+          label: item.is_active ? (tCommon.action_deactivate ?? "Deactivate") : (tCommon.action_activate ?? "Activate"),
           onClick: () => toggleMutation.mutate(),
           disabled: toggleMutation.isPending,
         },

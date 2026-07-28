@@ -202,14 +202,7 @@ export function ClaimReviewDialog({ claim, onOpenChange, t = {} }: ClaimReviewDi
             <p className="text-muted-foreground text-xs">
               {(t.label_fpo_email ?? "FPO Email: {email}").replace("{email}", claim.fpo_email)}
             </p>
-            {claim.fpo_identity?.matched_label && claim.fpo_identity?.matched_value && (
-              <div className="mt-2 rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-3 py-2">
-                <p className="text-xs text-amber-700 dark:text-amber-400 font-medium">{t.claimed_via_label ?? "Claimed via"}</p>
-                <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
-                  {claim.fpo_identity.matched_label}: <span className="font-mono">{claim.fpo_identity.matched_value}</span>
-                </p>
-              </div>
-            )}
+            
 
             {claim.fpo_identity && (
               <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
@@ -238,7 +231,16 @@ export function ClaimReviewDialog({ claim, onOpenChange, t = {} }: ClaimReviewDi
               <InfoRow label={t.label_claimant_name ?? "Name"} value={claim.claimant_name} />
               <InfoRow label={t.label_claimant_email ?? "Email"} value={claim.claimant_email} valueClassName="break-all" />
               <InfoRow label={t.label_claimant_phone ?? "Phone"} value={claim.claimant_phone} />
+              
             </div>
+            {claim.fpo_identity?.matched_label && claim.fpo_identity?.matched_value && (
+              <div className="mt-2 rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-3 py-2">
+                <p className="text-xs text-amber-700 dark:text-amber-400 font-medium">{t.claimed_via_label ?? "Claimed For"}</p>
+                <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+                  {claim.fpo_identity.matched_label}: <span className="font-mono">{claim.fpo_identity.matched_value}</span>
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Reason */}

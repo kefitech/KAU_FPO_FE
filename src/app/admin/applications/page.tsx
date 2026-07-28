@@ -205,17 +205,17 @@ export default function ApplicationsPage() {
           <DropdownMenuContent align="end">
             <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
               {searchParams.get("status") || searchParams.get("district") || searchParams.get("tier")
-                ? "Downloads with active filters"
-                : "Downloads all applications"}
+                ? (t.download_label_filtered ?? "Downloads with active filters")
+                : (t.download_label_all ?? "Downloads all applications")}
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => handleDownload("excel")}>
               <FileSpreadsheet className="mr-2 h-4 w-4 text-green-600" />
-              Download as Excel
+              {t.download_as_excel ?? "Download as Excel"}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleDownload("pdf")}>
               <FileText className="mr-2 h-4 w-4 text-red-600" />
-              Download as PDF
+              {t.download_as_pdf ?? "Download as PDF"}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

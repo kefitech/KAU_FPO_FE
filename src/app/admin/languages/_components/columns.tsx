@@ -25,7 +25,7 @@ function LanguageActions({ language, t, tCommon }: { language: Language; t: T; t
   const toggleMutation = useMutation({
     mutationFn: () => (language.is_active ? languageApi.deactivate(language.id) : languageApi.activate(language.id)),
     onSuccess: () => {
-      toast.success(`Language ${language.is_active ? "deactivated" : "activated"}`);
+      toast.success(language.is_active ? (t.toast_deactivated ?? "Language deactivated") : (t.toast_activated ?? "Language activated"));
       queryClient.invalidateQueries({ queryKey: ["languages"] });
       queryClient.invalidateQueries({ queryKey: ["public-languages"] });
     },
@@ -33,7 +33,7 @@ function LanguageActions({ language, t, tCommon }: { language: Language; t: T; t
   });
   const handleToggle = () => {
     if (language.is_active && language.is_default) {
-      toast.error("A default language cannot be deactivated. Please set another language as default first.");
+      toast.error(t.err_default_cannot_deactivate ?? "A default language cannot be deactivated. Please set another language as default first.");
       return;
     }
     toggleMutation.mutate();
@@ -42,7 +42,7 @@ function LanguageActions({ language, t, tCommon }: { language: Language; t: T; t
   const defaultMutation = useMutation({
     mutationFn: () => languageApi.setDefault(language.id),
     onSuccess: () => {
-      toast.success(`"${language.name}" set as default`);
+      toast.success(`"${language.name}" ${t.toast_set_default_suffix ?? "set as default"}`);
       queryClient.invalidateQueries({ queryKey: ["languages"] });
       queryClient.invalidateQueries({ queryKey: ["public-languages"] });
       setLocale(language.code, language.is_rtl ?? false);
@@ -52,7 +52,7 @@ function LanguageActions({ language, t, tCommon }: { language: Language; t: T; t
 
   const handleSetDefault = () => {
     if (!language.is_active) {
-      toast.error("An inactive language cannot be set as default. Please activate the language first.");
+      toast.error(t.err_inactive_cannot_default ?? "An inactive language cannot be set as default. Please activate the language first.");
       return;
     }
     defaultMutation.mutate();
@@ -61,7 +61,7 @@ function LanguageActions({ language, t, tCommon }: { language: Language; t: T; t
   const deleteMutation = useMutation({
     mutationFn: () => languageApi.delete(language.id),
     onSuccess: () => {
-      toast.success(`"${language.name}" deleted`);
+      toast.success(`"${language.name}" ${t.toast_deleted_suffix ?? "deleted"}`);
       queryClient.invalidateQueries({ queryKey: ["languages"] });
       queryClient.invalidateQueries({ queryKey: ["public-languages"] });
     },

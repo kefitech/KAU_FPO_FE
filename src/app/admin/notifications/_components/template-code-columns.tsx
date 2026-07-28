@@ -27,7 +27,7 @@ function TemplateCodeActions({ item, tConfirm, tCommon }: { item: NotificationTe
     mutationFn: () =>
       item.is_active ? notificationTemplateCodeApi.deactivate(item.id) : notificationTemplateCodeApi.activate(item.id),
     onSuccess: () => {
-      toast.success(`Template code ${item.is_active ? "deactivated" : "activated"}`);
+      toast.success(item.is_active ? (tConfirm.toast_deactivated ?? "Template code deactivated") : (tConfirm.toast_activated ?? "Template code activated"));
       queryClient.invalidateQueries({ queryKey: ["notification-template-codes"] });
     },
     onError: () => toast.error(tCommon.action_failed ?? "Action failed"),
@@ -36,7 +36,7 @@ function TemplateCodeActions({ item, tConfirm, tCommon }: { item: NotificationTe
   const deleteMutation = useMutation({
     mutationFn: () => notificationTemplateCodeApi.delete(item.id),
     onSuccess: () => {
-      toast.success(`"${item.name}" deleted`);
+      toast.success(`"${item.name}" ${tConfirm.toast_deleted_suffix ?? "deleted"}`);
       queryClient.invalidateQueries({ queryKey: ["notification-template-codes"] });
     },
     onError: () => toast.error(tCommon.delete_failed ?? "Failed to delete"),
@@ -45,7 +45,7 @@ function TemplateCodeActions({ item, tConfirm, tCommon }: { item: NotificationTe
   function handleDelete() {
     confirm({
       title: tConfirm.delete_tmpl_code ?? "Delete Template Code",
-      description: `Are you sure you want to delete "${item.code}"? This will also remove all language templates linked to this code. This action cannot be undone.`,
+      description: `${tConfirm.delete_confirm_prefix ?? "Are you sure you want to delete"} "${item.code}"? ${tConfirm.delete_tmpl_code_note ?? "This will also remove all language templates linked to this code."} ${tConfirm.delete_confirm_suffix ?? "This action cannot be undone."}`,
       onConfirm: () => deleteMutation.mutateAsync(),
     });
   }
@@ -54,7 +54,7 @@ function TemplateCodeActions({ item, tConfirm, tCommon }: { item: NotificationTe
     <RowActions
       actions={[
         {
-          label: item.is_active ? "Deactivate" : "Activate",
+          label: item.is_active ? (tCommon.action_deactivate ?? "Deactivate") : (tCommon.action_activate ?? "Activate"),
           onClick: () => toggleMutation.mutate(),
           disabled: toggleMutation.isPending,
         },

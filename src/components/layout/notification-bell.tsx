@@ -125,7 +125,7 @@ export function NotificationBell() {
           type: "node" as const,
           node: (
             <div
-              className="text-sm leading-relaxed prose prose-sm max-w-none"
+              className="text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none prose-a:text-blue-400 prose-a:no-underline hover:prose-a:underline"
               dangerouslySetInnerHTML={{ __html: selected.body }}
             />
           ),

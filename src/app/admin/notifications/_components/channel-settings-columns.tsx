@@ -56,7 +56,7 @@ function ChannelSettingActions({
   const toggleMutation = useMutation({
     mutationFn: () => (item.is_active ? channelSettingsApi.deactivate(item.id) : channelSettingsApi.activate(item.id)),
     onSuccess: () => {
-      toast.success(`Channel ${item.is_active ? "deactivated" : "activated"}`);
+      toast.success(item.is_active ? (tConfirm.toast_channel_deactivated ?? "Channel deactivated") : (tConfirm.toast_channel_activated ?? "Channel activated"));
       queryClient.invalidateQueries({ queryKey: ["channel-settings"] });
     },
     onError: () => toast.error(tCommon.action_failed ?? "Action failed"),
@@ -65,7 +65,7 @@ function ChannelSettingActions({
   const deleteMutation = useMutation({
     mutationFn: () => channelSettingsApi.delete(item.id),
     onSuccess: () => {
-      toast.success(`${item.channel_display ?? CHANNEL_LABELS[item.channel] ?? item.channel} setting deleted`);
+      toast.success(`${item.channel_display ?? CHANNEL_LABELS[item.channel] ?? item.channel} ${tConfirm.toast_setting_deleted_suffix ?? "setting deleted"}`);
       queryClient.invalidateQueries({ queryKey: ["channel-settings"] });
     },
     onError: () => toast.error(tCommon.delete_failed ?? "Failed to delete"),
@@ -74,7 +74,7 @@ function ChannelSettingActions({
   function handleDelete() {
     confirm({
       title: tConfirm.delete_channel_setting ?? "Delete Channel Setting",
-      description: `Are you sure you want to delete the ${item.channel_display ?? CHANNEL_LABELS[item.channel] ?? item.channel} channel setting? This action cannot be undone.`,
+      description: `${tConfirm.delete_confirm_prefix ?? "Are you sure you want to delete"} ${(tConfirm.delete_channel_setting_note ?? "the {channel} channel setting?").replace("{channel}", item.channel_display ?? CHANNEL_LABELS[item.channel] ?? item.channel)} ${tConfirm.delete_confirm_suffix ?? "This action cannot be undone."}`,
       onConfirm: () => deleteMutation.mutateAsync(),
     });
   }
@@ -87,7 +87,7 @@ function ChannelSettingActions({
           onClick: () => router.push(`/admin/notification-channel-settings/${item.id}/edit`),
         },
         {
-          label: item.is_active ? (tCommon.deactivate ?? "Deactivate") : (tCommon.activate ?? "Activate"),
+          label: item.is_active ? (tCommon.action_deactivate ?? "Deactivate") : (tCommon.action_activate ?? "Activate"),
           onClick: () => toggleMutation.mutate(),
           disabled: toggleMutation.isPending,
         },

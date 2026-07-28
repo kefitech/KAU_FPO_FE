@@ -1250,21 +1250,21 @@ function ApplicationDetailContent() {
   const activateMutation = useMutation({
     mutationFn: () => adminApplicationsApi.activate(fpoId),
     onSuccess: () => {
-      toast.success("FPO activated successfully");
+      toast.success(t.toast_activate_success ?? "FPO activated successfully");
       queryClient.invalidateQueries({ queryKey: ["application", fpoId] });
       queryClient.invalidateQueries({ queryKey: ["applications"] });
     },
-    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : "Failed to activate"),
+    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : (t.toast_activate_error ?? "Failed to activate")),
   });
 
   const deactivateMutation = useMutation({
     mutationFn: () => adminApplicationsApi.deactivate(fpoId),
     onSuccess: () => {
-      toast.success("FPO deactivated (suspended)");
+      toast.success(t.toast_suspended ?? "FPO deactivated (suspended)");   // reuses existing key
       queryClient.invalidateQueries({ queryKey: ["application", fpoId] });
       queryClient.invalidateQueries({ queryKey: ["applications"] });
     },
-    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : "Failed to deactivate"),
+    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : (t.toast_deactivate_error ?? "Failed to deactivate")),
   });
 
   const approveMutation = useMutation({
@@ -1359,11 +1359,10 @@ function ApplicationDetailContent() {
               className="text-orange-600 border-orange-200 hover:bg-orange-50"
               onClick={() =>
                 confirm({
-                  title: "Suspend FPO",
-                  description:
-                    "This will suspend the FPO account. They will lose access to the platform until reactivated.",
-                  confirmLabel: "Suspend",
-                  confirmingLabel: "Suspending…",
+                  title: t.suspend_dialog_title ?? "Suspend FPO",
+                  description: t.suspend_dialog_desc ?? "This will suspend the FPO account. They will lose access to the platform until reactivated.",
+                  confirmLabel: t.btn_suspend ?? "Suspend",
+                  confirmingLabel: t.btn_suspend_loading ?? "Suspending…",
                   variant: "destructive",
                   onConfirm: () => deactivateMutation.mutateAsync(),
                 })
@@ -1371,7 +1370,7 @@ function ApplicationDetailContent() {
               disabled={deactivateMutation.isPending}
             >
               <XCircle className="mr-1.5 h-4 w-4" />
-              {deactivateMutation.isPending ? "Suspending…" : "Suspend"}
+              {deactivateMutation.isPending ? (t.btn_suspend_loading ?? "Suspending…") : (t.btn_suspend ?? "Suspend")}
             </Button>
           )}
           {(app.status === "suspended" || app.status === "rejected") && (
@@ -1380,10 +1379,10 @@ function ApplicationDetailContent() {
               className="bg-green-600 hover:bg-green-700"
               onClick={() =>
                 confirm({
-                  title: "Reactivate FPO",
-                  description: "This will restore the FPO's access to the platform.",
-                  confirmLabel: "Reactivate",
-                  confirmingLabel: "Activating…",
+                  title: t.reactivate_dialog_title ?? "Reactivate FPO",
+                  description: t.reactivate_dialog_desc ?? "This will restore the FPO's access to the platform.",
+                  confirmLabel: t.btn_activate ?? "Reactivate",
+                  confirmingLabel: t.btn_activate_loading ?? "Activating…",
                   variant: "default",
                   onConfirm: () => activateMutation.mutateAsync(),
                 })
@@ -1391,7 +1390,7 @@ function ApplicationDetailContent() {
               disabled={activateMutation.isPending}
             >
               <CheckCheck className="mr-1.5 h-4 w-4" />
-              {activateMutation.isPending ? "Activating…" : "Activate"}
+              {activateMutation.isPending ? (t.btn_activate_loading ?? "Activating…") : (t.btn_activate ?? "Activate")}
             </Button>
           )}
           {app.status === "submitted" && isInfoResubmission && (

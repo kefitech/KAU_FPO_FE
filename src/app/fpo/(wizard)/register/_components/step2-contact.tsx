@@ -78,9 +78,11 @@ const schema = z.object({
   office_phone: z.string().refine((v) => /^\d{10}$/.test(v), { message: "Enter a valid 10-digit phone number" }),
   office_email: z.string().email({ message: "Enter a valid email address" }),
   website: z
-    .string()
-    .trim()
-    .refine((v) => v === "" || z.string().email().safeParse(v).success, { message: "Enter a valid email address" }),
+  .string()
+  .trim()
+  .refine((v) => v === "" || z.string().url().safeParse(v).success, {
+    message: "Enter a valid website URL",
+  }),
   location: z.object({ lat: z.number(), lng: z.number() }).nullable().optional(),
 });
 

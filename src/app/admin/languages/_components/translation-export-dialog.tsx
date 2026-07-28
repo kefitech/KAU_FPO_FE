@@ -45,7 +45,7 @@ export function TranslationExportDialog({ open, onClose, t, tCommon }: Translati
 
   const handleExport = async () => {
     if (!languageCode) {
-      toast.error(t.toast_select_language ?? "Please select a language");
+      toast.success(t.toast_downloaded ?? "Export downloaded successfully");
       return;
     }
     setIsDownloading(true);
@@ -97,7 +97,7 @@ export function TranslationExportDialog({ open, onClose, t, tCommon }: Translati
               onChange={(e) => setLanguageCode(e.target.value)}
               className="h-9 w-full rounded-md border bg-background px-3 text-foreground text-sm shadow-xs focus:outline-none focus:ring-1 focus:ring-ring"
             >
-              <option value="">Select language</option>
+              <option value="">{t.select_language_placeholder ?? "Select language"}</option>
               {languages.map((l) => (
                 <option key={l.id} value={l.code}>
                   {l.name} ({l.code})
@@ -119,7 +119,7 @@ export function TranslationExportDialog({ open, onClose, t, tCommon }: Translati
               <option value="">{t.all_categories ?? "All categories"}</option>
               {categories.map((c) => (
                 <option key={c.id} value={c.code}>
-                  {c.name}
+                  {t[`category_name_${c.code}`] ?? c.name}
                 </option>
               ))}
             </select>

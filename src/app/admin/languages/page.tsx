@@ -265,11 +265,11 @@ export default function LanguagesPage() {
           ) : activeTab === "translations" ? (
             <div className="flex items-center gap-2">
               <Button size="sm" variant="outline" onClick={() => setExportDialogOpen(true)}>
-                <Download className="mr-1.5 h-4 w-4" />
+                <Upload className="mr-1.5 h-4 w-4" />
                 {tPage.export_btn ?? "Export"}
               </Button>
               <Button size="sm" variant="outline" onClick={() => setImportDialogOpen(true)}>
-                <Upload className="mr-1.5 h-4 w-4" />
+                <Download className="mr-1.5 h-4 w-4" />
                 {tPage.import_btn ?? "Import"}
               </Button>
               {/* <Button size="sm" onClick={() => router.push("/admin/translations/new")}>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
@@ -108,6 +108,7 @@ export function Step1BasicInfo({ profile, onSave, onSuccess, t = {} }: Step1Prop
     watch,
     getValues,
     setError,
+    setValue,
     control,
     formState: { errors },
   } = useForm<FormValues>({
@@ -131,6 +132,19 @@ export function Step1BasicInfo({ profile, onSave, onSuccess, t = {} }: Step1Prop
   const selectedOption = legalStructures.find((o) => o.code === selectedStructure);
   const hasSubDropdown = selectedOption?.metadata?.has_sub_dropdown === true;
 
+  // Skip the very first run so we don't clobber a value loaded from a saved draft.
+  const isInitialMount = useRef(true);
+ 
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    // legal_structure changed after mount — any previously stored detail
+    // no longer belongs to this selection, so clear it and let the user re-pick.
+    setValue("legal_structure_detail", "");
+  }, [selectedStructure, setValue]);
+ 
   useEffect(() => {
     if (hasSubDropdown) {
       setSubOptionsLoaded(false);
