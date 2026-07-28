@@ -139,6 +139,14 @@ nav.navbar.validnavs .navbar-brand > img {
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   }
 
+  /* ---- Hamburger icon: force visible color on all devices (Android fix) ---- */
+  nav.navbar.validnavs .navbar-toggle,
+  nav.navbar.validnavs .navbar-toggle i {
+    color: var(--color-heading, #1a1a1a) !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+
   .banner-area {
     margin-top: 65px;
   }
