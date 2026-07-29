@@ -84,8 +84,8 @@ const schema = z.object({
     .string()
     .trim()
     .min(1, { message: "Annual turnover is required" })
-    .refine((v) => /^\d+(\.\d{1,3})?$/.test(v), {
-      message: "Enter a valid amount (e.g. 25.50)",
+    .refine((v) => /^\d+(\.\d{1,5})?$/.test(v), {
+      message: "Enter a valid amount (e.g. 25.550)",
     })
     .refine((v) => Number(v) > 0, {
       message: "Annual turnover must be greater than 0",
@@ -227,7 +227,9 @@ export function Step4Business({ profile, onSave, onSuccess, onBack, t = {} }: St
     <form onSubmit={(e) => e.preventDefault()} className="flex flex-col gap-5">
       <div>
         <h2 className="font-semibold text-lg">{t.step4_heading ?? "Business & Bank Details"}</h2>
-        <p className="mt-0.5 text-muted-foreground text-sm">{t.step4_subheading ?? "Commodities, financial overview and banking information"}</p>
+        <p className="mt-0.5 text-muted-foreground text-sm">
+          {t.step4_subheading ?? "Commodities, financial overview and banking information"}
+        </p>
       </div>
 
       {/* Commodities */}
@@ -283,7 +285,7 @@ export function Step4Business({ profile, onSave, onSuccess, onBack, t = {} }: St
           min={0}
           max={9999.99}
           step="0.01"
-          placeholder="e.g. 25.50"
+          placeholder="e.g. 25.550"
           {...register("annual_turnover")}
         />
         {errors.annual_turnover && <FieldError errors={[errors.annual_turnover]} />}
