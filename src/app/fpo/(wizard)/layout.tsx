@@ -8,6 +8,7 @@ import { usePathname, useRouter } from "next/navigation";
 
 import { Leaf, LogOut } from "lucide-react";
 
+import { LocaleSwitcher } from "@/components/layout/locale-switcher";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
@@ -45,6 +46,7 @@ export default function FpoWizardLayout({ children }: { children: React.ReactNod
           KAU-FPO Platform
         </Link>
         <div className="flex items-center gap-2">
+          <LocaleSwitcher />
           <ThemeToggle />
           <Button
             variant="ghost"

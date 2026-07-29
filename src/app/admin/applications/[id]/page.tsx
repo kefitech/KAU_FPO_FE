@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { masterDataApi } from "@/lib/api/master-data";
+
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -49,6 +49,7 @@ import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { masterDataApi } from "@/lib/api/master-data";
 import { translationsApi } from "@/lib/api/translations";
 import { useAuthStore } from "@/stores/auth-store";
 import { useConfirmStore } from "@/stores/confirm-store";
@@ -658,18 +659,19 @@ function AssignTierDialog({
 }
 
 function TierHistorySection({ entries, t }: { entries: TierAuditLogEntry[]; t: Record<string, string> }) {
-  if (entries.length === 0) return <p className="text-muted-foreground text-sm">{t.no_tier_history ?? "No tier history recorded yet."}</p>;
+  if (entries.length === 0)
+    return <p className="text-muted-foreground text-sm">{t.no_tier_history ?? "No tier history recorded yet."}</p>;
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b text-left text-xs text-muted-foreground">
-           <th className="pb-2 pr-4 font-medium">{t.financial_year_column ?? "Financial Year"}</th>
-           <th className="pb-2 pr-4 font-medium">{t.tier_column ?? "Tier"}</th>
-           <th className="pb-2 pr-4 font-medium">{t.score_column ?? "Score"}</th>
-           <th className="pb-2 pr-4 font-medium">{t.type_column ?? "Type"}</th>
-           <th className="pb-2 pr-4 font-medium">{t.by_column ?? "By"}</th>
-           <th className="pb-2 font-medium">{t.date_column ?? "Date"}</th>
+            <th className="pb-2 pr-4 font-medium">{t.financial_year_column ?? "Financial Year"}</th>
+            <th className="pb-2 pr-4 font-medium">{t.tier_column ?? "Tier"}</th>
+            <th className="pb-2 pr-4 font-medium">{t.score_column ?? "Score"}</th>
+            <th className="pb-2 pr-4 font-medium">{t.type_column ?? "Type"}</th>
+            <th className="pb-2 pr-4 font-medium">{t.by_column ?? "By"}</th>
+            <th className="pb-2 font-medium">{t.date_column ?? "Date"}</th>
           </tr>
         </thead>
         <tbody className="divide-y">
@@ -943,18 +945,21 @@ function AuditLogTab({ fpoId }: { fpoId: number }) {
                       {getObjectInfoDisplay(log.object_info)}
                     </span>
                   )}
-                  {log.action === "fpo_status_change" && log.changes && typeof log.changes === "object" && (() => {
-                    const c = log.changes as Record<string, string>;
-                    const from = (c.from_status ?? c.from)?.replace(/_/g, " ");
-                    const to   = (c.to_status   ?? c.to  )?.replace(/_/g, " ");
-                    if (!to) return null;
-                    const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-                    return (
-                      <span className="text-xs font-semibold mt-0.5" style={{ color: "var(--color-primary)" }}>
-                        {from ? `${cap(from)} → ${cap(to)}` : `→ ${cap(to)}`}
-                      </span>
-                    );
-                  })()}
+                  {log.action === "fpo_status_change" &&
+                    log.changes &&
+                    typeof log.changes === "object" &&
+                    (() => {
+                      const c = log.changes as Record<string, string>;
+                      const from = (c.from_status ?? c.from)?.replace(/_/g, " ");
+                      const to = (c.to_status ?? c.to)?.replace(/_/g, " ");
+                      if (!to) return null;
+                      const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+                      return (
+                        <span className="text-xs font-semibold mt-0.5" style={{ color: "var(--color-primary)" }}>
+                          {from ? `${cap(from)} → ${cap(to)}` : `→ ${cap(to)}`}
+                        </span>
+                      );
+                    })()}
                 </div>
               </div>
             ))}
@@ -1205,7 +1210,6 @@ function ApplicationDetailContent() {
   const [infoResponseOpen, setInfoResponseOpen] = useState(false);
   const [infoDetailsDoc, setInfoDetailsDoc] = useState<
     import("@/app/admin/_api/applications").ApplicationDocument | null
-    
   >(null);
 
   useEffect(() => {
@@ -1222,36 +1226,30 @@ function ApplicationDetailContent() {
     queryKey: ["master-data", "commodity", locale],
     queryFn: () => masterDataApi.get("commodity"), // GET /api/public/master-data/?category=commodity
   });
-  const commodityLabel = (code: string) =>
-    commodities?.find((c) => c.code === code)?.name ?? code; // fallback to code if not found
+  const commodityLabel = (code: string) => commodities?.find((c) => c.code === code)?.name ?? code; // fallback to code if not found
 
   const { data: promotingAgencies } = useQuery({
     queryKey: ["master-data", "promoting_agency", locale],
     queryFn: () => masterDataApi.get("promoting_agency"), // GET /api/public/master-data/?category=promoting_agency
   });
-  const promotingAgencyLabel = (code: string) =>
-    promotingAgencies?.find((a) => a.code === code)?.name ?? code;
+  const promotingAgencyLabel = (code: string) => promotingAgencies?.find((a) => a.code === code)?.name ?? code;
   const { data: signatoryDesignations } = useQuery({
     queryKey: ["master-data", "signatory_designation", locale],
     queryFn: () => masterDataApi.get("signatory_designation"), // GET /api/public/master-data/?category=signatory_designation
   });
-  const signatoryDesignationLabel = (code: string) =>
-    signatoryDesignations?.find((d) => d.code === code)?.name ?? code;   
+  const signatoryDesignationLabel = (code: string) => signatoryDesignations?.find((d) => d.code === code)?.name ?? code;
 
   const { data: bankNames } = useQuery({
     queryKey: ["master-data", "bank_name", locale],
     queryFn: () => masterDataApi.get("bank_name"), // GET /api/public/master-data/?category=bank_name
   });
-  const bankNameLabel = (code: string) =>
-    bankNames?.find((b) => b.code === code)?.name ?? code;
-
+  const bankNameLabel = (code: string) => bankNames?.find((b) => b.code === code)?.name ?? code;
 
   const { data: legalStructures } = useQuery({
     queryKey: ["master-data", "legal_structure", locale],
     queryFn: () => masterDataApi.get("legal_structure"), // GET /api/public/master-data/?category=legal_structure
   });
-  const legalStructureLabel = (code: string) =>
-    legalStructures?.find((l) => l.code === code)?.name ?? code;
+  const legalStructureLabel = (code: string) => legalStructures?.find((l) => l.code === code)?.name ?? code;
 
   const { data: app, isLoading } = useQuery({
     queryKey: ["application", fpoId],
@@ -1282,17 +1280,19 @@ function ApplicationDetailContent() {
       queryClient.invalidateQueries({ queryKey: ["application", fpoId] });
       queryClient.invalidateQueries({ queryKey: ["applications"] });
     },
-    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : (t.toast_activate_error ?? "Failed to activate")),
+    onError: (err: unknown) =>
+      toast.error(err instanceof Error ? err.message : (t.toast_activate_error ?? "Failed to activate")),
   });
 
   const deactivateMutation = useMutation({
     mutationFn: () => adminApplicationsApi.deactivate(fpoId),
     onSuccess: () => {
-      toast.success(t.toast_suspended ?? "FPO deactivated (suspended)");   // reuses existing key
+      toast.success(t.toast_suspended ?? "FPO deactivated (suspended)"); // reuses existing key
       queryClient.invalidateQueries({ queryKey: ["application", fpoId] });
       queryClient.invalidateQueries({ queryKey: ["applications"] });
     },
-    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : (t.toast_deactivate_error ?? "Failed to deactivate")),
+    onError: (err: unknown) =>
+      toast.error(err instanceof Error ? err.message : (t.toast_deactivate_error ?? "Failed to deactivate")),
   });
 
   const approveMutation = useMutation({
@@ -1388,7 +1388,9 @@ function ApplicationDetailContent() {
               onClick={() =>
                 confirm({
                   title: t.suspend_dialog_title ?? "Suspend FPO",
-                  description: t.suspend_dialog_desc ?? "This will suspend the FPO account. They will lose access to the platform until reactivated.",
+                  description:
+                    t.suspend_dialog_desc ??
+                    "This will suspend the FPO account. They will lose access to the platform until reactivated.",
                   confirmLabel: t.btn_suspend ?? "Suspend",
                   confirmingLabel: t.btn_suspend_loading ?? "Suspending…",
                   variant: "destructive",
@@ -1503,13 +1505,12 @@ function ApplicationDetailContent() {
                 <InfoRow label={t.field_name_ml ?? "FPO Name (Malayalam)"} value={app.name_ml} />
                 <InfoRow
                   label={t.field_registered_under ?? "Registered Under"}
-                  value={app.legal_structure ? legalStructureLabel(app.legal_structure) : formatDocType(app.registered_under)}
+                  value={
+                    app.legal_structure ? legalStructureLabel(app.legal_structure) : formatDocType(app.registered_under)
+                  }
                 />
                 {app.legal_structure_detail && (
-                  <InfoRow
-                    label={t.field_state_csa_act ?? "State CSA Act"}
-                    value={(app.legal_structure_detail)}
-                  />
+                  <InfoRow label={t.field_state_csa_act ?? "State CSA Act"} value={app.legal_structure_detail} />
                 )}
                 <InfoRow label={t.field_reg_number ?? "Registration Number"} value={app.registration_number} />
                 <InfoRow label={t.field_cin ?? "CIN Number"} value={app.cin_number} />
@@ -1582,7 +1583,10 @@ function ApplicationDetailContent() {
             <SectionCard icon={Users} title={t.section_signatory ?? "Signatory & Members"}>
               <div className="grid grid-cols-2 gap-3">
                 <InfoRow label={t.field_signatory_name ?? "Signatory Name"} value={app.signatory_name} />
-                <InfoRow label={t.field_designation ?? "Designation"} value={app.signatory_designation ? signatoryDesignationLabel(app.signatory_designation) : undefined} />
+                <InfoRow
+                  label={t.field_designation ?? "Designation"}
+                  value={app.signatory_designation ? signatoryDesignationLabel(app.signatory_designation) : undefined}
+                />
                 <InfoRow label={t.field_signatory_phone ?? "Signatory Phone"} value={app.signatory_phone} />
                 <InfoRow label={t.field_signatory_email ?? "Signatory Email"} value={app.signatory_email} />
                 <InfoRow label={t.field_aadhaar_last4 ?? "Aadhaar Last 4"} value={app.signatory_aadhaar_last4} />
@@ -1595,10 +1599,23 @@ function ApplicationDetailContent() {
               </div>
               {app.total_directors != null && (
                 <div className="grid grid-cols-3 gap-3 border-t pt-3">
-                  <InfoRow label={t.field_promoting_agency ?? "Promoting Agency"} value={app.promoting_agency ? promotingAgencyLabel(app.promoting_agency) : undefined} />
-                  <InfoRow label={t.field_facilitating_agency ?? "Facilitating Agency"} value={app.facilitating_agency_name} />
-                  <InfoRow label={t.field_ceo_available ?? "CEO Available"} value={app.ceo_available == null ? undefined : (app.ceo_available ? "Yes" : "No")} />
-                  <InfoRow label={t.field_accountant_available ?? "Accountant Available"} value={app.accountant_available == null ? undefined : (app.accountant_available ? "Yes" : "No")} />                  <InfoRow label="Total Directors" value={app.total_directors?.toString()} />
+                  <InfoRow
+                    label={t.field_promoting_agency ?? "Promoting Agency"}
+                    value={app.promoting_agency ? promotingAgencyLabel(app.promoting_agency) : undefined}
+                  />
+                  <InfoRow
+                    label={t.field_facilitating_agency ?? "Facilitating Agency"}
+                    value={app.facilitating_agency_name}
+                  />
+                  <InfoRow
+                    label={t.field_ceo_available ?? "CEO Available"}
+                    value={app.ceo_available == null ? undefined : app.ceo_available ? "Yes" : "No"}
+                  />
+                  <InfoRow
+                    label={t.field_accountant_available ?? "Accountant Available"}
+                    value={app.accountant_available == null ? undefined : app.accountant_available ? "Yes" : "No"}
+                  />{" "}
+                  <InfoRow label="Total Directors" value={app.total_directors?.toString()} />
                   <InfoRow label="Women Directors" value={app.women_directors?.toString()} />
                   <InfoRow label="Directors < 35" value={app.directors_under_35?.toString()} />
                 </div>
@@ -1633,7 +1650,10 @@ function ApplicationDetailContent() {
                 )}
               </div>
               <div className="grid grid-cols-2 gap-3 border-t pt-3">
-                <InfoRow label={t.field_bank_name ?? "Bank Name"} value={app.bank_name ? bankNameLabel(app.bank_name) : undefined} />
+                <InfoRow
+                  label={t.field_bank_name ?? "Bank Name"}
+                  value={app.bank_name ? bankNameLabel(app.bank_name) : undefined}
+                />
                 <InfoRow label={t.field_bank_branch ?? "Branch"} value={app.bank_branch} />
                 <InfoRow label={t.field_account_number ?? "Account Number"} value={app.account_number} />
                 <InfoRow label={t.field_ifsc ?? "IFSC Code"} value={app.ifsc_code} />
@@ -1665,7 +1685,7 @@ function ApplicationDetailContent() {
                 <span
                   className={`inline-flex items-center rounded-full border px-3 py-0.5 font-bold text-sm ${tierBadgeClass(app.tier)}`}
                 >
-                  {(t.tier_label ?? "Tier")} {app.tier}
+                  {t.tier_label ?? "Tier"} {app.tier}
                 </span>
               ) : (
                 <span className="text-muted-foreground text-sm">{t.not_assessed_label ?? "Not Assessed"}</span>
@@ -1850,10 +1870,12 @@ function ApplicationDetailContent() {
               </DialogHeader>
               <div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1.5 rounded-lg border border-orange-200 bg-orange-50 p-4 dark:border-orange-800 dark:bg-orange-950/20">
-                  <p className="font-semibold text-orange-800 text-xs dark:text-orange-300">{t.admin_request_label ?? "Admin Request"}</p>
+                  <p className="font-semibold text-orange-800 text-xs dark:text-orange-300">
+                    {t.admin_request_label ?? "Admin Request"}
+                  </p>
                   <p className="text-sm">{infoEntry?.notes || "—"}</p>
                   <p className="text-muted-foreground text-xs">
-                    {infoEntry?.changed_by_name ?? (t.admin_fallback_name ?? "Admin")} ·{" "}
+                    {infoEntry?.changed_by_name ?? t.admin_fallback_name ?? "Admin"} ·{" "}
                     {infoEntry
                       ? new Date(infoEntry.created_at).toLocaleString("en-IN", {
                           day: "2-digit",
@@ -1870,7 +1892,7 @@ function ApplicationDetailContent() {
                     <p className="font-semibold text-xs">{t.fpo_response_label ?? "FPO Response"}</p>
                     <p className="text-sm">{infoReply.notes || "—"}</p>
                     <p className="text-muted-foreground text-xs">
-                      {infoReply.changed_by_name ?? (t.fpo_fallback_name ?? "FPO")} ·{" "}
+                      {infoReply.changed_by_name ?? t.fpo_fallback_name ?? "FPO"} ·{" "}
                       {new Date(infoReply.created_at).toLocaleString("en-IN", {
                         day: "2-digit",
                         month: "short",
@@ -1896,7 +1918,6 @@ function ApplicationDetailContent() {
                       className="flex items-center gap-1 text-primary text-xs hover:underline"
                     >
                       {t.doc_view_link ?? "View"} <ExternalLink className="h-3 w-3" />
-
                     </a>
                   </div>
                 </div>
