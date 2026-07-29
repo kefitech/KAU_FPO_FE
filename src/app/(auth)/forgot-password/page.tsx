@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -17,6 +17,8 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { authApi } from "@/lib/api/auth";
+import { translationsApi } from "@/lib/api/translations";
+import { useLocaleStore } from "@/stores/locale-store";
 
 type Tab = "email" | "phone";
 
@@ -27,7 +29,7 @@ const emailSchema = z.object({
 });
 type EmailValues = z.infer<typeof emailSchema>;
 
-function EmailForm({ onSuccess }: { onSuccess: (email: string) => void }) {
+function EmailForm({ onSuccess, t }: { onSuccess: (email: string) => void; t: Record<string, string> }) {
   const [isLoading, setIsLoading] = useState(false);
   const form = useForm<EmailValues>({
     resolver: zodResolver(emailSchema),
@@ -40,7 +42,7 @@ function EmailForm({ onSuccess }: { onSuccess: (email: string) => void }) {
       await authApi.forgotPassword({ email: values.email });
       onSuccess(values.email);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to send reset link. Please try again.");
+      toast.error(error instanceof Error ? error.message : (t.email_error ?? "Failed to send reset link. Please try again."));
     } finally {
       setIsLoading(false);
     }
@@ -54,7 +56,7 @@ function EmailForm({ onSuccess }: { onSuccess: (email: string) => void }) {
           name="email"
           render={({ field, fieldState }) => (
             <Field className="gap-1.5" data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor="fp-email">Email address</FieldLabel>
+              <FieldLabel htmlFor="fp-email">{t.email_label ?? "Email address"}</FieldLabel>
               <Input
                 {...field}
                 id="fp-email"
@@ -69,7 +71,7 @@ function EmailForm({ onSuccess }: { onSuccess: (email: string) => void }) {
         />
       </FieldGroup>
       <Button className="w-full" type="submit" disabled={isLoading}>
-        {isLoading ? "Sending..." : "Send Reset Link"}
+        {isLoading ? (t.email_sending ?? "Sending...") : (t.email_submit_btn ?? "Send Reset Link")}
       </Button>
     </form>
   );
@@ -82,7 +84,7 @@ const phoneSchema = z.object({
 });
 type PhoneValues = z.infer<typeof phoneSchema>;
 
-function PhoneForm() {
+function PhoneForm({ t }: { t: Record<string, string> }) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const form = useForm<PhoneValues>({
@@ -96,7 +98,7 @@ function PhoneForm() {
       await authApi.forgotPassword({ phone: values.phone });
       router.push(`/verify-otp?phone=${encodeURIComponent(values.phone)}`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to send OTP. Please try again.");
+      toast.error(error instanceof Error ? error.message : (t.phone_error ?? "Failed to send OTP. Please try again."));
       setIsLoading(false);
     }
   };
@@ -109,7 +111,7 @@ function PhoneForm() {
           name="phone"
           render={({ field, fieldState }) => (
             <Field className="gap-1.5" data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor="fp-phone">Phone number</FieldLabel>
+              <FieldLabel htmlFor="fp-phone">{t.phone_label ?? "Phone number"}</FieldLabel>
               <Input
                 {...field}
                 id="fp-phone"
@@ -131,7 +133,7 @@ function PhoneForm() {
         />
       </FieldGroup>
       <Button className="w-full" type="submit" disabled={isLoading}>
-        {isLoading ? "Sending OTP..." : "Send OTP"}
+        {isLoading ? (t.phone_sending ?? "Sending OTP...") : (t.phone_submit_btn ?? "Send OTP")}
       </Button>
     </form>
   );
@@ -142,6 +144,15 @@ function PhoneForm() {
 export default function ForgotPasswordPage() {
   const [tab, setTab] = useState<Tab>("email");
   const [sentToEmail, setSentToEmail] = useState<string | null>(null);
+  const locale = useLocaleStore((s) => s.locale);
+  const [t, setT] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (!locale) return;
+    translationsApi.getPublic(locale, "forgot_password").then((data) => {
+      setT(data.forgot_password ?? {});
+    });
+  }, [locale]);
+
 
   return (
     <div
@@ -170,29 +181,31 @@ export default function ForgotPasswordPage() {
               <CheckCircle className="size-7" />
             </div>
             <div className="flex flex-col gap-1">
-              <h1 className="font-bold text-2xl">Check your email</h1>
+              <h1 className="font-bold text-2xl">{t.check_email_title ?? "Check your email"}</h1>
               <p className="text-muted-foreground text-sm">
-                We've sent a password reset link to <span className="font-medium text-foreground">{sentToEmail}</span>
-                . Check your inbox and click the link to reset your password.
+              {t.check_email_desc_prefix ?? "We've sent a password reset link to"}{" "}
+              <span className="font-medium text-foreground">{sentToEmail}</span>
+              . {t.check_email_desc_suffix ?? "Check your inbox and click the link to reset your password."}
+
               </p>
             </div>
             <p className="text-muted-foreground text-xs">
-              Didn't receive it?{" "}
+              {t.no_receive_prefix ?? "Didn't receive it?"}{" "}
               <button
                 type="button"
                 onClick={() => setSentToEmail(null)}
                 className="underline underline-offset-4 hover:text-foreground"
               >
-                Try again
+                {t.try_again ?? "Try again"}
               </button>
             </p>
           </div>
         ) : (
           <>
             <div className="flex flex-col gap-1">
-              <h1 className="font-bold text-2xl">Forgot password?</h1>
+              <h1 className="font-bold text-2xl">{t.page_title ?? "Forgot password?"}</h1>
               <p className="text-muted-foreground text-sm">
-                Enter your email or phone number to receive a reset link or OTP.
+                {t.page_subtitle ?? "Enter your email or phone number to receive a reset link or OTP."}
               </p>
             </div>
 
@@ -208,7 +221,7 @@ export default function ForgotPasswordPage() {
                 }`}
               >
                 <Mail className="size-4" />
-                Email
+                {t.tab_email ?? "Email"}
               </button>
               <button
                 type="button"
@@ -220,23 +233,23 @@ export default function ForgotPasswordPage() {
                 }`}
               >
                 <Phone className="size-4" />
-                Phone (OTP)
+                {t.tab_phone ?? "Phone (OTP)"}
               </button>
             </div>
 
-            {tab === "email" ? <EmailForm onSuccess={(email) => setSentToEmail(email)} /> : <PhoneForm />}
+            {tab === "email" ? <EmailForm onSuccess={(email) => setSentToEmail(email)} t={t} /> : <PhoneForm t={t} />}
           </>
         )}
 
         <p className="text-center text-muted-foreground text-sm">
-          Remember your password?{" "}
+          {t.remember_password ?? "Remember your password?"}{" "}
           <Link href="/v1/login" className="underline underline-offset-4 hover:text-foreground">
-            Back to login
+            {t.back_to_login ?? "Back to login"}
           </Link>
         </p>
 
         <a href="/" className="flex items-center justify-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
-          ← Back to Home
+          {t.back_to_home ?? "← Back to Home"}
         </a>
       </div>
     </div>

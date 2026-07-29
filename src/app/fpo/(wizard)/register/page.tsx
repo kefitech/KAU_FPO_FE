@@ -159,7 +159,7 @@ function FpoRegisterPageInner() {
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 sm:gap-6 px-3 sm:px-6 py-5 sm:py-8">
       <div className="flex items-center gap-3">
         <div className="min-w-0 flex-1">
-          <StepIndicator current={displayStep} />
+          <StepIndicator current={displayStep} t={t}/>
         </div>
         <button
           type="button"

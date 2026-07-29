@@ -192,7 +192,7 @@ export function Step3Signatory({ profile, onSave, onSuccess, onBack, t }: Step3P
         directors_under_35: values.directors_under_35 ? Number(values.directors_under_35) : 0,
       }),
     onSuccess: () => {
-      toast.success("Signatory details saved");
+      toast.success(t.step3_details_saved ?? "Signatory details saved");
     },
     onSettled: () => setSaveMode(null),
     onError: (err: unknown) => {

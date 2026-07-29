@@ -283,7 +283,7 @@ export function Step2Contact({ profile, onSave, onSuccess, onBack, t }: Step2Pro
         longitude: values.location?.lng ?? null,
       }),
     onSuccess: () => {
-      toast.success("Contact details saved");
+      toast.success(t.step2_contact_saved ?? "Contact details saved");
     },
     onSettled: () => setSaveMode(null),
     onError: (err: unknown) => {

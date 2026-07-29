@@ -26,7 +26,7 @@ export function Step7Submit({ profile, onBack, t }: Step7Props) {
   const submitMutation = useMutation({
     mutationFn: () => fpoRegistrationApi.submit(),
     onSuccess: () => {
-      toast.success("Application submitted successfully!");
+      toast.success(t.step7_application_submit ?? "Application submitted successfully!");
       queryClient.invalidateQueries({ queryKey: ["fpo-me"] });
       queryClient.invalidateQueries({ queryKey: ["fpo-status"] });
       router.replace("/fpo/status");

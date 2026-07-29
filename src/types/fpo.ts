@@ -455,27 +455,27 @@ export const DISTRICT_OPTIONS = [
   { value: "KSD", label: "Kasaragod" },
 ] as const;
 
-export const REQUIRED_DOC_CONFIG: { type: FpoDocumentType; label: string; maxSizeMB: number }[] = [
-  { type: "fpo_reg_cert", label: "FPO Registration Certificate", maxSizeMB: 5 },
-  { type: "bank_details", label: "Bank Statement / Details", maxSizeMB: 5 },
-  { type: "pan_card", label: "PAN Card", maxSizeMB: 5 },
-];
+export const REQUIRED_DOC_CONFIG: { type: FpoDocumentType; label: string; labelKey: string; maxSizeMB: number }[] = [
+  { type: "fpo_reg_cert", label: "FPO Registration Certificate", labelKey: "doc_fpo_reg_cert", maxSizeMB: 5 },
+  { type: "bank_details", label: "Bank Statement / Details", labelKey: "doc_bank_details", maxSizeMB: 5 },
+  { type: "pan_card", label: "PAN Card", labelKey: "doc_pan_card", maxSizeMB: 5 },
+ ];
 
-export const OPTIONAL_DOC_CONFIG: { type: FpoDocumentType; label: string; maxSizeMB: number }[] = [
-  { type: "gst_cert", label: "GST Certificate", maxSizeMB: 5 },
-  { type: "annual_report", label: "Annual Report", maxSizeMB: 10 },
-  { type: "member_list", label: "Member List (PDF / XLSX)", maxSizeMB: 10 },
-  { type: "board_resolution", label: "Board Resolution", maxSizeMB: 5 },
-  { type: "moa_aoa", label: "MOA / AOA", maxSizeMB: 5 },
-  { type: "other", label: "Other Document", maxSizeMB: 5 },
-];
+export const OPTIONAL_DOC_CONFIG: { type: FpoDocumentType; label: string; labelKey: string; maxSizeMB: number }[] = [
+  { type: "gst_cert", label: "GST Certificate", labelKey: "doc_gst_cert", maxSizeMB: 5 },
+  { type: "annual_report", label: "Annual Report", labelKey: "doc_annual_report", maxSizeMB: 10 },
+  { type: "member_list", label: "Member List (PDF / XLSX)", labelKey: "doc_member_list", maxSizeMB: 10 },
+  { type: "board_resolution", label: "Board Resolution", labelKey: "doc_board_resolution", maxSizeMB: 5 },
+  { type: "moa_aoa", label: "MOA / AOA", labelKey: "doc_moa_aoa", maxSizeMB: 5 },
+  { type: "other", label: "Other Document", labelKey: "doc_other", maxSizeMB: 5 },
+ ];
 
 export const WIZARD_STEPS = [
-  { number: 1, label: "Basic Info" },
-  { number: 2, label: "Contact" },
-  { number: 3, label: "Signatory" },
-  { number: 4, label: "Business & Bank" },
-  { number: 5, label: "Verification" },
-  { number: 6, label: "Documents" },
-  { number: 7, label: "Review & Submit" },
+  { number: 1, label: "Basic Info", labelKey: "step1_label" },
+  { number: 2, label: "Contact", labelKey: "step2_label" },
+  { number: 3, label: "Signatory", labelKey: "step3_label" },
+  { number: 4, label: "Business & Bank", labelKey: "step4_label" },
+  { number: 5, label: "Verification", labelKey: "step5_label" },
+  { number: 6, label: "Documents", labelKey: "step6_label" },
+  { number: 7, label: "Review & Submit", labelKey: "step7_label" },
 ] as const;

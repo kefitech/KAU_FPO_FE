@@ -213,7 +213,7 @@ export function Step1BasicInfo({ profile, onSave, onSuccess, t = {} }: Step1Prop
       return fpoRegistrationApi.register(payload);
     },
     onSuccess: () => {
-      toast.success(isEdit ? "Details updated." : "FPO created. Let's fill in the details.");
+      toast.success(isEdit ? t.step1_details_saved ??"Details updated." : t.step1_fpo_created ?? "FPO created. Let's fill in the details.");
     },
     onSettled: () => setSaveMode(null),
     onError: (err: unknown) => {

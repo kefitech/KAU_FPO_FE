@@ -207,7 +207,7 @@ export function Step4Business({ profile, onSave, onSuccess, onBack, t = {} }: St
         description: values.description || undefined,
       }),
     onSuccess: () => {
-      toast.success("Business details saved");
+      toast.success(t.step4_details_saved ?? "Business details saved");
     },
     onSettled: () => setSaveMode(null),
     onError: (err: unknown) => {

@@ -27,7 +27,9 @@ function OtpSection({ type, contact, verified, onVerified, t }: OtpSectionProps)
     mutationFn: () => (type === "email" ? fpoRegistrationApi.sendEmailOtp() : fpoRegistrationApi.sendPhoneOtp()),
     onSuccess: () => {
       setOtpSent(true);
-      toast.success(`OTP sent to ${contact}`);
+      const template = t.step5_otp_sents ?? `OTP sent to ${contact}`;
+      const message = template.replace("{contact}", contact);
+      toast.success(message);
     },
     onError: (err: unknown) => {
       const error = err as { message?: string; data?: { message?: string } } | undefined;
@@ -40,12 +42,12 @@ function OtpSection({ type, contact, verified, onVerified, t }: OtpSectionProps)
     mutationFn: () =>
       type === "email" ? fpoRegistrationApi.confirmEmailOtp(otp) : fpoRegistrationApi.confirmPhoneOtp(otp),
     onSuccess: () => {
-      toast.success(`${type === "email" ? "Email" : "Phone"} verified successfully`);
+      toast.success(type === "email" ? (t.step5_email_verified ?? "Email verified successfully") : (t.step5_phone_verified ?? "Phone verified successfully"));
       onVerified();
     },
     onError: (err: unknown) => {
       const e = err as { message?: string; data?: { message?: string } };
-      toast.error(e?.data?.message ?? e?.message ?? "Invalid OTP. Please check and try again.");
+      toast.error(e?.data?.message ?? e?.message ?? (t.step5_err_invalid_otp ?? "Invalid OTP. Please check and try again."));
     },
   });
 

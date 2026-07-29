@@ -1225,6 +1225,34 @@ function ApplicationDetailContent() {
   const commodityLabel = (code: string) =>
     commodities?.find((c) => c.code === code)?.name ?? code; // fallback to code if not found
 
+  const { data: promotingAgencies } = useQuery({
+    queryKey: ["master-data", "promoting_agency", locale],
+    queryFn: () => masterDataApi.get("promoting_agency"), // GET /api/public/master-data/?category=promoting_agency
+  });
+  const promotingAgencyLabel = (code: string) =>
+    promotingAgencies?.find((a) => a.code === code)?.name ?? code;
+  const { data: signatoryDesignations } = useQuery({
+    queryKey: ["master-data", "signatory_designation", locale],
+    queryFn: () => masterDataApi.get("signatory_designation"), // GET /api/public/master-data/?category=signatory_designation
+  });
+  const signatoryDesignationLabel = (code: string) =>
+    signatoryDesignations?.find((d) => d.code === code)?.name ?? code;   
+
+  const { data: bankNames } = useQuery({
+    queryKey: ["master-data", "bank_name", locale],
+    queryFn: () => masterDataApi.get("bank_name"), // GET /api/public/master-data/?category=bank_name
+  });
+  const bankNameLabel = (code: string) =>
+    bankNames?.find((b) => b.code === code)?.name ?? code;
+
+
+  const { data: legalStructures } = useQuery({
+    queryKey: ["master-data", "legal_structure", locale],
+    queryFn: () => masterDataApi.get("legal_structure"), // GET /api/public/master-data/?category=legal_structure
+  });
+  const legalStructureLabel = (code: string) =>
+    legalStructures?.find((l) => l.code === code)?.name ?? code;
+
   const { data: app, isLoading } = useQuery({
     queryKey: ["application", fpoId],
     queryFn: () => adminApplicationsApi.getById(fpoId),
@@ -1335,7 +1363,7 @@ function ApplicationDetailContent() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-end gap-2">
+        <div className="flex w-full flex-wrap items-center justify-center gap-2 md:w-auto md:justify-end">
           {/* <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
             <Pencil className="mr-1.5 h-4 w-4" />
             Edit Details
@@ -1475,12 +1503,12 @@ function ApplicationDetailContent() {
                 <InfoRow label={t.field_name_ml ?? "FPO Name (Malayalam)"} value={app.name_ml} />
                 <InfoRow
                   label={t.field_registered_under ?? "Registered Under"}
-                  value={formatDocType(app.legal_structure ?? app.registered_under)}
+                  value={app.legal_structure ? legalStructureLabel(app.legal_structure) : formatDocType(app.registered_under)}
                 />
                 {app.legal_structure_detail && (
                   <InfoRow
                     label={t.field_state_csa_act ?? "State CSA Act"}
-                    value={formatDocType(app.legal_structure_detail)}
+                    value={(app.legal_structure_detail)}
                   />
                 )}
                 <InfoRow label={t.field_reg_number ?? "Registration Number"} value={app.registration_number} />
@@ -1554,20 +1582,23 @@ function ApplicationDetailContent() {
             <SectionCard icon={Users} title={t.section_signatory ?? "Signatory & Members"}>
               <div className="grid grid-cols-2 gap-3">
                 <InfoRow label={t.field_signatory_name ?? "Signatory Name"} value={app.signatory_name} />
-                <InfoRow label={t.field_designation ?? "Designation"} value={app.signatory_designation} />
+                <InfoRow label={t.field_designation ?? "Designation"} value={app.signatory_designation ? signatoryDesignationLabel(app.signatory_designation) : undefined} />
                 <InfoRow label={t.field_signatory_phone ?? "Signatory Phone"} value={app.signatory_phone} />
                 <InfoRow label={t.field_signatory_email ?? "Signatory Email"} value={app.signatory_email} />
                 <InfoRow label={t.field_aadhaar_last4 ?? "Aadhaar Last 4"} value={app.signatory_aadhaar_last4} />
               </div>
               <div className="grid grid-cols-4 gap-3 border-t pt-3">
-                <InfoRow label={t.field_total_members ?? "Total"} value={app.total_members?.toString()} />
+                <InfoRow label={t.field_total_members ?? "Total Memebers"} value={app.total_members?.toString()} />
                 <InfoRow label={t.field_male_members ?? "Male"} value={app.male_members?.toString()} />
                 <InfoRow label={t.field_female_members ?? "Female"} value={app.female_members?.toString()} />
                 <InfoRow label={t.field_sc_st_members ?? "SC / ST"} value={app.sc_st_members?.toString()} />
               </div>
               {app.total_directors != null && (
                 <div className="grid grid-cols-3 gap-3 border-t pt-3">
-                  <InfoRow label="Total Directors" value={app.total_directors?.toString()} />
+                  <InfoRow label={t.field_promoting_agency ?? "Promoting Agency"} value={app.promoting_agency ? promotingAgencyLabel(app.promoting_agency) : undefined} />
+                  <InfoRow label={t.field_facilitating_agency ?? "Facilitating Agency"} value={app.facilitating_agency_name} />
+                  <InfoRow label={t.field_ceo_available ?? "CEO Available"} value={app.ceo_available == null ? undefined : (app.ceo_available ? "Yes" : "No")} />
+                  <InfoRow label={t.field_accountant_available ?? "Accountant Available"} value={app.accountant_available == null ? undefined : (app.accountant_available ? "Yes" : "No")} />                  <InfoRow label="Total Directors" value={app.total_directors?.toString()} />
                   <InfoRow label="Women Directors" value={app.women_directors?.toString()} />
                   <InfoRow label="Directors < 35" value={app.directors_under_35?.toString()} />
                 </div>
@@ -1602,7 +1633,7 @@ function ApplicationDetailContent() {
                 )}
               </div>
               <div className="grid grid-cols-2 gap-3 border-t pt-3">
-                <InfoRow label={t.field_bank_name ?? "Bank Name"} value={app.bank_name} />
+                <InfoRow label={t.field_bank_name ?? "Bank Name"} value={app.bank_name ? bankNameLabel(app.bank_name) : undefined} />
                 <InfoRow label={t.field_bank_branch ?? "Branch"} value={app.bank_branch} />
                 <InfoRow label={t.field_account_number ?? "Account Number"} value={app.account_number} />
                 <InfoRow label={t.field_ifsc ?? "IFSC Code"} value={app.ifsc_code} />
@@ -1703,7 +1734,7 @@ function ApplicationDetailContent() {
                         <p className="font-medium text-sm">{formatDocType(doc.document_type)}</p>
                         {doc.is_info_response_doc && (
                           <span className="inline-flex items-center rounded-full bg-orange-100 px-2 py-0.5 font-medium text-orange-700 text-xs dark:bg-orange-900/30 dark:text-orange-300">
-                            Info Response
+                            {t.doc_info_response_badge ?? "Info Response"}
                           </span>
                         )}
                       </div>
@@ -1712,7 +1743,7 @@ function ApplicationDetailContent() {
                       </p>
                       {doc.verified_by_name && (
                         <p className="text-muted-foreground text-xs">
-                          Verified by {doc.verified_by_name}
+                          {t.doc_verified_by ?? "Verified by"} {doc.verified_by_name}
                           {doc.verified_at && (
                             <>
                               {" "}
@@ -1739,7 +1770,7 @@ function ApplicationDetailContent() {
                         className="h-7 text-xs text-orange-600 hover:text-orange-700"
                         onClick={() => setInfoDetailsDoc(doc)}
                       >
-                        Info Details
+                        {t.doc_info_details_btn ?? "Info Details"}
                       </Button>
                     )}
                     <a
@@ -1777,7 +1808,7 @@ function ApplicationDetailContent() {
 
       {/* Team */}
       {activeTab === "team" && (
-        <SectionCard icon={Users} title="Team">
+        <SectionCard icon={Users} title={t.section_team ?? "Team"}>
           <TeamTab fpoId={fpoId} />
         </SectionCard>
       )}
@@ -1787,7 +1818,7 @@ function ApplicationDetailContent() {
 
       {/* Tier Assessment */}
       {activeTab === "tier-assessment" && (
-        <SectionCard icon={Star} title="Tier Assessment">
+        <SectionCard icon={Star} title={t.section_tier_assessment ?? "Tier Assessment"}>
           <TierAssessmentTab fpoId={fpoId} />
         </SectionCard>
       )}
@@ -1815,14 +1846,14 @@ function ApplicationDetailContent() {
           >
             <DialogContent className="max-w-md">
               <DialogHeader>
-                <DialogTitle>Info Request Details</DialogTitle>
+                <DialogTitle>{t.info_request_dialog_title ?? "Info Request Details"}</DialogTitle>
               </DialogHeader>
               <div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1.5 rounded-lg border border-orange-200 bg-orange-50 p-4 dark:border-orange-800 dark:bg-orange-950/20">
-                  <p className="font-semibold text-orange-800 text-xs dark:text-orange-300">Admin Request</p>
+                  <p className="font-semibold text-orange-800 text-xs dark:text-orange-300">{t.admin_request_label ?? "Admin Request"}</p>
                   <p className="text-sm">{infoEntry?.notes || "—"}</p>
                   <p className="text-muted-foreground text-xs">
-                    {infoEntry?.changed_by_name ?? "Admin"} ·{" "}
+                    {infoEntry?.changed_by_name ?? (t.admin_fallback_name ?? "Admin")} ·{" "}
                     {infoEntry
                       ? new Date(infoEntry.created_at).toLocaleString("en-IN", {
                           day: "2-digit",
@@ -1836,10 +1867,10 @@ function ApplicationDetailContent() {
                 </div>
                 {infoReply && (
                   <div className="flex flex-col gap-1.5 rounded-lg border bg-muted/40 p-4">
-                    <p className="font-semibold text-xs">FPO Response</p>
+                    <p className="font-semibold text-xs">{t.fpo_response_label ?? "FPO Response"}</p>
                     <p className="text-sm">{infoReply.notes || "—"}</p>
                     <p className="text-muted-foreground text-xs">
-                      {infoReply.changed_by_name ?? "FPO"} ·{" "}
+                      {infoReply.changed_by_name ?? (t.fpo_fallback_name ?? "FPO")} ·{" "}
                       {new Date(infoReply.created_at).toLocaleString("en-IN", {
                         day: "2-digit",
                         month: "short",
@@ -1851,7 +1882,7 @@ function ApplicationDetailContent() {
                   </div>
                 )}
                 <div className="flex flex-col gap-1.5 rounded-lg border p-4">
-                  <p className="font-semibold text-xs">Attached Document</p>
+                  <p className="font-semibold text-xs">{t.attached_document_label ?? "Attached Document"}</p>
                   <div className="flex items-center gap-2">
                     <FileText className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm">{formatDocType(infoDetailsDoc.document_type)}</span>
@@ -1864,7 +1895,8 @@ function ApplicationDetailContent() {
                       rel="noopener noreferrer"
                       className="flex items-center gap-1 text-primary text-xs hover:underline"
                     >
-                      View <ExternalLink className="h-3 w-3" />
+                      {t.doc_view_link ?? "View"} <ExternalLink className="h-3 w-3" />
+
                     </a>
                   </div>
                 </div>

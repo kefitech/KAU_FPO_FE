@@ -6,9 +6,10 @@ import { WIZARD_STEPS } from "@/types/fpo";
 
 interface StepIndicatorProps {
   current: number;
+  t?: Record<string, string>;
 }
 
-export function StepIndicator({ current }: StepIndicatorProps) {
+export function StepIndicator({ current, t={} }: StepIndicatorProps) {
   return (
     <div className="flex w-full items-center">
       {WIZARD_STEPS.map((step, idx) => {
@@ -17,7 +18,7 @@ export function StepIndicator({ current }: StepIndicatorProps) {
         return (
           <div key={step.number} className="flex flex-1 items-center last:flex-none">
             {/* Circle */}
-            <div className="flex flex-col items-center gap-1.5">
+            <div className="flex shrink-0 flex-col items-center gap-1.5">
               <div
                 className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 font-semibold text-xs transition-colors ${
                   done
@@ -30,18 +31,18 @@ export function StepIndicator({ current }: StepIndicatorProps) {
                 {done ? <Check className="h-4 w-4" /> : step.number}
               </div>
               <span
-                className={`hidden whitespace-nowrap font-medium text-[10px] sm:block ${
+                className={`hidden max-w-[70px] text-center font-medium text-[10px] leading-tight sm:block ${
                   active ? "text-foreground" : done ? "text-primary" : "text-muted-foreground"
                 }`}
               >
-                {step.label}
+                {t[step.labelKey] ?? step.label}
               </span>
             </div>
 
             {/* Connector line */}
             {idx < WIZARD_STEPS.length - 1 && (
               <div
-                className={`mx-2 mt-[-14px] h-0.5 flex-1 transition-colors sm:mt-[-26px] ${
+                className={`mx-2 mt-[-14px] h-0.5 min-w-[16px] flex-1 transition-colors sm:mt-[-26px] ${
                   done ? "bg-primary" : "bg-border"
                 }`}
               />

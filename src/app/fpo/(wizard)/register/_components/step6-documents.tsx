@@ -19,6 +19,7 @@ function formatBytes(bytes: number) {
 
 interface DocRowProps {
   label: string;
+  labelKey: string;
   docType: FpoDocumentType;
   maxSizeMB: number;
   uploaded?: FpoDocument;
@@ -27,10 +28,12 @@ interface DocRowProps {
   isUploading: boolean;
   isDeleting: boolean;
   t: Record<string, string>;
+  
 }
 
-function DocRow({ label, docType, maxSizeMB, uploaded, onUpload, onDelete, isUploading, isDeleting, t }: DocRowProps) {
+function DocRow({ label, labelKey, docType, maxSizeMB, uploaded, onUpload, onDelete, isUploading, isDeleting, t }: DocRowProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const displayLabel = t[labelKey] ?? label;
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -38,7 +41,7 @@ function DocRow({ label, docType, maxSizeMB, uploaded, onUpload, onDelete, isUpl
 
     const maxBytes = maxSizeMB * 1024 * 1024;
     if (file.size > maxBytes) {
-      toast.error(`File too large. Maximum size is ${maxSizeMB} MB.`);
+      toast.error((t.err_file_too_large ?? `File too large. Maximum size is {size} MB.`).replace("{size}", String(maxSizeMB)));
       e.target.value = "";
       return;
     }
@@ -46,7 +49,12 @@ function DocRow({ label, docType, maxSizeMB, uploaded, onUpload, onDelete, isUpl
     const allowed = ["application/pdf", "image/jpeg", "image/png"];
     if (docType === "member_list") allowed.push("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     if (!allowed.includes(file.type)) {
-      toast.error(`Invalid file type. Allowed: PDF, JPG, PNG${docType === "member_list" ? ", XLSX" : ""}`);
+      toast.error(
+        (t.err_invalid_file_type ?? `Invalid file type. Allowed: PDF, JPG, PNG{extra}`).replace(
+          "{extra}",
+          docType === "member_list" ? ", XLSX" : "",
+        ),
+      );
       e.target.value = "";
       return;
     }
@@ -60,7 +68,7 @@ function DocRow({ label, docType, maxSizeMB, uploaded, onUpload, onDelete, isUpl
       <div className="flex min-w-0 items-center gap-2.5">
         <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
         <div className="min-w-0">
-          <p className="truncate font-medium text-sm">{label}</p>
+          <p className="truncate font-medium text-sm">{displayLabel}</p>
           {uploaded && <p className="text-muted-foreground text-xs">{formatBytes(uploaded.file_size)}</p>}
         </div>
       </div>
@@ -79,7 +87,7 @@ function DocRow({ label, docType, maxSizeMB, uploaded, onUpload, onDelete, isUpl
                 onDelete(uploaded.uuid);
               }}
               disabled={isDeleting}
-              aria-label="Remove document"
+              aria-label={t.step6_remove_doc_aria ?? "Remove document"}
             >
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
@@ -183,6 +191,7 @@ export function Step6Documents({ onSuccess, onBack, t }: Step6Props) {
             <DocRow
               key={cfg.type}
               label={cfg.label}
+              labelKey={cfg.labelKey}
               docType={cfg.type}
               maxSizeMB={cfg.maxSizeMB}
               uploaded={getUploaded(cfg.type)}
@@ -212,6 +221,7 @@ export function Step6Documents({ onSuccess, onBack, t }: Step6Props) {
             <DocRow
               key={cfg.type}
               label={cfg.label}
+              labelKey={cfg.labelKey}
               docType={cfg.type}
               maxSizeMB={cfg.maxSizeMB}
               uploaded={getUploaded(cfg.type)}
@@ -233,7 +243,12 @@ export function Step6Documents({ onSuccess, onBack, t }: Step6Props) {
           type="button"
           onClick={() => {
             if (!allRequiredDone) {
-              toast.error(`Please upload all ${REQUIRED_DOC_CONFIG.length} required documents before continuing.`);
+              toast.error(
+                (t.err_incomplete_required ?? `Please upload all {count} required documents before continuing.`).replace(
+                  "{count}",
+                  String(REQUIRED_DOC_CONFIG.length),
+                ),
+              );
               return;
             }
             onSuccess();
