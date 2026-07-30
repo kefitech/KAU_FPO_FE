@@ -74,6 +74,8 @@
     "sonner": "^2.0.7",
     "swiper": "^11.2.10",
     "tailwind-merge": "^3.5.0",
+    "three": "^0.134.0",
+    "vanta": "^0.5.24",
     "vaul": "^1.1.2",
     "zod": "^4.3.6",
     "zustand": "^5.0.12"
@@ -85,6 +87,7 @@
     "@types/node": "^22.19.17",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@types/three": "^0.134.0",
     "babel-plugin-react-compiler": "^1.0.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",

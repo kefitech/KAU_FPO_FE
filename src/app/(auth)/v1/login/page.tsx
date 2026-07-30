@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { VantaBirds } from "@/components/common/vanta-birds";
 import { LocaleSwitcher } from "@/components/layout/locale-switcher";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { translationsApi } from "@/lib/api/translations";
@@ -21,12 +22,9 @@ export default function LoginV1() {
   }, [locale]);
 
   return (
-    <div
-      className="relative flex h-svh items-center justify-center overflow-hidden p-4"
-      style={{ backgroundImage: "url('/assets/img/background/background.png')", backgroundSize: "cover", backgroundPosition: "center" }}
-    >
-      {/* Dark mode overlay */}
-      <div className="absolute inset-0 hidden dark:block bg-black/70" />
+    <div className="relative flex h-svh items-center justify-center overflow-hidden p-4">
+      {/* Vanta Birds animation background */}
+      <VantaBirds />
 
       {/* Top-right controls */}
       <div className="fixed top-4 right-4 z-50 flex items-center gap-2 rounded-full bg-white/70 dark:bg-white/10 px-3 py-1.5 shadow backdrop-blur-sm">
