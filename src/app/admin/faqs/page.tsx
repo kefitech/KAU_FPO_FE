@@ -83,6 +83,7 @@ export default function FaqsPage() {
   const columns = getFaqColumns({
     t,
     tCommon,
+    locale,
     onEdit: (item: AdminFaq) => router.push(`/admin/faqs/${item.id}/edit`),
     onDelete: (item: AdminFaq) =>
       confirm({

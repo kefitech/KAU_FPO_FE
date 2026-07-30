@@ -19,17 +19,17 @@ interface ColumnActions {
   onToggleStatus: (item: AdminFaq) => void;
   t: T;
   tCommon: T;
+  locale: string;
 }
 
-export function getFaqColumns({ onEdit, onDelete, onToggleStatus, t, tCommon }: ColumnActions): ColumnDef<AdminFaq>[] {
-  return [
+export function getFaqColumns({ onEdit, onDelete, onToggleStatus, t, tCommon, locale }: ColumnActions): ColumnDef<AdminFaq>[] {  return [
     {
       accessorKey: "question",
       header: t.col_question ?? "Question",
       meta: { width: "55%" },
       cell: ({ row }) => {
         const question = row.original.question;
-        const text = typeof question === "string" ? question : (Object.values(question)[0] ?? "—");
+        const text = typeof question === "string" ? question : (question[locale] ?? question.en ?? Object.values(question)[0] ?? "—");
         return (
             <span className="block truncate text-sm" title={text}>
               {text}
