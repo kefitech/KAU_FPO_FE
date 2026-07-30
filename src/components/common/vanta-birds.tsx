@@ -1,50 +1,58 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import type { VantaEffect } from "vanta/dist/vanta.birds.min";
+import Script from "next/script";
+import { useEffect, useRef, useState } from "react";
 
 export function VantaBirds() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const effectRef = useRef<VantaEffect | null>(null);
+  const effectRef = useRef<{ destroy: () => void } | null>(null);
+  const [threeReady, setThreeReady] = useState(false);
+  const [vantaReady, setVantaReady] = useState(false);
 
   useEffect(() => {
-    let mounted = true;
+    if (!vantaReady || !containerRef.current) return;
 
-    async function init() {
-      const THREE = await import("three");
-      // Vanta reads THREE from window — set before calling init
-      (window as Window & { THREE?: typeof THREE }).THREE = THREE;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const VANTA = (window as unknown as Record<string, any>).VANTA;
+    if (!VANTA?.BIRDS) return;
 
-      const { default: VantaBirds } = await import("vanta/dist/vanta.birds.min");
-
-      if (!mounted || !containerRef.current) return;
-
-      effectRef.current = VantaBirds({
-        el: containerRef.current,
-        THREE,
-        backgroundColor: 0x07192f,
-        backgroundAlpha: 1,
-        color1: 0xff0000,
-        color2: 0xd1ff,
-        colorMode: "varianceGradient",
-        quantity: 5,
-        birdSize: 1,
-        wingSpan: 30,
-        speedLimit: 5,
-        separation: 20,
-        alignment: 20,
-        cohesion: 54,
-      });
-    }
-
-    init();
+    effectRef.current = VANTA.BIRDS({
+      el: containerRef.current,
+      backgroundAlpha: 0,
+      color1: 0xff0000,
+      color2: 0xd1ff,
+      colorMode: "varianceGradient",
+      quantity: 5,
+      birdSize: 1,
+      wingSpan: 30,
+      speedLimit: 5,
+      separation: 20,
+      alignment: 20,
+      cohesion: 54,
+    });
 
     return () => {
-      mounted = false;
       effectRef.current?.destroy();
       effectRef.current = null;
     };
-  }, []);
+  }, [vantaReady]);
 
-  return <div ref={containerRef} className="absolute inset-0 w-full h-full" />;
+  return (
+    <>
+      {/* Load three.js first, then vanta only after three is ready */}
+      <Script
+        src="/js/three.min.js"
+        strategy="afterInteractive"
+        onReady={() => setThreeReady(true)}
+      />
+      {threeReady && (
+        <Script
+          src="/js/vanta.birds.min.js"
+          strategy="afterInteractive"
+          onReady={() => setVantaReady(true)}
+        />
+      )}
+      <div ref={containerRef} className="absolute inset-0 w-full h-full" />
+    </>
+  );
 }
