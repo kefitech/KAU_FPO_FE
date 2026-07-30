@@ -50,8 +50,10 @@ export default function NotificationsPage() {
   const [tChannelTest, setTChannelTest] = useState<T>({});
   const [tConfirm, setTConfirm] = useState<T>({});
   const [tCommon, setTCommon] = useState<T>({});
+  const [translationsLoading, setTranslationsLoading ] = useState(true)
 
   useEffect(() => {
+    setTranslationsLoading(true)
     translationsApi
       .getPublic(
         locale,
@@ -66,7 +68,9 @@ export default function NotificationsPage() {
         setTChannelTest(data.channel_settings_test_dialog ?? {});
         setTConfirm(data.confirm_dialog ?? {});
         setTCommon(data.common ?? {});
-      });
+      })
+      .catch(() => undefined)
+      .finally(() => setTranslationsLoading(false));
   }, [locale]);
 
   const [testRenderTemplate, setTestRenderTemplate] = useState<NotificationTemplate | null>(null);
@@ -169,6 +173,21 @@ export default function NotificationsPage() {
     templates: tPage.tab_templates ?? "Templates",
     channels: tPage.tab_channel_settings ?? "Channel Settings",
   };
+
+
+  if (translationsLoading) {
+    return (
+      <div className="flex flex-col gap-6 py-6">
+        <div className="flex flex-col gap-2">
+          <div className="h-7 w-56 animate-pulse rounded bg-muted" />
+          <div className="h-4 w-96 animate-pulse rounded bg-muted" />
+        </div>
+        <div className="h-9 w-full max-w-md animate-pulse rounded-lg bg-muted" />
+        <div className="h-64 w-full animate-pulse rounded-lg bg-muted" />
+      </div>
+    );
+  }
+
 
   return (
     <div className="flex flex-col gap-6 py-6">

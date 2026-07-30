@@ -7,7 +7,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
-
+import { useLocaleStore } from "@/stores";
 import { fpoRegistrationApi } from "@/app/fpo/_api/fpo-registration";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
@@ -121,14 +121,15 @@ export function Step4Business({ profile, onSave, onSuccess, onBack, t = {} }: St
   const [commodities, setCommodities] = useState<MasterDataItem[]>([]);
   const [bankNames, setBankNames] = useState<MasterDataItem[]>([]);
   const [bankNamesLoaded, setBankNamesLoaded] = useState(false);
+  const locale = useLocaleStore((state) => state.locale);
 
   useEffect(() => {
     masterDataApi.get("commodity").then(setCommodities);
-    masterDataApi.get("bank_name").then((data) => {
+    masterDataApi.get("bank_name", undefined, locale).then((data) => {
       setBankNames(data);
       setBankNamesLoaded(true);
     });
-  }, []);
+  }, [locale]);
 
   const {
     register,
@@ -247,15 +248,21 @@ export function Step4Business({ profile, onSave, onSuccess, onBack, t = {} }: St
               <CommodityInput
                 value={field.value}
                 onChange={field.onChange}
-                placeholder="Select a commodity…"
+                placeholder={t.step4_select_commodity ?? "Select a commodity…"}
                 options={commodities.map((c) => ({ code: c.code, name: c.name }))}
+                selectedLabel={(count) => t.step4_commodities_selected
+                  ? t.step4_commodities_selected.replace("{count}", String(count))
+                  : `${count} selected`}
+                searchPlaceholder={t.step4_search_commodity ?? "Search commodities…"}
+                noResultsLabel={t.step4_no_results ?? "No results found"}
+
               />
               {errors.primary_commodities && (
                 <p className="mt-1 text-destructive text-xs">
                   {errors.primary_commodities.message ?? (errors.primary_commodities as { message?: string }).message}
                 </p>
               )}
-            </Field>
+            </Field>  
           )}
         />
 
@@ -268,8 +275,13 @@ export function Step4Business({ profile, onSave, onSuccess, onBack, t = {} }: St
               <CommodityInput
                 value={field.value}
                 onChange={field.onChange}
-                placeholder="Select a commodity…"
+                placeholder={t.step4_select_commodity ?? "Select a commodity…"}
                 options={commodities.map((c) => ({ code: c.code, name: c.name }))}
+                selectedLabel={(count) => t.step4_commodities_selected
+                  ? t.step4_commodities_selected.replace("{count}", String(count))
+                  : `${count} selected`}
+                searchPlaceholder={t.step4_search_commodity ?? "Search commodities…"}
+                noResultsLabel={t.step4_no_results ?? "No results found"}
               />
             </Field>
           )}
@@ -333,7 +345,10 @@ export function Step4Business({ profile, onSave, onSuccess, onBack, t = {} }: St
                   <SearchableSelect
                     value={field.value}
                     onChange={field.onChange}
-                    options={bankNames.map((b) => ({ value: b.code, label: b.name }))}
+                    options={bankNames.map((b) => ({
+                      value: b.code,
+                      label: b.name,
+                    }))}
                     placeholder="Search bank…"
                   />
                 )}

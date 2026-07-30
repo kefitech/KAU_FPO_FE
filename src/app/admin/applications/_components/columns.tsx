@@ -153,7 +153,7 @@ function ActionsCell({ row, t, tCommon }: { row: ApplicationListItem; t: T; tCom
   );
 }
 
-export function getApplicationColumns(t: T, tCommon: T): ColumnDef<ApplicationListItem>[] {
+export function getApplicationColumns(t: T, tCommon: T, locale:string): ColumnDef<ApplicationListItem>[] {
   return [
     {
       accessorKey: "application_id",
@@ -164,7 +164,16 @@ export function getApplicationColumns(t: T, tCommon: T): ColumnDef<ApplicationLi
     {
       accessorKey: "name",
       header: t.col_fpo_name ?? "FPO Name",
-      cell: ({ row }) => <TextCell value={row.original.name} maxWidth="max-w-[220px]" />,
+      cell: ({ row }) => (
+        <TextCell
+          value={
+            locale === "ml"
+              ? row.original.name_ml || row.original.name
+              : row.original.name
+          }
+          maxWidth="max-w-[220px]"
+        />
+      ),
     },
     {
       accessorKey: "district_display",

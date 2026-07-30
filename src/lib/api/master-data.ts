@@ -13,9 +13,10 @@ interface MasterDataResponse {
 }
 
 export const masterDataApi = {
-  get: (category: string, district?: string): Promise<MasterDataItem[]> => {
+  get: (category: string, district?: string, lang?: string): Promise<MasterDataItem[]> => {
     const params: Record<string, string> = { category };
     if (district) params.district = district;
+    if (lang) params.lang = lang;
     return api
       .get<MasterDataResponse>("/public/master-data/", { params })
       .then((r) => r.data.results);

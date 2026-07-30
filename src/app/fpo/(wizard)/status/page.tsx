@@ -7,8 +7,7 @@ import { AlertCircle, ArrowRight, CheckCircle2, Clock, FileText, Paperclip, Refr
 import { toast } from "sonner";
 
 import { fpoRegistrationApi } from "@/app/fpo/_api/fpo-registration";
-import { translationsApi } from "@/lib/api/translations";
-import { useLocaleStore } from "@/stores/locale-store";
+import { useTranslations } from "@/hooks/use-translations";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -75,20 +74,14 @@ function formatDate(iso: string) {
 export default function FpoStatusPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const locale = useLocaleStore((s) => s.locale);
-  const [t, setT] = useState<Record<string, string>>({});
+
   const [notes, setNotes] = useState("");
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (!locale) return;
-    translationsApi.getPublic(locale, "fpo_status").then((data) => {
-      setT(data.fpo_status ?? {});
-    });
-  }, [locale]);
 
 
+  const { t, loading: translationsLoading } = useTranslations("fpo_status");
   const { data, isLoading, refetch, isFetching } = useQuery({
     queryKey: ["fpo-status"],
     queryFn: fpoRegistrationApi.getStatus,
@@ -126,7 +119,7 @@ export default function FpoStatusPage() {
     e.target.value = "";
   }
 
-  if (isLoading) {
+  if (translationsLoading || isLoading) {
     return (
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-6 py-8">
         <Skeleton className="h-8 w-64" />

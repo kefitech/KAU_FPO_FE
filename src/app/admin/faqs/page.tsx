@@ -30,19 +30,22 @@ export default function FaqsPage() {
   const [t, setT] = useState<T>({});
   const [tCommon, setTCommon] = useState<T>({});
   const [sheet, setSheet] = useState<{ open: boolean; item: AdminFaq | null }>({ open: false, item: null });
+  const [translationsLoading, setTranslationsLoading] = useState(true)
 
   function stripHtml(html?: string) {
     if (!html) return "";
     return DOMPurify.sanitize(html, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
   }
   useEffect(() => {
+    setTranslationsLoading(true);
     translationsApi
       .getPublic(locale, "admin_faqs,common")
       .then((data) => {
         setT(data.admin_faqs ?? {});
         setTCommon(data.common ?? {});
       })
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => setTranslationsLoading(false));
   }, [locale]);
   const filters = useMemo(
     () => [
@@ -87,10 +90,25 @@ export default function FaqsPage() {
         description: t.delete_description ?? "Are you sure you want to delete this FAQ?",
         onConfirm: () => deleteMutation.mutateAsync(item.id),
       }),
-    onToggleStatus: (item: AdminFaq) => {
+      onToggleStatus: (item: AdminFaq) => {
       toggleStatusMutation.mutate(item);
     },
   });
+
+  if (translationsLoading) {
+    return (
+      <div className="flex flex-col gap-6 py-6">
+        <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-2">
+            <div className="h-7 w-32 animate-pulse rounded bg-muted" />
+            <div className="h-4 w-80 animate-pulse rounded bg-muted" />
+          </div>
+          <div className="h-9 w-32 animate-pulse rounded bg-muted" />
+        </div>
+        <div className="h-64 w-full animate-pulse rounded-lg bg-muted" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6 py-6">

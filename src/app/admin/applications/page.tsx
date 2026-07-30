@@ -93,7 +93,7 @@ export default function ApplicationsPage() {
   const [t, setT] = useState<T>({});
   const [tCommon, setTCommon] = useState<T>({});
   const [downloading, setDownloading] = useState(false);
-
+  const [translationsLoading, setTranslationsLoading] = useState(true);
 
 
   const filters = useMemo(
@@ -170,16 +170,32 @@ export default function ApplicationsPage() {
   });
 
   useEffect(() => {
+    setTranslationsLoading(true);
     translationsApi
       .getPublic(locale, "applications_table,admin_dashboard,districts,common")
       .then((data) => {
         setT({ ...(data.districts ?? {}), ...(data.admin_dashboard ?? {}), ...(data.applications_table ?? {}) });
         setTCommon(data.common ?? {});
       })
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => setTranslationsLoading(false));
   }, [locale]);
 
   const a = sheet.app;
+
+  if (translationsLoading) {
+    return (
+      <div className="flex flex-col gap-6 py-6">
+        <div className="flex flex-col gap-2">
+          <div className="h-7 w-56 animate-pulse rounded bg-muted" />
+          <div className="h-4 w-80 animate-pulse rounded bg-muted" />
+        </div>
+        <div className="h-9 w-full animate-pulse rounded-lg bg-muted" />
+        <div className="h-64 w-full animate-pulse rounded-lg bg-muted" />
+      </div>
+    );
+  }
+
 
   return (
     <div className="flex flex-col gap-6 py-6">
@@ -222,10 +238,11 @@ export default function ApplicationsPage() {
       </div>
 
       <Suspense>
+        
         <DataTable
           queryKey="applications"
           queryFn={adminApplicationsApi.getAll}
-          columns={getApplicationColumns(t, tCommon)}
+          columns={getApplicationColumns(t, tCommon, locale)}
           filters={filters}
           onRowClick={(row) => setSheet({ open: true, app: row })}
           columnsLabel={tCommon.col_header ?? "Columns"}
@@ -242,7 +259,7 @@ export default function ApplicationsPage() {
           title={a.name}
           actions={[
             {
-              label: t.action_view_full ?? "View Full Details",
+              label: t.btn_view_document ?? "View Full Details",
               icon: ExternalLink,
               onClick: () => router.push(`/admin/applications/${a.id}`),
             },

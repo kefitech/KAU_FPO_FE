@@ -469,14 +469,17 @@ export default function SiteContentPage() {
   const locale = useLocaleStore((s) => s.locale);
   const [t, setT] = useState<T>({});  
   const [tCommon, setTCommon] = useState<T>({});
+  const [translationsLoading, setTranslationsLoading] = useState(true);
   useEffect(() => {
+    setTranslationsLoading(true);
     translationsApi
       .getPublic(locale, "admin_site_content,common")
       .then((data) => {
         setT(data.admin_site_content ?? {});
         setTCommon(data.common ?? {});
       })
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => setTranslationsLoading(false));
   }, [locale]);
 
   function setTab(key: TabKey) {
@@ -485,6 +488,27 @@ export default function SiteContentPage() {
     router.replace(`/admin/site-content?${params.toString()}`);
   }
 
+
+  if (translationsLoading) {
+    return (
+      <div className="flex flex-col gap-0 py-6">
+        <div className="mb-6 flex flex-col gap-2">
+          <div className="h-7 w-40 animate-pulse rounded bg-muted" />
+          <div className="h-4 w-96 animate-pulse rounded bg-muted" />
+        </div>
+        <div className="flex flex-col gap-4 sm:flex-row sm:gap-6">
+          <div className="hidden sm:block w-52 shrink-0 space-y-1">
+            {Array.from({ length: 6 }).map((_, i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: skeleton
+              <div key={i} className="h-10 animate-pulse rounded-md bg-muted" />
+            ))}
+          </div>
+          <div className="flex-1 h-64 animate-pulse rounded-lg bg-muted" />
+        </div>
+      </div>
+    );
+  }
+ 
   return (
     <div className="flex flex-col gap-0 py-6">
       {/* Page header */}

@@ -11,18 +11,20 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { inboxApi } from "@/lib/api/inbox";
 import { cn } from "@/lib/utils";
 import type { InboxNotification } from "@/types";
-
+import { useLocaleStore } from "@/stores/locale-store";
+import { useTranslations } from "@/hooks/use-translations";
+type T = Record<string, string>;
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function relativeTime(dateStr: string): string {
+function relativeTime(dateStr: string, t: T): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const m = Math.floor(diff / 60000);
-  if (m < 1) return "Just now";
-  if (m < 60) return `${m}m ago`;
+  if (m < 1) return t.time_just_now ?? "Just now";
+  if (m < 60) return (t.time_minutes_ago ?? "{n}m ago").replace("{n}", String(m));
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
+  if (h < 24) return (t.time_hours_ago ?? "{n}h ago").replace("{n}", String(h));
   const d = Math.floor(h / 24);
-  if (d < 30) return `${d}d ago`;
+  if (d < 30) return (t.time_days_ago ?? "{n}d ago").replace("{n}", String(d));
   return new Date(dateStr).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
@@ -39,10 +41,12 @@ function NotifRow({
   item,
   selected,
   onClick,
+  t,
 }: {
   item: InboxNotification;
   selected: boolean;
   onClick: () => void;
+  t:T;
 }) {
   return (
     <button
@@ -70,7 +74,7 @@ function NotifRow({
               dangerouslySetInnerHTML={{ __html: item.title }}
             />
             <span className="shrink-0 text-[11px] text-muted-foreground/70">
-              {relativeTime(item.created_at)}
+              {relativeTime(item.created_at, t)}
             </span>
           </div>
           <p
@@ -90,11 +94,13 @@ function NotifDetail({
   onMarkRead,
   isPending,
   onBack,
+  t,
 }: {
   item: InboxNotification;
   onMarkRead: () => void;
   isPending: boolean;
   onBack?: () => void;
+  t: T;
 }) {
   return (
     <div className="flex flex-col h-full">
@@ -102,7 +108,7 @@ function NotifDetail({
       <div className="border-b px-4 sm:px-6 py-4 sm:py-5">
         {onBack && (
           <button type="button" onClick={onBack} className="flex items-center gap-1 text-sm text-muted-foreground mb-3 hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" /> Back
+            <ArrowLeft className="h-4 w-4" /> {t.btn_back ?? "Back"}
           </button>
         )}
         <h2
@@ -111,13 +117,13 @@ function NotifDetail({
         />
         <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-muted-foreground">
-            <span>From: <span className="font-medium text-foreground">KAU-FPO Platform</span></span>
+            <span>{t.label_from ?? "From:"} <span className="font-medium text-foreground">{t.platform_name ?? "KAU-FPO Platform"}</span></span>
             <span>{formatFull(item.created_at)}</span>
           </div>
           {!item.is_read && (
             <Button size="sm" variant="outline" onClick={onMarkRead} disabled={isPending} className="h-7 text-xs">
               <CheckCheck className="h-3.5 w-3.5 mr-1.5" />
-              Mark as read
+              {t.action_mark_as_read ?? "Mark as read"}
             </Button>
           )}
         </div>
@@ -136,20 +142,20 @@ function NotifDetail({
 
 // ─── Empty states ─────────────────────────────────────────────────────────────
 
-function EmptyList() {
+function EmptyList({ t }: { t: T }) {
   return (
     <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground py-16">
       <Inbox className="h-12 w-12 opacity-20" />
-      <p className="text-sm">Your inbox is empty</p>
+      <p className="text-sm">{t.empty_inbox ?? "Your inbox is empty"}</p>
     </div>
   );
 }
 
-function EmptyDetail() {
+function EmptyDetail({ t }: { t: T }) {
   return (
     <div className="flex flex-col w-6/6 items-center justify-center h-full gap-3 text-muted-foreground">
       <Bell className="h-12 w-12 opacity-10" />
-      <p className="text-sm">Select a notification to read</p>
+      <p className="text-sm">{t.empty_select ?? "Select a notification to read"}</p>
     </div>
   );
 }
@@ -158,25 +164,27 @@ function EmptyDetail() {
 
 export function InboxPage() {
   const queryClient = useQueryClient();
-  const [selected, setSelected] = useState<InboxNotification | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [showDetail, setShowDetail] = useState(false);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 20;
+  const locale = useLocaleStore((s) => s.locale);
+  const { t } = useTranslations("inbox_page");
+
 
   const { data, isLoading } = useQuery({
-    queryKey: ["inbox-full", page],
+    queryKey: ["inbox-full", page, locale],
     queryFn: () => inboxApi.getAll({ page, page_size: PAGE_SIZE }),
     staleTime: 30_000,
   });
 
   const markReadMutation = useMutation({
     mutationFn: (id: number) => inboxApi.markRead(id),
-    onSuccess: (_, id) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["inbox-full"] });
       queryClient.invalidateQueries({ queryKey: ["inbox-unread-count"] });
       queryClient.invalidateQueries({ queryKey: ["inbox-list"] });
-      setSelected((prev) => (prev?.id === id ? { ...prev, is_read: true } : prev));
     },
   });
 
@@ -186,7 +194,6 @@ export function InboxPage() {
       queryClient.invalidateQueries({ queryKey: ["inbox-full"] });
       queryClient.invalidateQueries({ queryKey: ["inbox-unread-count"] });
       queryClient.invalidateQueries({ queryKey: ["inbox-list"] });
-      setSelected((prev) => (prev ? { ...prev, is_read: true } : null));
     },
   });
 
@@ -203,9 +210,12 @@ export function InboxPage() {
       )
     : notifications;
 
+  const selected = notifications.find((n) => n.id === selectedId) ?? null;
+
+
   // Auto-mark read when opening
   const handleSelect = (item: InboxNotification) => {
-    setSelected(item);
+    setSelectedId(item.id);
     setShowDetail(true);
     if (!item.is_read) {
       markReadMutation.mutate(item.id);
@@ -213,7 +223,7 @@ export function InboxPage() {
   };
 
   // Reset selection when page changes
-  useEffect(() => { setSelected(null); setShowDetail(false); }, [page]);
+  useEffect(() => { setSelectedId(null); setShowDetail(false); }, [page]);
 
   return (
     <div className="flex flex-col gap-0 h-[calc(100vh-120px)]">
@@ -221,7 +231,7 @@ export function InboxPage() {
       {!showDetail && (
         <div className="flex items-center justify-between px-4 sm:px-8 py-4 border-b">
           <div className="flex items-center gap-3">
-            <h1 className="font-bold text-xl sm:text-2xl">Inbox</h1>
+            <h1 className="font-bold text-xl sm:text-2xl">{t.page_title ?? "Inbox"}</h1>
             {unreadCount > 0 && (
               <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-bold text-primary-foreground">
                 {unreadCount}
@@ -237,8 +247,8 @@ export function InboxPage() {
               className="gap-1.5"
             >
               <CheckCheck className="h-4 w-4" />
-              <span className="hidden sm:inline">Mark all read</span>
-              <span className="sm:hidden">Mark all</span>
+              <span className="hidden sm:inline">{t.action_mark_all_read ?? "Mark all read"}</span>
+              <span className="sm:hidden">{t.action_mark_all_short ?? "Mark all"}</span>
             </Button>
           )}
         </div>
@@ -252,6 +262,7 @@ export function InboxPage() {
             onMarkRead={() => markReadMutation.mutate(selected.id)}
             isPending={markReadMutation.isPending}
             onBack={() => setShowDetail(false)}
+            t={t}
           />
         </div>
       )}
@@ -267,7 +278,7 @@ export function InboxPage() {
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
                 className="pl-8 h-8 text-sm"
-                placeholder="Search notifications…"
+                placeholder={t.search_placeholder ?? "Search notifications…"}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -287,7 +298,7 @@ export function InboxPage() {
                 ))}
               </div>
             ) : filtered.length === 0 ? (
-              <EmptyList />
+              <EmptyList t={t} />
             ) : (
               filtered.map((n) => (
                 <NotifRow
@@ -295,6 +306,7 @@ export function InboxPage() {
                   item={n}
                   selected={selected?.id === n.id}
                   onClick={() => handleSelect(n)}
+                  t={t}
                 />
               ))
             )}
@@ -303,13 +315,13 @@ export function InboxPage() {
           {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex items-center justify-between border-t px-3 py-2 text-xs text-muted-foreground">
-              <span>Page {page} of {totalPages}</span>
+              <span>{(t.pagination_label ?? "Page {page} of {total}").replace("{page}", String(page)).replace("{total}", String(totalPages))}</span>
               <div className="flex gap-1">
                 <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" disabled={page === 1} onClick={() => setPage(p => p - 1)}>
-                  Prev
+                  {t.btn_prev ?? "Prev"}
                 </Button>
                 <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>
-                  Next
+                  {t.btn_next ?? "Next"}
                 </Button>
               </div>
             </div>
@@ -323,9 +335,10 @@ export function InboxPage() {
               item={selected}
               onMarkRead={() => markReadMutation.mutate(selected.id)}
               isPending={markReadMutation.isPending}
+              t={t}
             />
           ) : (
-            <EmptyDetail />
+            <EmptyDetail t={t} />
           )}
         </div>
       </div>

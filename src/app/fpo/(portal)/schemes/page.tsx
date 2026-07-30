@@ -18,14 +18,16 @@ import type { FpoScheme } from "@/types/fpo";
 
 type T = Record<string, string>;
 
-const SCHEME_CATEGORIES = [
-  { value: "", label: "All Schemes" },
-  { value: "credit", label: "Credit & Finance" },
-  { value: "insurance", label: "Insurance" },
-  { value: "marketing", label: "Marketing & Trade" },
-  { value: "infrastructure", label: "Infrastructure" },
-  { value: "capacity_building", label: "Capacity Building" },
-];
+const SCHEME_CATEGORIES = ["", "credit", "insurance", "marketing", "infrastructure", "capacity_building"];
+// Maps a category value to its translation key + English fallback.
+const CATEGORY_LABEL_KEYS: Record<string, { key: string; fallback: string }> = {
+  "": { key: "filter_all", fallback: "All Schemes" },
+  credit: { key: "filter_credit", fallback: "Credit & Finance" },
+  insurance: { key: "filter_insurance", fallback: "Insurance" },
+  marketing: { key: "filter_marketing", fallback: "Marketing & Trade" },
+  infrastructure: { key: "filter_infrastructure", fallback: "Infrastructure" },
+  capacity_building: { key: "filter_capacity_building", fallback: "Capacity Building" },
+};
 
 const CATEGORY_BADGE_COLORS: Record<string, string> = {
   credit: "bg-blue-100 text-blue-700 border-blue-200",
@@ -52,7 +54,7 @@ function SchemeSkeleton() {
 function buildSchemeFields(scheme: FpoScheme, t: T): SheetField[] {
   const fields: SheetField[] = [];
 
-  fields.push({ label: "Category", type: "node", node: (
+  fields.push({ label: t.card_category ?? "Category", type: "node", node: (
     <Badge className={`w-fit text-xs font-medium border ${CATEGORY_BADGE_COLORS[scheme.category] ?? "bg-muted text-muted-foreground"}`} variant="outline">
       {scheme.category_display}
     </Badge>
@@ -177,18 +179,18 @@ export default function FpoSchemesPage() {
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap gap-2">
-            {SCHEME_CATEGORIES.map((cat) => (
+            {SCHEME_CATEGORIES.map((catValue) => (
               <button
-                key={cat.value}
+                key={catValue}
                 type="button"
-                onClick={() => setActiveCategory(cat.value)}
+                onClick={() => setActiveCategory(catValue)}
                 className={`rounded-full px-3 py-1 text-xs font-medium transition-colors border ${
-                  activeCategory === cat.value
+                  activeCategory === catValue
                     ? "bg-primary text-primary-foreground border-primary"
                     : "bg-background text-muted-foreground border-border hover:bg-muted hover:text-foreground"
                 }`}
               >
-                {cat.label}
+                {t[CATEGORY_LABEL_KEYS[catValue].key] ?? CATEGORY_LABEL_KEYS[catValue].fallback}
               </button>
             ))}
           </div>
@@ -209,7 +211,7 @@ export default function FpoSchemesPage() {
                   setSearch("");
                 }}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                aria-label="Clear search"
+                aria-label={t.aria_clear_search ?? "Clear search"}
               >
                 <X className="h-3.5 w-3.5" />
               </button>

@@ -113,15 +113,18 @@ export default function AuditLogsPage() {
   const [tCommon, setTCommon] = useState<T>({});
   const [tTable, setTTable] = useState<T>({});
   const [logView, setLogView] = useState<{ open: boolean; row: AuditLog | null }>({ open: false, row: null });
+  const [translationsLoading, setTranslationsLoading] = useState(true);
 
   useEffect(() => {
+    setTranslationsLoading(true)
     translationsApi
       .getPublic(locale, "audit_logs_table,common")
       .then((data) => {
         setTTable(data.audit_logs_table ?? {});
         setTCommon(data.common ?? {});
       })
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => setTranslationsLoading(false));
   }, [locale]);
 
   const filters: FilterConfig[] = useMemo(
@@ -142,6 +145,17 @@ export default function AuditLogsPage() {
   );
 
   const columns = getColumns(tTable);
+  if (translationsLoading) {
+    return (
+      <div className="flex flex-col gap-6 px-8 py-6">
+        <div className="flex flex-col gap-2">
+          <div className="h-7 w-40 animate-pulse rounded bg-muted" />
+          <div className="h-4 w-72 animate-pulse rounded bg-muted" />
+        </div>
+        <div className="h-64 w-full animate-pulse rounded-lg bg-muted" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6 px-8 py-6">

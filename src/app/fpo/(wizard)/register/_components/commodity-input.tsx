@@ -15,6 +15,9 @@ interface CommodityInputProps {
   placeholder?: string;
   disabled?: boolean;
   options?: CommodityOption[];
+  selectedLabel?: (count: number) => string;
+  searchPlaceholder?: string;
+  noResultsLabel?: string;
 }
 
 export function CommodityInput({
@@ -23,6 +26,9 @@ export function CommodityInput({
   placeholder = "Select commodities…",
   disabled,
   options,
+  selectedLabel = (count) => `${count} selected`,
+  searchPlaceholder = "Search commodities…",
+  noResultsLabel = "No results found",
 }: CommodityInputProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -68,7 +74,7 @@ export function CommodityInput({
           className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
         >
           <span className={value.length === 0 ? "text-muted-foreground" : ""}>
-            {value.length === 0 ? placeholder : `${value.length} selected`}
+             {value.length === 0 ? placeholder : selectedLabel(value.length)}
           </span>
           <ChevronDown
             className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-150 ${open ? "rotate-180" : ""}`}
@@ -85,7 +91,7 @@ export function CommodityInput({
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search commodities…"
+                placeholder={searchPlaceholder}
                 autoFocus
                 className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
               />
@@ -99,7 +105,7 @@ export function CommodityInput({
             {/* Options list */}
             <div className="max-h-52 overflow-y-auto py-1">
               {filtered.length === 0 ? (
-                <p className="py-3 text-center text-muted-foreground text-sm">No results found</p>
+                <p className="py-3 text-center text-muted-foreground text-sm">{noResultsLabel}</p>
               ) : (
                 filtered.map((o) => (
                   <label

@@ -4,11 +4,13 @@ import { useRouter } from "next/navigation";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, XCircle } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { fpoRegistrationApi } from "@/app/fpo/_api/fpo-registration";
 import { Button } from "@/components/ui/button";
+import { useLocaleStore } from "@/stores";
+import { type MasterDataItem, masterDataApi } from "@/lib/api/master-data";
 import type { FpoProfile } from "@/types/fpo";
 
 interface Step7Props {
@@ -22,6 +24,23 @@ export function Step7Submit({ profile, onBack, t }: Step7Props) {
   const queryClient = useQueryClient();
   const canSubmit = profile.submission_errors.length === 0;
   const [submitErrors, setSubmitErrors] = useState<string[]>([]);
+  const [bankNames, setBankNames] = useState<MasterDataItem[]>([]);
+  const [commodities, setCommodities] = useState<MasterDataItem[]>([]); 
+  const locale = useLocaleStore((state) => state.locale);
+
+  useEffect(() => {
+    masterDataApi.get("bank_name", undefined, locale).then(setBankNames);
+    masterDataApi.get("commodity", undefined, locale).then(setCommodities);
+  }, [locale]);
+
+  function bankLabel(code: string) {
+    return bankNames.find((b) => b.code === code)?.name ?? code;
+  }
+  function commodityLabels(codes: string[]) {
+    return codes.map((c) => commodities.find((m) => m.code === c)?.name ?? c).join(", ");
+  }
+
+
 
   const submitMutation = useMutation({
     mutationFn: () => fpoRegistrationApi.submit(),
@@ -92,8 +111,8 @@ export function Step7Submit({ profile, onBack, t }: Step7Props) {
           <SummaryRow label={t.step7_summary_reg ?? "Registration No."} value={profile.registration_number} />
           <SummaryRow label={t.step7_summary_district ?? "District"} value={profile.district_display} />
           <SummaryRow label={t.step7_summary_members ?? "Total Members"} value={profile.total_members?.toString() ?? "—"} />
-          <SummaryRow label={t.step7_summary_commodities ?? "Primary Commodities"} value={profile.primary_commodities.join(", ") || "—"} />
-          <SummaryRow label={t.step7_summary_bank ?? "Bank"} value={profile.bank_name || "—"} />
+          <SummaryRow label={t.step7_summary_commodities ?? "Primary Commodities"} value={commodityLabels(profile.primary_commodities) || "—"} />
+          <SummaryRow label={t.step7_summary_bank ?? "Bank"} value={bankLabel(profile.bank_name) || "—"} />
           <SummaryRow label={t.step7_summary_ifsc ?? "IFSC"} value={profile.ifsc_code || "—"} />
         </div>
       </div>

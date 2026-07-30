@@ -52,8 +52,10 @@ export default function LanguagesPage() {
   const [tImportDialog, setTImportDialog] = useState<T>({});
   const [tMenuTable, setTMenuTable] = useState<T>({});
   const [tCommon, setTCommon] = useState<T>({});
+  const [translationsLoading, setTranslationsLoading] = useState(true)
 
   useEffect(() => {
+    setTranslationsLoading(true)
     translationsApi
       .getPublic(
         locale,
@@ -68,7 +70,10 @@ export default function LanguagesPage() {
         setTImportDialog(data.import_dialog ?? {});
         setTMenuTable(data.menu_table ?? {});
         setTCommon(data.common ?? {});
-      });
+
+      })
+      .catch(() => undefined)
+      .finally(() => setTranslationsLoading(false));
   }, [locale]);
   const LANGUAGE_FILTERS = useMemo(
     () => [
@@ -236,7 +241,18 @@ export default function LanguagesPage() {
     translations: tPage.tab_translations ?? "Translations",
     menu: tPage.tab_menu ?? "Menu Items",
   };
-
+  if (translationsLoading) {
+    return (
+      <div className="flex flex-col gap-6 py-6">
+        <div className="flex flex-col gap-2">
+          <div className="h-7 w-64 animate-pulse rounded bg-muted" />
+          <div className="h-4 w-96 animate-pulse rounded bg-muted" />
+        </div>
+        <div className="h-9 w-full max-w-md animate-pulse rounded-lg bg-muted" />
+        <div className="h-64 w-full animate-pulse rounded-lg bg-muted" />
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col gap-6 py-6">
       {/* Page header */}

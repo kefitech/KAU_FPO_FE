@@ -68,14 +68,17 @@ function formatDocType(type: string | undefined | null): string {
     .join(" ");
 }
 
-function formatStatus(status: string): string {
-  return status
-    .split("_")
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
+function formatStatus(status: string, t: Record<string, string>): string {
+  return (
+    t[`status_${status}`] ??
+    status
+      .split("_")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ")
+    );
 }
 
-function StatusBadge({ status }: { status: ApplicationStatus }) {
+function StatusBadge({ status, label }: { status: ApplicationStatus, label: string }) {
   const cls: Record<ApplicationStatus, string> = {
     draft: "bg-muted text-muted-foreground",
     submitted: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
@@ -88,7 +91,7 @@ function StatusBadge({ status }: { status: ApplicationStatus }) {
   };
   return (
     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 font-medium text-xs ${cls[status]}`}>
-      {formatStatus(status)}
+      {label}
     </span>
   );
 }
@@ -1177,11 +1180,11 @@ function TierAssessmentTab({ fpoId }: { fpoId: number }) {
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
 
 const TABS = [
-  { key: "overview", label: "Overview", icon: Building2 },
-  { key: "documents", label: "Documents", icon: FileText },
-  { key: "team", label: "Team", icon: Users },
-  { key: "audit-log", label: "Audit Log", icon: Clock },
-  { key: "tier-assessment", label: "Tier Assessment", icon: Star },
+  { key: "overview", label: "Overview", labelKey: "tab_overview", icon: Building2 },
+  { key: "documents", label: "Documents", labelKey: "tab_documents", icon: FileText },
+  { key: "team", label: "Team", labelKey: "section_team", icon: Users },
+  { key: "audit-log", label: "Audit Log", labelKey: "tab_audit_log", icon: Clock },
+  { key: "tier-assessment", label: "Tier Assessment", labelKey: "section_tier_assessment", icon: Star },
 ] as const;
 
 type TabKey = (typeof TABS)[number]["key"];
@@ -1202,6 +1205,7 @@ function ApplicationDetailContent() {
   const confirm = useConfirmStore((s) => s.confirm);
   const [t, setT] = useState<T>({});
   const [tCommon, setTCommon] = useState<T>({});
+  const [tAdmin, setTAdmin] = useState<Record<string, string>>({});
   const action = searchParams.get("action");
   const [rejectOpen, setRejectOpen] = useState(action === "reject");
   const [requestInfoOpen, setRequestInfoOpen] = useState(action === "request-info");
@@ -1214,10 +1218,11 @@ function ApplicationDetailContent() {
 
   useEffect(() => {
     translationsApi
-      .getPublic(locale, "applications_table,common")
+      .getPublic(locale, "admin_dashboard, applications_table,common")
       .then((data) => {
         setT(data.applications_table ?? {});
         setTCommon(data.common ?? {});
+        setTAdmin(data.admin_dashboard ?? {});
       })
       .catch(() => undefined);
   }, [locale]);
@@ -1337,7 +1342,7 @@ function ApplicationDetailContent() {
     app.status === "submitted" &&
     lastStatusEntry?.from_status === "info_required" &&
     lastStatusEntry?.to_status === "submitted";
-
+  
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-8 py-6">
       {/* Header */}
@@ -1353,8 +1358,11 @@ function ApplicationDetailContent() {
           </Button> */}
           <div>
             <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="font-bold text-xl max-w-[800px] break-words whitespace-normal">{app.name}</h1>
-              <StatusBadge status={app.status} />
+              <h1 className="font-bold text-xl max-w-[800px] break-words whitespace-normal"> {locale === "ml" ? app.name_ml || app.name : app.name}</h1>
+               <StatusBadge
+               status={app.status}
+               label={t[`status_${app.status}`] ?? tCommon[`status_${app.status}`] ?? tAdmin[`status_${app.status}`] ?? app.status}
+             />
               {app.tier && <Badge variant="outline">Tier {app.tier}</Badge>}
             </div>
             {app.application_id && (
@@ -1456,7 +1464,7 @@ function ApplicationDetailContent() {
       <div className="flex flex-col gap-0 sm:flex-row">
         {/* Mobile: horizontal scrollable pill tab bar */}
         <div className="flex sm:hidden overflow-x-auto border-b gap-1 pb-1 scrollbar-none">
-          {TABS.map(({ key, label, icon: Icon }) => {
+          {TABS.map(({ key, label, labelKey, icon: Icon }) => {
             const isActive = activeTab === key;
             return (
               <button
@@ -1470,7 +1478,7 @@ function ApplicationDetailContent() {
                 }`}
               >
                 <Icon className="h-4 w-4 shrink-0" />
-                {label}
+                {t[labelKey] ?? label}
               </button>
             );
           })}
@@ -1478,7 +1486,7 @@ function ApplicationDetailContent() {
 
         {/* Desktop: existing underline tab bar */}
         <div className="hidden sm:flex border-b gap-0">
-          {TABS.map(({ key, label, icon: Icon }) => (
+          {TABS.map(({ key, label, labelKey, icon: Icon }) => (
             <button
               key={key}
               type="button"
@@ -1490,7 +1498,7 @@ function ApplicationDetailContent() {
               }`}
             >
               <Icon className="h-3.5 w-3.5" />
-              {label}
+              {t[labelKey] ?? label}
             </button>
           ))}
         </div>

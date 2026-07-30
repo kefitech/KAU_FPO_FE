@@ -60,15 +60,18 @@ export default function ExpertsPage() {
     open: false,
     expert: null,
   });
+  const [translationsLoading, setTranslationsLoading] = useState(true);
 
   useEffect(() => {
+    setTranslationsLoading(true)
     translationsApi
       .getPublic(locale, "admin_experts,districts,common")
       .then((data) => {
         setT({ ...(data.districts ?? {}), ...(data.admin_experts ?? {}) });
         setTCommon(data.common ?? {});
       })
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(()=> setTranslationsLoading(false))
   }, [locale]);
 
   const filters = useMemo(
@@ -83,6 +86,18 @@ export default function ExpertsPage() {
       })),
     [t],
   );
+
+  if (translationsLoading) {
+    return (
+      <div className="flex flex-col gap-6 py-6">
+        <div className="flex flex-col gap-2">
+          <div className="h-7 w-40 animate-pulse rounded bg-muted" />
+          <div className="h-4 w-72 animate-pulse rounded bg-muted" />
+        </div>
+        <div className="h-64 w-full animate-pulse rounded-lg bg-muted" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6 py-6">
@@ -113,7 +128,6 @@ export default function ExpertsPage() {
           clearLabel={tCommon.cancel ?? "Clear"}
         />
       </Suspense>
-
       <ExpertDetailDialog
         open={detailDialog.open}
         onOpenChange={(open) => setDetailDialog((s) => ({ ...s, open }))}

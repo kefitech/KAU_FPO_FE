@@ -11,8 +11,7 @@ import { fpoClaimApi } from "@/app/fpo/_api/claim";
 import { fpoRegistrationApi } from "@/app/fpo/_api/fpo-registration";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useVoiceGuidance } from "@/hooks/use-voice-guidance";
-import { translationsApi } from "@/lib/api/translations";
-import { useLocaleStore } from "@/stores/locale-store";
+import { useTranslations } from "@/hooks/use-translations";
 import type { FpoProfile } from "@/types/fpo";
 
 import { StepIndicator } from "./_components/step-indicator";
@@ -23,6 +22,7 @@ import { Step4Business } from "./_components/step4-business";
 import { Step5Verification } from "./_components/step5-verification";
 import { Step6Documents } from "./_components/step6-documents";
 import { Step7Submit } from "./_components/step7-submit";
+import { Spinner } from "@/components/ui/spinner";
 
 function resolveStep(profile: FpoProfile): number {
   // Claimed FPO: force step 1 if not yet filled by claimant.
@@ -43,15 +43,8 @@ function FpoRegisterPageInner() {
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const { voiceEnabled, toggleVoice } = useVoiceGuidance();
-  const locale = useLocaleStore((s) => s.locale);
-  const [t, setT] = useState<Record<string, string>>({});
+  const { t, loading: translationsLoading } = useTranslations("wizard");
 
-  useEffect(() => {
-    if (!locale) return;
-    translationsApi.getPublic(locale, "wizard").then((data) => {
-      setT(data.wizard ?? {});
-    });
-  }, [locale]);
 
   // Skip GET /api/fpo/me/ only on the true first visit right after account creation.
   // The register flow sets "fpo_first_visit" in sessionStorage; we consume it once here.
@@ -140,7 +133,9 @@ function FpoRegisterPageInner() {
   function handleBack() {
     setDisplayStep((prev) => (prev && prev > 1 ? prev - 1 : prev));
   }
-
+   if (translationsLoading) {
+     return <Spinner />;
+   }
   if (isLoading || displayStep === null) {
     return (
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 sm:gap-6 px-3 sm:px-6 py-5 sm:py-8">

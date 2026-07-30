@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useLocaleStore } from "@/stores/locale-store";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
@@ -15,26 +16,28 @@ import { Separator } from "@/components/ui/separator";
 import { ViewSheet } from "@/components/ui/view-sheet";
 import { inboxApi } from "@/lib/api/inbox";
 import type { InboxNotification } from "@/types";
+import { useTranslations } from "@/hooks/use-translations";
 
-function relativeTime(dateStr: string): string {
+function relativeTime(dateStr: string, t: Record<string, string>): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const m = Math.floor(diff / 60000);
-  if (m < 1) return "Just now";
-  if (m < 60) return `${m}m ago`;
+  if (m < 1) return t.time_just_now ?? "Just now";
+  if (m < 60) return (t.time_minutes_ago ?? "{n}m ago").replace("{n}", String(m));
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
+  if (h < 24) return (t.time_hours_ago ?? "{n}h ago").replace("{n}", String(h));
+  return (t.time_days_ago ?? "{n}d ago").replace("{n}", String(Math.floor(h / 24)));
 }
-
 
 function NotificationItem({
   item,
   onRead,
   onView,
+  t,
 }: {
   item: InboxNotification;
   onRead: (id: number) => void;
   onView: (item: InboxNotification) => void;
+  t: Record<string, string>;
 }) {
   return (
     <button
@@ -63,7 +66,7 @@ function NotificationItem({
             dangerouslySetInnerHTML={{ __html: item.body }}
           />
           <p className="mt-1 text-muted-foreground/70 text-xs">
-            {relativeTime(item.created_at)}
+            {relativeTime(item.created_at, t)}
           </p>
         </div>
       </div>
@@ -77,15 +80,17 @@ export function NotificationBell() {
   const pathname = usePathname();
   const inboxPath = pathname.startsWith("/fpo") ? "/fpo/inbox" : "/admin/inbox";
   const queryClient = useQueryClient();
-
+  const { t } = useTranslations("notification_bell");
+  const locale = useLocaleStore((s) => s.locale);
+  
   const { data: countData } = useQuery({
-    queryKey: ["inbox-unread-count"],
+    queryKey: ["inbox-unread-count", locale],
     queryFn: inboxApi.unreadCount,
     refetchInterval: 30_000,
   });
 
   const { data: listData } = useQuery({
-    queryKey: ["inbox-list"],
+    queryKey: ["inbox-list", locale],
     queryFn: () => inboxApi.getAll({ page: 1, page_size: 15 }),
     enabled: open,
   });
@@ -119,9 +124,9 @@ export function NotificationBell() {
 
   const sheetFields = selected
     ? [
-        { label: "Received", type: "date" as const, value: selected.created_at },
+        { label: t.field_received ?? "Received", type: "date" as const, value: selected.created_at },
         {
-          label: "Message",
+          label: t.field_message ?? "Message",
           type: "node" as const,
           node: (
             <div
@@ -137,7 +142,7 @@ export function NotificationBell() {
     selected && !selected.is_read
       ? [
           {
-            label: "Mark as read",
+            label: t.action_mark_as_read ?? "Mark as read",
             variant: "outline" as const,
             onClick: () => {
               markReadMutation.mutate(selected.id);
@@ -164,7 +169,7 @@ export function NotificationBell() {
 
         <PopoverContent align="end" sideOffset={8} collisionPadding={8} className="w-80 max-w-[calc(100vw-1rem)] p-0 z-[200] shadow-lg rounded-xl border">
           <div className="flex items-center justify-between px-4 py-3">
-            <p className="font-semibold text-sm">Notifications</p>
+            <p className="font-semibold text-sm">{t.header_title ?? "Notifications"}</p>
             {hasUnread && (
               <Button
                 variant="ghost"
@@ -173,7 +178,7 @@ export function NotificationBell() {
                 onClick={() => markAllMutation.mutate()}
                 disabled={markAllMutation.isPending}
               >
-                Mark all read
+                {t.action_mark_all_read ?? "Mark all read"}
               </Button>
             )}
           </div>
@@ -183,7 +188,7 @@ export function NotificationBell() {
           {notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
               <Bell className="mb-2 h-8 w-8 opacity-30" />
-              <p className="text-sm">No notifications</p>
+              <p className="text-sm">{t.empty_state ?? "No notifications"}</p>
             </div>
           ) : (
             <ScrollArea className="h-[360px]">
@@ -194,6 +199,7 @@ export function NotificationBell() {
                     item={n}
                     onRead={(id) => markReadMutation.mutate(id)}
                     onView={handleView}
+                    t={t}
                   />
                 ))}
               </div>
@@ -206,7 +212,7 @@ export function NotificationBell() {
               onClick={() => setOpen(false)}
               className="text-xs text-primary hover:underline font-medium"
             >
-              View all notifications →
+              {t.view_all_link ?? "View all notifications →"}
             </Link>
           </div>
         </PopoverContent>

@@ -50,15 +50,18 @@ export default function SchemesPage() {
     open: false,
     scheme: null,
   });
+  const [translationsLoading, setTranslationsLoading] = useState(true);
 
   useEffect(() => {
+    setTranslationsLoading(true)
     translationsApi
       .getPublic(locale, "admin_schemes,common")
       .then((data) => {
         setT(data.admin_schemes ?? {});
         setTCommon(data.common ?? {});
       })
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(()=> setTranslationsLoading(false))
   }, [locale]);
 
   const filters = useMemo(
@@ -76,6 +79,18 @@ export default function SchemesPage() {
   );
 
   const s = sheet.scheme;
+
+  if (translationsLoading) {
+    return (
+      <div className="flex flex-col gap-6 py-6">
+        <div className="flex flex-col gap-2">
+          <div className="h-7 w-36 animate-pulse rounded bg-muted" />
+          <div className="h-4 w-72 animate-pulse rounded bg-muted" />
+        </div>
+        <div className="h-64 w-full animate-pulse rounded-lg bg-muted" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6 py-6">

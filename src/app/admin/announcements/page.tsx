@@ -30,15 +30,18 @@ export default function AnnouncementsPage() {
   const [t, setT] = useState<T>({});
   const [tCommon, setTCommon] = useState<T>({});
   const [sheet, setSheet] = useState<{ open: boolean; item: AdminAnnouncement | null }>({ open: false, item: null });
+  const [translationsLoading, setTranslationsLoading] = useState(true);
 
   useEffect(() => {
+    setTranslationsLoading(true);
     translationsApi
       .getPublic(locale, "admin_announcements,common")
       .then((data) => {
         setT(data.admin_announcements ?? {});
         setTCommon(data.common ?? {});
       })
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => setTranslationsLoading(false));
   }, [locale]);
   const filters = useMemo(
     () => [
@@ -93,7 +96,20 @@ export default function AnnouncementsPage() {
       toggleStatusMutation.mutate(item);
     },
   });
-
+  if (translationsLoading) {
+    return (
+      <div className="flex flex-col gap-6 p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-2">
+            <div className="h-7 w-48 animate-pulse rounded bg-muted" />
+            <div className="h-4 w-72 animate-pulse rounded bg-muted" />
+          </div>
+          <div className="h-9 w-40 animate-pulse rounded bg-muted" />
+        </div>
+        <div className="h-64 w-full animate-pulse rounded-lg bg-muted" />
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col gap-6 p-6">
       <div className="flex items-center justify-between">

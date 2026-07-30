@@ -26,15 +26,18 @@ export default function OwnershipClaimsPage() {
   const [tCommon, setTCommon] = useState<T>({});
   const [reviewing, setReviewing] = useState<AdminOwnershipClaim | null>(null);
   const [sheet, setSheet] = useState<{ open: boolean; item: AdminOwnershipClaim | null }>({ open: false, item: null });
+  const [translationsLoading, setTranslationsLoading] = useState(true);
 
   useEffect(() => {
+    setTranslationsLoading(true);
     translationsApi
       .getPublic(locale, "admin_ownership_claims,common")
       .then((data) => {
         setT(data.admin_ownership_claims ?? {});
         setTCommon(data.common ?? {});
       })
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => setTranslationsLoading(false));
   }, [locale]);
   const filters: FilterConfig[] = useMemo(
     () => [
@@ -50,6 +53,21 @@ export default function OwnershipClaimsPage() {
     ],
     [t]
   );
+
+  if (translationsLoading) {
+    return (
+      <div className="flex flex-col gap-6 px-8 py-6">
+        <div className="flex items-center gap-2">
+          <ShieldAlert className="h-5 w-5 text-muted-foreground" />
+          <div className="flex flex-col gap-1.5">
+            <div className="h-6 w-48 animate-pulse rounded bg-muted" />
+            <div className="h-4 w-72 animate-pulse rounded bg-muted" />
+          </div>
+        </div>
+        <div className="h-64 w-full animate-pulse rounded-lg bg-muted" />
+      </div>
+    );
+  }
 
 
   return (

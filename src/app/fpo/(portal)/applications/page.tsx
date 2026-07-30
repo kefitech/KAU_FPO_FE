@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 import type { FpoApplicationStatus, FpoProfile, FpoStatus } from "@/types/fpo";
+import { setTraceSigInt } from "util";
 
 type T = Record<string, string>;
 
@@ -380,12 +381,15 @@ function ApplicationTab({ profile, t }: { profile: FpoProfile; t: T }) {
 export default function FpoApplicationsPage() {
   const locale = useLocaleStore((s) => s.locale);
   const [t, setT] = useState<T>({});
+  const [translationsLoading, setTranslationsLoading] = useState(true);
 
   useEffect(() => {
+    setTranslationsLoading(true)
     translationsApi
       .getPublic(locale, "fpo_my_application,common")
       .then((data) => setT(data.fpo_my_application ?? {}))
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => setTranslationsLoading(false))
   }, [locale]);
 
   const {
@@ -406,7 +410,7 @@ export default function FpoApplicationsPage() {
     staleTime: 5 * 60_000,
   });
 
-  if (statusLoading || profileLoading) {
+  if (translationsLoading || statusLoading || profileLoading) {
     return (
       <div className="flex flex-col gap-6 px-3 sm:px-6 py-4 sm:py-6">
         <Skeleton className="h-8 w-64" />
@@ -418,7 +422,6 @@ export default function FpoApplicationsPage() {
   }
 
   if (!statusData) return null;
-
   return (
     <div className="flex flex-col gap-6 px-3 sm:px-6 py-4 sm:py-6">
       <div>

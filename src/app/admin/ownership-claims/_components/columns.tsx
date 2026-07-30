@@ -81,7 +81,7 @@ export function getOwnershipClaimColumns(
             <span className="truncate text-sm font-medium">{row.original.fpo_name}</span>
             {matched && (
               <span className="truncate text-xs font-medium text-amber-700 dark:text-amber-400">
-                Claimed via {matched}
+                Claimed for {matched}
               </span>
             )}
             {!matched && allParts && (

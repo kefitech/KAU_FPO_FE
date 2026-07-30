@@ -21,6 +21,7 @@ import { toast } from "sonner";
 
 import { fpoDashboardApi } from "@/app/fpo/_api/dashboard";
 import { fpoRegistrationApi } from "@/app/fpo/_api/fpo-registration";
+import { masterDataApi } from "@/lib/api/master-data"; // adjust path to match your project
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 
@@ -44,9 +45,7 @@ function formatRole(role: string) {
   return role.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function formatCommodity(code: string) {
-  return code.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-}
+
 
 function formatDate(dateStr: string) {
   if (!dateStr) return "—";
@@ -132,13 +131,23 @@ export default function FpoDashboardPage() {
   const user = useAuthStore((s) => s.user);
   const locale = useLocaleStore((s) => s.locale);
   const [t, setT] = useState<T>({});
+  const [translationsLoading, setTranslationsLoading] = useState(true);
 
   useEffect(() => {
+    setTranslationsLoading(true);
     translationsApi
       .getPublic(locale, "fpo_dashboard,common")
       .then((data) => setT(data.fpo_dashboard ?? {}))
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => setTranslationsLoading(false));
   }, [locale]);
+
+  const { data: commodities } = useQuery({
+    queryKey: ["master-data", "commodity", locale],
+    queryFn: () => masterDataApi.get("commodity"),
+  });
+ 
+  const commodityLabel = (code: string) => commodities?.find((c) => c.code === code)?.name ?? code;
 
   const { data, isLoading } = useQuery({
     queryKey: ["fpo-dashboard"],
@@ -182,7 +191,7 @@ export default function FpoDashboardPage() {
     }
   }, [user, t]);
 
-  if (isLoading || !data) {
+  if (translationsLoading || isLoading || !data) {
     return (
       <div className="flex flex-col gap-6 px-3 sm:px-6 py-4 sm:py-6">
         <div className="flex flex-col gap-2">
@@ -372,7 +381,7 @@ export default function FpoDashboardPage() {
               <div className="flex flex-wrap gap-2">
                 {profile.primary_commodities.map((c) => (
                   <Badge key={c} variant="secondary" className="font-normal">
-                    {formatCommodity(c)}
+                    {commodityLabel(c)}
                   </Badge>
                 ))}
                 {profile.primary_commodities.length === 0 && (

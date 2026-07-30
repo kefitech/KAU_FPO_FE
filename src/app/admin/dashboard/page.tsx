@@ -125,8 +125,11 @@ export default function AdminDashboardPage() {
   const user = useAuthStore((s) => s.user);
   const locale = useLocaleStore((s) => s.locale);
   const [t, setT] = useState<T>({});
+  const [translationsLoading, setTranslationsLoading] = useState(true);
+
 
   useEffect(() => {
+    setTranslationsLoading(true);
     translationsApi
       .getPublic(locale, "admin_dashboard,districts,common,fpo_report")
       .then((data) =>
@@ -137,6 +140,8 @@ export default function AdminDashboardPage() {
           ...(data.admin_dashboard ?? {}),
         })
       )
+      .catch(() => undefined)
+      .finally(() => setTranslationsLoading(false));
   }, [locale]);
 
   const { data, isLoading } = useQuery({
@@ -222,6 +227,31 @@ export default function AdminDashboardPage() {
         },
       ].filter((i) => i.count > 0)
     : [];
+
+
+  if (translationsLoading) {
+    return (
+      <div className="flex flex-col gap-6 py-6">
+        <div className="flex items-center gap-2">
+          <LayoutDashboard className="h-5 w-5 text-muted-foreground" />
+          <div className="flex flex-col gap-1.5">
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Skeleton className="h-28 w-full rounded-xl" />
+          <Skeleton className="h-28 w-full rounded-xl" />
+          <Skeleton className="h-28 w-full rounded-xl" />
+          <Skeleton className="h-28 w-full rounded-xl" />
+        </div>
+        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+          <ChartSkeleton />
+          <ChartSkeleton h="h-48" />
+        </div>
+      </div>
+    );
+  }
 
 
   return (
