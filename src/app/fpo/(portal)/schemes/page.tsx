@@ -132,11 +132,15 @@ export default function FpoSchemesPage() {
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [selectedScheme, setSelectedScheme] = useState<FpoScheme | null>(null);
+  const [translationsLoading, setTranslationsLoading] = useState(true);
+
 
   useEffect(() => {
+    setTranslationsLoading(true);
     translationsApi.getPublic(locale, "fpo_schemes,common")
       .then((data) => setT(data.fpo_schemes ?? {}))
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => setTranslationsLoading(false));
   }, [locale]);
 
   // Debounce searchInput -> search, so the query re-fires automatically as
@@ -165,6 +169,31 @@ export default function FpoSchemesPage() {
     ? [{ label: t.btn_visit ?? "Visit Website", icon: ExternalLink, variant: "outline" as const, onClick: () => window.open(selectedScheme.official_link, "_blank") }]
     : undefined;
 
+  
+  if (translationsLoading) {
+    return (
+      <div className="flex flex-col gap-6 px-3 sm:px-6 py-4 sm:py-6 animate-pulse">
+        <div>
+          <div className="h-7 w-56 rounded bg-muted" />
+          <div className="mt-1.5 h-4 w-80 rounded bg-muted" />
+        </div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap gap-2">
+            {SCHEME_CATEGORIES.map((catValue) => (
+              <div key={catValue} className="h-6 w-20 rounded-full bg-muted" />
+            ))}
+          </div>
+          <div className="h-8 w-full rounded bg-muted sm:w-64" />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: skeleton list
+            <SchemeSkeleton key={i} />
+          ))}
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col gap-6 px-3 sm:px-6 py-4 sm:py-6">
       {/* Header */}

@@ -39,6 +39,7 @@ export interface FpoProfile {
   district: string;
   district_display: string;
   block_taluk: string;
+  block_taluk_display?: string;
   village_town: string;
   address_line1: string;
   address_line2: string;
@@ -72,6 +73,7 @@ export interface FpoProfile {
   secondary_commodities: string[];
   annual_turnover: string | null;
   bank_name: string;
+  bank_name_display?: string;
   bank_branch: string;
   account_number: string;
   ifsc_code: string;

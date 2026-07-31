@@ -62,13 +62,18 @@ function ExpertCard({
   isApprovedFpo,
   onContact,
   t,
+  locale,
 }: {
   expert: FpoExpert;
   isApprovedFpo: boolean;
   onContact: (expert: FpoExpert) => void;
   t: T;
+  locale: string;
 }) {
   const badgeClass = CATEGORY_BADGE_COLORS[expert.category] ?? "bg-muted text-muted-foreground";
+
+
+  
 
   return (
     <div className="rounded-xl border bg-card shadow-sm hover:shadow-md transition-shadow flex flex-col gap-3 p-5">
@@ -77,7 +82,9 @@ function ExpertCard({
           {t[`filter_${expert.category}`] ?? expert.category_display}
         </Badge>
         <div className="flex flex-col gap-0.5 min-w-0">
-          <h3 className="font-semibold text-base leading-snug">{expert.name}</h3>
+          <h3 className="font-semibold text-base leading-snug">
+            {locale === "ml" ? (expert.name_ml || expert.name_en) : expert.name_en}
+          </h3>
           {expert.designation && <p className="text-xs text-muted-foreground">{expert.designation}</p>}
           {expert.organisation && (
             <p className="text-xs text-muted-foreground">{expert.organisation}</p>
@@ -88,7 +95,7 @@ function ExpertCard({
       {expert.district && (
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <MapPin className="h-3 w-3 shrink-0" />
-          {DISTRICT_OPTIONS.find((d) => d.value === expert.district)?.label ?? expert.district}
+          {t[`district_${expert.district}`] ?? DISTRICT_OPTIONS.find((d) => d.value === expert.district)?.label ?? expert.district}
         </div>
       )}
 
@@ -125,11 +132,15 @@ export default function FpoExpertsPage() {
   const [t, setT] = useState<T>({});
   const [activeCategory, setActiveCategory] = useState("");
   const [district, setDistrict] = useState("");
+  const [translationsLoading, setTranslationsLoading] = useState(true);
+
 
   useEffect(() => {
+    setTranslationsLoading(true);
     translationsApi.getPublic(locale, "fpo_experts,districts,common")
       .then((data) => setT({ ...(data.districts ?? {}), ...(data.fpo_experts ?? {}) }))
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => setTranslationsLoading(false));
   }, [locale]);
   const districtSelectOptions = useMemo(
     () =>
@@ -182,7 +193,34 @@ export default function FpoExpertsPage() {
     }
     setEnquiryDialog({ open: true, expert });
   }
-
+  if (translationsLoading) {
+    return (
+      <div className="flex flex-col gap-6 px-3 sm:px-6 py-4 sm:py-6 animate-pulse">
+        <div>
+          <div className="h-7 w-56 rounded bg-muted" />
+          <div className="mt-1.5 h-4 w-80 rounded bg-muted" />
+        </div>
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap gap-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: skeleton list
+              <div key={i} className="h-6 w-20 rounded-full bg-muted" />
+            ))}
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="h-8 w-full rounded bg-muted sm:w-48" />
+            <div className="h-8 flex-1 rounded bg-muted" />
+          </div>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: skeleton list
+            <ExpertSkeleton key={i} />
+          ))}
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col gap-6 px-3 sm:px-6 py-4 sm:py-6">
       {/* Header */}
@@ -285,6 +323,7 @@ export default function FpoExpertsPage() {
               isApprovedFpo={!!isApprovedFpo}
               onContact={handleContact}
               t={t}
+              locale={locale}
             />
           ))}
         </div>

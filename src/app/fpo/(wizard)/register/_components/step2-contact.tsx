@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 
 import dynamic from "next/dynamic";
 import { Ewert } from "next/font/google";
-
+import { useMemo } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
@@ -23,6 +23,7 @@ import { type MasterDataItem, masterDataApi } from "@/lib/api/master-data";
 import { DISTRICT_OPTIONS, type FpoProfile } from "@/types/fpo";
 
 import type { LatLng } from "./map-pin-picker";
+import { useLocaleStore } from "@/stores/locale-store";
 
 const MapPinPicker = dynamic(() => import("./map-pin-picker").then((m) => ({ default: m.MapPinPicker })), {
   ssr: false,
@@ -110,6 +111,10 @@ const FIELD_LABELS: Partial<Record<keyof FormValues, string>> = {
 
 export function Step2Contact({ profile, onSave, onSuccess, onBack, t }: Step2Props) {
   const { speak } = useVoiceGuidance();
+  const translatedDistrictOptions = useMemo(
+    () => DISTRICT_OPTIONS.map((o) => ({ ...o, label: t[`district_${o.value}`] ?? o.label })),
+    [t],
+  );
   const [fieldErrors, setFieldErrors] = useState<FieldValidationState>({});
   const [saveMode, setSaveMode] = useState<"save" | "next" | null>(null);
   const [pincodeLoading, setPincodeLoading] = useState(false);
@@ -147,7 +152,7 @@ export function Step2Contact({ profile, onSave, onSuccess, onBack, t }: Step2Pro
   });
 
   const selectedDistrict = watch("district");
-
+  const locale = useLocaleStore((s) => s.locale);
   useEffect(() => {
     if (!selectedDistrict) {
       setBlocks([]);
@@ -155,12 +160,12 @@ export function Step2Contact({ profile, onSave, onSuccess, onBack, t }: Step2Pro
       return;
     }
     setBlocksLoaded(false);
-    masterDataApi.get("block", selectedDistrict).then((data) => {
+    masterDataApi.get("block", selectedDistrict, locale).then((data) => {
       setBlocks(data);
       setBlocksLoaded(true);
       if (!profile.block_taluk) setValue("block_taluk", "", { shouldValidate: false });
     });
-  }, [selectedDistrict, setValue, profile.block_taluk]);
+  }, [selectedDistrict, locale, setValue, profile.block_taluk]);
 
   const validateMutation = useMutation({
     mutationFn: ({ field, value }: { field: string; value: string }) => fpoRegistrationApi.validateField(field, value),
@@ -318,7 +323,7 @@ export function Step2Contact({ profile, onSave, onSuccess, onBack, t }: Step2Pro
             <SearchableSelect
               value={field.value}
               onChange={field.onChange}
-              options={DISTRICT_OPTIONS}
+              options={translatedDistrictOptions}
               placeholder="Search district…"
             />
           )}

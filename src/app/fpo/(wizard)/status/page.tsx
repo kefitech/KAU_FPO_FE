@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, ArrowRight, CheckCircle2, Clock, FileText, Paperclip, RefreshCw, Send, ShieldOff, XCircle } from "lucide-react";
 import { toast } from "sonner";
-
+import { StatusBadge } from "@/components/data-table/cell-helpers";
 import { fpoRegistrationApi } from "@/app/fpo/_api/fpo-registration";
 import { useTranslations } from "@/hooks/use-translations";
 import { Badge } from "@/components/ui/badge";
@@ -133,6 +133,7 @@ export default function FpoStatusPage() {
 
   const config = getStatusConfig(t)[data.status];
   const Icon = config.icon;
+  
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-6 py-8">
@@ -161,8 +162,8 @@ export default function FpoStatusPage() {
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-semibold text-lg">{config.label}</p>
             <Badge variant="outline" className={config.color}>
-              {data.status_display}
-            </Badge>
+            {config.label}
+          </Badge>
           </div>
           <p className="mt-1 text-muted-foreground text-sm">{config.description}</p>
           {data.current_tier && (

@@ -274,9 +274,9 @@ function ApplicationTab({ profile, t }: { profile: FpoProfile; t: T }) {
 
         <SectionTitle>{t.section_location ?? "Location & Contact"}</SectionTitle>
         <InfoRow label={t.field_district ?? "District"} value={profile.district_display || profile.district} />
-        <InfoRow label={t.field_block_taluk ?? "Block / Taluk"} value={profile.block_taluk} />
+        <InfoRow label={t.field_block_taluk ?? "Block / Taluk"} value={profile.block_taluk_display || profile.block_taluk} />
         {profile.village_town && (
-          <InfoRow label={t.field_village_town ?? "Village / Town"} value={profile.village_town} />
+        <InfoRow label={t.field_village_town ?? "Village / Town"} value={profile.village_town} />
         )}
         <InfoRow
           label={t.field_address ?? "Address"}
@@ -366,7 +366,7 @@ function ApplicationTab({ profile, t }: { profile: FpoProfile; t: T }) {
             }).format(Number(profile.annual_turnover) * 100000)}
           />
         )}
-        <InfoRow label={t.field_bank_name ?? "Bank Name"} value={humanize(profile.bank_name)} />
+        <InfoRow label={t.field_bank_name ?? "Bank Name"} value={profile.bank_name_display || humanize(profile.bank_name)} />
         <InfoRow label={t.field_bank_branch ?? "Bank Branch"} value={profile.bank_branch} />
         <InfoRow label={t.field_account_number ?? "Account Number"} value={profile.account_number} />
         <InfoRow label={t.field_ifsc_code ?? "IFSC Code"} value={profile.ifsc_code} />

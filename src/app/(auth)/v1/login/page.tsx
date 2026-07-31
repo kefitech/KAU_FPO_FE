@@ -13,14 +13,32 @@ import { LoginForm } from "../../_components/login-form";
 export default function LoginV1() {
   const locale = useLocaleStore((s) => s.locale);
   const [t, setT] = useState<Record<string, string>>({});
+  const [translationsLoading, setTranslationsLoading] = useState(true);
+
 
   useEffect(() => {
     if (!locale) return;
     translationsApi.getPublic(locale, "login").then((data) => {
+      setTranslationsLoading(true);
       setT(data.login ?? {});
-    });
+    })
+     .catch(() => undefined)
+     .finally(() => setTranslationsLoading(false));
   }, [locale]);
 
+  if (translationsLoading) {
+    return (
+      <div className="relative flex h-svh items-center justify-center overflow-hidden p-4">
+        <div className="relative z-10 w-full max-w-md rounded-2xl bg-white/80 dark:bg-neutral-900/90 p-5 sm:p-8 shadow-xl backdrop-blur-md flex flex-col gap-5 sm:gap-6 animate-pulse">
+          <div className="h-12 w-32 rounded bg-neutral-300/60 dark:bg-neutral-700/60" />
+          <div className="h-7 w-2/3 rounded bg-neutral-300/60 dark:bg-neutral-700/60" />
+          <div className="h-4 w-1/2 rounded bg-neutral-300/60 dark:bg-neutral-700/60" />
+          <div className="h-40 w-full rounded bg-neutral-300/40 dark:bg-neutral-700/40" />
+        </div>
+      </div>
+    );
+  }
+ 
   return (
     <div
       className="relative flex h-svh items-center justify-center overflow-hidden p-4"

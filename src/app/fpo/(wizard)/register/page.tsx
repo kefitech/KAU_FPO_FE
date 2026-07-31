@@ -43,7 +43,7 @@ function FpoRegisterPageInner() {
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const { voiceEnabled, toggleVoice } = useVoiceGuidance();
-  const { t, loading: translationsLoading } = useTranslations("wizard");
+  const { t, loading: translationsLoading } = useTranslations("wizard, districts");
 
 
   // Skip GET /api/fpo/me/ only on the true first visit right after account creation.

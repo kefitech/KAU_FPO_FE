@@ -1540,8 +1540,8 @@ function ApplicationDetailContent() {
 
             <SectionCard icon={MapPin} title={t.section_contact ?? "Contact & Location"}>
               <div className="grid grid-cols-2 gap-3">
-                <InfoRow label={t.field_district ?? "District"} value={app.district} />
-                <InfoRow label={t.field_block_taluk ?? "Block / Taluk"} value={app.block_taluk} />
+                <InfoRow label={t.field_district ?? "District"} value={app.district_display || app.district} />
+                <InfoRow label={t.field_block_taluk ?? "Block / Taluk"} value={app.block_taluk_display} />
                 <InfoRow label={t.field_village_town ?? "Village / Town"} value={app.village_town} />
                 <InfoRow label={t.field_pincode ?? "Pincode"} value={app.pincode} />
                 <div className="col-span-2">

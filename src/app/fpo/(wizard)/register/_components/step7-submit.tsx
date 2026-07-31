@@ -125,14 +125,26 @@ export function Step7Submit({ profile, onBack, t }: Step7Props) {
         <Button type="button" variant="outline" onClick={onBack}>
           {t.btn_back ?? "← Back"}
         </Button>
+        <div className="flex items-center gap-2">
+           {profile.status === "info_required" && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.push("/fpo/status")}
+            >
+              {t.step7_btn_go_to_status ?? "Go to Status"}
+            </Button>
+            )}
+
         <Button
           type="button"
           onClick={() => submitMutation.mutate()}
           disabled={!canSubmit || submitMutation.isPending}
           className="min-w-32"
-        >
+          >
           {submitMutation.isPending ? (t.step7_btn_submitting ?? "Submitting…") : (t.step7_btn_submit ?? "Submit Application")}
         </Button>
+          </div>
       </div>
     </div>
   );

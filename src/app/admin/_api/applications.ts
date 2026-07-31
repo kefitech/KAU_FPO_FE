@@ -150,6 +150,7 @@ export interface ApplicationDetail {
   district: string;
   district_display: string;
   block_taluk: string;
+  block_taluk_display: string;
   village_town: string;
   address_line1: string;
   address_line2: string;

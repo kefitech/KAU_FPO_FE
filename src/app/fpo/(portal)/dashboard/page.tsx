@@ -92,7 +92,7 @@ const QUICK_LINK_KEYS: Record<string, string> = {
 };
 
 const DISTRICT_LABELS: Record<string, string> = {
-  TVM: "Thiruvananthapuram",
+ TVM: "Thiruvananthapuram",
   KLM: "Kollam",
   PTA: "Pathanamthitta",
   ALP: "Alappuzha",
@@ -105,7 +105,7 @@ const DISTRICT_LABELS: Record<string, string> = {
   KZD: "Kozhikode",
   WYD: "Wayanad",
   KNR: "Kannur",
-  KSD: "Kasaragod",
+  KSD: "Kasaragod", 
 };
 
 // ─── Skeletons ────────────────────────────────────────────────────────────────
@@ -136,9 +136,8 @@ export default function FpoDashboardPage() {
   useEffect(() => {
     setTranslationsLoading(true);
     translationsApi
-      .getPublic(locale, "fpo_dashboard,common")
-      .then((data) => setT(data.fpo_dashboard ?? {}))
-      .catch(() => undefined)
+      .getPublic(locale, "fpo_dashboard,common,districts")
+      .then((data) => setT({ ...(data.fpo_dashboard ?? {}), ...(data.common ?? {}), ...(data.districts ?? {}) }))
       .finally(() => setTranslationsLoading(false));
   }, [locale]);
 
@@ -150,7 +149,7 @@ export default function FpoDashboardPage() {
   const commodityLabel = (code: string) => commodities?.find((c) => c.code === code)?.name ?? code;
 
   const { data, isLoading } = useQuery({
-    queryKey: ["fpo-dashboard"],
+    queryKey: ["fpo-dashboard", locale],
     queryFn: fpoDashboardApi.get,
     staleTime: 60_000,
   });
@@ -214,7 +213,7 @@ export default function FpoDashboardPage() {
 
   const { profile, tier, location, team, documents, notifications, quick_links } = data;
   const statusCfg = STATUS_CONFIG[profile.status] ?? { className: "bg-muted text-muted-foreground" };
-  const districtLabel = DISTRICT_LABELS[location.district] ?? location.district;
+  const districtLabel = t[`district_${location.district}`] ?? DISTRICT_LABELS[location.district] ?? location.district;
   const statusLabel = t[`status_${profile.status}`] ?? STATUS_CONFIG[profile.status]?.label ?? profile.status;
 
   return (

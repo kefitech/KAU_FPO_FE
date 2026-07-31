@@ -11,7 +11,10 @@ export function useTranslations(namespace: string) {
     if (!locale) return;
     setLoading(true);
     translationsApi.getPublic(locale, namespace).then((data) => {
-      setT(data[namespace] ?? {});
+      const merged = namespace
+        .split(",")
+        .reduce((acc, ns) => ({ ...acc, ...(data[ns.trim()] ?? {}) }), {});
+      setT(merged);
       setLoading(false);
     });
   }, [locale, namespace]);
