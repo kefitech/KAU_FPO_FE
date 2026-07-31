@@ -4,6 +4,12 @@ import type { DataTableParams, PaginatedResponse } from "@/types/pagination";
 
 const BASE = "/notifications/inbox/";
 
+export interface ApiResponse<T> {
+  status: string;
+  message: string;
+  data: T;
+}
+
 export const inboxApi = {
   getAll: (params?: Partial<DataTableParams>) =>
     api.get<PaginatedResponse<InboxNotification>>(BASE, { params }).then((r) => r.data),
@@ -14,5 +20,6 @@ export const inboxApi = {
 
   markAllRead: () => api.post(`${BASE}read_all/`).then((r) => r.data),
 
-  unreadCount: () => api.get<InboxUnreadCount>(`${BASE}unread_count/`).then((r) => r.data),
+  unreadCount: () => api.get<ApiResponse<InboxUnreadCount>>(`${BASE}unread_count/`)
+    .then((r) => r.data),
 };

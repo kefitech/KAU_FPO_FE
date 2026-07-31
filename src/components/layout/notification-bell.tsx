@@ -116,7 +116,7 @@ export function NotificationBell() {
     setSelected(item);
   };
 
-  const unreadCount = countData?.unread_count ?? 0;
+  const unreadCount = countData?.data?.unread_count ?? 0;
   const notifications: InboxNotification[] = Array.from(
     new Map((listData?.data ?? []).map((n) => [n.id, n])).values(),
   );
@@ -152,6 +152,7 @@ export function NotificationBell() {
           },
         ]
       : undefined;
+    console.log("countData is::::", countData?.data?.unread_count);
 
   return (
     <>
@@ -159,8 +160,9 @@ export function NotificationBell() {
         <PopoverTrigger asChild>
           <Button variant="ghost" size="icon" className="relative h-8 w-8">
             <Bell className="h-4 w-4" />
+
             {unreadCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary font-bold text-[10px] text-primary-foreground">
+              <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-500 px-1 text-[9px] font-bold text-white ring-2 ring-background">
                 {unreadCount > 99 ? "99+" : unreadCount}
               </span>
             )}
