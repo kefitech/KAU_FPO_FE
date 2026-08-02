@@ -263,27 +263,6 @@ const Documents = () => {
 
                     {/* Action icons */}
                     <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                      {/* View */}
-                      <a
-                        href={doc.file_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title="View"
-                        style={{
-                          width: 26,
-                          height: 26,
-                          borderRadius: 5,
-                          background: "var(--color-primary)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          textDecoration: "none",
-                          flexShrink: 0,
-                        }}
-                      >
-                        <i className="fas fa-eye" style={{ fontSize: 11, color: "#fff" }} />
-                      </a>
-
                       {/* Download — only if not view-only */}
                       {!doc.is_view_only && (
                         <a
@@ -305,6 +284,27 @@ const Documents = () => {
                           <i className="fas fa-download" style={{ fontSize: 11, color: "#fff" }} />
                         </a>
                       )}
+
+                      {/* View */}
+                      <a
+                        href={doc.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="View"
+                        style={{
+                          width: 26,
+                          height: 26,
+                          borderRadius: 5,
+                          background: "var(--color-primary)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          textDecoration: "none",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <i className="fas fa-eye" style={{ fontSize: 11, color: "#fff" }} />
+                      </a>
                     </div>
                   </div>
                 );

@@ -540,7 +540,7 @@ export default function SiteContentPage() {
               key={key}
               type="button"
               onClick={() => setTab(key)}
-              className={`flex shrink-0 items-center whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              className={`flex shrink-0 items-center whitespace-nowrap rounded-lg px-3 py-2 text-sm text-left font-medium transition-colors ${
                 tab === key
                   ? "bg-muted text-foreground"
                   : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
@@ -559,7 +559,7 @@ export default function SiteContentPage() {
                 <button
                   type="button"
                   onClick={() => setTab(key)}
-                  className={`w-full flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                  className={`w-full flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors text-left ${
                     tab === key
                       ? "bg-muted text-foreground"
                       : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
