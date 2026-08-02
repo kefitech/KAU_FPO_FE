@@ -42,7 +42,7 @@ export default function LoginV1() {
   return (
     <div
       className="relative flex h-svh items-center justify-center overflow-hidden p-4"
-      style={{ backgroundImage: "url('/assets/img/background/background.png')", backgroundSize: "cover", backgroundPosition: "center" }}
+      style={{ backgroundImage: "url('/assets/img/background/background.jpg')", backgroundSize: "cover", backgroundPosition: "center" }}
     >
       {/* Vanta Birds animation background */}
       <VantaBirds />

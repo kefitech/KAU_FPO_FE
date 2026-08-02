@@ -56,14 +56,14 @@ export function LocaleSwitcher() {
     <Select value={locale} onValueChange={handleChange}>
       <SelectTrigger className="h-8 w-8 border px-2 text-xs font-medium sm:w-auto sm:gap-1.5 sm:px-2.5">
         <Languages className="h-3.5 w-3.5 shrink-0" />
-        <span className="hidden sm:block"><SelectValue /></span>
+          <span className="hidden text-foreground sm:block"><SelectValue /></span>
       </SelectTrigger>
       <SelectContent align="end">
         {languages.map((lang) => (
           <SelectItem key={lang.code} value={lang.code} className="text-sm">
             <span>{lang.native_name}</span>
             {lang.is_default && (
-              <span className="ml-1.5 text-muted-foreground text-xs">default</span>
+              <span className="ml-1.5 text-foreground/60 text-xs">default</span>
             )}
           </SelectItem>
         ))}

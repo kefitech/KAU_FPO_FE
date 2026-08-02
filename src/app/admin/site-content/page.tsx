@@ -40,6 +40,10 @@ const BLOCK_LABEL_FALLBACKS: Record<string, string> = {
   about_title: "About Title",
   about_body: "About Body",
   how_to_register: "How to Register FPO",
+  mission_title: "Mission Title",
+  mission_body: "Mission Body",
+  vision_title: "Vision Title",
+  vision_body: "Vision Body",
 };
 
 const BLOCK_DESC_FALLBACKS: Record<string, string> = {
@@ -49,6 +53,11 @@ const BLOCK_DESC_FALLBACKS: Record<string, string> = {
   about_title: "Heading for the About section",
   about_body: "Body content for the About section",
   how_to_register: "Step-by-step registration guide (shown in modal)",
+  mission_title: "Heading for the Mission section",
+  mission_body: "Body content for the Mission section",
+  vision_title: "Heading for the Vision section",
+  vision_body: "Body content for the Vision section",
+
 };
 
 function getBlockLabel(key: string, t: T): string {
@@ -59,7 +68,7 @@ function getBlockDesc(key: string, t: T): string {
   return t[`block_desc_${key}`] ?? BLOCK_DESC_FALLBACKS[key] ?? "";
 }
 
-const RICH_TEXT_BLOCKS = ["about_body", "how_to_register", "hero_description"];
+const RICH_TEXT_BLOCKS = ["about_body", "how_to_register", "hero_description", "mission_body", "vision_body"];
 
 function toHtml(content: string): string {
   if (!content) return "";
@@ -78,6 +87,10 @@ const BLOCK_ORDER = [
   "about_title",
   "about_body",
   "how_to_register",
+  "mission_title",
+  "mission_body",
+  "vision_title",
+  "vision_body",
 ];
 
 interface BlockEditorProps {

@@ -13,6 +13,10 @@ interface AboutData {
   hero_headline: string;
   hero_subheading: string;
   how_to_register: string;
+  mission_title: string;
+  mission_body: string;
+  vision_title: string;
+  vision_body: string;
 }
 interface DangerouslySetInnerHTML {
   __html: string | TrustedHTML;
@@ -24,6 +28,19 @@ export default function About() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const locale = useLocaleStore((s) => s.locale)
+
+
+  function parseMissionBody(html: string): { intro: string; items: string[] } {
+    if (typeof window === "undefined" || !html) return { intro: "", items: [] };
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const ul = doc.querySelector("ul");
+    let items: string[] = [];
+    if (ul) {
+      items = Array.from(ul.querySelectorAll("li")).map((li) => li.innerHTML);
+      ul.remove();
+    }
+    return { intro: doc.body.innerHTML, items };
+  }
 
   useEffect(() => {
     if (!locale) return;
@@ -97,63 +114,59 @@ export default function About() {
               <div className="col-xl-12 col-lg-12">
                 <h2 className="heading pt-4 text-center">{data.about_title}</h2>
 
-                <div
-                  className="justify-text"
-                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(data.about_body) }}
-                />
+              <div
+                className="justify-text"
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(data.about_body) }}
+              />
               </div>
             </div>
           </div>
         
           </div>
-            <div className="row align-center">
-              <div className="col-xl-7 col-md-6 col-lg-6 col-sm-7">
-                <h3>The Mission</h3>
-                <p style={{textAlign: "justify"}}>
-                  The KAU-FPO Linkage (KFL) project will work with a mission to ignite a sustainable
-                  agricultural development in Kerala by empowering FPOs as the driving force. This will be
-                  achieved through a transformative partnership between Kerala Agricultural University
-                  (KAU) and FPOs, synergizing academic brilliance with practical experience. The core
-                  mission encompasses the following:
-                </p>
-                  <ul className="check-solid-list mt-20">
-                    <li style={{textAlign: "justify"}}>
-                      Empowerment of FPOs for excellence: Empowering FPO members through
-                      knowledge and entrepreneurial skill development, equipping them to conquer the
-                      challenges of modern agriculture and propel their organizations towards self-
-                      sufficiency
-                    </li>
-                    <li style={{textAlign: "justify"}}>Research for impact: Fueling groundbreaking business and policy-oriented research
-                      directly addressing the critical issues faced by FPOs. This research will be a
-                      cornerstone for providing actionable solutions for their growth and propelling
-                      informed decision-making
-                    </li>
-                    <li style={{textAlign: "justify"}}>Building sustainable FPO ecosystems: Foster a collaborative environment and
-                        provide handholding support to streamline FPO activities, ensuring their long-term
-                        sustainability and maximising their impact on Kerala’s agriculture.
-                    </li>
-                  </ul>
-                
+            <div className="row align-center force-white-text" >
+              <div className="col-12">
+                {(() => {
+                  const { intro, items } = parseMissionBody(data.mission_body);
+                  return (
+                    <div className="mission-vision-container">
+                      <div className="mission-column">
+                        <h2 className="mission-title">{data.mission_title}</h2>
+                        {intro && (
+                          <div
+                            className="justify-text force-white-text mission-intro"
+                            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(intro) }}
+                          />
+                        )}
+                         <div className="mission-items">
+                          {items.map((html, i) => (
+                            <div key={i} className="mission-card">
+                              <span className="mission-check">&#xf00c;</span>
+                              <div
+                                className="justify-text force-white-text mission-card-text"
+                                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
 
+                      <div className="vision-column">
+                        <div className="vision-card">
+                          <h2 className="vision-title">{data.vision_title}</h2>
+                          <div
+                            className="justify-text"
+                            style={{color: "#ffffff", opacity: 0.9 }}
+                            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(data.vision_body) }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
-
-
-              <div className="col-xl-3 col-lg-4 col-md-5 col-md-3 ">
-                <div className="vision-circle" >
-                  <div>
-                <h2 className="banner-style-one" ><strong style={{ color: "var(--color-secondary)" }}>The Vision</strong></h2>
-                
-                <p style={{textAlign: "justify"}}>The KAU-FPO Linkage (KFL) project envisions a future where FPOs in Kerala flourish as
-                  empowered and self-sustaining institutions driven by strategic collaboration between the
-                  academic expertise of Kerala Agricultural University and the invaluable real-world
-                  experience of FPO members.</p>
-              </div>
-              </div>
-              </div>
-              </div>
+            </div>
               </div>
           </div>
-          
          
          
      

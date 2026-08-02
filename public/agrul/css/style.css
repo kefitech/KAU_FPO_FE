@@ -3646,7 +3646,7 @@ nav.navbar.validnavs.inc-shape::after {
 	content: "";
 	height: 250px;
 	width: 250px;
-	background: url(/assets/img/shape/8.png);
+	
 	z-index: -1;
 	border-radius: 50%;
 	margin-left: 0;
@@ -3904,6 +3904,24 @@ nav.navbar.validnavs.inc-shape::after {
 	color: var(--color-primary);
 }
 
+.mission-content ul li {
+	position: relative;
+	z-index: 1;
+	line-height: 2;
+	font-weight: 800;
+	padding-left: 25px;
+	list-style: none;
+}
+
+.mission-content ul li::after {
+	position: absolute;
+	left: 0;
+	top: 0;
+	content: "\f00c";
+	font-family: "Font Awesome 5 Pro";
+	font-weight: 100;
+	color: var(--color-primary);
+}
 
 /* ============================================================== 
     # About Style Two 
