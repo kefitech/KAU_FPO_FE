@@ -948,20 +948,40 @@ function AuditLogTab({ fpoId }: { fpoId: number }) {
                       {getObjectInfoDisplay(log.object_info)}
                     </span>
                   )}
-                  {log.action === "fpo_status_change" &&
-                    log.changes &&
+                  {log.changes &&
                     typeof log.changes === "object" &&
                     (() => {
-                      const c = log.changes as Record<string, string>;
-                      const from = (c.from_status ?? c.from)?.replace(/_/g, " ");
-                      const to = (c.to_status ?? c.to)?.replace(/_/g, " ");
-                      if (!to) return null;
+                      const c = log.changes as Record<string, any>;
                       const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-                      return (
+                      const fmt = (s: string) => cap(s.replace(/_/g, " "));
+                      const arrow = (from: string | undefined, to: string) => (
                         <span className="text-xs font-semibold mt-0.5" style={{ color: "var(--color-primary)" }}>
-                          {from ? `${cap(from)} → ${cap(to)}` : `→ ${cap(to)}`}
+                          {from ? `${fmt(from)} → ${fmt(to)}` : `→ ${fmt(to)}`}
                         </span>
                       );
+
+                      // FPO status change: {from_status, to_status}
+                      if (log.action === "fpo_status_change") {
+                        const from = c.from_status ?? c.from;
+                        const to = c.to_status ?? c.to;
+                        return to ? arrow(from, to) : null;
+                      }
+
+                      // Claim status change: {status: {old, new}}
+                      if (c.status && typeof c.status === "object" && "new" in c.status) {
+                        return arrow(c.status.old, c.status.new);
+                      }
+
+                      // Account deactivated on ownership transfer
+                      if (c.action === "account_deactivated") {
+                        return (
+                          <span className="text-xs font-semibold mt-0.5" style={{ color: "var(--color-destructive, #dc2626)" }}>
+                            Account deactivated{c.fpo_name ? ` · ${c.fpo_name}` : ""}
+                          </span>
+                        );
+                      }
+
+                      return null;
                     })()}
                 </div>
               </div>
