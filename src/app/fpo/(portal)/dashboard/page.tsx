@@ -166,6 +166,7 @@ export default function FpoDashboardPage() {
       : null;
 
   useEffect(() => {
+    if(translationsLoading) return;
     if (sessionStorage.getItem("show_welcome") === "1") {
       sessionStorage.removeItem("show_welcome");
       const fullName = user ? `${user.first_name} ${user.last_name}`.trim() : "there";
@@ -188,7 +189,7 @@ export default function FpoDashboardPage() {
         { duration: 4000 },
       );
     }
-  }, [user, t]);
+  }, [user, t, translationsLoading]);
 
   if (translationsLoading || isLoading || !data) {
     return (

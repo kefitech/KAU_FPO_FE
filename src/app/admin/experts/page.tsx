@@ -118,7 +118,7 @@ export default function ExpertsPage() {
         <DataTable
           queryKey="experts"
           queryFn={adminExpertsApi.getAll}
-          columns={getExpertColumns(t, tCommon)}
+          columns={getExpertColumns(t, tCommon, locale)}
           // filters={FILTERS}
           filters={filters}
           onRowClick={(row) => setDetailDialog({ open: true, expert: row })}

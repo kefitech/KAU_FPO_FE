@@ -111,7 +111,7 @@ export default function SchemesPage() {
         <DataTable
           queryKey="schemes"
           queryFn={adminSchemesApi.getAll}
-          columns={getSchemeColumns(t, tCommon)}
+          columns={getSchemeColumns(t, tCommon, locale)}
           // filters={FILTERS}
           filters={filters}
           onRowClick={(row) => setSheet({ open: true, scheme: row })}

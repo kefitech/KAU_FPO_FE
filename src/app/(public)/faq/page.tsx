@@ -6,12 +6,11 @@ import { faqApi, type Faq } from "@/lib/api/faq";
 import { useLocaleStore } from "@/stores/locale-store";
 
 const CATEGORIES = [
-  { label: "All", value: "" },
-  { label: "FPO General", value: "fpo_general" },
-  { label: "Schemes", value: "schemes" },
-  { label: "Platform Usage", value: "platform_usage" },
+  { label: { en: "All", ml: "എല്ലാം" }, value: "" },
+  { label: { en: "FPO General", ml: "FPO പൊതു വിവരങ്ങൾ" }, value: "fpo_general" },
+  { label: { en: "Schemes", ml: "പദ്ധതികൾ" }, value: "schemes" },
+  { label: { en: "Platform Usage", ml: "പ്ലാറ്റ്ഫോം ഉപയോഗം" }, value: "platform_usage" },
 ];
-
 const PAGE_SIZE = 10;
 
 export default function FaqPage() {
@@ -95,7 +94,7 @@ export default function FaqPage() {
                         }
                       }
                     >
-                      {cat.label}
+                      {cat.label[locale as "en" | "ml"] ?? cat.label.en}
                     </button>
                   </li>
                 ))}

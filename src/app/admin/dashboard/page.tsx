@@ -152,6 +152,7 @@ export default function AdminDashboardPage() {
 
   // Welcome toast on first login
   useEffect(() => {
+    if (translationsLoading) return;
     if (sessionStorage.getItem("show_welcome") === "1") {
       sessionStorage.removeItem("show_welcome");
       const fullName = user ? `${user.first_name} ${user.last_name}`.trim() : "there";
@@ -176,7 +177,7 @@ export default function AdminDashboardPage() {
         { duration: 4000 },
       );
     }
-  }, [user]);
+  }, [user, translationsLoading]);
 
   const stats = data;
 
@@ -252,7 +253,6 @@ export default function AdminDashboardPage() {
       </div>
     );
   }
-
 
   return (
     <div className="flex flex-col gap-6 py-6">

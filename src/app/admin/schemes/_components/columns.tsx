@@ -76,12 +76,17 @@ const CATEGORY_BADGE_COLORS: Record<string, string> = {
   capacity_building: "bg-yellow-100 text-yellow-700",
 };
 
-export function getSchemeColumns(t: T = {}, tCommon: T = {}): ColumnDef<AdminScheme>[] {
+export function getSchemeColumns(t: T = {}, tCommon: T = {}, locale: string = "en"): ColumnDef<AdminScheme>[] {
   return [
     {
       accessorKey: "name_en",
       header: t.col_name ?? "Name",
-      cell: ({ row }) => <TextCell value={row.original.name_en} maxWidth="max-w-[280px]" />,
+      cell: ({ row }) => (
+        <TextCell
+          value={locale === "ml" ? (row.original.name_ml || row.original.name_en) : row.original.name_en}
+          maxWidth="max-w-[280px]"
+        />
+      ),
     },
     {
       accessorKey: "administering_body",

@@ -78,15 +78,17 @@ const CATEGORY_BADGE_COLORS: Record<string, string> = {
   banker: "bg-blue-100 text-blue-700",
   facilitator: "bg-teal-100 text-teal-700",
 };
-
-export function getExpertColumns(t: T = {}, tCommon: T = {}): ColumnDef<AdminExpert>[] {
+export function getExpertColumns(t: T = {}, tCommon: T = {}, locale: string = "en"): ColumnDef<AdminExpert>[] {
   return [
     {
       accessorKey: "name_en",
       header: t.col_name ?? "Name",
       cell: ({ row }) => (
         <div className="flex flex-col">
-          <TextCell value={row.original.name_en} maxWidth="max-w-[200px]" />
+          <TextCell
+            value={locale === "ml" ? (row.original.name_ml || row.original.name_en) : row.original.name_en}
+            maxWidth="max-w-[200px]"
+          />
           <TextCell value={row.original.designation} maxWidth="max-w-[200px]" muted />
         </div>
       ),
