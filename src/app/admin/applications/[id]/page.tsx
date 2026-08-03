@@ -981,6 +981,28 @@ function AuditLogTab({ fpoId }: { fpoId: number }) {
                         );
                       }
 
+
+                      // Generic field-level diff (e.g. fpo_profile_change): {field: {old, new}, ...}
+                      if (log.action === "fpo_profile_change") {
+                        const fieldEntries = Object.entries(c).filter(
+                          ([, v]) => v && typeof v === "object" && "old" in (v as any) && "new" in (v as any)
+                        ) as [string, { old: any; new: any }][];
+                        if (fieldEntries.length === 0) return null;
+                        if (fieldEntries.length === 1) {
+                          const [field, { old, new: nv }] = fieldEntries[0];
+                          return (
+                            <span className="text-xs font-semibold mt-0.5" style={{ color: "var(--color-primary)" }}>
+                              {fmt(field)}: {String(old) || "—"} → {String(nv)}
+                            </span>
+                          );
+                        }
+                        return (              
+                          <span className="text-xs font-semibold mt-0.5" style={{ color: "var(--color-primary)" }}>
+                            Changed: {fieldEntries.map(([f]) => fmt(f)).join(", ")}
+                          </span>
+                        );
+                      }
+
                       return null;
                     })()}
                 </div>
