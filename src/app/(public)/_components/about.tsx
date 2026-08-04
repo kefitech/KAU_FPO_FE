@@ -115,7 +115,7 @@ export default function About() {
                 <h2 className="heading pt-4 text-center">{data.about_title}</h2>
 
               <div
-                className="justify-text"
+                className={`justify-text ${locale === "ml" ? "justify-tight" : ""}`}
                 dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(data.about_body) }}
               />
               </div>
@@ -133,7 +133,7 @@ export default function About() {
                         <h2 className="mission-title">{data.mission_title}</h2>
                         {intro && (
                           <div
-                            className="justify-text force-white-text mission-intro"
+                            className={`justify-text force-white-text mission-intro ${locale === "ml" ? "justify-tight" : ""}`}
                             dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(intro) }}
                           />
                         )}
@@ -142,7 +142,7 @@ export default function About() {
                             <div key={i} className="mission-card">
                               <span className="mission-check">&#xf00c;</span>
                               <div
-                                className="justify-text force-white-text mission-card-text"
+                                className={`justify-text force-white-text mission-card-text ${locale === "ml" ? "justify-tight" : ""}`}
                                 dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }}
                               />
                             </div>
@@ -154,7 +154,7 @@ export default function About() {
                         <div className="vision-card">
                           <h2 className="vision-title">{data.vision_title}</h2>
                           <div
-                            className="justify-text"
+                            className={`justify-text force-white-text ${locale === "ml" ? "justify-tight" : ""}`}
                             style={{color: "#ffffff", opacity: 0.9 }}
                             dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(data.vision_body) }}
                           />

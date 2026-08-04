@@ -4004,7 +4004,16 @@ nav.navbar.validnavs.inc-shape::after {
   border: 1px solid rgba(250, 240, 200, 0.5);
   position: relative;
   z-index: 1;
+  overflow: hidden;
+  box-sizing: border-box;
+  width: 100%;
   transition: box-shadow 0.4s ease;
+}
+
+@media (max-width: 480px) {
+  .vision-title {
+    font-size: 1.25rem;
+  }
 }
 
 .vision-column::before {
@@ -4055,6 +4064,14 @@ nav.navbar.validnavs.inc-shape::after {
     
   }
 }
+
+.justify-tight,
+.justify-tight p,
+.justify-tight li {
+  text-align: justify !important;
+  word-break: break-all !important;
+  text-justify: inter-character;
+ }
 
 .shape-right-top {
 	position: absolute;

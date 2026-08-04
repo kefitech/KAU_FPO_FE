@@ -20,6 +20,7 @@ interface ColumnActions {
   onToggleStatus: (item: AdminAnnouncement) => void;
   t: T;
   tCommon: T;
+  locale: string;
 }
 
 function formatDate(date: string | null): string {
@@ -33,6 +34,7 @@ export function getAnnouncementColumns({
   onToggleStatus,
   t,
   tCommon,
+  locale,
 }: ColumnActions): ColumnDef<AdminAnnouncement>[] {
   return [
     {
@@ -40,7 +42,10 @@ export function getAnnouncementColumns({
       header: t.col_title ?? "Title",
       cell: ({ row }) => {
         const title = row.original.title;
-        const text = typeof title === "string" ? title : (Object.values(title)[0] ?? "—");
+        const text =
+          typeof title === "string"
+            ? title
+            : (title[locale] || title.en || Object.values(title)[0] || "—");
         return <TextCell value={text} maxWidth="max-w-xs" />;
       },
     },

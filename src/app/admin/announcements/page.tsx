@@ -83,9 +83,13 @@ export default function AnnouncementsPage() {
   const columns = getAnnouncementColumns({
     t,
     tCommon,
+    locale,
     onEdit: (item: AdminAnnouncement) => router.push(`/admin/announcements/${item.id}/edit`),
     onDelete: (item: AdminAnnouncement) => {
-      const name = typeof item.title === "object" ? (Object.values(item.title)[0] ?? "") : item.title;
+      const name =
+        typeof item.title === "object"
+          ? (item.title[locale] || item.title.en || Object.values(item.title)[0] || "")
+          : item.title;
       confirm({
         title: t.delete_title ?? "Delete Announcement",
         description: (t.delete_description ?? 'Are you sure you want to delete "{name}"?').replace("{name}", name),
