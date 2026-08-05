@@ -69,8 +69,11 @@ const MainMenu = ({ openIndex, toggleSubMenu, navbarPlacement }: Props) => {
       <li>
         <Link href="/news-events">{t.events_updates ?? "Events & Updates"}</Link>
       </li>
+      <li>
+        <Link href="/more-info">{t.more_info ?? "More Info"}</Link>
+      </li>
     </ul>
   );
-};
+}
 
 export default MainMenu;
