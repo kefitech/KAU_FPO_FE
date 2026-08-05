@@ -30,6 +30,7 @@ import { DocumentsTab } from "./_components/documents-tab";
 import { GalleryTab } from "./_components/gallery-tab";
 import { TeamTab } from "./_components/team-tab";
 import { QuickLinksTab } from "./_components/quick-links-tab";
+import { PartnersTab } from "./_components/partners-tab";
 import { NewsSourcesTab } from "./_components/news-sources-tab";
 import { FeedbackTab } from "./_components/feedback-tab";
 
@@ -459,6 +460,7 @@ const TABS = [
   { key: "gallery",        label: "Gallery"        },
   { key: "team",           label: "Team"           },
   { key: "quick-links",   label: "Quick Links"    },
+  { key: "partners",      label: "Partners"       },
   { key: "news-sources",  label: "News Sources"   },
   { key: "feedback",      label: "Feedback"       },
 ] as const;
@@ -471,6 +473,7 @@ const TAB_LABEL_KEYS: Record<string, string> = {
   gallery: "tab_gallery",
   team: "tab_team",
   "quick-links": "tab_quick_links",
+  partners: "tab_partners",
   "news-sources": "tab_news_sources",
   feedback: "tab_feedback",
 };
@@ -579,6 +582,7 @@ export default function SiteContentPage() {
           {tab === "gallery" && <GalleryTab t={t} />}
           {tab === "team" && <TeamTab t={t} />}
           {tab === "quick-links" && <QuickLinksTab t={t} />}
+          {tab === "partners" && <PartnersTab t={t} />}
           {tab === "news-sources" && <NewsSourcesTab t={t} />}
           {tab === "feedback" && <FeedbackTab t={t} tCommon={tCommon} />}
         </div>

@@ -610,6 +610,18 @@ export interface AdminQuickLink {
   created_at: string;
 }
 
+// ─── Site Content — Partners ──────────────────────────────────────────────────
+
+export interface AdminPartner {
+  id: number;
+  name: string;
+  url: string;
+  logo_url: string | null;
+  order: number;
+  is_active: boolean;
+  created_at: string;
+}
+
 // ─── Site Content — News Sources ──────────────────────────────────────────────
 
 export interface AdminNewsSource {
