@@ -41,63 +41,23 @@ const PageLoader = () => {
       style={{
         position: "fixed",
         inset: 0,
-        background: "#0a1a0a",
+        background: "#0a1a0a", // Keep your original background
         zIndex: 99999,
         display: "flex",
-        flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
         opacity: fading ? 0 : 1,
         transition: "opacity 0.5s ease",
       }}
     >
-      <img
-        src="/assets/img/shape/19.png"
-        alt="Agrul"
-        style={{
-          width: "clamp(200px, 30vw, 340px)",
-          height: "auto",
-          filter: "drop-shadow(0 0 18px rgba(76,175,80,0.6))",
-          marginBottom: "40px",
-        }}
-      />
-
-      <div
-        style={{
-          width: "clamp(200px, 30vw, 340px)",
-          height: "3px",
-          background: "rgba(255,255,255,0.1)",
-          borderRadius: "2px",
-          overflow: "hidden",
-          marginBottom: "16px",
-        }}
-      >
-        <div
-          ref={barRef}
-          style={{
-            height: "100%",
-            width: "0%",
-            background: "linear-gradient(90deg, #4caf50, #76ff03)",
-            borderRadius: "2px",
-            transition: "width 0.15s ease",
-            boxShadow: "0 0 8px rgba(118,255,3,0.6)",
-          }}
-        />
+      <div className="loader">
+        <div className="inner one" />
+        <div className="inner two" />
+        <div className="inner three" />
+        <div className="loaderlogo">
+          <img src="/assets/img/shape/19.png" alt="Agrul" />
+        </div>
       </div>
-
-      <p
-        style={{
-          margin: 0,
-          fontFamily: "'Poppins', sans-serif",
-          fontSize: "12px",
-          fontWeight: 500,
-          letterSpacing: "4px",
-          textTransform: "uppercase",
-          color: "rgba(255,255,255,0.4)",
-        }}
-      >
-        Loading
-      </p>
     </div>
   );
 };

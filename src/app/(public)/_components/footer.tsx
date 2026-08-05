@@ -109,30 +109,37 @@ const Footer = () => {
             <div style={{ position: "relative", padding: quickLinks.length > 4 ? "0 48px" : "0" }}>
               {quickLinks.length > 4 ? (
                 <>
-                {(() => {
-                const swiperLinks =
-                  quickLinks.length < 10
-                    ? Array(Math.ceil(10 / quickLinks.length)).fill(quickLinks).flat()
-                    : quickLinks;
-                return (
-                  <Swiper
-                    modules={[Navigation, Autoplay]}
-                    loop={quickLinks.length > 1}
-                    autoplay={{ delay: 3000, disableOnInteraction: false }}
-                    navigation={{ nextEl: ".ql-swiper-next", prevEl: ".ql-swiper-prev" }}
-                    spaceBetween={16}
-                    slidesPerView={1}
-                    centeredSlides={true}
-                    style={{ width: "100%" }}
-                    breakpoints={{ 576: { slidesPerView: 2 }, 992: { slidesPerView: 3 }, 1200: { slidesPerView: 4 } }}
-                  >{swiperLinks.map((link, i) => (
-                      <SwiperSlide key={`${link.id}-${i}`} style={{ display: "flex", justifyContent: "center" }}>
-                        <PartnerBox link={link} />
-                      </SwiperSlide>
-                    ))}
-                  </Swiper>
-                );
-              })()}
+                  {(() => {
+                    const swiperLinks =
+                      quickLinks.length < 10
+                        ? Array(Math.ceil(10 / quickLinks.length))
+                            .fill(quickLinks)
+                            .flat()
+                        : quickLinks;
+                    return (
+                      <Swiper
+                        modules={[Navigation, Autoplay]}
+                        loop={quickLinks.length > 1}
+                        autoplay={{ delay: 3000, disableOnInteraction: false }}
+                        navigation={{ nextEl: ".ql-swiper-next", prevEl: ".ql-swiper-prev" }}
+                        spaceBetween={16}
+                        slidesPerView={1}
+                        centeredSlides={true}
+                        style={{ width: "100%" }}
+                        breakpoints={{
+                          576: { slidesPerView: 2 },
+                          992: { slidesPerView: 3 },
+                          1200: { slidesPerView: 4 },
+                        }}
+                      >
+                        {swiperLinks.map((link, i) => (
+                          <SwiperSlide key={`${link.id}-${i}`} style={{ display: "flex", justifyContent: "center" }}>
+                            <PartnerBox link={link} />
+                          </SwiperSlide>
+                        ))}
+                      </Swiper>
+                    );
+                  })()}
                   <button
                     type="button"
                     className="ql-swiper-prev"
@@ -212,7 +219,7 @@ const Footer = () => {
                     <Link href="/team">{t.meet_our_team ?? "Meet Our Team"}</Link>
                   </li>
                   <li>
-                    <Link href="/news-events">{t.news_media ?? "News & Media"}</Link>
+                    <Link href="/news-sources">{t.news_media ?? "News & Media"}</Link>
                   </li>
                   <li>
                     <Link href="/contact-us">{t.contact_us ?? "Contact Us"}</Link>
@@ -260,7 +267,10 @@ const Footer = () => {
                       <i className="fas fa-home" />
                     </div>
                     <div className="content">
-                      <strong>{t.address ?? "Address"}:</strong><a href="https://maps.app.goo.gl/4FXjLWkpN5jvM8N17">{t.kau_address ?? "Kerala Agricultural University, Mannuthy P.O, Pin- 680651."}</a>
+                      <strong>{t.address ?? "Address"}:</strong>
+                      <a href="https://maps.app.goo.gl/4FXjLWkpN5jvM8N17">
+                        {t.kau_address ?? "Kerala Agricultural University, Mannuthy P.O, Pin- 680651."}
+                      </a>
                     </div>
                   </li>
                   <li>

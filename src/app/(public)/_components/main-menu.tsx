@@ -60,7 +60,7 @@ const MainMenu = ({ openIndex, toggleSubMenu, navbarPlacement }: Props) => {
         </ul>
       </li>
       <li>
-        <Link href="/news-events">{t.events_updates ?? "Events & Updates"}</Link>
+        <Link href="/news-announcements">{t.events_updates ?? "Events & Updates"}</Link>
       </li>
       <li>
         <Link href="/more-info">{t.more_info ?? "More Info"}</Link>

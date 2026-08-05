@@ -10,7 +10,7 @@ import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 
 import { publicFetch } from "../_lib/public-fetch";
-import { AnnouncementDetailModal } from "../news-events/page";
+import { AnnouncementDetailModal } from "../news-announcements/page";
 
 interface AnnouncementNews {
   id: number;
@@ -41,7 +41,7 @@ const NewsWidget = () => {
 
   const TABS: { key: TabKey; label: string; icon: string }[] = [
     { key: "announcement", label: t.news_tab_announcements ?? "Announcements", icon: "fas fa-bullhorn" },
-    { key: "news",         label: t.news_tab_news         ?? "News",            icon: "fas fa-newspaper" },
+    { key: "news", label: t.news_tab_news ?? "News", icon: "fas fa-newspaper" },
   ];
 
   useEffect(() => {
@@ -78,9 +78,11 @@ const NewsWidget = () => {
             gap: 16,
           }}
         >
-          <h3 style={{ fontSize: 32, fontWeight: 700, color: "#1a1a1a", margin: 0 }}>{t.news_title ?? "News and Announcements"}</h3>
+          <h3 style={{ fontSize: 32, fontWeight: 700, color: "#1a1a1a", margin: 0 }}>
+            {t.news_title ?? "News and Announcements"}
+          </h3>
           <Link
-            href="/news-events"
+            href="/news-announcements"
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -170,7 +172,11 @@ const NewsWidget = () => {
                         </div>
                         <div className="operator" />
                       </div>
-                      <span className="medium">{activeTab === "announcement" ? (t.news_tab_announcements ?? "Announcements") : (t.news_tab_news ?? "News")}</span>
+                      <span className="medium">
+                        {activeTab === "announcement"
+                          ? (t.news_tab_announcements ?? "Announcements")
+                          : (t.news_tab_news ?? "News")}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -206,7 +212,9 @@ const NewsWidget = () => {
                   ))
                 ) : items.length === 0 ? (
                   <div style={{ padding: "60px 0", textAlign: "center", color: "#888", fontSize: 15 }}>
-                    {activeTab === "announcement" ? (t.news_empty_announcements ?? "No announcements available at the moment.") : (t.news_empty_news ?? "No news available at the moment.")}
+                    {activeTab === "announcement"
+                      ? (t.news_empty_announcements ?? "No announcements available at the moment.")
+                      : (t.news_empty_news ?? "No news available at the moment.")}
                   </div>
                 ) : (
                   items.map((item, idx) => (
@@ -270,7 +278,8 @@ const NewsWidget = () => {
                               marginTop: 4,
                             }}
                           >
-                            {t.news_read_more ?? "Read More"} <i className="fas fa-arrow-right" style={{ fontSize: 12 }} />
+                            {t.news_read_more ?? "Read More"}{" "}
+                            <i className="fas fa-arrow-right" style={{ fontSize: 12 }} />
                           </button>
                         </div>
                       </div>

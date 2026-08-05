@@ -244,7 +244,7 @@ export default function NewsAndEvents() {
 
   return (
     <AgrulLayout>
-      <BreadCrumb title="Latest Updates - News / Events" breadCrumb="News & Events" />
+      <BreadCrumb title="Latest Updates - News / Announcement" breadCrumb="News & Announcement" />
       <div className="blog-area blog-grid default-padding">
         <div className="container">
           <div className="text-center" style={{ marginBottom: 40 }}>

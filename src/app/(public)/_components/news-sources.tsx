@@ -92,7 +92,7 @@ const NewsSourcesStrip = () => {
   const locale = useLocaleStore((s) => s.locale);
 
   useEffect(() => {
-    if(!locale) return;
+    if (!locale) return;
     publicFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/public/news-sources/`)
       .then((r) => r.json())
       .then((json) => {
@@ -117,7 +117,7 @@ const NewsSourcesStrip = () => {
           <div className="offset-lg-2 col-lg-8">
             <div className="site-heading text-center">
               <h5 className="sub-heading">Media Coverage</h5>
-              <h2 className="title">In the News</h2>
+              <h2 className="title">News and Media</h2>
               <div className="devider" />
             </div>
           </div>
@@ -144,8 +144,7 @@ const NewsSourcesStrip = () => {
             <div style={{ position: "relative", padding: "0 50px" }}>
               <Swiper
                 modules={[Navigation, Autoplay]}
-                loop={true}          // turn this off entirely
-
+                loop={true} // turn this off entirely
                 autoplay={{ delay: 3000, disableOnInteraction: false }}
                 navigation={{ nextEl: ".news-swiper-next", prevEl: ".news-swiper-prev" }}
                 spaceBetween={24}

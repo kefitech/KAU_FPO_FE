@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+
 import { useLocaleStore } from "@/stores/locale-store";
-import { publicFetch } from "../_lib/public-fetch";
+
 import AgrulLayout from "../_components/agrul-layout";
 import BreadCrumb from "../_components/bread-crumb";
 import type { NewsSource } from "../_components/news-sources";
+import { publicFetch } from "../_lib/public-fetch";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -136,7 +138,7 @@ export default function NewsSourcesPage() {
 
   return (
     <AgrulLayout>
-      <BreadCrumb title="In the News" breadCrumb="News Sources" />
+      <BreadCrumb title="News and Media" breadCrumb="News Sources" />
       <div className="default-padding">
         <div className="container">
           <div className="text-center" style={{ marginBottom: 40 }}>
