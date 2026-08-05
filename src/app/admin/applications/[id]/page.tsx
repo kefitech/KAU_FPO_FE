@@ -1003,6 +1003,43 @@ function AuditLogTab({ fpoId }: { fpoId: number }) {
                         );
                       }
 
+                      // Fallback for any other action: {field: {old, new}} pairs anywhere in changes
+                      {
+                        const fieldEntries = Object.entries(c).filter(
+                          ([, v]) => v && typeof v === "object" && "old" in (v as any) && "new" in (v as any)
+                        ) as [string, { old: any; new: any }][];
+                        if (fieldEntries.length === 1) {
+                          const [field, { old, new: nv }] = fieldEntries[0];
+                          return (
+                            <span className="text-xs font-semibold mt-0.5" style={{ color: "var(--color-primary)" }}>
+                              {fmt(field)}: {String(old) || "—"} → {String(nv)}
+                            </span>
+                          );
+                        }
+                        if (fieldEntries.length > 1) {
+                          return (
+                            <span className="text-xs font-semibold mt-0.5" style={{ color: "var(--color-primary)" }}>
+                              Changed: {fieldEntries.map(([f]) => fmt(f)).join(", ")}
+                            </span>
+                          );
+                        }
+                      }
+ 
+                      // Fallback for scalar changes not shaped as {old,new}, e.g. {member_name: "X"}
+                      {
+                        const scalarEntries = Object.entries(c).filter(
+                          ([, v]) => v !== null && (typeof v === "string" || typeof v === "number" || typeof v === "boolean")
+                        );
+                        if (scalarEntries.length > 0) {
+                          return (
+                            <span className="text-xs font-semibold mt-0.5" style={{ color: "var(--color-primary)" }}>
+                              {scalarEntries.map(([f, v]) => `${fmt(f)}: ${String(v)}`).join(" · ")}
+                            </span>
+                          );
+                        }
+                      }
+ 
+
                       return null;
                     })()}
                 </div>
