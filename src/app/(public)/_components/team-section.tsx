@@ -223,10 +223,10 @@ const TeamSection = ({ showAll = false }: Props) => {
       </div>
       <div className="container">
         <div className="row">
-          <div className="col-lg-10 offset-lg-1">
+          <div className="col-lg-12">
             {loading ? (
               <div className="row">
-                {[0, 1, 2].map((i) => (
+                {[0, 1, 2, 3].map((i) => (
                   <div className="col-lg-4 col-md-6 farmer-stye-one" style={{ marginBottom: 30 }} key={i}>
                     <SkeletonCard />
                   </div>
@@ -238,7 +238,7 @@ const TeamSection = ({ showAll = false }: Props) => {
                   modules={[Navigation, Pagination, Autoplay]}
                   spaceBetween={30}
                   slidesPerView={1}
-                  loop={members.length > 3}
+                  loop={members.length > 4}
                   autoplay={{ delay: 4000, disableOnInteraction: false }}
                   navigation={{
                     prevEl,
@@ -248,9 +248,11 @@ const TeamSection = ({ showAll = false }: Props) => {
                     el: paginationEl,
                     clickable: true,
                   }}
+                  centeredSlides={false}
+                  centerInsufficientSlides={true}
                   breakpoints={{
                     768: { slidesPerView: 2 },
-                    992: { slidesPerView: 3 },
+                    992: { slidesPerView: 4, spaceBetween: 20 },
                   }}
                 >
                   {members.map((member) => (
