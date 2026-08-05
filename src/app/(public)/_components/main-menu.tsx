@@ -28,18 +28,11 @@ const MainMenu = ({ openIndex, toggleSubMenu, navbarPlacement }: Props) => {
       <li>
         <a href="/">{t.home ?? "HOME"}</a>
       </li>
-      <li className={`dropdown ${openIndex === 0 ? "on" : ""}`}>
-        <Link href="#" className="dropdown-toggle" data-toggle="dropdown" onClick={toggleSubMenu?.(0)}>
-          {t.get_started ?? "Get Started"}
-        </Link>
-        <ul className="dropdown-menu">
-          <li>
-            <a href="/v1/login">{t.sign_in ?? "Sign In"}</a>
-          </li>
-          <li>
-            <a href="/register">{t.register ?? "Register FPO"}</a>
-          </li>
-        </ul>
+      <li>
+        <a href="/v1/login">{t.sign_in ?? "Sign In"}</a>
+      </li>
+      <li>
+        <a href="/register">{t.get_started ?? "Get Started"}</a>
       </li>
       <li className={`dropdown ${openIndex === 1 ? "on" : ""}`}>
         <Link href="#" className="dropdown-toggle" data-toggle="dropdown" onClick={toggleSubMenu?.(1)}>
@@ -74,6 +67,6 @@ const MainMenu = ({ openIndex, toggleSubMenu, navbarPlacement }: Props) => {
       </li>
     </ul>
   );
-}
+};
 
 export default MainMenu;

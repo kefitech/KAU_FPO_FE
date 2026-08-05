@@ -26,9 +26,9 @@ const Header = () => {
       <HeaderTop />
       <header>
         <nav
-          className={`navbar mobile-sidenav inc-shape navbar-common navbar-sticky navbar-default validnavs ${isMenuSticky ? "sticked" : ""}`}
+          className={`navbar mobile-sidenav navbar-sticky navbar-default validnavs ${isMenuSticky ? "sticked" : ""}`}
         >
-          <div className="container d-flex align-items-center gap-3 navbar-container-fix">
+          <div className=" d-flex align-items-center gap-5 navbar-container-fix">
             <div className="navbar-header">
               <button type="button" className="navbar-toggle" onClick={openMenu}>
                 <i className="fa fa-bars" />
@@ -62,7 +62,10 @@ const Header = () => {
                 <div className="sidebar-info">
                   <ul>
                     <li>
-                      <i className="fas fa-map-marker-alt" /><a href="https://maps.app.goo.gl/4FXjLWkpN5jvM8N17">Kerala Agricultural University, Mannuthy P.O, Pin- 680651.</a> 
+                      <i className="fas fa-map-marker-alt" />
+                      <a href="https://maps.app.goo.gl/4FXjLWkpN5jvM8N17">
+                        Kerala Agricultural University, Mannuthy P.O, Pin- 680651.
+                      </a>
                     </li>
                     <li>
                       <i className="fas fa-phone-alt" /> <a href="tel:+91 487 237 0509">+91 487 237 0509</a>
