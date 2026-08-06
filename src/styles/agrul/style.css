@@ -4132,6 +4132,7 @@ nav.navbar.validnavs.inc-shape::after {
   display: flex;
   flex-wrap: wrap;
   gap: 30px;
+  overflow: hidden;
 }
 
 .mission-column {
@@ -4145,7 +4146,7 @@ nav.navbar.validnavs.inc-shape::after {
   display: flex;
   align-items: center;
   position: relative;
-  overflow: hidden;
+  
 }
 
 .mission-title {
@@ -4261,8 +4262,8 @@ nav.navbar.validnavs.inc-shape::after {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 180%;
-  height: 180%;
+  width: 110%;
+  height: 110%;
   transform: translate(-50%, -50%) scale(1);
    background:
      repeating-conic-gradient(
@@ -7528,6 +7529,8 @@ footer {
 		margin: auto;
 		max-width: 100%;
 		border-radius: inherit;
+		display: none;
+		
 	}
 
 	.about-style-one .thumb {
@@ -7934,6 +7937,7 @@ footer {
 		max-width: 100%;
 		margin: auto;
 		border-radius: inherit;
+		display: none;
 	}
 
 	.check-solid-list {
