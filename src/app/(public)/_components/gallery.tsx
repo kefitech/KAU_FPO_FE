@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 import { publicFetch } from "../_lib/public-fetch";
@@ -9,20 +10,21 @@ import "swiper/css";
 import "swiper/css/effect-coverflow";
 import "swiper/css/navigation";
 
-interface GalleryPhoto {
+interface GalleryAlbum {
   id: number;
-  photo_url: string;
-  caption: string;
-  order: number;
+  title: string;
+  cover_photo_url: string | null;
+  photo_count: number;
 }
 
 const Gallery = () => {
-  const [photos, setPhotos] = useState<GalleryPhoto[]>([]);
+  const [albums, setAlbums] = useState<GalleryAlbum[]>([]);
   const [loading, setLoading] = useState(true);
   const [t, setT] = useState<Record<string, string>>({});
   const locale = useLocaleStore((s) => s.locale);
   const prevRef = useRef<HTMLButtonElement>(null);
   const nextRef = useRef<HTMLButtonElement>(null);
+  const router = useRouter();
 
   useEffect(() => {
     if (!locale) return;
@@ -30,14 +32,14 @@ const Gallery = () => {
   }, [locale]);
 
   useEffect(() => {
-    publicFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/public/gallery/`)
+    publicFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/public/gallery/albums/`)
       .then((r) => r.json())
-      .then((json) => setPhotos((json.data as GalleryPhoto[]) ?? []))
-      .catch(() => setPhotos([]))
+      .then((json) => setAlbums((json.data as GalleryAlbum[]) ?? []))
+      .catch(() => setAlbums([]))
       .finally(() => setLoading(false));
-  }, [locale]);
+  }, []);
 
-  if (!loading && photos.length === 0) return null;
+  if (!loading && albums.length === 0) return null;
 
   return (
     <div className="gallery-style-one-area bg-gray default-padding-top">
@@ -69,7 +71,7 @@ const Gallery = () => {
             effect="coverflow"
             grabCursor
             centeredSlides
-            loop={photos.length > 2}
+            loop={albums.length > 2}
             slidesPerView="auto"
             speed={900}
             autoplay={{ delay: 3200, disableOnInteraction: false }}
@@ -89,24 +91,36 @@ const Gallery = () => {
             navigation={{ prevEl: prevRef.current, nextEl: nextRef.current }}
             modules={[Navigation, Autoplay, EffectCoverflow]}
           >
-            {photos.map((photo) => (
-              <SwiperSlide key={photo.id} className="gallery-coverflow-slide">
+            {albums.map((album) => (
+              <SwiperSlide
+                key={album.id}
+                className="gallery-coverflow-slide"
+                onClick={() => router.push(`/gallery/${album.id}`)}
+                style={{ cursor: "pointer" }}
+              >
                 <div className="gallery-card-modern">
-                  <div
-                    className="gallery-card-bg"
-                    style={{ backgroundImage: `url(${photo.photo_url})` }}
-                  />
-                  <img
-                    src={photo.photo_url}
-                    alt={photo.caption || "Gallery"}
-                    className="gallery-card-img"
-                  />
-                  {photo.caption && (
-                    <div className="gallery-card-caption">
-                      <span className="gallery-card-caption-dot" />
-                      <span className="gallery-card-caption-text">{photo.caption}</span>
+                  {album.cover_photo_url && (
+                    <div
+                      className="gallery-card-bg"
+                      style={{ backgroundImage: `url(${album.cover_photo_url})` }}
+                    />
+                  )}
+                  {album.cover_photo_url ? (
+                    <img
+                      src={album.cover_photo_url}
+                      alt={album.title}
+                      className="gallery-card-img"
+                    />
+                  ) : (
+                    <div className="gallery-card-placeholder">
+                      <i className="fas fa-images" />
                     </div>
                   )}
+                  <div className="gallery-card-caption">
+                    <span className="gallery-card-caption-dot" />
+                    <span className="gallery-card-caption-text">{album.title}</span>
+                    <span className="gallery-card-caption-count">{album.photo_count}</span>
+                  </div>
                 </div>
               </SwiperSlide>
             ))}
@@ -114,10 +128,10 @@ const Gallery = () => {
         )}
 
         <div className="gallery-coverflow-nav">
-          <button ref={prevRef} type="button" className="gallery-nav-btn" aria-label="Previous photo">
+          <button ref={prevRef} type="button" className="gallery-nav-btn" aria-label="Previous">
             <i className="fas fa-arrow-left" />
           </button>
-          <button ref={nextRef} type="button" className="gallery-nav-btn" aria-label="Next photo">
+          <button ref={nextRef} type="button" className="gallery-nav-btn" aria-label="Next">
             <i className="fas fa-arrow-right" />
           </button>
         </div>
@@ -163,8 +177,8 @@ const Gallery = () => {
           height: 100%;
           border-radius: 24px;
           overflow: hidden;
-          box-shadow: 0 20px 45px rgba(0, 0, 0, 0.98);
-          background: #f0f0f0;
+          box-shadow: 0 20px 45px rgba(0, 0, 0, 0.18);
+          background: #1a1a1a;
           transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.6s ease;
         }
         .gallery-card-img {
@@ -174,6 +188,17 @@ const Gallery = () => {
           position: relative;
           z-index: 1;
           display: block;
+        }
+        .gallery-card-placeholder {
+          width: 100%;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #555;
+          font-size: 48px;
+          position: relative;
+          z-index: 1;
         }
         .gallery-card-bg {
           position: absolute;
@@ -191,10 +216,10 @@ const Gallery = () => {
           display: flex;
           align-items: center;
           gap: 8px;
-          z-index: 1;
+          z-index: 2;
           padding: 8px 14px;
           border-radius: 30px;
-          background: rgba(20, 20, 20, 0.45);
+          background: rgba(20, 20, 20, 0.55);
           backdrop-filter: blur(8px);
           -webkit-backdrop-filter: blur(8px);
           opacity: 0;
@@ -219,6 +244,15 @@ const Gallery = () => {
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
+          flex: 1;
+        }
+        .gallery-card-caption-count {
+          color: rgba(255, 255, 255, 0.7);
+          font-size: 11px;
+          background: rgba(255, 255, 255, 0.15);
+          border-radius: 20px;
+          padding: 2px 8px;
+          flex-shrink: 0;
         }
         .gallery-fade-edge {
           position: absolute;
@@ -276,6 +310,12 @@ const Gallery = () => {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.5; }
         }
+        @media (max-width: 1200px) {
+          :global(.gallery-coverflow-swiper .gallery-coverflow-slide) {
+            width: 350px;
+            height: 350px;
+          }
+        }
         @media (max-width: 991px) {
           :global(.gallery-coverflow-swiper .gallery-coverflow-slide),
           .gallery-skeleton-card {
@@ -297,13 +337,6 @@ const Gallery = () => {
           }
           .gallery-fade-edge {
             width: 6%;
-          }
-        }
-       
-        @media (max-width: 1200px) {
-          :global(.gallery-coverflow-swiper .gallery-coverflow-slide) {
-            width: 350px;
-            height: 350px;
           }
         }
       `}</style>

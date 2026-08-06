@@ -39,7 +39,7 @@ export function VantaBirds() {
 
   return (
     <>
-      {/* Load three.js first, then vanta only after three is ready */}
+      {/* Load 1three.js first, then vanta only after three is ready */}
       <Script
         src="/js/three.min.js"
         strategy="afterInteractive"
