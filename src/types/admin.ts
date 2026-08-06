@@ -578,8 +578,19 @@ export interface AdminDocument {
 
 // ─── Site Content — Gallery ───────────────────────────────────────────────────
 
+export interface AdminGalleryAlbum {
+  id: number;
+  title: string;
+  order: number;
+  is_active: boolean;
+  cover_photo_url: string | null;
+  photo_count: number;
+  created_at: string;
+}
+
 export interface AdminGalleryPhoto {
   id: number;
+  album: number | null;
   photo_url: string;
   caption: Record<string, string> | string | null;
   order: number;
