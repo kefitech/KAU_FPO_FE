@@ -207,7 +207,6 @@ const Footer = () => {
                 <img className="logo" src="/assets/img/logo.png" alt="Logo" />
               </div>
             </div>
-
             <div className="col-lg-2 col-md-6 item">
               <div className="footer-item link">
                 <h4 className="widget-title">{t.explore ?? "Explore"}</h4>
@@ -227,37 +226,6 @@ const Footer = () => {
                 </ul>
               </div>
             </div>
-
-            {/* <div className="col-lg-3 col-md-6 item">
-              <div className="footer-item recent-post">
-                <h4 className="widget-title">Recent Posts</h4>
-                <ul>
-                  <li>
-                    <div className="thumb">
-                      <Link href="/blog-single-with-sidebar/1">
-                        <img src="/assets/img/thumbs/3.jpg" alt="Thumb" />
-                      </Link>
-                    </div>
-                    <div className="info">
-                      <div className="meta-title"><span className="post-date">12 Sep, 2024</span></div>
-                      <h5><Link href="/blog-single-with-sidebar/1">Meant widow equal an share least part.</Link></h5>
-                    </div>
-                  </li>
-                  <li>
-                    <div className="thumb">
-                      <Link href="/blog-single-with-sidebar/2">
-                        <img src="/assets/img/thumbs/5.jpg" alt="Thumb" />
-                      </Link>
-                    </div>
-                    <div className="info">
-                      <div className="meta-title"><span className="post-date">18 Jul, 2024</span></div>
-                      <h5><Link href="/blog-single-with-sidebar/2">Future Plan &amp; Strategy for Construction</Link></h5>
-                    </div>
-                  </li>
-                </ul>
-              </div>
-            </div> */}
-
             <div className="col-lg-3 col-md-6 item">
               <div className="footer-item contact">
                 <h4 className="widget-title">{t.contact_info ?? "Contact Info"}</h4>
