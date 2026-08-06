@@ -18,6 +18,7 @@ import VisitorTracker from "./_components/visitor-tracker";
 import WhyChoose from "./_components/why-choose";
 import { useEffect, useState } from "react";
 import { useLocaleStore } from "@/stores/locale-store";
+import QuickLinksSection from "./_components/quick-links";
 
 export default function HomePage() {
     const locale = useLocaleStore((s) => s.locale);
@@ -35,6 +36,7 @@ export default function HomePage() {
       <VisitorTracker />
       <Banner />
       <About />
+      <QuickLinksSection />
       <TeamSection showAll={false} />
       <NewsWidget />
       {/* <MoreInformantion /> */}

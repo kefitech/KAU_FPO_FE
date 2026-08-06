@@ -11,14 +11,14 @@ import { useLocaleStore } from "@/stores/locale-store";
 
 import { publicFetch } from "../_lib/public-fetch";
 
-interface QuickLink {
+interface Partners {
   id: number;
   name: string;
   url: string;
   logo_url: string | null;
 }
 
-function PartnerBox({ link }: { link: QuickLink }) {
+function PartnerBox({ link }: { link: Partners }) {
   return (
     <a
       href={link.url}
@@ -67,7 +67,7 @@ function PartnerBox({ link }: { link: QuickLink }) {
 }
 
 const Footer = () => {
-  const [quickLinks, setQuickLinks] = useState<QuickLink[]>([]);
+  const [partners, setPartners] = useState<Partners[]>([]);
   const locale = useLocaleStore((s) => s.locale);
   const [t, setT] = useState<Record<string, string>>({});
 
@@ -80,9 +80,9 @@ const Footer = () => {
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: locale intentionally kept to allow future locale-based refetch
   useEffect(() => {
-    publicFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/public/quick-links/`)
+    publicFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/public/partners/`)
       .then((r) => r.json())
-      .then((json) => setQuickLinks((json.data as QuickLink[]) ?? []))
+      .then((json) => setPartners((json.data as Partners[]) ?? []))
       .catch(() => {
         // intentionally ignored
       });
@@ -91,7 +91,7 @@ const Footer = () => {
   return (
     <footer className="bg-dark text-light" style={{ backgroundImage: "url(/assets/img/shape/brush-down.png)" }}>
       <div className="container">
-        {quickLinks.length > 0 && (
+        {partners.length > 0 && (
           <div style={{ borderBottom: "1px solid rgba(255,255,255,0.1)", padding: "32px 0" }}>
             <p
               style={{
@@ -104,22 +104,22 @@ const Footer = () => {
                 fontFamily: "var(--font-default)",
               }}
             >
-              {t.our_partners ?? "Our Partners"}
+              {t.partners ?? "Partners"}
             </p>
-            <div style={{ position: "relative", padding: quickLinks.length > 4 ? "0 48px" : "0" }}>
-              {quickLinks.length > 4 ? (
+            <div style={{ position: "relative", padding: partners.length > 4 ? "0 48px" : "0" }}>
+              {partners.length > 4 ? (
                 <>
                   {(() => {
                     const swiperLinks =
-                      quickLinks.length < 10
-                        ? Array(Math.ceil(10 / quickLinks.length))
-                            .fill(quickLinks)
+                      partners.length < 10
+                        ? Array(Math.ceil(10 / partners.length))
+                            .fill(partners)
                             .flat()
-                        : quickLinks;
+                        : partners;
                     return (
                       <Swiper
                         modules={[Navigation, Autoplay]}
-                        loop={quickLinks.length > 1}
+                        loop={partners.length > 1}
                         autoplay={{ delay: 3000, disableOnInteraction: false }}
                         navigation={{ nextEl: ".ql-swiper-next", prevEl: ".ql-swiper-prev" }}
                         spaceBetween={16}
@@ -191,7 +191,7 @@ const Footer = () => {
                 </>
               ) : (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
-                  {quickLinks.map((link) => (
+                  {partners.map((link) => (
                     <PartnerBox key={link.id} link={link} />
                   ))}
                 </div>
