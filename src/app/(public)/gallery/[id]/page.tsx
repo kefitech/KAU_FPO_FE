@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import AgrulLayout from "../../_components/agrul-layout";
 import BreadCrumb from "../../_components/bread-crumb";
 import { publicFetch } from "../../_lib/public-fetch";
+import "./gallery-album.css";
 
 interface AlbumDetail {
   id: number;
@@ -72,109 +73,6 @@ export default function GalleryAlbumPage() {
         </div>
       )}
 
-      <style jsx>{`
-        .gallery-album-area {
-          padding: 80px 0 100px;
-        }
-        .gallery-grid {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 20px;
-        }
-        .gallery-item {
-          position: relative;
-          overflow: hidden;
-          border-radius: 12px;
-          aspect-ratio: 4/3;
-          cursor: pointer;
-          background: #f0f0f0;
-        }
-        .gallery-item img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          transition: transform 0.4s ease;
-          display: block;
-        }
-        .gallery-item:hover img {
-          transform: scale(1.06);
-        }
-        .gallery-item-caption {
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          right: 0;
-          padding: 10px 14px;
-          background: linear-gradient(transparent, rgba(0,0,0,0.65));
-          color: #fff;
-          font-size: 13px;
-          font-weight: 500;
-        }
-        .gallery-skeleton {
-          aspect-ratio: 4/3;
-          border-radius: 12px;
-          background: #e8e8e8;
-          animation: pulse 1.5s ease-in-out infinite;
-        }
-        .gallery-empty {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          gap: 16px;
-          padding: 80px 0;
-          color: #aaa;
-          font-size: 16px;
-        }
-        .gallery-empty i {
-          font-size: 48px;
-          opacity: 0.4;
-        }
-        .gallery-lightbox {
-          position: fixed;
-          inset: 0;
-          background: rgba(0,0,0,0.92);
-          z-index: 9999;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 20px;
-        }
-        .gallery-lightbox img {
-          max-width: 90vw;
-          max-height: 90vh;
-          object-fit: contain;
-          border-radius: 8px;
-        }
-        .gallery-lightbox-close {
-          position: absolute;
-          top: 20px;
-          right: 24px;
-          background: none;
-          border: none;
-          color: #fff;
-          font-size: 24px;
-          cursor: pointer;
-          opacity: 0.8;
-        }
-        .gallery-lightbox-close:hover {
-          opacity: 1;
-        }
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
-        }
-        @media (max-width: 768px) {
-          .gallery-grid {
-            grid-template-columns: repeat(2, 1fr);
-          }
-        }
-        @media (max-width: 480px) {
-          .gallery-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-      `}</style>
     </AgrulLayout>
   );
 }
