@@ -35,7 +35,7 @@ export default function HomePage() {
     <AgrulLayout>
       <VisitorTracker />
       <Banner />
-      <About />
+      <Services />
       <QuickLinksSection />
       <TeamSection showAll={false} />
       <NewsWidget />

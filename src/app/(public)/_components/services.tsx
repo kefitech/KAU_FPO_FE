@@ -12,8 +12,8 @@ const Services = () => {
           <div className="row">
             <div className="col-lg-5">
               <div className="left-info">
-                <h5 className="sub-title">What we do</h5>
-                <h2 className="title">Currently we are <br /> selling organic food</h2>
+                <h5 className="sub-title">What We do</h5>
+                <h2 className="title">Our Services</h2>
               </div>
             </div>
             <div className="col-lg-6 offset-lg-1">
