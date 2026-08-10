@@ -36,7 +36,7 @@ const Header = () => {
 
               <Link className="navbar-brand" href="/">
                 <div className="navbar-logos">
-                  <img src="/assets/img/logo.png" className="logo" alt="Logo" />
+                  {/* <img src="/assets/img/logo.png" className="logo" alt="Logo" /> */}
                   <img src="/assets/img/SHM_MIDH.png" className="logo logo-secondary" alt="SHM MIDH Logo" />
                 </div>
               </Link>

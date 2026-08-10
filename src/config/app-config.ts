@@ -7,7 +7,7 @@ export const APP_CONFIG = {
   version: packageJson.version,
   copyright: `© ${currentYear}, Kefi Tech Solutions Pvt Ltd.`,
   meta: {
-    title: "KAU FPO Plateform - Modern FPO Dashboard by Kerala Agriculture University",
+    title: "KAU FPO Platform - Modern FPO Dashboard by Kerala Agriculture University",
     description:
       "A unified digital platform connecting Farmer Producer Organizations (FPOs) with knowledge resources, experts, institutions, schemes, and growth opportunities.",
   },
