@@ -2838,8 +2838,8 @@ nav.navbar.validnavs .navbar-collapse.collapse button i {
 
 @media only screen and (min-width: 1024px) and (max-width: 1199px) {
 	.navbar.validnavs.navbar-default .navbar-nav li a {
-		padding: 30px 8px !important;
-		font-size: 14px;
+		padding: 30px 4px;
+		font-size: clamp(11px, 1vw, 14px);
 	}
 }
 

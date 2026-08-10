@@ -66,10 +66,11 @@
   align-items: center;
   gap: 12px;
   min-width: 0;
+  width: auto;
 }
 
 .navbar-logos .logo {
-  height: 55px;
+  height: clamp(48px, 4vw, 55px);
   width: auto;
   object-fit: contain;
   display: block;
@@ -104,29 +105,32 @@ nav.navbar.validnavs .navbar-brand > img {
   }
 }
 
-/* ---- At 1024–1199px: shrink logos ---- */
-@media (min-width: 1024px) and (max-width: 1199px) {
-  .navbar-logos .logo {
-    height: 42px;
-  }
 
-  nav.navbar.validnavs {
-    height: 70px;
-  }
 
-  .navbar-logos {
-    gap: 8px;
-  }
-}
+
 
 /* ---- Mobile: shrink only the second logo ---- */
 @media (max-width: 767px) {
   .navbar-logos .logo:nth-of-type(2) {
     height: 32px;
     flex-shrink: 1;
-    min-width: 0;
+    display: none;
   }
 }
+
+
+/* ---- Small mobile: hide second logo, center the first ---- */
+@media (max-width: 480px) {
+  .navbar-logos {
+    width: 100%;
+    justify-content: left;
+  }
+
+  .navbar-logos .logo:nth-of-type(2) {
+    display: none;
+  }
+}
+
 
 /* ---- Sticky navbar on mobile ---- */
 @media (max-width: 1023.98px) {
@@ -146,7 +150,26 @@ nav.navbar.validnavs .navbar-brand > img {
     opacity: 1 !important;
     visibility: visible !important;
   }
-
+ 
+  /* ---- Hamburger icon: pin to far left ---- */
+  nav.navbar.validnavs .container {
+    position: relative;
+  }
+ 
+  nav.navbar.validnavs .navbar-toggle {
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+ 
+  /* ---- Logo: center independently of hamburger ---- */
+  nav.navbar.validnavs .navbar-brand {
+    position: absolute;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    top: 50%;
+  }
   .banner-area {
     margin-top: 65px;
   }

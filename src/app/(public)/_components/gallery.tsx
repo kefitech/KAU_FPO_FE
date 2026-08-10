@@ -154,16 +154,16 @@ const Gallery = () => {
       <style jsx>{`
         .gallery-style-one-area {
           padding-top: 100px !important;
-          padding-bottom: 100px !important;
+          padding-bottom: 50px !important;
         }
         .gallery-coverflow-wrap {
           position: relative;
-          padding: 60px 0 40px;
+          padding: 2px 0 40px;
           overflow-x: hidden;
           overflow-y: visible;
         }
         :global(.gallery-coverflow-swiper) {
-          padding: 100px 0 50px;
+          padding: 10px 0 50px;
           width: 100%;
           max-width: 100%;
           overflow: visible !important;

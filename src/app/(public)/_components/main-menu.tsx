@@ -49,6 +49,9 @@ const MainMenu = ({ openIndex, toggleSubMenu, navbarPlacement }: Props) => {
             <Link href="/howtoregister">{t.how_to_register_FPO ?? "How To Register FPO"}</Link>
           </li>
           <li>
+            <Link href="/news-announcements">{t.events_updates ?? "Events & Updates"}</Link>
+          </li>
+          <li>
             <Link href="/news-sources">{t.in_the_news ?? "News and Media"}</Link>
           </li>
           <li>
@@ -58,9 +61,6 @@ const MainMenu = ({ openIndex, toggleSubMenu, navbarPlacement }: Props) => {
             <Link href="/contact-us">{t.contact_us ?? "Contact Us"}</Link>
           </li>
         </ul>
-      </li>
-      <li>
-        <Link href="/news-announcements">{t.events_updates ?? "Events & Updates"}</Link>
       </li>
       <li>
         <Link href="/more-info">{t.more_info ?? "More Info"}</Link>

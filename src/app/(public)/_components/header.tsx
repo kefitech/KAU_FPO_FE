@@ -38,6 +38,7 @@ const Header = () => {
                 <div className="navbar-logos">
                   {/* <img src="/assets/img/logo.png" className="logo" alt="Logo" /> */}
                   <img src="/assets/img/SHM_MIDH.png" className="logo logo-secondary" alt="SHM MIDH Logo" />
+                  <img src="/assets/img/SHM_MIDH1.png" className="logo logo-secondary" alt="SHM MIDH Logo" />
                 </div>
               </Link>
             </div>
@@ -71,7 +72,7 @@ const Header = () => {
                       <i className="fas fa-phone-alt" /> <a href="tel:+91 487 237 0509">+91 487 237 0509</a>
                     </li>
                   </ul>
-                  <div className="sidebar-social">
+                  {/* <div className="sidebar-social">
                     <a href="https://www.facebook.com/" target="_blank" rel="noopener noreferrer">
                       <i className="fab fa-facebook-f" />
                     </a>
@@ -84,7 +85,7 @@ const Header = () => {
                     <a href="https://www.linkedin.com/" target="_blank" rel="noopener noreferrer">
                       <i className="fab fa-linkedin-in" />
                     </a>
-                  </div>
+                  </div> */}
                 </div>
               </div>
               <button
