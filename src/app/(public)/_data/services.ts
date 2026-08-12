@@ -1,36 +1,29 @@
 export const serviceData = [
   {
     id: 1,
-    thumb: "1.png",
-    title: "Fresh Vegetables",
+    thumb: "tier_class.png",
+    title: "Tier Classification",
     description:
       "Continue indulged speaking technical out horrible domestic position. Seeing rather you.",
   },
   {
     id: 2,
-    thumb: "2.png",
-    title: "Agricultural Products",
+    thumb: "dpr.png",
+    title: "Detailed Project Report",
     description:
       "Continue indulged speaking technical out horrible domestic position. Seeing rather you.",
   },
   {
     id: 3,
-    thumb: "3.png",
-    title: "Organic Products",
+    thumb: "market_linkage.png",
+    title: "Market Linkage",
     description:
       "Continue indulged speaking technical out horrible domestic position. Seeing rather you.",
   },
   {
     id: 4,
-    thumb: "4.png",
-    title: "Dairy Production",
-    description:
-      "Continue indulged speaking technical out horrible domestic position. Seeing rather you.",
-  },
-  {
-    id: 5,
-    thumb: "6.png",
-    title: "Sweet Exotic Fruits",
+    thumb: "schemes_subsidies.png",
+    title: "Schemes and Subsidies",
     description:
       "Continue indulged speaking technical out horrible domestic position. Seeing rather you.",
   },

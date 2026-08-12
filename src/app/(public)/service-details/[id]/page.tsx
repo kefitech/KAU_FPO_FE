@@ -59,8 +59,7 @@ export default function ServiceDetailsPage({ params }: { params: Promise<{ id: s
                 </div>
                 <h2>{service.title}</h2>
                 <p>
-                  We denounce with righteous indignation and dislike men who are so beguiled and demoralized by the charms of pleasure of the moment, so blinded by desire, that they cannot foresee the pain and trouble that are bound to ensue. These cases are perfectly simple and easy to distinguish. In a free hour, when our power of choice is untrammelled data structures manages data in technology.
-                </p>
+                  The platform will include an AI-assisted DPR (Detailed Project Report) generation feature as part of Phase II. Using an AI-driven templating engine, the system will automatically compile Detailed Project Reports for FPOs based on their commodity, region, and business plan data. This automation reduces manual effort in preparing project documentation needed for scheme applications, funding proposals, or institutional approvals. The DPR generation module will work alongside the AI-based crop suitability and business plan recommendation engine, pulling relevant data to produce structured reports. Report rendering will be handled using WeasyPrint, enabling export in PDF format for official submission and record-keeping.                </p>
                 <div className="features mt-40 mt-xs-30 mb-30 mb-xs-20">
                   <div className="row">
                     <div className="col-lg-5 col-md-6">
@@ -106,10 +105,10 @@ export default function ServiceDetailsPage({ params }: { params: Promise<{ id: s
                   <div className="content">
                     <h3>Need Help?</h3>
                     <p>
-                      Speak with a human to filling out a form? call corporate office and we will connect you with a team member help.
+                      Speak with a human to filling out a form? call office and we will connect you with a team member help.
                     </p>
-                    <h2>+(012) 6679545</h2>
-                    <h4><a href="mailto:info@agrul.com">info@agrul.com</a></h4>
+                    <h2>+91-487-2370150 <br />+91-487-2370086 </h2>
+                    <h4><a href="mailto:de@kau.in">de@kau.in</a></h4>
                     <Link className="btn mt-30 circle btn-theme animation btn-md" href="/contact-us">Contact Us</Link>
                   </div>
                 </div>

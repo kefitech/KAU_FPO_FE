@@ -37,8 +37,9 @@ const Header = () => {
               <Link className="navbar-brand" href="/">
                 <div className="navbar-logos">
                   {/* <img src="/assets/img/logo.png" className="logo" alt="Logo" /> */}
-                  <img src="/assets/img/SHM_MIDH.png" className="logo logo-secondary" alt="SHM MIDH Logo" />
-                  <img src="/assets/img/SHM_MIDH1.png" className="logo logo-secondary" alt="SHM MIDH Logo" />
+                  <img src="/assets/img/Dir_of_ext.png" className="logo logo-secondary" alt="Dir_of_extLogo" />
+                  <img src="/assets/img/GOK.jpg" className="logo logo-secondary" alt="GOK Logo" />
+                  <img src="/assets/img/SHM_LOGO.png" className="logo logo-secondary" alt="SHM Logo" />
                 </div>
               </Link>
             </div>
@@ -69,7 +70,7 @@ const Header = () => {
                       </a>
                     </li>
                     <li>
-                      <i className="fas fa-phone-alt" /> <a href="tel:+91 487 237 0509">+91 487 237 0509</a>
+                      <i className="fas fa-phone-alt" /> <a href="tel:+91-487-2370150">+91-487-2370150 </a> <a href="tel:+91-487-2370086">+91-487-2370086 </a> <a href="tel:+91-487-2370150">+91-487-2370150 </a>
                     </li>
                   </ul>
                   {/* <div className="sidebar-social">

@@ -105,7 +105,7 @@ const HeaderTop = () => {
             </li>
             <li>
               <i className="fas fa-phone-alt" />{" "}
-              <a href="tel:+914872370509">+91 487 237 0509</a>
+              <a href="tel:+914872370150">+91-487-2370150</a> , <a href="tel:+914872370086">+91-487-2370086</a>
             </li>
           </ul>
           <LangToggle />

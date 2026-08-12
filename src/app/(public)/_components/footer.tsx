@@ -237,7 +237,7 @@ const Footer = () => {
                     <div className="content">
                       <strong>{t.address ?? "Address"}:</strong>
                       <a href="https://maps.app.goo.gl/4FXjLWkpN5jvM8N17">
-                        {t.kau_address ?? "Kerala Agricultural University, Mannuthy P.O, Pin- 680651."}
+                        {t.kau_address ?? "Directorate of Extension, Mannuthy P.O, Thrissur - 680651 "}
                       </a>
                     </div>
                   </li>
@@ -246,7 +246,7 @@ const Footer = () => {
                       <i className="fas fa-envelope" />
                     </div>
                     <div className="content">
-                      <strong>Email:</strong> <a href="mailto:registrar@kau.in">registrar@kau.in</a>
+                      <strong>Email:</strong> <a href="mailto:de@kau.in">de@kau.in</a>
                     </div>
                   </li>
                   <li>
@@ -254,7 +254,7 @@ const Footer = () => {
                       <i className="fas fa-phone" />
                     </div>
                     <div className="content">
-                      <strong>Phone:</strong> <a href="tel:+91 487 237 0509">+91 487 237 0509</a>
+                      <strong>Phone:</strong> <a href="tel:+914872370150">+91-487-2370150</a> <br/> <a href="tel:+914872370086">+91-487-2370086</a>
                     </div>
                   </li>
                 </ul>

@@ -13,7 +13,7 @@ const Services = () => {
             <div className="col-lg-5">
               <div className="left-info">
                 <h5 className="sub-title">What We do</h5>
-                <h2 className="title">Our Services</h2>
+                <h2 className="title">Services Offered</h2>
               </div>
             </div>
             <div className="col-lg-6 offset-lg-1">
@@ -23,7 +23,7 @@ const Services = () => {
                   Connection stimulated estimating excellence an to impression. ladies she
                   basket season age her uneasy saw. Discourse unwilling am no described.
                 </p>
-                <Link className="btn btn-theme btn-md radius animation" href="/services">Discover More</Link>
+                
               </div>
             </div>
           </div>
@@ -50,7 +50,8 @@ const Services = () => {
                       <img src={`/assets/img/thumb/${service.thumb}`} alt={service.title} />
                     </div>
                     <h5><Link href={`/service-details/${service.id}`}>{service.title}</Link></h5>
-                    <p>{service.description}</p>
+                    <Link className="btn btn-theme btn-md radius animation" href={`/service-details/${service.id}`}>Discover More</Link>    
+                    {/* <p>{service.description}</p> */}
                   </div>
                 </SwiperSlide>
               ))}

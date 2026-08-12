@@ -5,7 +5,7 @@ import ServicesSection from "../_components/services";
 export default function ServicesPage() {
   return (
     <AgrulLayout>
-      <BreadCrumb title="Our Services" breadCrumb="Services" />
+      <BreadCrumb title="Services Offered" breadCrumb="Services" />
       <ServicesSection />
     </AgrulLayout>
   );
