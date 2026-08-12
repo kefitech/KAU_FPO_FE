@@ -14,17 +14,16 @@ export default function LoginV1() {
   const locale = useLocaleStore((s) => s.locale);
   const [t, setT] = useState<Record<string, string>>({});
   const [translationsLoading, setTranslationsLoading] = useState(true);
-
+  const effectiveLocale = locale || "en";
 
   useEffect(() => {
-    if (!locale) return;
-    translationsApi.getPublic(locale, "login").then((data) => {
-      setTranslationsLoading(true);
-      setT(data.login ?? {});
+    setTranslationsLoading(true);
+    translationsApi.getPublic(effectiveLocale, "login").then((data) => {
+    setT(data.login ?? {});
     })
      .catch(() => undefined)
      .finally(() => setTranslationsLoading(false));
-  }, [locale]);
+  }, [effectiveLocale]);
 
   if (translationsLoading) {
     return (

@@ -360,7 +360,7 @@ export function MenuItemForm({ mode, menuItem, t = {}, tCommon = {} }: MenuItemF
                 }}
               />
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 {/* ── Parent ── */}
                 <Controller
                   control={control}
@@ -368,7 +368,7 @@ export function MenuItemForm({ mode, menuItem, t = {}, tCommon = {} }: MenuItemF
                   render={({ field }) => {
                     const selectedItem = topLevelItems.find((i) => i.id === field.value);
                     return (
-                      <Field>
+                      <Field className="col-span-2">
                         <FieldLabel>{t.parent ?? "Parent Item"}</FieldLabel>
                         <Popover open={parentOpen} onOpenChange={setParentOpen}>
                           <PopoverTrigger asChild>
@@ -430,7 +430,7 @@ export function MenuItemForm({ mode, menuItem, t = {}, tCommon = {} }: MenuItemF
                   control={control}
                   name="order"
                   render={({ field }) => (
-                    <Field>
+                    <Field className="col-span-1">
                       <FieldLabel htmlFor="mi-order">
                         {t.order ?? "Order"} <span className="text-destructive">*</span>
                       </FieldLabel>

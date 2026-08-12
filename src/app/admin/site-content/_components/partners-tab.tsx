@@ -169,6 +169,7 @@ function PartnerDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Kerala Agricultural University"
+              maxLength={100}
             />
           </div>
 
@@ -373,7 +374,9 @@ export function PartnersTab({ t = {} }: { t?: T }) {
                   <TableCell>
                     <LogoThumb logo_url={partner.logo_url} name={partner.name} />
                   </TableCell>
-                  <TableCell className="font-medium text-sm">{partner.name}</TableCell>
+                  <TableCell className="font-medium text-sm max-w-[200px] truncate" title={partner.name}>
+                    {partner.name}
+                  </TableCell>
                   <TableCell>
                     {partner.url ? (
                       <a

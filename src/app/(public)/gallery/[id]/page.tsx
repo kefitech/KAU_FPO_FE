@@ -33,9 +33,11 @@ export default function GalleryAlbumPage() {
       .finally(() => setLoading(false));
   }, [id]);
 
+  const capitalize = (text: string) =>
+    text.replace(/\b\w/g, (char) => char.toUpperCase());
   return (
     <AgrulLayout>
-      <BreadCrumb title={album?.title ?? "Gallery"} breadCrumb="Gallery" />
+      <BreadCrumb title={capitalize(album?.title ?? "Gallery")} breadCrumb="Gallery" />
 
       <div className="gallery-album-area default-padding">
         <div className="container">

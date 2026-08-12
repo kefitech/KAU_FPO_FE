@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 
 import AgrulLayout from "../_components/agrul-layout";
@@ -14,11 +15,6 @@ import { publicFetch } from "../_lib/public-fetch";
 const ITEMS_PER_PAGE = 6;
 
 type TabKey = "newspaper" | "magazine";
-
-const TABS: { key: TabKey; label: string; icon: string }[] = [
-  { key: "newspaper", label: "Newspapers", icon: "fas fa-newspaper" },
-  { key: "magazine", label: "Magazines", icon: "fas fa-book-open" },
-];
 
 // ─── Skeleton row ─────────────────────────────────────────────────────────────
 
@@ -113,7 +109,18 @@ export default function NewsSourcesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [t, setT] = useState<Record<string, string>>({});
   const locale = useLocaleStore((s) => s.locale);
+
+  useEffect(() => {
+    if (!locale) return;
+    translationsApi.getPublic(locale, "home").then((res) => setT(res.home ?? {}));
+  }, [locale]);
+
+  const TABS: { key: TabKey; label: string; icon: string }[] = [
+    { key: "newspaper", label: t.news_sources_tab_newspapers ?? "Newspapers", icon: "fas fa-newspaper" },
+    { key: "magazine", label: t.news_sources_tab_magazines ?? "Magazines", icon: "fas fa-book-open" },
+  ];
 
   useEffect(() => {
     if (!locale) return;
@@ -209,7 +216,9 @@ export default function NewsSourcesPage() {
                 fontSize: 15,
               }}
             >
-              No {activeTab === "newspaper" ? "newspapers" : "magazines"} available at the moment.
+              No {activeTab === "newspaper"
+                ? (t.news_sources_tab_newspapers ?? "newspapers")
+                : (t.news_sources_tab_magazines ?? "magazines")} available at the moment.
             </div>
           ) : (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 20, justifyContent: "center" }}>

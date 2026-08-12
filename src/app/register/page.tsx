@@ -224,7 +224,7 @@ function EligibilityStep({ onPass, t }: { onPass: (token: string) => void; t: T 
           <label key={name} className="flex cursor-pointer items-start gap-3">
             <input
               type="checkbox"
-              className="mt-0.5 h-4 w-4 rounded border-input accent-green-600"
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-input accent-green-600"
               {...register(name)}
             />
             <span className="text-sm">{label}</span>
@@ -696,17 +696,17 @@ const STAGE_ORDER: Stage[] = ["eligibility", "phone-otp", "account"];
 export default function RegisterPage() {
   const locale = useLocaleStore((s) => s.locale);
   const [t, setT] = useState<T>({});
+  const effectiveLocale = locale || "en";
   const [stage, setStage] = useState<Stage>("eligibility");
   const [eligibilityToken, setEligibilityToken] = useState("");
   const [phoneToken, setPhoneToken] = useState("");
   const [verifiedPhone, setVerifiedPhone] = useState("");
 
   useEffect(() => {
-    if (!locale) return;
-    translationsApi.getPublic(locale, "register,districts").then((data) => {
+    translationsApi.getPublic(effectiveLocale, "register,districts").then((data) => {
       setT({ ...(data.districts ?? {}), ...(data.register ?? {}) });
     });
-  }, [locale]);
+  }, [effectiveLocale]);
 
   const stages: { key: Stage; label: string }[] = [
     { key: "eligibility", label: t.stage_eligibility ?? "Eligibility" },

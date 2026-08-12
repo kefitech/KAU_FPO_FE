@@ -555,7 +555,7 @@ function AlbumDetailView({
                   {photo.is_active ? (t.badge_active ?? "Active") : (t.badge_inactive ?? "Inactive")}
                 </Badge>
               </div>
-              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="absolute top-2 right-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="secondary" size="sm" className="h-7 w-7 p-0 shadow">
@@ -731,7 +731,7 @@ export function GalleryTab({ t = {} }: { t?: T }) {
               </div>
 
               {/* Actions — stop propagation so click doesn't open album */}
-              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+              <div className="absolute top-2 right-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                 onClick={(e) => e.stopPropagation()}>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import DOMPurify from "isomorphic-dompurify";
-
+import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 
 import AgrulLayout from "../_components/agrul-layout";
@@ -22,11 +22,6 @@ interface Announcement {
 type TabKey = "announcement" | "news";
 
 const ITEMS_PER_PAGE = 6;
-
-const TABS: { key: TabKey; label: string; icon: string }[] = [
-  { key: "announcement", label: "Announcements", icon: "fas fa-bullhorn" },
-  { key: "news", label: "News", icon: "fas fa-newspaper" },
-];
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", {
@@ -218,8 +213,19 @@ export default function NewsAndEvents() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [t, setT] = useState<Record<string, string>>({});
   const [selected, setSelected] = useState<Announcement | null>(null);
   const locale = useLocaleStore((s) => s.locale);
+
+  useEffect(() => {
+    if (!locale) return;
+    translationsApi.getPublic(locale, "home").then((res) => setT(res.home ?? {}));
+  }, [locale]);
+
+  const TABS: { key: TabKey; label: string; icon: string }[] = [
+    { key: "announcement", label: t.news_tab_announcements ?? "Announcements", icon: "fas fa-bullhorn" },
+    { key: "news", label: t.news_tab_news ?? "News", icon: "fas fa-newspaper" },
+  ];
 
   useEffect(() => {
     setLoading(true);
@@ -313,7 +319,9 @@ export default function NewsAndEvents() {
                 ))
               ) : items.length === 0 ? (
                 <div className="col-12 text-center" style={{ padding: "60px 0", color: "#888" }}>
-                  No {activeTab === "announcement" ? "announcements" : "news"} available at the moment.
+                  No {activeTab === "announcement" 
+                  ? (t.news_tab_announcements ?? "Announcements")
+                  : (t.news_tab_news ?? "News")} available at the moment.
                 </div>
               ) : (
                 items.map((item) => (
@@ -405,7 +413,8 @@ export default function NewsAndEvents() {
                             marginTop: 4,
                           }}
                         >
-                          Read More <i className="fas fa-arrow-right" style={{ fontSize: 11 }} />
+                          {t.news_read_more ?? "Read More"}{" "}
+                          <i className="fas fa-arrow-right" style={{ fontSize: 11 }} />
                         </button>
                       </div>
                     </div>

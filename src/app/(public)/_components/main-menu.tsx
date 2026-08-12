@@ -34,7 +34,7 @@ const MainMenu = ({ openIndex, toggleSubMenu, navbarPlacement }: Props) => {
       <li>
         <a href="/register">{t.get_started ?? "Get Started"}</a>
       </li>
-      <li className={`dropdown ${openIndex === 1 ? "on" : ""}`}>
+      <li className={`dropdown pages-dropdown ${openIndex === 1 ? "on" : ""}`}>
         <Link href="#" className="dropdown-toggle" data-toggle="dropdown" onClick={toggleSubMenu?.(1)}>
           {t.pages ?? "Pages"}
         </Link>
@@ -60,10 +60,16 @@ const MainMenu = ({ openIndex, toggleSubMenu, navbarPlacement }: Props) => {
           <li>
             <Link href="/contact-us">{t.contact_us ?? "Contact Us"}</Link>
           </li>
+          <li className="more-info-dropdown-item">
+            <Link href="/more-info">{t.more_info ?? "More Info"}</Link>
+          </li>
+
         </ul>
       </li>
-      <li>
-        <Link href="/more-info">{t.more_info ?? "More Info"}</Link>
+      <li className="flex items-center more-info-standalone">
+        <Link href="/more-info" className="more-info-link">
+          {t.more_info ?? "More Info"}
+        </Link>
       </li>
     </ul>
   );

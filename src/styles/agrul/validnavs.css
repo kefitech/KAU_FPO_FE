@@ -2838,8 +2838,8 @@ nav.navbar.validnavs .navbar-collapse.collapse button i {
 
 @media only screen and (min-width: 1024px) and (max-width: 1199px) {
 	.navbar.validnavs.navbar-default .navbar-nav li a {
-		padding: 30px 4px;
-		font-size: clamp(11px, 1vw, 14px);
+		padding: 30px 8px !important;
+		font-size: 14px;
 	}
 }
 
@@ -2982,3 +2982,26 @@ nav.navbar.validnavs .navbar-collapse.collapse button i {
 		width: 300px;
 	}
 }
+
+/* Collapse "More Info" into the Pages dropdown once the nav runs out of room */
+.dropdown-menu .more-info-dropdown-item {
+  display: none;
+}
+@media (max-width: 1380px) {
+  li.more-info-standalone {
+    display: none;
+  }
+  .dropdown-menu .more-info-dropdown-item {
+    display: block;
+  }
+}
+
+
+/* "Pages" sits near the right edge of the right-aligned nav; open it
+   right-anchored so it doesn't overflow the viewport on narrower windows */
+nav.navbar.validnavs ul.nav.navbar-right li.pages-dropdown .dropdown-menu {
+  left: auto;
+  right: 0;
+}
+
+
