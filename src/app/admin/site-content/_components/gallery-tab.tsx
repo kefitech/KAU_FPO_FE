@@ -637,9 +637,10 @@ export function GalleryTab({ t = {} }: { t?: T }) {
   const toggleMutation = useMutation({
     mutationFn: ({ id, active }: { id: number; active: boolean }) =>
       active ? galleryAlbumApi.activate(id) : galleryAlbumApi.deactivate(id),
-    onSuccess: () => {
+    onSuccess: (_data, { id }) => {
       toast.success("Album updated.");
       queryClient.invalidateQueries({ queryKey: ["admin-gallery-albums"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-gallery", id] });
     },
     onError: () => toast.error("Failed to update album."),
   });

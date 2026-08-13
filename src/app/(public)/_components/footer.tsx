@@ -107,7 +107,7 @@ const Footer = () => {
               {t.partners ?? "Partners"}
             </p>
             <div style={{ position: "relative", padding: partners.length > 4 ? "0 48px" : "0" }}>
-              {partners.length > 4 ? (
+              {partners.length > 1 ? (
                 <>
                   {(() => {
                     const swiperLinks =

@@ -82,6 +82,7 @@ const Gallery = () => {
             grabCursor
             centeredSlides
             loop={albums.length > 2}
+            rewind={albums.length <= 2}
             slidesPerView="auto"
             speed={900}
             autoplay={{ delay: 3200, disableOnInteraction: false }}

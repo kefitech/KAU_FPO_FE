@@ -1,42 +1,156 @@
 "use client";
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import { ExternalLink } from "lucide-react";
 import AgrulLayout from "../../_components/agrul-layout";
 import BreadCrumb from "../../_components/bread-crumb";
 import { serviceData } from "../../_data/services";
+import { schemesApi } from "@/lib/api/schemes";
+import { translationsApi } from "@/lib/api/translations";
+import { useLocaleStore } from "@/stores/locale-store";
+import {
+  SCHEME_CATEGORIES,
+  CATEGORY_LABEL_KEYS,
+  type T,
+} from "@/components/schemes/scheme-card";
+import type { FpoScheme } from "@/types/fpo";
+import styles from "./scheme-card.module.css";
 
-const faqItems = [
-  { id: "one", q: "What do you add to the soil before you plant a crop?", a: "Bennings appetite disposed me an at subjects an. To no indulgence diminution so discovered mr apartments. Are off under folly death wrote cause her way spite. Plan upon yet way get cold spot its week. therefore always holds in these matters to this principle of selection." },
-  { id: "two", q: "Do you use herbicides?", a: "Cennings appetite disposed me an at subjects an. To no indulgence diminution so discovered mr apartments. Are off under folly death wrote cause her way spite. Plan upon yet way get cold spot its week." },
-  { id: "three", q: "Where does the water come from that you use on your crops?", a: "Tennings appetite disposed me an at subjects an. To no indulgence diminution so discovered mr apartments. Are off under folly death wrote cause her way spite. Plan upon yet way get cold spot its week." },
-];
+const CATEGORY_BADGE_CLASS: Record<string, string> = {
+  credit: "bg-primary",
+  insurance: "bg-info text-dark",
+  marketing: "bg-success",
+  infrastructure: "bg-warning text-dark",
+  capacity_building: "bg-secondary",
+};
 
-function ServiceFaq() {
-  const [open, setOpen] = useState("one");
+function ServiceSchemes() {
+  const locale = useLocaleStore((s) => s.locale);
+  const [t, setT] = useState<T>({});
+  const schemeCategories = SCHEME_CATEGORIES.filter((c) => c !== "");
+  const [activeCategory, setActiveCategory] = useState(schemeCategories[0]);
+  const [selectedScheme, setSelectedScheme] = useState<FpoScheme | null>(null);
+
+  useEffect(() => {
+    translationsApi.getPublic(locale, "fpo_schemes,common")
+      .then((data) => setT(data.fpo_schemes ?? {}))
+      .catch(() => undefined);
+  }, [locale]);
+
+  const { data: schemes, isLoading } = useQuery({
+    queryKey: ["fpo-schemes", locale, activeCategory],
+    queryFn: () =>
+      schemesApi.list({
+        locale,
+        category: activeCategory,
+      }),
+    staleTime: 5 * 60 * 1000,
+  });
+
   return (
-    <div className="common-faq mt-40">
-      <h3 className="mb-20">We're Here to Help You</h3>
-      <div className="accordion accordion-regular" id="faqAccordion">
-        {faqItems.map((faq) => (
-          <div className="accordion-item" key={faq.id}>
-            <h2 className="accordion-header">
-              <button
-                className={`accordion-button${open === faq.id ? "" : " collapsed"}`}
-                type="button"
-                onClick={() => setOpen(open === faq.id ? "" : faq.id)}
-              >
-                {faq.q}
-              </button>
-            </h2>
-            <div
-              className={`accordion-collapse collapse${open === faq.id ? " show" : ""}`}
+    <div className="service-schemes mt-40">
+      <h3 className="mb-20">Related Government Schemes</h3>
+        <ul className={`nav nav-pills ${styles.filterList}`}>
+        {schemeCategories.map((catValue) => (
+          <li className="nav-item" key={catValue}>
+            <button
+              type="button"
+              className={`${styles.filterPill} ${activeCategory === catValue ? styles.filterPillActive : styles.filterPillInactive}`}
+              onClick={() => setActiveCategory(catValue)}
             >
-              <div className="accordion-body"><p>{faq.a}</p></div>
+              {t[CATEGORY_LABEL_KEYS[catValue].key] ?? CATEGORY_LABEL_KEYS[catValue].fallback}
+            </button>
+          </li>
+        ))}
+      </ul>
+
+      {isLoading ? (
+        <div className="row g-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: skeleton list
+            <div className="col-md-6" key={i}>
+              <div className="card h-100 p-4 placeholder-glow">
+                <span className="placeholder col-4 mb-3" />
+                <span className="placeholder col-8 mb-2" />
+                <span className="placeholder col-12 mb-2" />
+                <span className="placeholder col-6" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : !schemes || schemes.length === 0 ? (
+        <p className="text-muted">No schemes available in this category.</p>
+      ) : (
+        <div className={`row g-4 ${styles.schemesGrid}`}>
+          {schemes.map((scheme) => (
+            <div className="col-md-6" key={scheme.id}>
+              <div className={`card h-100 p-4 d-flex flex-column gap-2 ${styles.schemeHoverCard}`}>
+                <span className={`badge ${CATEGORY_BADGE_CLASS[scheme.category] ?? "bg-light text-dark"} align-self-start`}>
+                  {scheme.category_display}
+                </span>
+                <h5 className="mb-1">{scheme.name}</h5>
+                {scheme.administering_body && (
+                  <p className="small text-muted mb-1">
+                    <strong>Administered by:</strong> {scheme.administering_body}
+                  </p>
+                )}
+                {scheme.eligibility && (
+                  <p className="small mb-1">
+                    <strong>Eligibility:</strong> {scheme.eligibility}
+                  </p>
+                )}
+                <div className="mt-auto pt-2 d-flex flex-wrap gap-2">
+                  <button type="button" className="btn btn-sm btn-outline-dark" onClick={() => setSelectedScheme(scheme)}>
+                    View Details
+                  </button>
+                  {scheme.official_link && (
+                    <a className="btn btn-sm btn-theme" href={scheme.official_link} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="me-1" size={14} /> Website
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {selectedScheme && (
+        <>
+          <div className="modal-backdrop fade show" onClick={() => setSelectedScheme(null)} />
+          <div className="modal fade show d-block" tabIndex={-1} role="dialog">
+            <div className="modal-dialog modal-dialog-centered modal-lg" role="document">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">{selectedScheme.name}</h5>
+                  <button type="button" className="btn-close" aria-label="Close" onClick={() => setSelectedScheme(null)} />
+                </div>
+                <div className="modal-body">
+                  <p><strong>Category:</strong> {selectedScheme.category_display}</p>
+                  {selectedScheme.administering_body && <p><strong>Administered By:</strong> {selectedScheme.administering_body}</p>}
+                  {selectedScheme.objective && <p><strong>Objective:</strong> {selectedScheme.objective}</p>}
+                  {selectedScheme.eligibility && <p><strong>Eligibility:</strong> {selectedScheme.eligibility}</p>}
+                  {selectedScheme.benefit_details && <p><strong>Benefits:</strong> {selectedScheme.benefit_details}</p>}
+                  {selectedScheme.application_process && <p><strong>How to Apply:</strong> {selectedScheme.application_process}</p>}
+                  {selectedScheme.last_updated && <p><strong>Last Updated:</strong> {selectedScheme.last_updated}</p>}
+                </div>
+                <div className="modal-footer">
+                  {selectedScheme.official_link && (
+                    <a className="btn btn-theme" href={selectedScheme.official_link} target="_blank" rel="noopener noreferrer">
+                      Visit Website
+                    </a>
+                  )}
+                  <button type="button" className="btn btn-outline-secondary" onClick={() => setSelectedScheme(null)}>
+                    Close
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
-        ))}
-      </div>
+        </>
+      )}
     </div>
   );
 }
@@ -58,36 +172,8 @@ export default function ServiceDetailsPage({ params }: { params: Promise<{ id: s
                   <img src={`/assets/img/banner/${service.id === 1 ? "6" : service.id === 2 ? "7" : service.id === 3 ? "8" : service.id === 4 ? "9" : "10"}.jpg`} alt={service.title} />
                 </div>
                 <h2>{service.title}</h2>
-                <p>
-                  The platform will include an AI-assisted DPR (Detailed Project Report) generation feature as part of Phase II. Using an AI-driven templating engine, the system will automatically compile Detailed Project Reports for FPOs based on their commodity, region, and business plan data. This automation reduces manual effort in preparing project documentation needed for scheme applications, funding proposals, or institutional approvals. The DPR generation module will work alongside the AI-based crop suitability and business plan recommendation engine, pulling relevant data to produce structured reports. Report rendering will be handled using WeasyPrint, enabling export in PDF format for official submission and record-keeping.                </p>
-                <div className="features mt-40 mt-xs-30 mb-30 mb-xs-20">
-                  <div className="row">
-                    <div className="col-lg-5 col-md-6">
-                      <div className="content">
-                        <h3>Services offered</h3>
-                        <ul className="feature-list-item">
-                          <li>Agriculture Consulting</li>
-                          <li>Custom farming rules</li>
-                          <li>Real-time rate shopping</li>
-                          <li>100 freight shipments / month</li>
-                        </ul>
-                      </div>
-                    </div>
-                    <div className="col-lg-7 col-md-6 mt-xs-30">
-                      <div className="content">
-                        <h3>The Challange</h3>
-                        <p>
-                          Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe eveniet ut et voluptates repudiandae sint et molestiae non recusandae. Itaque earum rerum hic tenetur a sapiente delectus.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <h3>What we do?</h3>
-                <p>
-                  Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo minus id quod maxime placeat facere possimus, omnis voluptas assumenda est, omnis dolor repellendus. Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe eveniet.
-                </p>
-                <ServiceFaq />
+
+                {service.id === 4 && <ServiceSchemes />}
               </div>
               <div className="col-xl-4 col-lg-5 mt-md-50 mt-xs-50 services-sidebar">
                 <div className="single-widget services-list-widget">

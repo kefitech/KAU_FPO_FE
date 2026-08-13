@@ -66,11 +66,11 @@ const Header = () => {
                     <li>
                       <i className="fas fa-map-marker-alt" />
                       <a href="https://maps.app.goo.gl/4FXjLWkpN5jvM8N17">
-                        Kerala Agricultural University, Mannuthy P.O, Pin- 680651.
+                        Directorate of Extension, Mannuthy P.O, Thrissur - 680651
                       </a>
                     </li>
                     <li>
-                      <i className="fas fa-phone-alt" /> <a href="tel:+91-487-2370150">+91-487-2370150 </a> <a href="tel:+91-487-2370086">+91-487-2370086 </a> <a href="tel:+91-487-2370150">+91-487-2370150 </a>
+                      <i className="fas fa-phone-alt" /> <a href="tel:+91-487-2370086">+91-487-2370086 </a> <a href="tel:+91-487-2370150">+91-487-2370150 </a> 
                     </li>
                   </ul>
                   {/* <div className="sidebar-social">

@@ -65,7 +65,7 @@ export function AdminSidebar() {
           <img
             src="/assets/img/logo.png"
             alt="KAU"
-            className="h-8 w-auto shrink-0 dark:hidden group-data-[collapsible=icon]:hidden"
+            className="hidden h-8 w-8 shrink-0 object-contain group-data-[collapsible=icon]:block dark:group-data-[collapsible=icon]:hidden"
           />
           <img
             src="/assets/img/logoblack.png"
@@ -75,7 +75,7 @@ export function AdminSidebar() {
           <img
             src="/assets/img/logo.png"
             alt="KAU"
-            className="hidden h-8 w-8 shrink-0 object-contain dark:hidden group-data-[collapsible=icon]:block"
+            className="hidden h-8 w-8 shrink-0 object-contain dark:group-data-[collapsible=icon]:block"
           />
           <img
             src="/assets/img/logoblack.png"

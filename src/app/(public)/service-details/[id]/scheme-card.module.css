@@ -1,0 +1,46 @@
+.schemeHoverCard {
+  transition: all 0.35s ease;
+  border-radius: 14px;
+}
+
+.schemeHoverCard:hover {
+  transform: translateY(-10px) rotate(1deg) scale(1.02);
+  border-color: #2f8f2f !important;
+  background: #fcfffc;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18), 0 6px 12px rgba(47, 143, 47, 0.12);
+}
+
+.schemesGrid > div:nth-child(even) .schemeHoverCard:hover {
+  transform: translateY(-10px) rotate(-1deg) scale(1.02);
+}
+
+.filterPill {
+  padding: 8px 20px;
+  border-radius: 50px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+.filterPillActive {
+  background: #2f8f2f !important;
+  color: #ffffff !important;
+  border: 1px solid #2f8f2f !important;
+}
+.filterPillInactive {
+  background: #ffffff !important;
+  color: #555555 !important;
+  border: 1px solid #dddddd !important;
+}
+.filterPillInactive:hover {
+  background: #f4faf4 !important;
+  color: #2f8f2f !important;
+  border-color: #2f8f2f !important;
+}
+.filterList {
+  margin-bottom: 30px;
+  display: flex;
+  flex-wrap: wrap;
+  row-gap: 10px;
+  column-gap: 10px;
+}
