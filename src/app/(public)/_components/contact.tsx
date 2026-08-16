@@ -291,9 +291,7 @@ const Contact = ({ t }: ContactProps) => {
                   <div className="info">
                     <h5 className="title">{t.our_location ?? "Our Location"}</h5>
                     <p>
-                      Kerala Agricultural University, KAU P.O.,
-                      <br />
-                      Vellanikkara, Thrissur - 680 656, Kerala
+                      {t.kau_address ?? "Directorate of Extension, Mannuthy P.O, \n Thrissur - 680651"}
                     </p>
                   </div>
                 </li>
@@ -303,7 +301,7 @@ const Contact = ({ t }: ContactProps) => {
                   </div>
                   <div className="info">
                     <h5 className="title">{t.official_email ?? "Official Email"}</h5>
-                    <a href="mailto:registrar@kau.in">registrar@kau.in</a>
+                    <a href="mailto:registrar@kau.in">de@kau.in</a>
                   </div>
                 </li>
               </ul>

@@ -109,9 +109,9 @@ function FeedbackDetailDialog({
           </div>
 
           {/* Status + actions */}
-          <div className="flex items-center justify-between border-t pt-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
             <StatusBadge status={feedback.status} t={t} />
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {feedback.status !== "read" && (
                 <Button variant="outline" size="sm" onClick={() => onStatusChange(feedback.id, "read")}>
                   <Eye className="mr-1.5 h-3.5 w-3.5" />

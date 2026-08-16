@@ -213,8 +213,8 @@ const TeamSection = ({ showAll = false }: Props) => {
         <div className="row">
           <div className="col-lg-8 offset-lg-2">
             <div className="site-heading text-center">
-              <h5 className="sub-title">{t.team_subtitle ?? "Our Team"}</h5>
-              <h2 className="title">{t.team_title ?? "Meet Our Leadership"}</h2>
+              <h5 className="sub-title">{t.team_subtitle ?? "KAU-FPO Linkage Programme"}</h5>
+              <h2 className="title">{t.team_title ?? "Our Team"}</h2>
               <div className="devider" />
               
             </div>

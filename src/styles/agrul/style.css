@@ -7171,15 +7171,15 @@ footer {
     display: inline-block;
     align-items: center;
     justify-content: center;
-    width: 80px;
-    height: 80px;
+    width: 100px;
+    height: 100px;
     background: var(--white);
     border-radius: 50%;
     overflow: hidden;
 }
 .footer-item .logo img {
-  max-width: 70%;
-  max-height: 70%;
+  max-width: 90%;
+  max-height: 90%;
   object-fit: contain;
 }
 
@@ -7287,8 +7287,18 @@ footer {
 
 .footer-item.contact li {
 	display: flex;
+  	align-items: center;
 	margin-top: 20px;
 }
+.footer-item.contact li .content {
+	line-height: 1.8;
+}
+
+.footer-item.contact li .content a {
+	line-height: 1.6;
+	display: inline-block;
+}
+
 
 .footer-item.contact li strong {
 	display: block;
@@ -8279,6 +8289,10 @@ footer {
 		margin-right: 0 !important;
 		padding: 0 !important;
 	}
+ 	.footer-item.link {
+ 		text-align: center;
+ 	}
+	
 
 	footer .item:first-child .footer-item {
 		margin-top: 0;

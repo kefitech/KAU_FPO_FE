@@ -65,22 +65,7 @@ export function AdminSidebar() {
           <img
             src="/assets/img/logo.png"
             alt="KAU"
-            className="hidden h-8 w-8 shrink-0 object-contain group-data-[collapsible=icon]:block dark:group-data-[collapsible=icon]:hidden"
-          />
-          <img
-            src="/assets/img/logoblack.png"
-            alt="KAU"
-            className="h-8 w-auto shrink-0 hidden dark:block group-data-[collapsible=icon]:hidden"
-          />
-          <img
-            src="/assets/img/logo.png"
-            alt="KAU"
-            className="hidden h-8 w-8 shrink-0 object-contain dark:group-data-[collapsible=icon]:block"
-          />
-          <img
-            src="/assets/img/logoblack.png"
-            alt="KAU"
-            className="hidden h-8 w-8 shrink-0 object-contain dark:hidden dark:group-data-[collapsible=icon]:block"
+            className="h-8 w-8 shrink-0 object-contain group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:w-8"
           />          
           <div className="flex flex-col group-data-[collapsible=icon]:hidden">
             <span className="font-semibold text-sm leading-tight tracking-tight">KAU-FPO</span>
