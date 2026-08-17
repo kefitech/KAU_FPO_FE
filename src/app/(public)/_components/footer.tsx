@@ -202,12 +202,12 @@ const Footer = () => {
 
         <div className="f-items default-padding">
           <div className="row">
-            <div className="col-lg-4 col-md-6 item">
+            <div className="col-12 col-lg-3 item">
               <div className="footer-item about">
                 <img className="logo" src="/assets/img/logo1.png" alt="Logo" />
               </div>
             </div>
-            <div className="col-lg-2 col-md-6 item">
+            <div className="col-12 col-sm-6 col-lg-3 item">
               <div className="footer-item link">
                 <h4 className="widget-title">{t.explore ?? "Explore"}</h4>
                 <ul>
@@ -226,7 +226,7 @@ const Footer = () => {
                 </ul>
               </div>
             </div>
-            <div className="col-lg-3 col-md-6 item">
+            <div className="col-12 col-sm-6 col-lg-5 item">
               <div className="footer-item contact">
                 <h4 className="widget-title">{t.contact_info ?? "Contact Info"}</h4>
                 <ul>
@@ -254,11 +254,9 @@ const Footer = () => {
                       <i className="fas fa-phone" />
                     </div>
                     <div className="content">
-                      <strong>Phone:</strong> <a href="tel:+914872370150">+91-487-2370150</a> 
-                      <br/>
-                      <a href="tel:+914872370086">
-                        +91-487-2370086
-                      </a>
+                      <strong>Phone:</strong> <a href="tel:+914872370150">+91-487-2370150</a>
+                      <br />
+                      <a href="tel:+914872370086">+91-487-2370086</a>
                     </div>
                   </li>
                 </ul>
