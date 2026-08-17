@@ -3,17 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Eye,
-  EyeOff,
-  ImageIcon,
-  MoreHorizontal,
-  Pencil,
-  Plus,
-  RefreshCw,
-  Trash2,
-  X,
-} from "lucide-react";
+import { Eye, EyeOff, ImageIcon, MoreHorizontal, Pencil, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -137,17 +127,30 @@ function PartnerDialog({
       onSuccess();
       onOpenChange(false);
     },
-    onError: () => toast.error("Failed to save partner."),
+    onError: (error: any) => {
+      console.log("mutation error:", error);
+      console.log("error.response?.data:", error?.response?.data);
+      const backendMessage = error?.message;
+      const firstError =
+        backendMessage && typeof backendMessage === "object" ? Object.values(backendMessage).flat()[0] : null;
+      toast.error((firstError as string) || "Failed to save partner.");
+    },
   });
 
   const handleSubmit = () => {
     if (url) {
       const err = validateUrl(url);
-      if (err) { setUrlError(err); return; }
+      if (err) {
+        setUrlError(err);
+        return;
+      }
     }
     if (logo) {
       const logoErr = validateLogo(logo);
-      if (logoErr) { setLogoError(logoErr); return; }
+      if (logoErr) {
+        setLogoError(logoErr);
+        return;
+      }
     }
     mutation.mutate();
   };
@@ -164,7 +167,9 @@ function PartnerDialog({
         <div className="flex flex-col gap-4 py-2">
           {/* Name */}
           <div className="flex flex-col gap-1.5">
-            <p className="text-sm font-medium">Name <span className="text-destructive">*</span></p>
+            <p className="text-sm font-medium">
+              Name <span className="text-destructive">*</span>
+            </p>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -178,7 +183,10 @@ function PartnerDialog({
             <p className="text-sm font-medium">Website URL</p>
             <Input
               value={url}
-              onChange={(e) => { setUrl(e.target.value); if (urlError) setUrlError(null); }}
+              onChange={(e) => {
+                setUrl(e.target.value);
+                if (urlError) setUrlError(null);
+              }}
               onBlur={() => setUrlError(validateUrl(url))}
               placeholder="https://example.com"
               type="url"
@@ -191,13 +199,7 @@ function PartnerDialog({
           {/* Order */}
           <div className="flex flex-col gap-1.5">
             <p className="text-sm font-medium">Display Order</p>
-            <Input
-              value={order}
-              onChange={(e) => setOrder(e.target.value)}
-              type="number"
-              min="0"
-              placeholder="0"
-            />
+            <Input value={order} onChange={(e) => setOrder(e.target.value)} type="number" min="0" placeholder="0" />
           </div>
 
           {/* Logo */}
@@ -207,7 +209,11 @@ function PartnerDialog({
             {editing && !logo && (
               <div className="flex items-center gap-3 rounded-md border bg-muted/40 p-2">
                 {editing.logo_url ? (
-                  <img src={editing.logo_url} alt="logo" className="h-10 w-10 rounded object-contain bg-muted shrink-0" />
+                  <img
+                    src={editing.logo_url}
+                    alt="logo"
+                    className="h-10 w-10 rounded object-contain bg-muted shrink-0"
+                  />
                 ) : (
                   <div className="h-10 w-10 rounded bg-muted flex items-center justify-center shrink-0">
                     <ImageIcon className="h-5 w-5 text-muted-foreground" />
@@ -226,8 +232,14 @@ function PartnerDialog({
                       className="hidden"
                       onChange={(e) => {
                         const file = e.target.files?.[0] ?? null;
-                        if (file) { const err = validateLogo(file); setLogoError(err); setLogo(err ? null : file); }
-                        else { setLogo(null); setLogoError(null); }
+                        if (file) {
+                          const err = validateLogo(file);
+                          setLogoError(err);
+                          setLogo(err ? null : file);
+                        } else {
+                          setLogo(null);
+                          setLogoError(null);
+                        }
                       }}
                     />
                   </label>
@@ -238,14 +250,21 @@ function PartnerDialog({
             {logo && (
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center gap-3 rounded-md border bg-muted/40 p-2">
-                  <img src={URL.createObjectURL(logo)} alt="preview" className="h-10 w-10 rounded object-contain bg-muted shrink-0" />
+                  <img
+                    src={URL.createObjectURL(logo)}
+                    alt="preview"
+                    className="h-10 w-10 rounded object-contain bg-muted shrink-0"
+                  />
                   <div className="flex flex-col gap-1 w-0 flex-1">
                     <span className="text-sm text-foreground truncate">{logo.name}</span>
                     <span className="text-xs text-muted-foreground">{formatFileSize(logo.size)}</span>
                   </div>
                   <button
                     type="button"
-                    onClick={() => { setLogo(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                    onClick={() => {
+                      setLogo(null);
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
                     className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
                   >
                     {editing ? <span className="text-xs">Cancel</span> : <X className="h-4 w-4" />}
@@ -262,8 +281,14 @@ function PartnerDialog({
                 accept="image/jpeg,image/png,image/webp"
                 onChange={(e) => {
                   const file = e.target.files?.[0] ?? null;
-                  if (file) { const err = validateLogo(file); setLogoError(err); setLogo(err ? null : file); }
-                  else { setLogo(null); setLogoError(null); }
+                  if (file) {
+                    const err = validateLogo(file);
+                    setLogoError(err);
+                    setLogo(err ? null : file);
+                  } else {
+                    setLogo(null);
+                    setLogoError(null);
+                  }
                 }}
               />
             )}
@@ -291,7 +316,12 @@ export function PartnersTab({ t = {} }: { t?: T }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<AdminPartner | null>(null);
 
-  const { data: partners = [], isLoading, isFetching, refetch } = useQuery({
+  const {
+    data: partners = [],
+    isLoading,
+    isFetching,
+    refetch,
+  } = useQuery({
     queryKey: ["admin-partners"],
     queryFn: partnersApi.getAll,
     staleTime: 30_000,
@@ -332,7 +362,13 @@ export function PartnersTab({ t = {} }: { t?: T }) {
           <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
             <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
           </Button>
-          <Button size="sm" onClick={() => { setEditing(null); setDialogOpen(true); }}>
+          <Button
+            size="sm"
+            onClick={() => {
+              setEditing(null);
+              setDialogOpen(true);
+            }}
+          >
             <Plus className="mr-1.5 h-4 w-4" />
             Add Partner
           </Button>
@@ -358,7 +394,9 @@ export function PartnersTab({ t = {} }: { t?: T }) {
                 <TableRow key={i}>
                   {Array.from({ length: 6 }).map((_, j) => (
                     // biome-ignore lint/suspicious/noArrayIndexKey: skeleton
-                    <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
+                    <TableCell key={j}>
+                      <Skeleton className="h-4 w-full" />
+                    </TableCell>
                   ))}
                 </TableRow>
               ))
@@ -412,15 +450,28 @@ export function PartnersTab({ t = {} }: { t?: T }) {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="min-w-[190]">
-                        <DropdownMenuItem onClick={() => { setEditing(partner); setDialogOpen(true); }}>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setEditing(partner);
+                            setDialogOpen(true);
+                          }}
+                        >
                           <Pencil className="mr-2 h-4 w-4" />
                           Edit
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toggleMutation.mutate({ id: partner.id, active: !partner.is_active })}>
+                        <DropdownMenuItem
+                          onClick={() => toggleMutation.mutate({ id: partner.id, active: !partner.is_active })}
+                        >
                           {partner.is_active ? (
-                            <><EyeOff className="mr-2 h-4 w-4" />Deactivate</>
+                            <>
+                              <EyeOff className="mr-2 h-4 w-4" />
+                              Deactivate
+                            </>
                           ) : (
-                            <><Eye className="mr-2 h-4 w-4" />Activate</>
+                            <>
+                              <Eye className="mr-2 h-4 w-4" />
+                              Activate
+                            </>
                           )}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
