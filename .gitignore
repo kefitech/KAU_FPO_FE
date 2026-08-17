@@ -39,3 +39,8 @@ next-env.d.ts
 # Claude AI context files
 CLAUDE.md
 .claude/
+
+# Deployment files
+DEPLOY.md
+.env.production.live
+.env.production.testing.bak
