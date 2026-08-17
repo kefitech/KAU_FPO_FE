@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import AgrulLayout from "../../_components/agrul-layout";
 import BreadCrumb from "../../_components/bread-crumb";
 import { publicFetch } from "../../_lib/public-fetch";
+import { useLocaleStore } from "@/stores/locale-store";
 import "./gallery-album.css";
 
 interface AlbumDetail {
@@ -23,16 +24,18 @@ export default function GalleryAlbumPage() {
   const [album, setAlbum] = useState<AlbumDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const locale = useLocaleStore((s) => s.locale);
 
   useEffect(() => {
     if (!id) return;
-    publicFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/public/gallery/albums/${id}/`)
+    publicFetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/public/gallery/albums/${id}/?lang=${locale}`
+    )
       .then((r) => r.json())
       .then((json) => setAlbum(json.data as AlbumDetail))
       .catch(() => setAlbum(null))
       .finally(() => setLoading(false));
-  }, [id]);
-
+  }, [id, locale]);
   const capitalize = (text: string) =>
     text.replace(/\b\w/g, (char) => char.toUpperCase());
   return (
