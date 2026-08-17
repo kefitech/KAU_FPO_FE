@@ -70,6 +70,74 @@ const Banner = () => {
                 className="banner-thumb bg-cover shadow dark"
                 style={{ background: `url(/assets/img/banner/${slide.bgThumb})` }}
               />
+
+              {/* Quick access cards — desktop only, absolutely positioned on right */}
+              <div style={{
+                position: "absolute",
+                right: 60,
+                bottom: 100,
+                zIndex: 10,
+                display: "flex",
+                flexDirection: "column",
+                gap: 14,
+                width: 300,
+                height: "auto",
+              }} className="d-none d-xl-flex">
+                {[
+                  { href: "/about-us",           icon: "fa-university",     defaultTitle: "About Us",              defaultDesc: "About KAU-FPO Linkage Programme" },
+                  { href: "/howtoregister",       icon: "fa-file-alt",       defaultTitle: "How To Register FPO",   defaultDesc: "Step-by-step registration guide" },
+                  { href: "/news-announcements",  icon: "fa-bullhorn",       defaultTitle: "Events & Updates",      defaultDesc: "Latest announcements and news" },
+                  { href: "/faq",                 icon: "fa-question-circle",defaultTitle: "FAQs",                  defaultDesc: "Frequently asked questions" },
+                  { href: "/contact-us",          icon: "fa-envelope",       defaultTitle: "Contact Us",            defaultDesc: "Get in touch with us" },
+                  { href: "/more-info",           icon: "fa-info-circle",    defaultTitle: "More Info",             defaultDesc: "Resources, documents & guidelines" },
+                ].map((card) => (
+                  <a
+                    key={card.href}
+                    href={card.href}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 16,
+                      background: "rgba(0,0,0,0.35)",
+                      backdropFilter: "blur(10px)",
+                      WebkitBackdropFilter: "blur(10px)",
+                      border: "1px solid rgba(255,255,255,0.2)",
+                      borderRadius: 12,
+                      padding: "16px 20px",
+                      textDecoration: "none",
+                      color: "#fff",
+                      transition: "background 0.2s, transform 0.2s",
+                      height: "auto",
+                    }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLAnchorElement).style.background = "rgba(0,0,0,0.55)";
+                      (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)";
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLAnchorElement).style.background = "rgba(0,0,0,0.35)";
+                      (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(0)";
+                    }}
+                  >
+                    <div style={{
+                      width: 44, height: 44, borderRadius: 10, flexShrink: 0,
+                      background: "rgba(255,255,255,0.15)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
+                      <i className={`fas ${card.icon}`} style={{ fontSize: 18, color: "#f5c842" }} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 3 }}>
+                        {card.defaultTitle}
+                      </div>
+                      <div style={{ fontSize: 12, opacity: 0.8 }}>
+                        {card.defaultDesc}
+                      </div>
+                    </div>
+                    <i className="fas fa-chevron-right" style={{ fontSize: 12, opacity: 0.6 }} />
+                  </a>
+                ))}
+              </div>
+
               <div className="container">
                 <div className="row align-center">
                   <div className="col-xl-7">
@@ -93,6 +161,7 @@ const Banner = () => {
                       </div>
                     </div>
                   </div>
+
                 </div>
               </div>
             </SwiperSlide>
