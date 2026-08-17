@@ -1,7 +1,10 @@
 "use client";
+
 import Link from "next/link";
+
+import { Autoplay, Navigation, Pagination } from "swiper/modules";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { Pagination, Navigation, Autoplay } from "swiper/modules";
+
 import { serviceData } from "../_data/services";
 
 const Services = () => {
@@ -17,13 +20,14 @@ const Services = () => {
               </div>
             </div>
             <div className="col-lg-6 offset-lg-1">
-              <div className="right-info">
-                <p>
-                  Everything melancholy uncommonly but solicitude inhabiting projection off.
-                  Connection stimulated estimating excellence an to impression. ladies she
-                  basket season age her uneasy saw. Discourse unwilling am no described.
+              <div className="right-info ">
+                <p style={{ textAlign: "justify" }}>
+                  From registration to market access, our platform brings every essential FPO service together in one
+                  place. Generate AI-backed project reports for funding and scheme applications, connect directly with
+                  buyers through our market linkage tools, discover government schemes and subsidies you're eligible
+                  for, and track your FPO's tier classification — all from a single, easy-to-use dashboard designed to
+                  support your growth at every stage.
                 </p>
-                
               </div>
             </div>
           </div>
@@ -49,8 +53,12 @@ const Services = () => {
                     <div className="thumb">
                       <img src={`/assets/img/thumb/${service.thumb}`} alt={service.title} />
                     </div>
-                    <h5><Link href={`/service-details/${service.id}`}>{service.title}</Link></h5>
-                    <Link className="btn btn-theme btn-md radius animation" href={`/service-details/${service.id}`}>Discover More</Link>    
+                    <h5>
+                      <Link href={`/service-details/${service.id}`}>{service.title}</Link>
+                    </h5>
+                    <Link className="btn btn-theme btn-md radius animation" href={`/service-details/${service.id}`}>
+                      Discover More
+                    </Link>
                     {/* <p>{service.description}</p> */}
                   </div>
                 </SwiperSlide>
