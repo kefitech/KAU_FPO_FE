@@ -1,7 +1,7 @@
 "use client";
-import { use, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound,useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { ExternalLink } from "lucide-react";
 import AgrulLayout from "../../_components/agrul-layout";
@@ -155,9 +155,9 @@ function ServiceSchemes() {
   );
 }
 
-export default function ServiceDetailsPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
-  const service = serviceData.find((s) => s.id === parseInt(id));
+export default function ServiceDetailsPage() {
+  const { id } = useParams<{ id: string }>();
+  const service = serviceData.find((s) => s.id === parseInt(id as string));
   if (!service) notFound();
 
   return (
@@ -169,9 +169,10 @@ export default function ServiceDetailsPage({ params }: { params: Promise<{ id: s
             <div className="row">
               <div className="col-xl-8 col-lg-7 pl-45 pl-md-15 pl-xs-15 services-single-content order-lg-last">
                 <div className="thumb">
-                  <img src={`/assets/img/banner/${service.id === 1 ? "6" : service.id === 2 ? "7" : service.id === 3 ? "8" : service.id === 4 ? "9" : "10"}.jpg`} alt={service.title} />
+                  <img src={`/assets/img/banner/services.png`} alt={service.title} />
                 </div>
                 <h2>{service.title}</h2>
+                <p>{service.description}</p>
 
                 {service.id === 4 && <ServiceSchemes />}
               </div>
@@ -187,11 +188,11 @@ export default function ServiceDetailsPage({ params }: { params: Promise<{ id: s
                     </ul>
                   </div>
                 </div>
-                <div className="single-widget quick-contact-widget text-light" style={{ backgroundImage: "url(/assets/img/thumbs/5.jpg)" }}>
+                <div className="single-widget quick-contact-widget text-light" style={{ backgroundImage: "url(/assets/img/thumbs/contact.png)" }}>
                   <div className="content">
                     <h3>Need Help?</h3>
                     <p>
-                      Speak with a human to filling out a form? call office and we will connect you with a team member help.
+                      Call office and we will connect you with a team member help.
                     </p>
                     <h2>+91-487-2370150 <br />+91-487-2370086 </h2>
                     <h4><a href="mailto:de@kau.in">de@kau.in</a></h4>
