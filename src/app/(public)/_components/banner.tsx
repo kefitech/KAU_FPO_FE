@@ -31,11 +31,13 @@ const SLIDES = [
 const Banner = () => {
   const locale = useLocaleStore((s) => s.locale);
   const [t, setT] = useState<Record<string, string>>({});
+  const [nav, setNav] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!locale) return;
-    translationsApi.getPublic(locale, "banner").then((data) => {
+    translationsApi.getPublic(locale, "banner,nav").then((data) => {
       setT(data.banner ?? {});
+      setNav(data.nav ?? {});
     });
   }, [locale]);
 
@@ -84,12 +86,12 @@ const Banner = () => {
                 height: "auto",
               }} className="d-none d-xl-flex">
                 {[
-                  { href: "/about-us",           icon: "fa-university",     defaultTitle: "About Us",              defaultDesc: "About KAU-FPO Linkage Programme" },
-                  { href: "/howtoregister",       icon: "fa-file-alt",       defaultTitle: "How To Register FPO",   defaultDesc: "Step-by-step registration guide" },
-                  { href: "/news-announcements",  icon: "fa-bullhorn",       defaultTitle: "Events & Updates",      defaultDesc: "Latest announcements and news" },
-                  { href: "/faq",                 icon: "fa-question-circle",defaultTitle: "FAQs",                  defaultDesc: "Frequently asked questions" },
-                  { href: "/contact-us",          icon: "fa-envelope",       defaultTitle: "Contact Us",            defaultDesc: "Get in touch with us" },
-                  { href: "/more-info",           icon: "fa-info-circle",    defaultTitle: "More Info",             defaultDesc: "Resources, documents & guidelines" },
+                  { href: "/about-us",           icon: "fa-university",     navKey: "about_us",            descKey: "card_about_desc",     defaultTitle: "About Us",              defaultDesc: "About KAU-FPO Linkage Programme" },
+                  { href: "/howtoregister",       icon: "fa-file-alt",       navKey: "how_to_register_FPO", descKey: "card_register_desc",  defaultTitle: "How To Register FPO",   defaultDesc: "Step-by-step registration guide" },
+                  { href: "/news-announcements",  icon: "fa-bullhorn",       navKey: "events_updates",      descKey: "card_events_desc",    defaultTitle: "Events & Updates",      defaultDesc: "Latest announcements and news" },
+                  { href: "/faq",                 icon: "fa-question-circle",navKey: "faqs",                descKey: "card_faq_desc",       defaultTitle: "FAQs",                  defaultDesc: "Frequently asked questions" },
+                  { href: "/contact-us",          icon: "fa-envelope",       navKey: "contact_us",          descKey: "card_contact_desc",   defaultTitle: "Contact Us",            defaultDesc: "Get in touch with us" },
+                  { href: "/more-info",           icon: "fa-info-circle",    navKey: "more_info",           descKey: "card_more_info_desc", defaultTitle: "More Info",             defaultDesc: "Resources, documents & guidelines" },
                 ].map((card) => (
                   <a
                     key={card.href}
@@ -127,10 +129,10 @@ const Banner = () => {
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 3 }}>
-                        {card.defaultTitle}
+                        {nav[card.navKey] ?? card.defaultTitle}
                       </div>
                       <div style={{ fontSize: 12, opacity: 0.8 }}>
-                        {card.defaultDesc}
+                        {t[card.descKey] ?? card.defaultDesc}
                       </div>
                     </div>
                     <i className="fas fa-chevron-right" style={{ fontSize: 12, opacity: 0.6 }} />
