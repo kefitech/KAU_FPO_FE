@@ -43,22 +43,6 @@ function LogoThumb({ logo_url, name }: { logo_url: string | null; name: string }
   );
 }
 
-const urlSchema = z
-  .string()
-  .trim()
-  .refine(
-    (value) => {
-      if (!value) return true; // URL is optional for partners
-      try {
-        const parsed = new URL(value);
-        return ["http:", "https:"].includes(parsed.protocol);
-      } catch {
-        return false;
-      }
-    },
-    { message: "URL must start with http:// or https://" },
-  );
-
 function PartnerDialog({
   open,
   onOpenChange,
@@ -79,6 +63,22 @@ function PartnerDialog({
   const [logo, setLogo] = useState<File | null>(null);
   const [logoError, setLogoError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const urlSchema = z
+    .string()
+    .trim()
+    .refine(
+      (value) => {
+        if (!value) return true;
+        try {
+          const parsed = new URL(value);
+          return ["http:", "https:"].includes(parsed.protocol);
+        } catch {
+          return false;
+        }
+      },
+      { message: t.field_url_error ?? "URL must start with http:// or https://" },
+    );
 
   useEffect(() => {
     if (!open) return;
@@ -101,7 +101,7 @@ function PartnerDialog({
     if (!value) return null;
     const result = urlSchema.safeParse(value);
     if (result.success) return null;
-    return "URL must start with http:// or https://";
+    return t.field_url_error ?? "URL must start with http:// or https://";
   };
 
   const ALLOWED_LOGO_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -123,17 +123,15 @@ function PartnerDialog({
       return editing ? partnersApi.update(editing.id, formData) : partnersApi.create(formData);
     },
     onSuccess: () => {
-      toast.success(editing ? "Partner updated." : "Partner added.");
+      toast.success(editing ? (t.toast_updated ?? "Partner updated.") : (t.toast_created ?? "Partner added."));
       onSuccess();
       onOpenChange(false);
     },
     onError: (error: any) => {
-      console.log("mutation error:", error);
-      console.log("error.response?.data:", error?.response?.data);
       const backendMessage = error?.message;
       const firstError =
         backendMessage && typeof backendMessage === "object" ? Object.values(backendMessage).flat()[0] : null;
-      toast.error((firstError as string) || "Failed to save partner.");
+      toast.error((firstError as string) || (t.toast_save_failed ?? "Failed to save partner."));
     },
   });
 
@@ -161,26 +159,26 @@ function PartnerDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{editing ? "Edit Partner" : "Add Partner"}</DialogTitle>
+          <DialogTitle>{editing ? (t.dialog_edit_partner ?? "Edit Partner") : (t.dialog_add_partner ?? "Add Partner")}</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col gap-4 py-2">
           {/* Name */}
           <div className="flex flex-col gap-1.5">
             <p className="text-sm font-medium">
-              Name <span className="text-destructive">*</span>
+              {t.field_name ?? "Name"} <span className="text-destructive">*</span>
             </p>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Kerala Agricultural University"
+              placeholder={t.placeholder_name ?? "e.g. Kerala Agricultural University"}
               maxLength={100}
             />
           </div>
 
           {/* URL */}
           <div className="flex flex-col gap-1.5">
-            <p className="text-sm font-medium">Website URL</p>
+            <p className="text-sm font-medium">{t.field_url ?? "Website URL"}</p>
             <Input
               value={url}
               onChange={(e) => {
@@ -188,7 +186,7 @@ function PartnerDialog({
                 if (urlError) setUrlError(null);
               }}
               onBlur={() => setUrlError(validateUrl(url))}
-              placeholder="https://example.com"
+              placeholder={t.placeholder_url ?? "https://example.com"}
               type="url"
               aria-invalid={!!urlError}
               className={urlError ? "border-destructive focus-visible:ring-destructive/20" : ""}
@@ -198,13 +196,13 @@ function PartnerDialog({
 
           {/* Order */}
           <div className="flex flex-col gap-1.5">
-            <p className="text-sm font-medium">Display Order</p>
+            <p className="text-sm font-medium">{t.field_order ?? "Display Order"}</p>
             <Input value={order} onChange={(e) => setOrder(e.target.value)} type="number" min="0" placeholder="0" />
           </div>
 
           {/* Logo */}
           <div className="flex flex-col gap-1.5">
-            <p className="font-medium text-sm">Logo</p>
+            <p className="font-medium text-sm">{t.field_logo ?? "Logo"}</p>
 
             {editing && !logo && (
               <div className="flex items-center gap-3 rounded-md border bg-muted/40 p-2">
@@ -221,10 +219,10 @@ function PartnerDialog({
                 )}
                 <div className="flex flex-col gap-1 min-w-0 flex-1">
                   <span className="text-xs text-muted-foreground">
-                    {editing.logo_url ? "Current logo" : "No logo set"}
+                    {editing.logo_url ? (t.logo_current ?? "Current logo") : (t.logo_none ?? "No logo set")}
                   </span>
                   <label className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer w-fit">
-                    {editing.logo_url ? "Replace" : "Upload logo"}
+                    {editing.logo_url ? (t.logo_replace ?? "Replace") : (t.logo_upload ?? "Upload logo")}
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -267,10 +265,14 @@ function PartnerDialog({
                     }}
                     className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
                   >
-                    {editing ? <span className="text-xs">Cancel</span> : <X className="h-4 w-4" />}
+                    {editing ? <span className="text-xs">{t.btn_cancel ?? "Cancel"}</span> : <X className="h-4 w-4" />}
                   </button>
                 </div>
-                {editing && <p className="text-xs text-muted-foreground">This will replace the existing logo.</p>}
+                {editing && (
+                  <p className="text-xs text-muted-foreground">
+                    {t.logo_replace_notice ?? "This will replace the existing logo."}
+                  </p>
+                )}
               </div>
             )}
 
@@ -292,17 +294,21 @@ function PartnerDialog({
                 }}
               />
             )}
-            <p className="text-xs text-muted-foreground">JPG, PNG, or WebP — max 5 MB</p>
+            <p className="text-xs text-muted-foreground">{t.logo_hint ?? "JPG, PNG, or WebP — max 5 MB"}</p>
             {logoError && <p className="text-xs text-destructive">{logoError}</p>}
           </div>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={mutation.isPending}>
-            Cancel
+            {t.btn_cancel ?? "Cancel"}
           </Button>
           <Button onClick={handleSubmit} disabled={!canSubmit || mutation.isPending}>
-            {mutation.isPending ? "Saving…" : editing ? "Save Changes" : "Add Partner"}
+            {mutation.isPending
+              ? (t.btn_saving ?? "Saving…")
+              : editing
+                ? (t.btn_save_changes ?? "Save Changes")
+                : (t.btn_add_partner ?? "Add Partner")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -330,26 +336,29 @@ export function PartnersTab({ t = {} }: { t?: T }) {
   const toggleMutation = useMutation({
     mutationFn: ({ id, active }: { id: number; active: boolean }) =>
       active ? partnersApi.activate(id) : partnersApi.deactivate(id),
-    onSuccess: () => {
-      toast.success("Partner updated.");
+    onSuccess: (_data, variables) => {
+      toast.success(
+        variables.active ? (t.toast_activated ?? "Partner activated.") : (t.toast_deactivated ?? "Partner deactivated."),
+      );
       queryClient.invalidateQueries({ queryKey: ["admin-partners"] });
     },
-    onError: () => toast.error("Failed to update partner."),
+    onError: () => toast.error(t.toast_update_failed ?? "Failed to update partner."),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => partnersApi.remove(id),
     onSuccess: () => {
-      toast.success("Partner deleted.");
+      toast.success(t.toast_deleted ?? "Partner deleted.");
       queryClient.invalidateQueries({ queryKey: ["admin-partners"] });
     },
-    onError: () => toast.error("Failed to delete partner."),
+    onError: () => toast.error(t.toast_delete_failed ?? "Failed to delete partner."),
   });
 
   function handleDelete(partner: AdminPartner) {
+    const descTemplate = t.delete_description ?? 'Are you sure you want to delete "{name}"? This cannot be undone.';
     confirm({
-      title: "Delete Partner",
-      description: `Are you sure you want to delete "${partner.name}"? This cannot be undone.`,
+      title: t.delete_title ?? "Delete Partner",
+      description: descTemplate.replace("{name}", partner.name),
       onConfirm: () => deleteMutation.mutateAsync(partner.id),
     });
   }
@@ -357,7 +366,7 @@ export function PartnersTab({ t = {} }: { t?: T }) {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold">Partners</h2>
+        <h2 className="text-base font-semibold">{t.partner_title ?? "Partners"}</h2>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
             <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
@@ -370,7 +379,7 @@ export function PartnersTab({ t = {} }: { t?: T }) {
             }}
           >
             <Plus className="mr-1.5 h-4 w-4" />
-            Add Partner
+            {t.btn_add_partner ?? "Add Partner"}
           </Button>
         </div>
       </div>
@@ -380,10 +389,10 @@ export function PartnersTab({ t = {} }: { t?: T }) {
           <TableHeader>
             <TableRow>
               <TableHead className="w-10" />
-              <TableHead>Name</TableHead>
-              <TableHead>URL</TableHead>
-              <TableHead className="w-16">Order</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>{t.col_name ?? "Name"}</TableHead>
+              <TableHead>{t.col_url ?? "URL"}</TableHead>
+              <TableHead className="w-16">{t.col_order ?? "Order"}</TableHead>
+              <TableHead>{t.col_status ?? "Status"}</TableHead>
               <TableHead className="w-12" />
             </TableRow>
           </TableHeader>
@@ -403,7 +412,7 @@ export function PartnersTab({ t = {} }: { t?: T }) {
             ) : partners.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="py-12 text-center text-muted-foreground text-sm">
-                  No partners added yet.
+                  {t.empty_state ?? "No partners added yet."}
                 </TableCell>
               </TableRow>
             ) : (
@@ -457,7 +466,7 @@ export function PartnersTab({ t = {} }: { t?: T }) {
                           }}
                         >
                           <Pencil className="mr-2 h-4 w-4" />
-                          Edit
+                          {t.action_edit ?? "Edit"}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => toggleMutation.mutate({ id: partner.id, active: !partner.is_active })}
@@ -465,19 +474,19 @@ export function PartnersTab({ t = {} }: { t?: T }) {
                           {partner.is_active ? (
                             <>
                               <EyeOff className="mr-2 h-4 w-4" />
-                              Deactivate
+                              {t.action_deactivate ?? "Deactivate"}
                             </>
                           ) : (
                             <>
                               <Eye className="mr-2 h-4 w-4" />
-                              Activate
+                              {t.action_activate ?? "Activate"}
                             </>
                           )}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(partner)}>
                           <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
+                          {t.action_delete ?? "Delete"}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

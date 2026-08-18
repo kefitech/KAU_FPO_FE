@@ -657,7 +657,7 @@ export function GalleryTab({ t = {} }: { t?: T }) {
   function handleDeleteAlbum(album: AdminGalleryAlbum) {
     confirm({
       title: t.album_delete_title ?? "Delete Album",
-      description: t.album_delete_description ?? `Delete "${album.title}" and all its photos? This cannot be undone.`,
+      description: (t.album_delete_description ?? `Delete "${album.title}" and all its photos? This cannot be undone.`).replace('{album.title}', album.title),
       onConfirm: () => deleteMutation.mutateAsync(album.id),
     });
   }

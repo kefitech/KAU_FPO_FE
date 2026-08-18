@@ -51,6 +51,11 @@ const Gallery = () => {
 
   if (!loading && albums.length === 0) return null;
 
+  const MIN_LOOP_SLIDES = 20;
+  const loopAlbums =
+    albums.length > 0 && albums.length < MIN_LOOP_SLIDES
+      ? Array.from({ length: MIN_LOOP_SLIDES }, (_, i) => albums[i % albums.length])
+      : albums;
   return (
     <div className="gallery-style-one-area bg-gray default-padding-top">
       <div className="container">
@@ -81,8 +86,8 @@ const Gallery = () => {
             effect="coverflow"
             grabCursor
             centeredSlides
-            loop={albums.length > 2}
-            rewind={albums.length <= 2}
+            loop={albums.length > 1}
+            loopAdditionalSlides={4}
             slidesPerView="auto"
             speed={900}
             autoplay={{ delay: 3200, disableOnInteraction: false }}
@@ -105,8 +110,8 @@ const Gallery = () => {
             navigation={{ prevEl: prevRef.current, nextEl: nextRef.current }}
             modules={[Navigation, Autoplay, EffectCoverflow]}
           >
-            {albums.map((album) => (
-              <SwiperSlide key={album.id} className="gallery-coverflow-slide">
+            {loopAlbums.map((album, i) => (
+               <SwiperSlide key={`${album.id}-${i}`} className="gallery-coverflow-slide">
                 <div
                   className="gallery-card-modern"
                   onClick={() => router.push(`/gallery/${album.id}`)}

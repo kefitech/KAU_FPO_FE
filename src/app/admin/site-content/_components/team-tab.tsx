@@ -121,7 +121,7 @@ function TeamDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{editing ? (t.dialog_edit_title ?? "Edit Member") : (t.dialog_add_title ?? "Add Team Member")}</DialogTitle>
+          <DialogTitle>{editing ? (t.dialog_edit_team ?? "Edit Member") : (t.dialog_add_team ?? "Add Team Member")}</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col gap-4 py-2">
