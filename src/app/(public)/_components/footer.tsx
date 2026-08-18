@@ -1,6 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
-
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 import { Autoplay, Navigation } from "swiper/modules";
@@ -48,7 +47,7 @@ function PartnerBox({ link }: { link: Partners }) {
       }}
     >
       {link.logo_url ? (
-        <img src={link.logo_url} alt={link.name} style={{ maxHeight: 56, maxWidth: "100%", objectFit: "contain" }} />
+        <img src={link.logo_url} alt={link.name} style={{ maxHeight: 65, maxWidth: "100%", objectFit: "contain" }} />
       ) : (
         <span
           style={{
@@ -70,6 +69,9 @@ const Footer = () => {
   const [partners, setPartners] = useState<Partners[]>([]);
   const locale = useLocaleStore((s) => s.locale);
   const [t, setT] = useState<Record<string, string>>({});
+  const containerRef = useRef<HTMLDivElement>(null);
+  const measureRowRef = useRef<HTMLDivElement>(null);
+  const [fitsStatic, setFitsStatic] = useState(true);
 
   useEffect(() => {
     if (!locale) return;
@@ -87,6 +89,19 @@ const Footer = () => {
         // intentionally ignored
       });
   }, [locale]);
+
+
+  useEffect(() => {
+    if (!containerRef.current || !measureRowRef.current) return;
+    const checkFit = () => {
+      if (!containerRef.current || !measureRowRef.current) return;
+      setFitsStatic(measureRowRef.current.scrollWidth <= containerRef.current.clientWidth);
+    };
+    checkFit();
+    const observer = new ResizeObserver(checkFit);
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, [partners]);
 
   return (
     <footer className="bg-dark text-light" style={{ backgroundImage: "url(/assets/img/shape/brush-down.png)" }}>
@@ -106,8 +121,29 @@ const Footer = () => {
             >
               {t.partners ?? "Partners"}
             </p>
-            <div style={{ position: "relative", padding: partners.length > 4 ? "0 48px" : "0" }}>
-              {partners.length > 1 ? (
+            <div
+              ref={containerRef}
+              style={{ position: "relative", padding: !fitsStatic ? "0 48px" : "0" }}
+            >
+              {/* Hidden row used only to measure the natural width of all items */}
+              <div
+                ref={measureRowRef}
+                style={{
+                  position: "absolute",
+                  visibility: "hidden",
+                  pointerEvents: "none",
+                  display: "flex",
+                  flexWrap: "nowrap",
+                  gap: 16,
+                  top: -9999,
+                }}
+              >
+                {partners.map((link) => (
+                  <PartnerBox key={`measure-${link.id}`} link={link} />
+                ))}
+              </div>
+ 
+              {!fitsStatic && partners.length > 1 ? (
                 <>
                   {(() => {
                     const swiperLinks =
