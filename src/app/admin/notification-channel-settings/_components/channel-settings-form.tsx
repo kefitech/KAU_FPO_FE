@@ -24,6 +24,7 @@ type T = Record<string, string>;
 const schema = z.object({
   channel: z.enum(["email", "sms", "in_app", "whatsapp"] as const, { message: "Please select a channel" }),
   is_active: z.boolean(),
+  email_mode: z.enum(["smtp", "oauth"]).optional(),
   email_host: z.string().optional(),
   email_port: z.number().optional(),
   email_username: z.string().optional(),
@@ -31,6 +32,9 @@ const schema = z.object({
   email_from_email: z.string().optional(),
   email_from_name: z.string().optional(),
   email_use_tls: z.boolean().optional(),
+  email_oauth_client_id: z.string().optional(),
+  email_oauth_client_secret: z.string().optional(),
+  email_oauth_refresh_token: z.string().optional(),
   sms_url: z.string().optional(),
   sms_application: z.string().optional(),
   sms_token: z.string().optional(),
@@ -51,6 +55,7 @@ interface ChannelSettingsFormProps {
 const defaultValues: FormValues = {
   channel: "email",
   is_active: true,
+  email_mode: "smtp",
   email_host: "",
   email_port: 587,
   email_username: "",
@@ -58,6 +63,9 @@ const defaultValues: FormValues = {
   email_from_email: "",
   email_from_name: "",
   email_use_tls: true,
+  email_oauth_client_id: "",
+  email_oauth_client_secret: "",
+  email_oauth_refresh_token: "",
   sms_url: "",
   sms_application: "",
   sms_token: "",
@@ -71,14 +79,25 @@ function parseEditingValues(item: ChannelSetting): FormValues {
   try {
     const config = typeof item.config === "string" ? JSON.parse(item.config) : item.config;
     if (item.channel === "email") {
-      const c = config as Partial<EmailConfig>;
-      base.email_host = c.host ?? "";
-      base.email_port = c.port ?? 587;
-      base.email_username = c.username ?? "";
-      base.email_password = "";
-      base.email_from_email = c.from_email ?? "";
-      base.email_from_name = c.from_name ?? "";
-      base.email_use_tls = c.use_tls ?? true;
+      const c = config as Record<string, unknown>;
+      if (c.refresh_token !== undefined) {
+        base.email_mode = "oauth";
+        base.email_oauth_client_id = (c.client_id as string) ?? "";
+        base.email_oauth_client_secret = "";
+        base.email_oauth_refresh_token = "";
+        base.email_from_email = (c.from_email as string) ?? "";
+        base.email_from_name = (c.from_name as string) ?? "";
+      } else {
+        base.email_mode = "smtp";
+        const ec = config as Partial<EmailConfig>;
+        base.email_host = ec.host ?? "";
+        base.email_port = ec.port ?? 587;
+        base.email_username = ec.username ?? "";
+        base.email_password = "";
+        base.email_from_email = ec.from_email ?? "";
+        base.email_from_name = ec.from_name ?? "";
+        base.email_use_tls = ec.use_tls ?? true;
+      }
     } else if (item.channel === "sms") {
       const c = config as Record<string, string>;
       base.sms_url = c.url ?? "";
@@ -98,6 +117,16 @@ function parseEditingValues(item: ChannelSetting): FormValues {
 
 function buildConfig(values: FormValues): Record<string, unknown> {
   if (values.channel === "email") {
+    if (values.email_mode === "oauth") {
+      const config: Record<string, unknown> = {
+        client_id: values.email_oauth_client_id,
+        from_email: values.email_from_email,
+        from_name: values.email_from_name,
+      };
+      if (values.email_oauth_client_secret) config.client_secret = values.email_oauth_client_secret;
+      if (values.email_oauth_refresh_token) config.refresh_token = values.email_oauth_refresh_token;
+      return config;
+    }
     const config: Partial<EmailConfig> = {
       host: values.email_host,
       port: values.email_port,
@@ -148,6 +177,7 @@ export function ChannelSettingsForm({ mode, channelSetting, t = {}, tCommon = {}
   }, [channelSetting?.id, reset, channelSetting]);
 
   const channel = useWatch({ control, name: "channel" });
+  const emailMode = useWatch({ control, name: "email_mode" });
 
   const mutation = useMutation({
     mutationFn: (values: FormValues) => {
@@ -209,123 +239,208 @@ export function ChannelSettingsForm({ mode, channelSetting, t = {}, tCommon = {}
                     {t.section_config ?? "Configuration"}
                   </p>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <Controller
-                      control={control}
-                      name="email_host"
-                      render={({ field }) => (
-                        <Field>
-                          <FieldLabel htmlFor="cs-host">
-                            {t.host_label ?? "SMTP Host"} <span className="text-destructive">*</span>
-                          </FieldLabel>
-                          <Input id="cs-host" placeholder={t.host_placeholder ?? "e.g. smtp.gmail.com"} {...field} />
-                        </Field>
-                      )}
-                    />
-                    <Controller
-                      control={control}
-                      name="email_port"
-                      render={({ field }) => (
-                        <Field>
-                          <FieldLabel htmlFor="cs-port">
-                            {t.port_label ?? "Port"} <span className="text-destructive">*</span>
-                          </FieldLabel>
-                          <Input
-                            id="cs-port"
-                            type="number"
-                            placeholder={t.port_placeholder ?? "587"}
-                            value={field.value ?? ""}
-                            onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
-                          />
-                        </Field>
-                      )}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <Controller
-                      control={control}
-                      name="email_username"
-                      render={({ field }) => (
-                        <Field>
-                          <FieldLabel htmlFor="cs-username">
-                            {t.username_label ?? "Username"} <span className="text-destructive">*</span>
-                          </FieldLabel>
-                          <Input
-                            id="cs-username"
-                            placeholder={t.username_placeholder ?? "e.g. noreply@kau.in"}
-                            {...field}
-                          />
-                        </Field>
-                      )}
-                    />
-                    <Controller
-                      control={control}
-                      name="email_password"
-                      render={({ field }) => (
-                        <Field>
-                          <FieldLabel htmlFor="cs-password">
-                            {t.password_label ?? "Password"} <span className="text-destructive">*</span>
-                          </FieldLabel>
-                          <Input
-                            id="cs-password"
-                            type="password"
-                            placeholder={isEdit ? (t.password_placeholder ?? "Enter new password to update") : ""}
-                            {...field}
-                          />
-                        </Field>
-                      )}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <Controller
-                      control={control}
-                      name="email_from_email"
-                      render={({ field }) => (
-                        <Field>
-                          <FieldLabel htmlFor="cs-from-email">
-                            {t.from_email_label ?? "From Email"} <span className="text-destructive">*</span>
-                          </FieldLabel>
-                          <Input
-                            id="cs-from-email"
-                            placeholder={t.from_email_placeholder ?? "e.g. noreply@kau.in"}
-                            {...field}
-                          />
-                        </Field>
-                      )}
-                    />
-                    <Controller
-                      control={control}
-                      name="email_from_name"
-                      render={({ field }) => (
-                        <Field>
-                          <FieldLabel htmlFor="cs-from-name">
-                            {t.from_name_label ?? "From Name"} <span className="text-destructive">*</span>
-                          </FieldLabel>
-                          <Input
-                            id="cs-from-name"
-                            placeholder={t.from_name_placeholder ?? "e.g. KAU-FPO Platform"}
-                            {...field}
-                          />
-                        </Field>
-                      )}
-                    />
-                  </div>
-
+                  {/* Email mode toggle */}
                   <Controller
                     control={control}
-                    name="email_use_tls"
+                    name="email_mode"
                     render={({ field }) => (
                       <div className="flex items-center justify-between rounded-lg border p-3">
                         <div>
-                          <FieldLabel className="mb-0">{t.use_tls_label ?? "Use TLS"}</FieldLabel>
-                          <p className="text-muted-foreground text-xs">STARTTLS on port 587</p>
+                          <FieldLabel className="mb-0">Gmail OAuth 2.0</FieldLabel>
+                          <p className="text-muted-foreground text-xs">Use Gmail API instead of SMTP</p>
                         </div>
-                        <Switch checked={field.value ?? true} onCheckedChange={field.onChange} />
+                        <Switch
+                          checked={field.value === "oauth"}
+                          onCheckedChange={(v) => field.onChange(v ? "oauth" : "smtp")}
+                        />
                       </div>
                     )}
                   />
+
+                  {emailMode === "oauth" ? (
+                    <>
+                      <Controller
+                        control={control}
+                        name="email_oauth_client_id"
+                        render={({ field }) => (
+                          <Field>
+                            <FieldLabel htmlFor="cs-oauth-client-id">
+                              Client ID <span className="text-destructive">*</span>
+                            </FieldLabel>
+                            <Input id="cs-oauth-client-id" placeholder="e.g. 908924726445-....apps.googleusercontent.com" {...field} />
+                          </Field>
+                        )}
+                      />
+                      <Controller
+                        control={control}
+                        name="email_oauth_client_secret"
+                        render={({ field }) => (
+                          <Field>
+                            <FieldLabel htmlFor="cs-oauth-secret">
+                              Client Secret {!isEdit && <span className="text-destructive">*</span>}
+                            </FieldLabel>
+                            <Input
+                              id="cs-oauth-secret"
+                              type="password"
+                              placeholder={isEdit ? "Enter to update" : "GOCSPX-..."}
+                              {...field}
+                            />
+                          </Field>
+                        )}
+                      />
+                      <Controller
+                        control={control}
+                        name="email_oauth_refresh_token"
+                        render={({ field }) => (
+                          <Field>
+                            <FieldLabel htmlFor="cs-oauth-refresh">
+                              Refresh Token {!isEdit && <span className="text-destructive">*</span>}
+                            </FieldLabel>
+                            <Input
+                              id="cs-oauth-refresh"
+                              type="password"
+                              placeholder={isEdit ? "Enter to update" : "1//04ms_..."}
+                              {...field}
+                            />
+                          </Field>
+                        )}
+                      />
+                      <div className="grid grid-cols-2 gap-4">
+                        <Controller
+                          control={control}
+                          name="email_from_email"
+                          render={({ field }) => (
+                            <Field>
+                              <FieldLabel htmlFor="cs-from-email-oauth">
+                                From Email <span className="text-destructive">*</span>
+                              </FieldLabel>
+                              <Input id="cs-from-email-oauth" placeholder="noreply.kfl@kau.in" {...field} />
+                            </Field>
+                          )}
+                        />
+                        <Controller
+                          control={control}
+                          name="email_from_name"
+                          render={({ field }) => (
+                            <Field>
+                              <FieldLabel htmlFor="cs-from-name-oauth">
+                                From Name <span className="text-destructive">*</span>
+                              </FieldLabel>
+                              <Input id="cs-from-name-oauth" placeholder="KAU-FPO Platform" {...field} />
+                            </Field>
+                          )}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <Controller
+                          control={control}
+                          name="email_host"
+                          render={({ field }) => (
+                            <Field>
+                              <FieldLabel htmlFor="cs-host">
+                                {t.host_label ?? "SMTP Host"} <span className="text-destructive">*</span>
+                              </FieldLabel>
+                              <Input id="cs-host" placeholder={t.host_placeholder ?? "e.g. smtp.gmail.com"} {...field} />
+                            </Field>
+                          )}
+                        />
+                        <Controller
+                          control={control}
+                          name="email_port"
+                          render={({ field }) => (
+                            <Field>
+                              <FieldLabel htmlFor="cs-port">
+                                {t.port_label ?? "Port"} <span className="text-destructive">*</span>
+                              </FieldLabel>
+                              <Input
+                                id="cs-port"
+                                type="number"
+                                placeholder={t.port_placeholder ?? "587"}
+                                value={field.value ?? ""}
+                                onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                              />
+                            </Field>
+                          )}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <Controller
+                          control={control}
+                          name="email_username"
+                          render={({ field }) => (
+                            <Field>
+                              <FieldLabel htmlFor="cs-username">
+                                {t.username_label ?? "Username"} <span className="text-destructive">*</span>
+                              </FieldLabel>
+                              <Input id="cs-username" placeholder={t.username_placeholder ?? "e.g. noreply@kau.in"} {...field} />
+                            </Field>
+                          )}
+                        />
+                        <Controller
+                          control={control}
+                          name="email_password"
+                          render={({ field }) => (
+                            <Field>
+                              <FieldLabel htmlFor="cs-password">
+                                {t.password_label ?? "Password"} <span className="text-destructive">*</span>
+                              </FieldLabel>
+                              <Input
+                                id="cs-password"
+                                type="password"
+                                placeholder={isEdit ? (t.password_placeholder ?? "Enter new password to update") : ""}
+                                {...field}
+                              />
+                            </Field>
+                          )}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <Controller
+                          control={control}
+                          name="email_from_email"
+                          render={({ field }) => (
+                            <Field>
+                              <FieldLabel htmlFor="cs-from-email">
+                                {t.from_email_label ?? "From Email"} <span className="text-destructive">*</span>
+                              </FieldLabel>
+                              <Input id="cs-from-email" placeholder={t.from_email_placeholder ?? "e.g. noreply@kau.in"} {...field} />
+                            </Field>
+                          )}
+                        />
+                        <Controller
+                          control={control}
+                          name="email_from_name"
+                          render={({ field }) => (
+                            <Field>
+                              <FieldLabel htmlFor="cs-from-name">
+                                {t.from_name_label ?? "From Name"} <span className="text-destructive">*</span>
+                              </FieldLabel>
+                              <Input id="cs-from-name" placeholder={t.from_name_placeholder ?? "e.g. KAU-FPO Platform"} {...field} />
+                            </Field>
+                          )}
+                        />
+                      </div>
+
+                      <Controller
+                        control={control}
+                        name="email_use_tls"
+                        render={({ field }) => (
+                          <div className="flex items-center justify-between rounded-lg border p-3">
+                            <div>
+                              <FieldLabel className="mb-0">{t.use_tls_label ?? "Use TLS"}</FieldLabel>
+                              <p className="text-muted-foreground text-xs">STARTTLS on port 587</p>
+                            </div>
+                            <Switch checked={field.value ?? true} onCheckedChange={field.onChange} />
+                          </div>
+                        )}
+                      />
+                    </>
+                  )}
                 </>
               )}
 
