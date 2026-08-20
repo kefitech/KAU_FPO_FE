@@ -2988,11 +2988,20 @@ nav.navbar.validnavs .navbar-collapse.collapse button i {
   display: none;
 }
 @media (max-width: 1380px) {
-  li.more-info-standalone {
+  nav.navbar.validnavs .navbar-nav > li.more-info-standalone {
     display: none;
   }
   .dropdown-menu .more-info-dropdown-item {
     display: block;
+  }
+}
+
+@media (max-width: 1023.98px) {
+  nav.navbar.validnavs .navbar-nav > li.more-info-standalone {
+    display: flex;
+  }
+  .dropdown-menu .more-info-dropdown-item {
+    display: none;
   }
 }
 

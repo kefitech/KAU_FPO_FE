@@ -148,8 +148,35 @@ function AnnouncementDetailModal({ item, onClose }: { item: Announcement | null;
           flexDirection: "column",
           boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
           overflow: "hidden",
+          position: "relative",
         }}
       >
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          style={{
+            position: "absolute",
+            top: 14,
+            right: 14,
+            width: 32,
+            height: 32,
+            borderRadius: "50%",
+            border: "none",
+            background: "rgba(0,0,0,0.06)",
+            color: "#555",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            fontSize: 14,
+            zIndex: 1,
+          }}
+        >
+          <i className="fas fa-times" />
+        </button>
+
+
         {/* Content */}
         <div style={{ padding: "24px 28px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 14 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>

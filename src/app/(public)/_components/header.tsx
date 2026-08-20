@@ -70,7 +70,7 @@ const Header = () => {
                       </a>
                     </li>
                     <li>
-                      <i className="fas fa-phone-alt" /> <a href="tel:+91-487-2370086">+91-487-2370086 </a> <a href="tel:+91-487-2370150">+91-487-2370150 </a> 
+                      <i className="fas fa-phone-alt" /> <a href="tel:+91-487-2370086">+91-487-2370086 </a> <br/><a href="tel:+91-487-2370150">+91-487-2370150 </a> 
                     </li>
                   </ul>
                   {/* <div className="sidebar-social">

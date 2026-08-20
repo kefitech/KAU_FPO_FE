@@ -48,9 +48,7 @@ export default function HomePage() {
       {/* <Testimonial /> */}
       <Gallery />
       <Facts />
-      {/* <Contact /> */}
-
-      
+      {/* <Contact /> */}   
       <NewsSourcesStrip />
       <Documents />
       <Contact t={t} />

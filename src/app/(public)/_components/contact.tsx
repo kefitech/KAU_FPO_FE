@@ -301,7 +301,7 @@ const Contact = ({ t }: ContactProps) => {
                   </div>
                   <div className="info">
                     <h5 className="title">{t.official_email ?? "Official Email"}</h5>
-                    <a href="mailto:registrar@kau.in">de@kau.in</a>
+                    <a href="mailto:de@kau.in">de@kau.in</a>
                   </div>
                 </li>
               </ul>

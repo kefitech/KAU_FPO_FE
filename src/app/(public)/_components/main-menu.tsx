@@ -26,7 +26,7 @@ const MainMenu = ({ openIndex, toggleSubMenu, navbarPlacement }: Props) => {
   return (
     <ul className={`nav navbar-nav ${navbarPlacement} navbar-right`} data-in="fadeInDown" data-out="fadeOutUp">
       <li>
-        <a href="/">{t.home ?? "HOME"}</a>
+        <a href="/">{t.home ?? "Home"}</a>
       </li>
       <li>
         <a href="/v1/login">{t.sign_in ?? "Sign In"}</a>

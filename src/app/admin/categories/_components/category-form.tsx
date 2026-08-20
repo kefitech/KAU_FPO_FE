@@ -86,7 +86,14 @@ export function CategoryForm({ mode, category, t = {}, tCommon = {} }: CategoryF
       queryClient.invalidateQueries({ queryKey: ["translation-categories"] });
       if (!isEdit) router.push("/admin/languages?tab=categories");
     },
-    onError: () => toast.error(isEdit ? "Failed to update category" : "Failed to add category"),
+    onError: (error: any) => {
+      const fieldErrors = error?.data?.errors;
+      const firstMessage = fieldErrors
+        ? (Object.values(fieldErrors)[0] as string[])?.[0]
+        : error?.data?.message;
+      toast.error(firstMessage ?? (isEdit ? "Failed to update category" : "Failed to add category"));
+    },
+
   });
 
   return (

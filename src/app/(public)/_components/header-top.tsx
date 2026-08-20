@@ -100,7 +100,7 @@ const HeaderTop = () => {
             <li>
               <i className="fas fa-map-marker-alt" />{" "}
               <a href="https://maps.app.goo.gl/4FXjLWkpN5jvM8N17">
-                {t.kau_address ?? "Kerala Agricultural University, Mannuthy P.O, Pin- 680651."}
+                {t.kau_address ?? "Kerala Agricultural University, Mannuthy P.O, , Pin- 680651."}
               </a>
             </li>
             <li>

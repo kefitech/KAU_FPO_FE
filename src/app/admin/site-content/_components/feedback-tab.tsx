@@ -223,7 +223,7 @@ export function FeedbackTab({ t = {}, tCommon = {} }: { t?: T; tCommon?: T }) {
                   <TableCell className="text-sm">{fb.name}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{fb.email}</TableCell>
                   <TableCell className="text-sm text-muted-foreground max-w-xs">
-                    <span className="line-clamp-1">{fb.message}</span>
+                    <span className="block truncate">{fb.message}</span>
                   </TableCell>
                   <TableCell>
                     <StatusBadge status={fb.status} t={t} />

@@ -64,14 +64,15 @@
 .navbar-logos {
   display: flex;
   align-items: center;
-  gap: 12px;
   min-width: 0;
   width: auto;
   flex-wrap: nowrap;
+  margin-right: 20px;
 }
 
 .navbar-logos .logo {
-  height: 80px;
+  height: auto;
+  max-height: 80px;
   width: auto;
   object-fit: contain;
   display: block;
@@ -79,11 +80,12 @@
   flex-shrink: 1;
   min-width: 0;
   max-width: 100%;
+  
 }
 
 @media (max-width: 767px) {
   .navbar-logos .logo {
-    height: clamp(56px, 13vw, 80px);
+    max-height: clamp(56px, 13vw, 80px);
   }
 }
 
@@ -160,8 +162,8 @@ nav.navbar.validnavs .navbar-brand > img {
   /* ---- Logo: center independently of hamburger ---- */
   nav.navbar.validnavs .navbar-brand {
     position: absolute;
-    left: 50%;
-    transform: translate(-50%, -50%);
+    left: 60px;
+    transform: translateY(-50%);
     top: 50%;
   }
   .banner-area {

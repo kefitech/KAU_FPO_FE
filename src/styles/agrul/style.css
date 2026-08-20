@@ -3107,7 +3107,7 @@ nav.navbar.validnavs.inc-shape::after {
     # Banner Styles
 =================================================================== */
 .banner-area {
-	height: 100vh;
+	min-height:80vh;
 	width: 100%;
 	position: relative;
 }
@@ -3119,6 +3119,19 @@ nav.navbar.validnavs.inc-shape::after {
 }
 
 .banner-area div {
+	min-height: 100%;
+}
+
+.banner-area .swiper {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	height: auto;
+}
+.banner-area .swiper-wrapper,
+.banner-area .swiper-slide {
 	height: 100%;
 }
 
@@ -3492,8 +3505,10 @@ nav.navbar.validnavs.inc-shape::after {
 	position: absolute;
 	left: 0;
 	top: 0;
+	right: 0;
+	bottom: 0;
 	content: "";
-	height: 100%;
+	min-height: 100%;
 	width: 100%;
 }
 
