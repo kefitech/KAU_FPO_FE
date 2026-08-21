@@ -29,12 +29,9 @@ const SLIDES = [
 ];
 
 const QUICK_LINKS = [
-  { href: "/about-us", icon: "fa-university", navKey: "about_us", descKey: "card_about_desc", defaultTitle: "About Us", defaultDesc: "About KAU-FPO Linkage Programme" },
   { href: "/howtoregister", icon: "fa-file-alt", navKey: "how_to_register_FPO", descKey: "card_register_desc", defaultTitle: "How To Register FPO", defaultDesc: "Step-by-step registration guide" },
-  { href: "/news-announcements", icon: "fa-bullhorn", navKey: "events_updates", descKey: "card_events_desc", defaultTitle: "Events & Updates", defaultDesc: "Latest announcements and news" },
   { href: "/faq", icon: "fa-question-circle", navKey: "faqs", descKey: "card_faq_desc", defaultTitle: "FAQs", defaultDesc: "Frequently asked questions" },
   { href: "/contact-us", icon: "fa-envelope", navKey: "contact_us", descKey: "card_contact_desc", defaultTitle: "Contact Us", defaultDesc: "Get in touch with us" },
-  { href: "/more-info", icon: "fa-info-circle", navKey: "more_info", descKey: "card_more_info_desc", defaultTitle: "More Info", defaultDesc: "Resources, documents & guidelines" },
 ];
 
 const Banner = () => {
@@ -81,8 +78,8 @@ const Banner = () => {
                 style={{ background: `url(/assets/img/banner/${slide.bgThumb})` }}
               />
               <div className="container" style={{ position: "relative", zIndex: 2 }}>
-                <div className="row align-items-start">
-                  <div className="col-xl-7">
+                <div className="row align-item-start">
+                  <div className="col-xl-8">
                     <div className="content">
                       <h4>{subtitle}</h4>
                       <h2>
@@ -104,7 +101,7 @@ const Banner = () => {
                     </div>
                   </div>
 
-                  <div className="col-xl-5 d-none d-xl-block">
+                  <div className="col-xl-3 d-none d-xl-block">
                     <div style={{ display: "flex", flexDirection: "column", gap: 14, paddingTop: 40 }}>
                       {QUICK_LINKS.map((card) => (
                         <a

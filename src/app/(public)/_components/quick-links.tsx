@@ -30,8 +30,8 @@ function QuickLinkCard({ link }: { link: QuickLinks }) {
         border: "1px solid #e8e8e8",
         borderRadius: 10,
         padding: "18px 20px",
-        height: 100,
-        width: 180,
+        height: 130,
+        width: 200,
         textDecoration: "none",
         boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
         transition: "box-shadow 0.2s, border-color 0.2s, transform 0.2s",
@@ -51,11 +51,24 @@ function QuickLinkCard({ link }: { link: QuickLinks }) {
       }}
     >
       {link.logo_url ? (
-        <img
-          src={link.logo_url}
-          alt={link.name}
-          style={{ maxHeight: 48, maxWidth: "100%", objectFit: "contain" }}
-        />
+        <>
+          <img
+            src={link.logo_url}
+            alt={link.name}
+            style={{ maxHeight: 86, maxWidth: "100%", objectFit: "contain" }}
+          />
+          <span
+            style={{
+              color: "#333",
+              fontWeight: 600,
+              fontSize: 12,
+              textAlign: "center",
+              lineHeight: 1.3,
+            }}
+          >
+            {link.name}
+          </span>
+        </>
       ) : (
         <span
           style={{
@@ -66,7 +79,7 @@ function QuickLinkCard({ link }: { link: QuickLinks }) {
             lineHeight: 1.3,
           }}
         >
-          {link.name}
+         {link.name} 
         </span>
       )}
     </a>
