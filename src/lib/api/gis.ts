@@ -3,12 +3,14 @@ import type {
   AgroClimaticZone,
   Coordinates,
   CropSuitabilityResult,
-  CultivationArea,
+  CultivationAreaFeature,
+  SaveCultivationAreaRequest,
   FpoLocation,
   LocationValidationRequest,
   LocationValidationResponse,
   MapConfig,
   MarketProximity,
+  WeatherSnapshot,
 } from "@/types/gis";
 
 import { apiClient } from "./client";
@@ -49,30 +51,81 @@ export async function saveFpoLocation(
   return response.data.data;
 }
 
+// ── Cultivation Area — matches the REAL, tested backend endpoint:
+// GET/POST/DELETE /api/gis/cultivation-area/me/
+// (apps/gis_module/api/cultivation_area.py). One area per FPO, no
+// fpoId in the URL — the backend always resolves "which FPO" from the
+// logged-in user's own session. ──
+
+const CULTIVATION_AREA_PATH = "/gis/cultivation-area/me/";
+
 /**
- * Get cultivation areas for an FPO
+ * Fetch the current FPO's own cultivation area.
+ * Returns null if none has been drawn/saved yet (backend returns 404
+ * in that case — this is expected, not an error state to surface).
  */
-export async function getCultivationAreas(fpoId: string): Promise<CultivationArea[]> {
-  const response = await apiClient.get<ApiResponse<CultivationArea[]>>(`/v1/gis/cultivation-areas/${fpoId}`);
-  return response.data.data;
+export async function getCultivationArea(): Promise<CultivationAreaFeature | null> {
+  try {
+    const response = await apiClient.get<ApiResponse<CultivationAreaFeature>>(CULTIVATION_AREA_PATH);
+    return response.data.data;
+  } catch (error) {
+    const status = (error as { status?: number })?.status;
+    if (status === 404) return null;
+    throw error;
+  }
 }
 
 /**
- * Save cultivation area (polygon drawing)
+ * Save (create or replace) the current FPO's cultivation area.
+ * A fresh call always overwrites any existing area — there is only
+ * ever one per FPO, so this is effectively an upsert.
  */
 export async function saveCultivationArea(
-  fpoId: string,
-  data: Omit<CultivationArea, "id" | "fpoId" | "createdAt">,
-): Promise<CultivationArea> {
-  const response = await apiClient.post<ApiResponse<CultivationArea>>(`/v1/gis/cultivation-areas/${fpoId}`, data);
+  feature: SaveCultivationAreaRequest,
+): Promise<CultivationAreaFeature> {
+  const response = await apiClient.post<ApiResponse<CultivationAreaFeature>>(CULTIVATION_AREA_PATH, feature);
   return response.data.data;
 }
 
 /**
- * Delete cultivation area
+ * Delete the current FPO's cultivation area.
  */
-export async function deleteCultivationArea(areaId: string): Promise<void> {
-  await apiClient.delete(`/v1/gis/cultivation-areas/${areaId}`);
+export async function deleteCultivationArea(): Promise<void> {
+  await apiClient.delete(CULTIVATION_AREA_PATH);
+}
+
+// ── Weather — matches GET/POST /api/gis/weather/me/(refresh/)
+// (apps/gis_module/api/weather.py). TEMPORARY: backend currently
+// returns a simulated seasonal estimate, not live weather — see
+// WeatherSnapshot's doc comment in types/gis.ts. ──
+
+const WEATHER_PATH = "/gis/weather/me/";
+const WEATHER_REFRESH_PATH = "/gis/weather/me/refresh/";
+
+/**
+ * Fetch the current FPO's cached weather snapshot.
+ * Returns null if none has been fetched yet — call refreshWeather()
+ * first in that case.
+ */
+export async function getWeather(): Promise<WeatherSnapshot | null> {
+  try {
+    const response = await apiClient.get<ApiResponse<WeatherSnapshot>>(WEATHER_PATH);
+    return response.data.data;
+  } catch (error) {
+    const status = (error as { status?: number })?.status;
+    if (status === 404) return null;
+    throw error;
+  }
+}
+
+/**
+ * Fetch a fresh weather estimate and store it, replacing any cached
+ * snapshot. Requires the FPO to have a location (cultivation area or
+ * latitude/longitude) — backend returns 400 otherwise.
+ */
+export async function refreshWeather(): Promise<WeatherSnapshot> {
+  const response = await apiClient.post<ApiResponse<WeatherSnapshot>>(WEATHER_REFRESH_PATH);
+  return response.data.data;
 }
 
 /**
