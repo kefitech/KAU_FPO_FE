@@ -1,6 +1,13 @@
 // ─── Enums / Literals ────────────────────────────────────────────────────────
 
-export type FpoStatus = "draft" | "submitted" | "under_review" | "approved" | "rejected" | "info_required" | "suspended";
+export type FpoStatus =
+  | "draft"
+  | "submitted"
+  | "under_review"
+  | "approved"
+  | "rejected"
+  | "info_required"
+  | "suspended";
 
 export type FpoDocumentType =
   | "fpo_reg_cert"
@@ -461,7 +468,7 @@ export const REQUIRED_DOC_CONFIG: { type: FpoDocumentType; label: string; labelK
   { type: "fpo_reg_cert", label: "FPO Registration Certificate", labelKey: "doc_fpo_reg_cert", maxSizeMB: 5 },
   { type: "bank_details", label: "Bank Statement / Details", labelKey: "doc_bank_details", maxSizeMB: 5 },
   { type: "pan_card", label: "PAN Card", labelKey: "doc_pan_card", maxSizeMB: 5 },
- ];
+];
 
 export const OPTIONAL_DOC_CONFIG: { type: FpoDocumentType; label: string; labelKey: string; maxSizeMB: number }[] = [
   { type: "gst_cert", label: "GST Certificate", labelKey: "doc_gst_cert", maxSizeMB: 5 },
@@ -470,7 +477,7 @@ export const OPTIONAL_DOC_CONFIG: { type: FpoDocumentType; label: string; labelK
   { type: "board_resolution", label: "Board Resolution", labelKey: "doc_board_resolution", maxSizeMB: 5 },
   { type: "moa_aoa", label: "MOA / AOA", labelKey: "doc_moa_aoa", maxSizeMB: 5 },
   { type: "other", label: "Other Document", labelKey: "doc_other", maxSizeMB: 5 },
- ];
+];
 
 export const WIZARD_STEPS = [
   { number: 1, label: "Basic Info", labelKey: "step1_label" },
@@ -481,3 +488,98 @@ export const WIZARD_STEPS = [
   { number: 6, label: "Documents", labelKey: "step6_label" },
   { number: 7, label: "Review & Submit", labelKey: "step7_label" },
 ] as const;
+
+/*
+-------------------------------------------------------------------------------------
+Arunima S
+24/08/2026
+*/
+
+// ─── Marketplace: Enums / Literals ─────────────────────────────────────────────
+
+export type ProductStatus = "draft" | "active" | "sold" | "expired";
+
+export type ProductUnit = "kg" | "quintal" | "mt" | "litre" | "piece";
+
+// ─── Marketplace: Product ───────────────────────────────────────────────────────
+// Matches ProductSerializer fields exactly (apps/marketplace/serializers.py).
+
+export interface LocalizedText {
+  en: string;
+  ml: string;
+}
+
+export interface Product {
+  id: number;
+  fpo: number;
+  name: LocalizedText;
+  commodity: number; // MasterLookup id (category='commodity')
+  description: LocalizedText;
+  quantity: string; // DecimalField -> serialized as string, e.g. "10.00"
+  unit: ProductUnit;
+  price_per_unit: string;
+  quality_certification: string;
+  available_from: string; // "YYYY-MM-DD"
+  available_until: string | null;
+  is_ondc_listed: boolean;
+  ondc_product_id: string | null;
+  is_public: boolean;
+  status: ProductStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+// ─── Marketplace: Payloads ───────────────────────────────────────────────────────
+// fpo, is_ondc_listed, ondc_product_id, status are server-set — never sent by the client.
+
+export interface CreateProductPayload {
+  name: LocalizedText;
+  commodity: number;
+  description?: LocalizedText;
+  quantity: string;
+  unit: ProductUnit;
+  price_per_unit: string;
+  quality_certification?: string;
+  available_from: string;
+  available_until?: string | null;
+  is_public?: boolean;
+}
+
+// PATCH — all fields optional, send only what changed
+export type UpdateProductPayload = Partial<CreateProductPayload>;
+
+// ─── Marketplace: Pagination envelope ───────────────────────────────────────────
+// Matches StandardPagination's meta.pagination block, confirmed via testing.
+
+export interface PaginationMeta {
+  page: number;
+  page_size: number;
+  total_count: number;
+  total_pages: number;
+  has_next: boolean;
+  has_previous: boolean;
+}
+
+export interface ProductListResult {
+  products: Product[];
+  pagination: PaginationMeta | null;
+}
+
+// ─── Marketplace: UI Constants ───────────────────────────────────────────────────
+
+export const UNIT_OPTIONS: { value: ProductUnit; label: string }[] = [
+  { value: "kg", label: "Kilogram" },
+  { value: "quintal", label: "Quintal" },
+  { value: "mt", label: "Metric Tonne" },
+  { value: "litre", label: "Litre" },
+  { value: "piece", label: "Piece" },
+];
+
+export const PRODUCT_STATUS_LABEL: Record<ProductStatus, string> = {
+  draft: "Draft",
+  active: "Active",
+  sold: "Sold",
+  expired: "Expired",
+};
+
+//----------------------------------------------------------------------------------------------
