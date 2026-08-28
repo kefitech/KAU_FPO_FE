@@ -101,7 +101,7 @@ export default function QuickLinksSection() {
   if (loading || quickLinks.length === 0) return null;
 
   return (
-    <div className="quick-links-section default-padding-bottom">
+    <div className="quick-links-section default-padding bottom-less">
       <div className="container">
         <div className="row">
           <div className="col-lg-8 offset-lg-2">

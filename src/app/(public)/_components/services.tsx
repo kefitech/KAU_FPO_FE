@@ -17,7 +17,13 @@ const Services = () => {
               <div className="left-info">
                 <h5 className="sub-title">What We do</h5>
                 <h2 className="title">Services Offered</h2>
+                <div className="text-center" style={{ paddingTop: 8, paddingBottom: 20 }}>
+                <a href="/services" className="btn btn-theme">
+                  More Services
+                </a>
               </div>
+              </div>
+                 
             </div>
             <div className="col-lg-6 offset-lg-1">
               <div className="right-info ">
@@ -57,7 +63,7 @@ const Services = () => {
                       <Link href={`/service-details/${service.id}`}>{service.title}</Link>
                     </h5>
                     <Link className="btn btn-theme btn-md radius animation" href={`/service-details/${service.id}`}>
-                      Discover More
+                      Learn More
                     </Link>
                     {/* <p>{service.description}</p> */}
                   </div>

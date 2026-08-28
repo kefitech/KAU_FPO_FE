@@ -92,7 +92,7 @@ function MemberCard({ member }: { member: TeamMember }) {
       >
         <h3 style={{ textAlign: "center", margin: 0, fontWeight: 700 }}>{member.name}</h3>
         {member.designation && (
-          <span style={{ display: "block", textAlign: "center", width: "100%" }}>
+          <span style={{ display: "block", textAlign: "center", width: "100%", whiteSpace: "pre-line" }}>
             {member.designation}
           </span>
         )}

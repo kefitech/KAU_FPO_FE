@@ -665,7 +665,7 @@ p {
 }
 
 .default-padding-bottom {
-	padding-bottom: 120px;
+	padding-bottom: 100px;
 }
 
 @media only screen and (max-width: 767px) {
@@ -4585,7 +4585,7 @@ ul.counter-list li:nth-child(2) {
 }
 
 .services-style-one img {
-	height: 120px;
+	height: auto;
 }
 
 .services-style-one .thumb {

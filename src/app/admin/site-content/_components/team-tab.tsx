@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useConfirmStore } from "@/stores/confirm-store";
 import type { AdminTeamMember } from "@/types/admin";
+import { Textarea } from "@/components/ui/textarea";
 
 type T = Record<string, string>;
 
@@ -213,7 +214,7 @@ function TeamDialog({
             <label htmlFor="member-designation" className="text-sm font-medium">
               {t.field_designation ?? "Designation"} <span className="text-destructive">*</span>
             </label>
-            <Input
+            <Textarea
               id="member-designation"
               value={designation}
               onChange={(e) => setDesignation(e.target.value)}

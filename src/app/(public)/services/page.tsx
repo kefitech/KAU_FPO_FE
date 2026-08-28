@@ -6,6 +6,7 @@ export default function ServicesPage() {
   return (
     <AgrulLayout>
       <BreadCrumb title="Services Offered" breadCrumb="Services" />
+      
       <ServicesSection />
     </AgrulLayout>
   );
