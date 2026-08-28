@@ -160,34 +160,57 @@ export default function ServiceDetailsPage() {
   const service = serviceData.find((s) => s.id === parseInt(id as string));
   if (!service) notFound();
 
-  return (
+ return (
     <AgrulLayout>
-      <BreadCrumb title="Service Details" breadCrumb="Service Details" />
+      <BreadCrumb title={service.title} breadCrumb={service.title} />
       <div className="services-details-area default-padding">
         <div className="container">
+{/* Horizontal service cards row */}
+<div className="row" style={{ marginBottom: 40 }}>
+  {serviceData.map((s) => (
+    <div className="col-lg-3 col-md-6" key={s.id} style={{ marginBottom: 16 }}>
+<div
+  style={{
+    background: "#fff",
+    boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
+    padding: 16,
+    borderRadius: 4,
+    textAlign: "center",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "space-between",
+    height: "100%",
+  }}
+  className={s.id === service.id ? "current-item" : ""}
+>
+        <img
+          src={`/assets/img/thumb/${s.thumb}`}
+          alt={s.title}
+          style={{ width: "100%", height: 140, objectFit: "contain", marginBottom: 12 }}
+        />
+        <h4 style={{ marginBottom: 12, fontSize: 15, alignItems: "center", width: "100%"}}>{s.title}</h4>
+        <Link
+          href={`/service-details/${s.id}`}
+          className="btn btn-theme"
+          style={{ width: "100%" }}
+        >
+          Learn More
+        </Link>
+      </div>
+    </div>
+  ))}
+</div>
           <div className="services-details-items">
             <div className="row">
               <div className="col-xl-8 col-lg-7 pl-45 pl-md-15 pl-xs-15 services-single-content order-lg-last">
-                <div className="thumb">
-                  <img src={`/assets/img/banner/services.png`} alt={service.title} />
-                </div>
+               
                 <h2>{service.title}</h2>
                 <p>{service.description}</p>
 
                 {service.id === 4 && <ServiceSchemes />}
               </div>
               <div className="col-xl-4 col-lg-5 mt-md-50 mt-xs-50 services-sidebar">
-                <div className="single-widget services-list-widget">
-                  <div className="content">
-                    <ul>
-                      {serviceData.map((s) => (
-                        <li key={s.id} className={s.id === service.id ? "current-item" : ""}>
-                          <Link href={`/service-details/${s.id}`}>{s.title}</Link>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
                 <div className="single-widget quick-contact-widget text-light" style={{ backgroundImage: "url(/assets/img/thumbs/contact.png)" }}>
                   <div className="content">
                     <h3>Need Help?</h3>

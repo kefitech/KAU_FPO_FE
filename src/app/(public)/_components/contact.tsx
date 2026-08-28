@@ -290,9 +290,9 @@ const Contact = ({ t }: ContactProps) => {
                   </div>
                   <div className="info">
                     <h5 className="title">{t.our_location ?? "Our Location"}</h5>
-                    <p>
+                    <a href="https://maps.app.goo.gl/PKDCW49BW1qGABDS6">
                       {t.kau_address ?? "Directorate of Extension, Mannuthy P.O, \n Thrissur - 680651"}
-                    </p>
+                    </a>
                   </div>
                 </li>
                 <li data-aos="fade-up" data-aos-delay="500">
