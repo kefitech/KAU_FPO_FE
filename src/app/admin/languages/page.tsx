@@ -288,11 +288,16 @@ export default function LanguagesPage() {
                 <Download className="mr-1.5 h-4 w-4" />
                 {tPage.import_btn ?? "Import"}
               </Button>
-              {/* <Button size="sm" onClick={() => router.push("/admin/translations/new")}>
+              <Button size="sm" onClick={() => router.push("/admin/translations/new")}>
                 <Plus className="mr-1.5 h-4 w-4" />
                 {tPage.add_translation_btn ?? "Add Translation"}
-              </Button> */}
+              </Button>
             </div>
+          ) : activeTab === "menu" ? (
+            <Button size="sm" onClick={() => router.push("/admin/menu-items/new")}>
+              <Plus className="mr-1.5 h-4 w-4" />
+              {tPage.add_menu_btn ?? "Add Menu Item"}
+            </Button>
           ) : null
            
         }

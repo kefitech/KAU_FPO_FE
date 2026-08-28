@@ -3,6 +3,8 @@
 import dynamic from "next/dynamic";
 import { useState } from "react";
 
+import { CropRecommendationDisplay } from "./_components/crop-recommendation-display"
+
 const CultivationAreaMap = dynamic(
   () => import("./_components/cultivation-area-map").then((m) => ({ default: m.CultivationAreaMap })),
   {
@@ -61,6 +63,12 @@ export default function FpoRecommendationsPage() {
             </p>
           </div>
           <CultivationAreaMap />
+        </div>
+      )}
+
+      {activeTab === "crop" && (
+        <div className="rounded-lg border p-4">
+          <CropRecommendationDisplay />
         </div>
       )}
 
