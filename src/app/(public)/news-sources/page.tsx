@@ -145,7 +145,7 @@ export default function NewsSourcesPage() {
 
   return (
     <AgrulLayout>
-      <BreadCrumb title="News and Media" breadCrumb="News Sources" />
+      <BreadCrumb title="Media Coverage" breadCrumb="Media Sources" />
       <div className="default-padding">
         <div className="container">
           <div className="text-center" style={{ marginBottom: 40 }}>
