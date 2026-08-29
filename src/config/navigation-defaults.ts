@@ -18,6 +18,7 @@ export const fpoNavigationConfig: NavigationConfig = {
         { id: "schemes", title: "Schemes", translations: { ml: "പദ്ധതികൾ" }, url: "/fpo/schemes", icon: "FileText" },
         { id: "experts", title: "Expert Directory", translations: { ml: "വിദഗ്ധ ഡയറക്ടറി" }, url: "/fpo/experts", icon: "BookOpen" },
         { id: "tier-assessment", title: "Tier Assessment", translations: { ml: "ടയർ അസസ്മെന്റ്" }, url: "/fpo/tier-assessment", icon: "ClipboardList" },
+        { id: "dpr", title: "DPR Projects", translations: { ml: "DPR പ്രൊജക്ടുകൾ" }, url: "/fpo/dpr", icon: "FileBarChart" },
       ],
     },
   ],
@@ -49,6 +50,9 @@ export const adminNavigationConfig: NavigationConfig = {
         { id: "languages", title: "Languages", translations: { ml: "ഭാഷകൾ" }, url: "/admin/languages", icon: "Globe" },
         { id: "notifications", title: "Notifications", translations: { ml: "അറിയിപ്പുകൾ" }, url: "/admin/notifications", icon: "Bell" },
         { id: "experts", title: "Expert Directory", translations: { ml: "വിദഗ്ധ ഡയറക്ടറി" }, url: "/admin/experts", icon: "User" },
+        { id: "dpr", title: "DPR Projects", translations: { ml: "DPR പ്രൊജക്ടുകൾ" }, url: "/admin/dpr", icon: "FileBarChart" },
+        { id: "dpr-config", title: "DPR Config", translations: { ml: "DPR കോൺഫിഗ്" }, url: "/admin/dpr-config", icon: "SlidersHorizontal" },
+        { id: "ai-services", title: "AI Services", translations: { ml: "AI സേവനങ്ങൾ" }, url: "/admin/ai-services", icon: "Bot" },
       ],
     },
     {

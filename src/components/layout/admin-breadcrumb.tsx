@@ -50,6 +50,8 @@ const SEGMENT_LABELS: Record<string, string> = {
   "site-content": "Site Content",
   announcements: "Announcements",
   faqs: "FAQs",
+  dpr: "DPR Projects",
+  "dpr-config": "DPR Configuration",
   new: "New",
   edit: "Edit",
 };
