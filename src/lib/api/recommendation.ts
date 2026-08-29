@@ -1,28 +1,68 @@
 import type { ApiResponse } from "@/types/api";
 import type {
   BusinessPlanGuidance,
-  CropRecommendation,
   DprGenerationRequest,
   GeneratedDpr,
-  RecommendationHistory,
+  MyRecommendation,
 } from "@/types/recommendation";
 
 import { apiClient } from "./client";
 
+// ── My Recommendation — matches the REAL, tested backend endpoint:
+// GET/POST /api/recommendations/me/(request|feedback)/
+// (apps/recommendations/api/recommendations.py). ──
+
+const RECOMMENDATION_PATH = "/recommendations/me/";
+const RECOMMENDATION_REQUEST_PATH = "/recommendations/me/request/";
+const RECOMMENDATION_FEEDBACK_PATH = "/recommendations/me/feedback/";
+
 /**
- * Get AI-powered crop recommendations
+ * Fetch the current FPO's cached recommendation for this financial year.
+ * Returns null if none has been requested yet (backend returns 404 in
+ * that case — expected, not an error state to surface).
  */
-export async function getCropRecommendations(data: {
-  district: string;
-  soilType: string;
-  waterAvailability: string;
-  season: string;
-  landArea?: number;
-  existingCrops?: string[];
-}): Promise<CropRecommendation[]> {
-  const response = await apiClient.post<ApiResponse<CropRecommendation[]>>("/v1/recommendations/crops", data);
+export async function getMyRecommendation(): Promise<MyRecommendation | null> {
+  try {
+    const response = await apiClient.get<ApiResponse<MyRecommendation>>(RECOMMENDATION_PATH);
+    return response.data.data;
+  } catch (error) {
+    const status = (error as { status?: number })?.status;
+    if (status === 404) return null;
+    throw error;
+  }
+}
+
+/**
+ * Request a fresh recommendation — triggers the backend to call the
+ * ML service (FastAPI) with the FPO's current district/zone/soil/
+ * season/commodities/tier, derived server-side. Replaces any existing
+ * cached recommendation for this financial year.
+ */
+export async function requestFreshRecommendation(): Promise<MyRecommendation> {
+  const response = await apiClient.post<ApiResponse<MyRecommendation>>(RECOMMENDATION_REQUEST_PATH);
   return response.data.data;
 }
+
+/**
+ * Submit a 1-5 rating (and optional comment) on the current cached
+ * recommendation. No recommendation ID needed — always applies to the
+ * FPO's current financial year's cached result.
+ */
+export async function submitRecommendationFeedback(
+  rating: number,
+  comment?: string,
+): Promise<MyRecommendation> {
+  const response = await apiClient.post<ApiResponse<MyRecommendation>>(RECOMMENDATION_FEEDBACK_PATH, {
+    rating,
+    comment: comment ?? "",
+  });
+  return response.data.data;
+}
+
+// ── Below: speculative functions for features not yet built on the
+// backend (Business Plan Guidance, DPR generation). Left as-is —
+// endpoints don't exist yet, these will need the same real-backend
+// treatment once that work happens. ──
 
 /**
  * Get business plan guidance
@@ -62,27 +102,4 @@ export async function downloadDpr(dprId: string): Promise<Blob> {
     responseType: "blob",
   });
   return response.data;
-}
-
-/**
- * Get my recommendation history (FPO only)
- */
-export async function getMyRecommendationHistory(): Promise<RecommendationHistory[]> {
-  const response = await apiClient.get<ApiResponse<RecommendationHistory[]>>("/v1/recommendations/history/me");
-  return response.data.data;
-}
-
-/**
- * Save recommendation feedback (for improving AI)
- */
-export async function saveRecommendationFeedback(
-  recommendationId: string,
-  data: {
-    isHelpful: boolean;
-    rating?: number;
-    feedback?: string;
-    implementedCrops?: string[];
-  },
-): Promise<void> {
-  await apiClient.post(`/v1/recommendations/${recommendationId}/feedback`, data);
 }
