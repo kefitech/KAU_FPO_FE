@@ -4562,6 +4562,14 @@ ul.counter-list li:nth-child(2) {
 	background: var(--white);
 	position: relative;
 	z-index: 1;
+	align-content: center;
+
+	/* ADD THESE */
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	height: 420px;              /* pick a value that fits your longest title comfortably */
+	justify-content: flex-start;
 }
 
 .services-style-one p {
@@ -4585,7 +4593,11 @@ ul.counter-list li:nth-child(2) {
 }
 
 .services-style-one img {
-	height: auto;
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+	display: block;
+	margin: 0 auto;
 }
 
 .services-style-one .thumb {
@@ -4594,6 +4606,8 @@ ul.counter-list li:nth-child(2) {
 	z-index: 1;
 	margin-bottom: 40px;
 	margin-top: 20px;
+	width: 150px;
+	height: 150px;
 }
 
 .services-style-one .thumb::after {

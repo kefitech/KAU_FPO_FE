@@ -27,4 +27,39 @@ export const serviceData = [
     description:
       "Schemes and Subsidies Information Hub listing central and state government agricultural schemes relevant to FPOs in Kerala.",
   },
+  {
+    id: 5,
+    thumb: "ai_chatbot.png",
+    title: "AI Chatbot",
+    description:
+      "Have a quick question about your FPO, a scheme, or how to use the platform? Our AI-powered chatbot is here to help — available round the clock to answer queries, guide you through features, and point you in the right direction. (Please Login to use this feature.)",
+  },
+  {
+    id: 6,
+    thumb: "expert_directory.png",
+    title: "Expert Directory",
+    description:
+      "Connect directly with agricultural experts, agronomists, and business consultants who can guide your FPO on everything from crop planning to compliance. Search by expertise, location, or specialization to find the right person for your needs. (Please Login to use this feature.)",
+  },
+  {
+    id: 7,
+    thumb: "training_programmes.png",
+    title: "Training Programmes",
+    description:
+      "Build your FPO's capacity with curated training programmes, workshops, and certification courses covering post-harvest management, digital literacy, financial planning, and more. Browse upcoming sessions and enroll directly through the platform. (Please Login to use this feature.)",
+  },
+  {
+    id: 8,
+    thumb: "gis_integration.png",
+    title: "GIS Integration",
+    description:
+      "Visualize your FPO's operations on an interactive map — track member locations, crop coverage, and resource distribution. GIS-powered insights help with better planning around irrigation, storage, and logistics. (Please Login to use this feature.)",
+  },
+  {
+    id: 9,
+    thumb: "crop_recommendation.png",
+    title: "Crop Recommendation",
+    description:
+      "Not sure what to grow next season? Share your soil type, region, and climate conditions, and our AI will recommend the most suitable crops for your FPO — helping you make informed decisions that boost yield and profitability. (Please Login to use this feature.)",
+  },
 ];

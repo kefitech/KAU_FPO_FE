@@ -53,22 +53,32 @@ const Services = () => {
               breakpoints={{ 768: { slidesPerView: 2 }, 992: { slidesPerView: 3 }, 1199: { slidesPerView: 4 } }}
               modules={[Navigation, Pagination, Autoplay]}
             >
-              {serviceData.map((service) => (
-                <SwiperSlide key={service.id}>
-                  <div className="services-style-one">
-                    <div className="thumb">
-                      <img src={`/assets/img/thumb/${service.thumb}`} alt={service.title} />
-                    </div>
-                    <h5>
-                      <Link href={`/service-details/${service.id}`}>{service.title}</Link>
-                    </h5>
-                    <Link className="btn btn-theme btn-md radius animation" href={`/service-details/${service.id}`}>
-                      Learn More
-                    </Link>
-                    {/* <p>{service.description}</p> */}
+            {serviceData.map((service) => (
+              <SwiperSlide key={service.id}>
+                <div className="services-style-one">
+                  <div className="thumb">
+                    <img
+                      src={`/assets/img/thumb/${service.thumb}`}
+                      alt={service.title}
+                      onError={(e) => {
+                        e.currentTarget.onerror = null; // prevent infinite loop if fallback also missing
+                        e.currentTarget.src = "/assets/img/thumb/default.png";
+                      }}
+                    />
                   </div>
-                </SwiperSlide>
-              ))}
+                  <h5>
+                    <Link href={`/service-details/${service.id}`}>{service.title}</Link>
+                  </h5>
+                  <Link
+                    className="btn btn-theme btn-md radius animation"
+                    href={`/service-details/${service.id}`}
+                  >
+                    Learn More
+                  </Link>
+                  {/* <p>{service.description}</p> */}
+                </div>
+              </SwiperSlide>
+            ))}
             </Swiper>
           </div>
         </div>
