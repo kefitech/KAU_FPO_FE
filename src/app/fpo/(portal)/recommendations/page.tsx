@@ -1,9 +1,13 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { useState } from "react";
 
-import { CropRecommendationDisplay } from "./_components/crop-recommendation-display"
+import { translationsApi } from "@/lib/api/translations";
+import { useLocaleStore } from "@/stores/locale-store";
+import { CropRecommendationDisplay } from "./_components/crop-recommendation-display";
+
+type T = Record<string, string>;
 
 const CultivationAreaMap = dynamic(
   () => import("./_components/cultivation-area-map").then((m) => ({ default: m.CultivationAreaMap })),
@@ -19,21 +23,43 @@ const CultivationAreaMap = dynamic(
 
 type TabKey = "crop" | "business-plan" | "dpr";
 
-const TABS: { key: TabKey; label: string }[] = [
-  { key: "crop", label: "Crop Recommendation" },
-  { key: "business-plan", label: "Business Plan Guidance" },
-  { key: "dpr", label: "DPR Generation" },
-];
-
 export default function FpoRecommendationsPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("crop");
+  const locale = useLocaleStore((s) => s.locale);
+
+  const [t, setT] = useState<T>({});
+  const [translationsLoading, setTranslationsLoading] = useState(true);
+
+  useEffect(() => {
+    setTranslationsLoading(true);
+    translationsApi
+      .getPublic(locale, "fpo_recommendations")
+      .then((data) => setT(data.fpo_recommendations ?? {}))
+      .catch(() => undefined)
+      .finally(() => setTranslationsLoading(false));
+  }, [locale]);
+
+  const TABS: { key: TabKey; label: string }[] = [
+    { key: "crop", label: t.tab_crop_recommendation ?? "Crop Recommendation" },
+    { key: "business-plan", label: t.tab_business_plan ?? "Business Plan Guidance" },
+    { key: "dpr", label: t.tab_dpr_generation ?? "DPR Generation" },
+  ];
+
+  if (translationsLoading) {
+    return (
+      <div className="flex flex-col gap-6 p-6">
+        <div className="h-7 w-56 animate-pulse rounded bg-muted" />
+        <div className="h-72 w-full animate-pulse rounded-lg bg-muted" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6 p-6">
       <div>
-        <h1 className="font-semibold text-2xl">AI Recommendations</h1>
+        <h1 className="font-semibold text-2xl">{t.page_title ?? "AI Recommendations"}</h1>
         <p className="text-muted-foreground text-sm">
-          Get AI-powered crop recommendations, business plan guidance, and DPR generation.
+          {t.page_description ?? "Get AI-powered crop recommendations, business plan guidance, and DPR generation."}
         </p>
       </div>
 
@@ -57,9 +83,10 @@ export default function FpoRecommendationsPage() {
       {activeTab === "crop" && (
         <div className="flex flex-col gap-4 rounded-lg border p-4">
           <div>
-            <h2 className="font-medium text-sm">Your Farm Boundary</h2>
+            <h2 className="font-medium text-sm">{t.farm_boundary_heading ?? "Your Farm Boundary"}</h2>
             <p className="text-muted-foreground text-xs">
-              Mark your cultivation area on the map — this helps us tailor crop recommendations to your farm.
+              {t.farm_boundary_description ??
+                "Mark your cultivation area on the map — this helps us tailor crop recommendations to your farm."}
             </p>
           </div>
           <CultivationAreaMap />
@@ -74,13 +101,13 @@ export default function FpoRecommendationsPage() {
 
       {activeTab === "business-plan" && (
         <div className="flex h-40 items-center justify-center rounded-lg border bg-muted/30">
-          <p className="text-muted-foreground text-sm">Business Plan Guidance — coming soon.</p>
+          <p className="text-muted-foreground text-sm">{t.business_plan_coming_soon ?? "Business Plan Guidance — coming soon."}</p>
         </div>
       )}
 
       {activeTab === "dpr" && (
         <div className="flex h-40 items-center justify-center rounded-lg border bg-muted/30">
-          <p className="text-muted-foreground text-sm">DPR Generation — coming soon.</p>
+          <p className="text-muted-foreground text-sm">{t.dpr_coming_soon ?? "DPR Generation — coming soon."}</p>
         </div>
       )}
     </div>

@@ -15,6 +15,8 @@ import type {
 
 import { apiClient } from "./client";
 
+import type { ZoneFeatureCollection } from "@/types/gis";
+
 /**
  * Get map configuration
  */
@@ -203,3 +205,21 @@ export async function reverseGeocode(coordinates: Coordinates): Promise<{
   );
   return response.data.data;
 }
+
+ 
+/**
+ * Fetches all agro-climatic zones as a GeoJSON FeatureCollection — used
+ * for the toggleable zone layer on the cultivation area map. Confirmed
+ * real response shape: { status, message, data: { type: "FeatureCollection",
+ * features: [...] } } — data is the FeatureCollection itself, not a flat
+ * array of features.
+ *
+ * ~170KB response (simplified geometry, see scripts/seed_gis_zones.py) —
+ * fetched lazily, only when the layer toggle is actually turned on, not
+ * on every page load.
+ */
+export async function getZones(): Promise<ZoneFeatureCollection> {
+  const response = await apiClient.get<ApiResponse<ZoneFeatureCollection>>("/gis/zones/");
+  return response.data.data;
+}
+ 
