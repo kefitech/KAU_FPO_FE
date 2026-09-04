@@ -4,13 +4,50 @@ import { useRouter } from "next/navigation";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { adminMlModelsApi, type MLModelVersion } from "@/app/admin/_api/ml-models";
 import { RowActions } from "@/components/data-table/row-actions";
 import { Badge } from "@/components/ui/badge";
 
-function MlModelActions({ model }: { model: MLModelVersion }) {
+function StatusBadge({ model }: { model: MLModelVersion }) {
+  if (model.status === "training") {
+    return (
+      <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+        <Loader2 className="mr-1 h-3 w-3 animate-spin motion-reduce:animate-none" />
+        Training
+      </Badge>
+    );
+  }
+  if (model.status === "failed") {
+    return (
+      <Badge variant="secondary" className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+        Failed
+      </Badge>
+    );
+  }
+  return (
+    <Badge
+      variant="secondary"
+      className={
+        model.is_active
+          ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+          : "bg-muted text-muted-foreground"
+      }
+    >
+      {model.is_active ? "Active" : "Inactive"}
+    </Badge>
+  );
+}
+
+function MlModelActions({
+  model,
+  onViewDetails,
+}: {
+  model: MLModelVersion;
+  onViewDetails: (model: MLModelVersion) => void;
+}) {
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -18,7 +55,7 @@ function MlModelActions({ model }: { model: MLModelVersion }) {
     mutationFn: () => adminMlModelsApi.activate(model.id),
     onSuccess: (result) => {
       if (result.warning) {
-        toast.warning(result.warning);
+        toast.warning(result.warning, { duration: 12_000 });
       } else {
         toast.success("Model version activated");
       }
@@ -34,6 +71,14 @@ function MlModelActions({ model }: { model: MLModelVersion }) {
     <RowActions
       actions={[
         {
+          // Training stats for a ready CSV-trained version; the error for a
+          // failed one. Hidden when there is nothing to show (a direct file
+          // upload has no stats; a training row has neither yet).
+          label: model.status === "failed" ? "View Error" : "View Training Stats",
+          onClick: () => onViewDetails(model),
+          hidden: model.status === "training" || (model.status === "ready" && !model.training_metrics),
+        },
+        {
           label: "View Feedback",
           onClick: () => router.push(`/admin/ml-models/${model.id}/feedback`),
         },
@@ -41,7 +86,9 @@ function MlModelActions({ model }: { model: MLModelVersion }) {
           label: "Activate",
           onClick: () => activateMutation.mutate(),
           disabled: activateMutation.isPending,
-          hidden: model.is_active,
+          // Only a ready, not-yet-active version can be activated -- the
+          // backend enforces the same rule (400 otherwise).
+          hidden: model.is_active || model.status !== "ready",
           separator: true,
         },
       ]}
@@ -49,7 +96,12 @@ function MlModelActions({ model }: { model: MLModelVersion }) {
   );
 }
 
-export function getMlModelColumns(): ColumnDef<MLModelVersion>[] {
+/**
+ * onViewDetails is called both from the row action above and from clicking
+ * anywhere on the row (wired in page.tsx via DataTable's onRowClick) --
+ * both funnel into the same dialog state at the page level.
+ */
+export function getMlModelColumns(onViewDetails: (model: MLModelVersion) => void): ColumnDef<MLModelVersion>[] {
   return [
     {
       accessorKey: "version_code",
@@ -76,25 +128,14 @@ export function getMlModelColumns(): ColumnDef<MLModelVersion>[] {
       accessorKey: "is_active",
       header: "Status",
       enableSorting: false,
-      cell: ({ row }) => (
-        <Badge
-          variant="secondary"
-          className={
-            row.original.is_active
-              ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-              : "bg-muted text-muted-foreground"
-          }
-        >
-          {row.original.is_active ? "Active" : "Inactive"}
-        </Badge>
-      ),
+      cell: ({ row }) => <StatusBadge model={row.original} />,
     },
     {
       id: "actions",
       header: "",
       enableSorting: false,
       enableHiding: false,
-      cell: ({ row }) => <MlModelActions model={row.original} />,
+      cell: ({ row }) => <MlModelActions model={row.original} onViewDetails={onViewDetails} />,
     },
   ];
 }

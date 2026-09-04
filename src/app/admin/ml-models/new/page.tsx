@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+
 import { useRouter } from "next/navigation";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -47,14 +48,22 @@ export default function NewMlModelPage() {
       if (file) formData.append("model_file", file);
       return adminMlModelsApi.create(formData);
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast.success("Model version registered successfully");
+      // Non-blocking notes from the ML service's validation pass (e.g. the
+      // file was trained on a different scikit-learn version). It loaded and
+      // passed the schema check, but the admin should know.
+      if (data.validation_warnings?.length) {
+        toast.warning(data.validation_warnings.join(" "), { duration: 10_000 });
+      }
       queryClient.invalidateQueries({ queryKey: ["ml-models"] });
       router.push("/admin/ml-models");
     },
     onError: (error: unknown) => {
+      // A rejected file arrives here as a 422 whose message names the exact
+      // mismatch (e.g. "expects column(s) this service never sends: ['elevation_m']").
       const msg = (error as { message?: string })?.message;
-      toast.error(msg ?? "Failed to register model version");
+      toast.error(msg ?? "Failed to register model version", { duration: 12_000 });
     },
   });
 
@@ -72,8 +81,8 @@ export default function NewMlModelPage() {
       <div className="mx-auto w-full max-w-3xl">
         <h1 className="font-bold text-2xl">Register Model Version</h1>
         <p className="mt-0.5 text-muted-foreground text-sm">
-          Upload a trained model file and register it as a new version. Registering does not
-          activate it — use &quot;Activate&quot; from the list afterward.
+          Upload a trained model file and register it as a new version. Registering does not activate it — use
+          &quot;Activate&quot; from the list afterward.
         </p>
       </div>
 
@@ -140,8 +149,10 @@ export default function NewMlModelPage() {
                   />
                   {fileError && <p className="text-destructive text-sm">{fileError}</p>}
                   <p className="text-muted-foreground text-xs">
-                    Uploaded files are stored in the shared model directory. No file type is
-                    currently restricted — validate carefully before uploading.
+                    The file is checked by the ML service before it&apos;s registered: it must be a joblib classifier
+                    trained on this service&apos;s exact feature columns. Files that don&apos;t fit are rejected with
+                    the specific mismatch. This is a structural check only — it doesn&apos;t judge whether the model is
+                    any good.
                   </p>
                 </Field>
               </FieldGroup>
