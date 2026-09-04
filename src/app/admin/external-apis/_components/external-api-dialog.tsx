@@ -23,6 +23,7 @@ const SERVICE_OPTIONS = [
   { value: "aadhaar_verification", label: "Aadhaar Verification" },
   { value: "gstin_verification", label: "GSTIN Verification" },
   { value: "bank_account_verification", label: "Bank Account Verification" },
+  { value: "weather_api", label: "Weather API" },
 ];
 
 const schema = z.object({
