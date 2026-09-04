@@ -1,37 +1,73 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
-import { Plus, Sparkles } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Loader2, Plus, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 import { adminMlModelsApi, type MLModelVersion } from "@/app/admin/_api/ml-models";
 import { DataTable } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import type { PaginatedResponse } from "@/types/pagination";
 
 import { getMlModelColumns } from "./_components/columns";
 import { TrainingMetricsView } from "./_components/training-metrics-view";
 
+const TRAINING_POLL_MS = 5_000;
+
 export default function MlModelsPage() {
   const router = useRouter();
-  const [statsView, setStatsView] = useState<{ open: boolean; model: MLModelVersion | null }>({
+  const queryClient = useQueryClient();
+  const [detail, setDetail] = useState<{ open: boolean; model: MLModelVersion | null }>({
     open: false,
     model: null,
   });
 
-  function openStats(model: MLModelVersion) {
-    if (!model.training_metrics) {
-      // Rows are clickable table-wide (DataTable's onRowClick doesn't vary
-      // per-row), so a version with no saved metrics -- anything registered
-      // via direct file upload -- needs an explicit "nothing here" signal
-      // rather than silently doing nothing on click.
-      toast.info("No training stats saved for this version (registered via file upload).");
+  // Lightweight status watch, separate from the DataTable's own paginated
+  // query: polls while any version is training, stops when none is, and
+  // nudges the table to refetch whenever a status actually changes. Same
+  // "fetch first 100" shape the feedback page already uses for its lookup.
+  const { data: statusData } = useQuery({
+    queryKey: ["ml-models-status"],
+    queryFn: () => adminMlModelsApi.getAll({ page: 1, page_size: 100 }),
+    // Read the latest data from the cache rather than from the callback
+    // argument -- its shape differs between TanStack Query v4 and v5, this
+    // works identically in both.
+    refetchInterval: () => {
+      const latest = queryClient.getQueryData<PaginatedResponse<MLModelVersion>>(["ml-models-status"]);
+      return latest?.data.some((m) => m.status === "training") ? TRAINING_POLL_MS : false;
+    },
+  });
+  const trainingCount = statusData?.data.filter((m) => m.status === "training").length ?? 0;
+  const statusSignature = useMemo(
+    () => (statusData?.data ?? []).map((m) => `${m.id}:${m.status}`).join(","),
+    [statusData],
+  );
+  const lastSignature = useRef(statusSignature);
+  useEffect(() => {
+    if (statusSignature !== lastSignature.current) {
+      lastSignature.current = statusSignature;
+      queryClient.invalidateQueries({ queryKey: ["ml-models"] });
+    }
+  }, [statusSignature, queryClient]);
+
+  function openDetails(model: MLModelVersion) {
+    if (model.status === "training") {
+      toast.info("Still training — stats will be available when it finishes.");
       return;
     }
-    setStatsView({ open: true, model });
+    if (model.status === "ready" && !model.training_metrics) {
+      // Rows are clickable table-wide (DataTable's onRowClick doesn't vary
+      // per-row), so a version with nothing to show -- registered via direct
+      // file upload -- needs an explicit signal rather than a dead click.
+      toast.info("No training stats for this version (registered via file upload).");
+      return;
+    }
+    setDetail({ open: true, model });
   }
 
   return (
@@ -55,27 +91,48 @@ export default function MlModelsPage() {
         </div>
       </div>
 
+      {trainingCount > 0 && (
+        <div className="flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-blue-800 text-sm dark:border-blue-900/50 dark:bg-blue-950/30 dark:text-blue-300">
+          <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" />
+          {trainingCount === 1 ? "1 version is training" : `${trainingCount} versions are training`} — this list
+          refreshes automatically.
+        </div>
+      )}
+
       <Suspense>
         <DataTable
           queryKey="ml-models"
           queryFn={adminMlModelsApi.getAll}
-          columns={getMlModelColumns(openStats)}
+          columns={getMlModelColumns(openDetails)}
           columnsLabel="Columns"
           toggleColumnsLabel="Toggle columns"
           searchPlaceholder="Search..."
           clearLabel="Clear"
-          onRowClick={(row) => openStats(row)}
+          onRowClick={(row) => openDetails(row)}
         />
       </Suspense>
 
-      <Dialog open={statsView.open} onOpenChange={(open) => setStatsView((s) => ({ ...s, open }))}>
+      <Dialog open={detail.open} onOpenChange={(open) => setDetail((s) => ({ ...s, open }))}>
         <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              Training stats — <span className="font-mono">{statsView.model?.version_code}</span>
+              {detail.model?.status === "failed" ? "Training failed" : "Training stats"} —{" "}
+              <span className="font-mono">{detail.model?.version_code}</span>
             </DialogTitle>
           </DialogHeader>
-          {statsView.model?.training_metrics && <TrainingMetricsView metrics={statsView.model.training_metrics} />}
+          {detail.model?.status === "failed" ? (
+            <div className="flex flex-col gap-3 text-sm">
+              <p className="text-muted-foreground">
+                This version has no model file and cannot be activated. Fix the cause below and upload the dataset again
+                as a new version.
+              </p>
+              <pre className="whitespace-pre-wrap rounded-md border border-red-200 bg-red-50 p-3 font-mono text-red-800 text-xs dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
+                {detail.model.training_error || "No error details were recorded."}
+              </pre>
+            </div>
+          ) : (
+            detail.model?.training_metrics && <TrainingMetricsView metrics={detail.model.training_metrics} />
+          )}
         </DialogContent>
       </Dialog>
     </div>
