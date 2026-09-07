@@ -5,15 +5,17 @@ import { DynamicSidebar } from "@/components/layout/dynamic-sidebar";
 import { LocaleSwitcher } from "@/components/layout/locale-switcher";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { governmentNavigationConfig } from "@/config/navigation-defaults";
+import { expertNavigationConfig } from "@/config/navigation-defaults";
 import { usePortalNavigation } from "@/hooks/use-navigation";
 import { useLocaleStore } from "@/stores/locale-store";
 
-export default function GovernmentLayout({ children }: { children: React.ReactNode }) {
-  const { data: navConfig } = usePortalNavigation("government");
+export default function ExpertLayout({ children }: { children: React.ReactNode }) {
+  const { data: navConfig } = usePortalNavigation(
+    "expert" as Parameters<typeof usePortalNavigation>[0],
+  );
   const locale = useLocaleStore((state) => state.locale);
 
-  const config = navConfig ?? governmentNavigationConfig;
+  const config = navConfig ?? expertNavigationConfig;
 
   return (
     <SidebarProvider>
@@ -26,7 +28,7 @@ export default function GovernmentLayout({ children }: { children: React.ReactNo
             <ThemeToggle />
           </div>
         </div>
-        {children}
+        <div className="p-6">{children}</div>
       </SidebarInset>
     </SidebarProvider>
   );
