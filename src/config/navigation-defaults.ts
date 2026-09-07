@@ -75,7 +75,6 @@ export const governmentNavigationConfig: NavigationConfig = {
       translations: { ml: "ഡാഷ്‌ബോർഡ്" },
       items: [
         { id: "dashboard", title: "Overview", translations: { ml: "അവലോകനം" }, url: "/government/dashboard", icon: "LayoutDashboard" },
-        { id: "analytics", title: "Analytics", translations: { ml: "അനലിറ്റിക്സ്" }, url: "/government/analytics", icon: "BarChart3" },
       ],
     },
     {
@@ -85,11 +84,12 @@ export const governmentNavigationConfig: NavigationConfig = {
       items: [
         { id: "fpos", title: "FPO Directory", translations: { ml: "FPO ഡയറക്ടറി" }, url: "/government/fpos", icon: "Building2" },
         { id: "schemes", title: "Scheme Linkage", translations: { ml: "സ്കീം ലിങ്കേജ്" }, url: "/government/schemes", icon: "FileText" },
+        { id: "training", title: "Training Sessions", translations: { ml: "Training Sessions" }, url: "/government/training", icon: "GraduationCap" },
       ],
     },
   ],
   footerItems: [
-    { id: "settings", title: "Settings", translations: { ml: "ക്രമീകരണങ്ങൾ" }, url: "/government/settings", icon: "Settings" },
+    { id: "my-profile", title: "Profile", translations: { ml: "പ്രൊഫൈൽ" }, url: "/government/profile", icon: "User" },
     { id: "logout", title: "Logout", translations: { ml: "ലോഗൗട്ട്" }, url: "/logout", icon: "LogOut" },
   ],
 };
@@ -117,6 +117,25 @@ export const cbboNavigationConfig: NavigationConfig = {
   ],
   footerItems: [
     { id: "settings", title: "Settings", translations: { ml: "ക്രമീകരണങ്ങൾ" }, url: "/cbbo/settings", icon: "Settings" },
+    { id: "logout", title: "Logout", translations: { ml: "ലോഗൗട്ട്" }, url: "/logout", icon: "LogOut" },
+  ],
+};
+
+export const expertNavigationConfig: NavigationConfig = {
+  logo: { title: "KAU-FPO Platform", subtitle: "Expert Portal", icon: "Sprout" },
+  groups: [
+    {
+      id: "main",
+      label: "Dashboard",
+      translations: { ml: "ഡാഷ്‌ബോർഡ്" },
+      items: [
+        { id: "dashboard", title: "My Bookings", translations: { ml: "എന്റെ ബുക്കിംഗുകൾ" }, url: "/expert/dashboard", icon: "LayoutDashboard" },
+        { id: "availability", title: "Availability", translations: { ml: "ലഭ്യത" }, url: "/expert/availability", icon: "CalendarDays" },
+      ],
+    },
+  ],
+  footerItems: [
+    { id: "my-profile", title: "Profile", translations: { ml: "പ്രൊഫൈൽ" }, url: "/expert/profile", icon: "User" },
     { id: "logout", title: "Logout", translations: { ml: "ലോഗൗട്ട്" }, url: "/logout", icon: "LogOut" },
   ],
 };

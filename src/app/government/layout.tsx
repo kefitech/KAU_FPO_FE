@@ -1,27 +1,33 @@
 "use client";
-
 import "@/app/globals.css";
+
 import { DynamicSidebar } from "@/components/layout/dynamic-sidebar";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { LocaleSwitcher } from "@/components/layout/locale-switcher";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { governmentNavigationConfig } from "@/config/navigation-defaults";
 import { usePortalNavigation } from "@/hooks/use-navigation";
 import { useLocaleStore } from "@/stores/locale-store";
 
 export default function GovernmentLayout({ children }: { children: React.ReactNode }) {
-  const { data: navConfig, isLoading } = usePortalNavigation("government");
+  const { data: navConfig } = usePortalNavigation("government");
   const locale = useLocaleStore((state) => state.locale);
 
-  if (isLoading || !navConfig) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="animate-pulse">Loading...</div>
-      </div>
-    );
-  }
+  const config = navConfig ?? governmentNavigationConfig;
 
   return (
     <SidebarProvider>
-      <DynamicSidebar config={navConfig} locale={locale} />
-      <SidebarInset>{children}</SidebarInset>
+      <DynamicSidebar config={config} locale={locale} />
+      <SidebarInset>
+        <div className="flex items-center justify-between border-b px-4 py-2">
+          <SidebarTrigger />
+          <div className="flex items-center gap-2">
+            <LocaleSwitcher />
+            <ThemeToggle />
+          </div>
+        </div>
+        {children}
+      </SidebarInset>
     </SidebarProvider>
   );
 }
