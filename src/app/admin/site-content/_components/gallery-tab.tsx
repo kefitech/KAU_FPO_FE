@@ -66,6 +66,24 @@ function getCaptionDisplay(caption: Record<string, string> | string | null): str
   return Object.values(caption).find((v) => v?.trim()) ?? "";
 }
 
+function parseTitle(raw: Record<string, string> | string): Record<string, string> {
+  if (typeof raw === "object" && raw !== null) return raw;
+  try {
+    const parsed = JSON.parse(raw);
+    if (typeof parsed === "object" && parsed !== null) return parsed as Record<string, string>;
+  } catch { /* plain string title */ }
+  return {};
+}
+
+function getTitleDisplay(title: Record<string, string> | string): string {
+  if (typeof title === "string") {
+    const parsed = parseTitle(title);
+    const fromParsed = Object.values(parsed).find((v) => v?.trim());
+    return fromParsed ?? title;
+  }
+  return Object.values(title).find((v) => v?.trim()) ?? "";
+}
+
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -87,20 +105,35 @@ function AlbumDialog({
   onSuccess: () => void;
   t: T;
 }) {
-  const [title, setTitle] = useState("");
+  const [titleValues, setTitleValues] = useState<Record<string, string>>({});
+  const [activeLang, setActiveLang] = useState("");
   const [order, setOrder] = useState("0");
+
+  const { data: languages = [], isLoading: langsLoading } = useQuery<PublicLanguage[]>({
+    queryKey: ["public-languages"],
+    queryFn: () => api.get("/public/languages/").then((r) => (r.data as { data: PublicLanguage[] }).data),
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const defaultLang = languages.find((l) => l.is_default);
 
   useEffect(() => {
     if (!open) return;
-    setTitle(editing?.title ?? "");
+    setTitleValues(editing ? parseTitle(editing.title) : {});
     setOrder(String(editing?.order ?? 0));
   }, [open, editing]);
+
+  useEffect(() => {
+    if (open && !activeLang && defaultLang?.code) setActiveLang(defaultLang.code);
+  }, [open, activeLang, defaultLang?.code]);
+
+  const hasTitle = Object.values(titleValues).some((v) => v?.trim());
 
   const mutation = useMutation({
     mutationFn: () =>
       editing
-        ? galleryAlbumApi.update(editing.id, { title, order: Number(order) })
-        : galleryAlbumApi.create({ title, order: Number(order) }),
+        ? galleryAlbumApi.update(editing.id, { title: titleValues, order: Number(order) })
+        : galleryAlbumApi.create({ title: titleValues, order: Number(order) }),
     onSuccess: () => {
       toast.success(editing ? "Album updated." : "Album created.");
       onSuccess();
@@ -117,8 +150,36 @@ function AlbumDialog({
         </DialogHeader>
         <div className="flex flex-col gap-4 py-2">
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium">{t.field_album_title ?? "Album Title"}</label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Opening Ceremony 2024" />
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium">{t.field_album_title ?? "Album Title"}</label>
+              {!langsLoading && languages.length > 1 && (
+                <Select value={activeLang} onValueChange={setActiveLang}>
+                  <SelectTrigger className="h-8 w-44 text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {languages.map((lang) => {
+                      const filled = !!titleValues[lang.code]?.trim();
+                      return (
+                        <SelectItem key={lang.code} value={lang.code}>
+                          <span className="flex items-center gap-2">
+                            {filled ? <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" /> : <Circle className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />}
+                            {lang.native_name}
+                            {lang.is_default && <span className="text-muted-foreground text-xs">{t.label_default ?? "(default)"}</span>}
+                          </span>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              )}
+              {langsLoading && <Skeleton className="h-8 w-36" />}
+            </div>
+            {langsLoading ? <Skeleton className="h-10 w-full" /> : (
+              <Input
+                value={titleValues[activeLang] ?? ""}
+                onChange={(e) => setTitleValues((prev) => ({ ...prev, [activeLang]: e.target.value }))}
+                placeholder={`Title in ${languages.find((l) => l.code === activeLang)?.name ?? activeLang} — e.g. Opening Ceremony 2024`}
+              />
+            )}
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium">{t.field_order ?? "Order"}</label>
@@ -129,7 +190,7 @@ function AlbumDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={mutation.isPending}>
             {t.action_cancel ?? "Cancel"}
           </Button>
-          <Button onClick={() => mutation.mutate()} disabled={!title.trim() || mutation.isPending}>
+          <Button onClick={() => mutation.mutate()} disabled={!hasTitle || mutation.isPending}>
             {mutation.isPending ? (t.action_saving ?? "Saving…") : (t.action_save ?? "Save")}
           </Button>
         </DialogFooter>
@@ -512,7 +573,7 @@ function AlbumDetailView({
             {t.btn_back ?? "Back"}
           </Button>
           <span className="text-muted-foreground">/</span>
-          <h2 className="text-base font-semibold">{album.title}</h2>
+          <h2 className="text-base font-semibold">{getTitleDisplay(album.title)}</h2>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
@@ -657,7 +718,7 @@ export function GalleryTab({ t = {} }: { t?: T }) {
   function handleDeleteAlbum(album: AdminGalleryAlbum) {
     confirm({
       title: t.album_delete_title ?? "Delete Album",
-      description: (t.album_delete_description ?? `Delete "${album.title}" and all its photos? This cannot be undone.`).replace('{album.title}', album.title),
+      description: (t.album_delete_description ?? `Delete "${getTitleDisplay(album.title)}" and all its photos? This cannot be undone.`).replace('{album.title}', getTitleDisplay(album.title)),
       onConfirm: () => deleteMutation.mutateAsync(album.id),
     });
   }
@@ -714,7 +775,7 @@ export function GalleryTab({ t = {} }: { t?: T }) {
               {/* Cover */}
               <div className="relative aspect-video w-full bg-muted">
                 {album.cover_photo_url ? (
-                  <img src={album.cover_photo_url} alt={album.title} className="absolute inset-0 h-full w-full object-cover" />
+                  <img src={album.cover_photo_url} alt={getTitleDisplay(album.title)} className="absolute inset-0 h-full w-full object-cover" />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <FolderOpen className="h-8 w-8 text-muted-foreground/30" />
@@ -761,7 +822,7 @@ export function GalleryTab({ t = {} }: { t?: T }) {
 
               {/* Title + count */}
               <div className="px-2.5 py-2 bg-background/95">
-                <p className="text-sm font-medium truncate">{album.title}</p>
+                <p className="text-sm font-medium truncate">{getTitleDisplay(album.title)}</p>
                 <p className="text-xs text-muted-foreground">{album.photo_count} photo{album.photo_count !== 1 ? "s" : ""}</p>
               </div>
             </div>

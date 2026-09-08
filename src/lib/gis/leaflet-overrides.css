@@ -1,0 +1,17 @@
+/* Leaflet scale control — Google Maps-style: transparent, bracket-shaped, no box */
+.leaflet-control-scale-line {
+  background: transparent !important;
+  border: none !important;
+  border-left: 2px solid rgba(0, 0, 0, 0.65) !important;
+  border-right: 2px solid rgba(0, 0, 0, 0.65) !important;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.65) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  color: #333;
+  font-weight: 600;
+  text-shadow:
+    -1px -1px 0 #fff,
+    1px -1px 0 #fff,
+    -1px 1px 0 #fff,
+    1px 1px 0 #fff;
+}

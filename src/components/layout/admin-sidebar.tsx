@@ -63,7 +63,7 @@ export function AdminSidebar() {
       <SidebarHeader className="border-border/50 border-b pb-3">
         <div className="flex items-center gap-2.5 px-2 pt-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
           <img
-            src="/assets/img/logo.png"
+            src="/assets/img/logo.webp"
             alt="KAU"
             className="h-8 w-8 shrink-0 object-contain group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:w-8"
           />          

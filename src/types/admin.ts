@@ -580,7 +580,7 @@ export interface AdminDocument {
 
 export interface AdminGalleryAlbum {
   id: number;
-  title: string;
+  title: Record<string, string> | string;
   order: number;
   is_active: boolean;
   cover_photo_url: string | null;

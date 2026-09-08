@@ -5,10 +5,10 @@ export const galleryAlbumApi = {
   getAll: (): Promise<AdminGalleryAlbum[]> =>
     api.get("/admin/gallery/albums/").then((r) => (r.data as { data: AdminGalleryAlbum[] }).data),
 
-  create: (data: { title: string; order?: number; is_active?: boolean }): Promise<AdminGalleryAlbum> =>
+  create: (data: { title: Record<string, string> | string; order?: number; is_active?: boolean }): Promise<AdminGalleryAlbum> =>
     api.post("/admin/gallery/albums/", data).then((r) => (r.data as { data: AdminGalleryAlbum }).data),
 
-  update: (id: number, data: Partial<{ title: string; order: number; is_active: boolean }>): Promise<AdminGalleryAlbum> =>
+  update: (id: number, data: Partial<{ title: Record<string, string> | string; order: number; is_active: boolean }>): Promise<AdminGalleryAlbum> =>
     api.patch(`/admin/gallery/albums/${id}/`, data).then((r) => (r.data as { data: AdminGalleryAlbum }).data),
 
   remove: (id: number): Promise<void> =>

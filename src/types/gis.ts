@@ -199,3 +199,22 @@ export const KERALA_MAP_CONFIG: MapConfig = {
   baseLayers: [],
   overlayLayers: [],
 };
+
+ 
+export interface ZoneFeature {
+  id: number;
+  type: "Feature";
+  geometry: GeoJSONMultiPolygon;
+  properties: {
+    code: string;
+    name_en: string;
+    name_ml: string;
+    suitable_crops: string[];
+    soil_type: string;
+  };
+}
+ 
+export interface ZoneFeatureCollection {
+  type: "FeatureCollection";
+  features: ZoneFeature[];
+}

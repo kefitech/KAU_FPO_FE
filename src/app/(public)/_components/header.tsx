@@ -36,10 +36,10 @@ const Header = () => {
 
               <Link className="navbar-brand" href="/">
                 <div className="navbar-logos">
-                  {/* <img src="/assets/img/logo.png" className="logo" alt="Logo" /> */}
-                  <img src="/assets/img/Dir_of_ext.png" className="logo logo-secondary" alt="Dir_of_extLogo" />
-                  <img src="/assets/img/GOK.jpg" className="logo logo-secondary" alt="GOK Logo" />
-                  <img src="/assets/img/SHM_LOGO.png" className="logo logo-secondary" alt="SHM Logo" />
+                  {/* <img src="/assets/img/logo.webp" className="logo" alt="Logo" /> */}
+                  <img src="/assets/img/Dir_of_ext.webp" className="logo logo-secondary" alt="Dir_of_extLogo" />
+                  <img src="/assets/img/GOK.webp" className="logo logo-secondary" alt="GOK Logo" />
+                  <img src="/assets/img/SHM_LOGO.webp" className="logo logo-secondary" alt="SHM Logo" />
                 </div>
               </Link>
             </div>
@@ -50,7 +50,7 @@ const Header = () => {
                 className={`collapse navbar-collapse ${isOpen ? "show collapse-mobile" : "collapse-mobile"}`}
               >
                 <div className="mobile-menu-top-row">
-                  <img src="/assets/img/logo.png" alt="Logo" />
+                  <img src="/assets/img/logo.webp" alt="Logo" />
                   <div className="mobile-menu-top-right">
                     <div className="d-lg-none">
                       <LangToggle variant="dark" />

@@ -18,6 +18,12 @@ import {
 import type { FpoScheme } from "@/types/fpo";
 import styles from "./scheme-card.module.css";
 
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Navigation, Pagination, Autoplay } from "swiper/modules";
+import "swiper/css";
+import "swiper/css/navigation";
+
+
 const CATEGORY_BADGE_CLASS: Record<string, string> = {
   credit: "bg-primary",
   insurance: "bg-info text-dark",
@@ -25,6 +31,25 @@ const CATEGORY_BADGE_CLASS: Record<string, string> = {
   infrastructure: "bg-warning text-dark",
   capacity_building: "bg-secondary",
 };
+
+function ServiceThumb({ src, alt }: { src: string; alt: string }) {
+  const [imgSrc, setImgSrc] = useState(src);
+  const [hasErrored, setHasErrored] = useState(false);
+
+  return (
+    <img
+      src={imgSrc}
+      alt={alt}
+      style={{ width: "100%", height: 140, objectFit: "contain", marginBottom: 12 }}
+      onError={() => {
+        if (!hasErrored) {
+          setHasErrored(true);
+          setImgSrc("/assets/img/thumb/14.jpg");
+        }
+      }}
+    />
+  );
+}
 
 function ServiceSchemes() {
   const locale = useLocaleStore((s) => s.locale);
@@ -154,72 +179,87 @@ function ServiceSchemes() {
     </div>
   );
 }
-
 export default function ServiceDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const service = serviceData.find((s) => s.id === parseInt(id as string));
   if (!service) notFound();
 
- return (
+  return (
     <AgrulLayout>
       <BreadCrumb title={service.title} breadCrumb={service.title} />
       <div className="services-details-area default-padding">
         <div className="container">
-{/* Horizontal service cards row */}
-<div className="row" style={{ marginBottom: 40 }}>
-  {serviceData.map((s) => (
-    <div className="col-lg-3 col-md-6" key={s.id} style={{ marginBottom: 16 }}>
-<div
-  style={{
-    background: "#fff",
-    boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
-    padding: 16,
-    borderRadius: 4,
-    textAlign: "center",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "space-between",
-    height: "100%",
-  }}
-  className={s.id === service.id ? "current-item" : ""}
->
-        <img
-          src={`/assets/img/thumb/${s.thumb}`}
-          alt={s.title}
-          style={{ width: "100%", height: 140, objectFit: "contain", marginBottom: 12 }}
-        />
-        <h4 style={{ marginBottom: 12, fontSize: 15, alignItems: "center", width: "100%"}}>{s.title}</h4>
-        <Link
-          href={`/service-details/${s.id}`}
-          className="btn btn-theme"
-          style={{ width: "100%" }}
-        >
-          Learn More
-        </Link>
-      </div>
-    </div>
-  ))}
-</div>
+          {/* Service cards carousel */}
+          <div style={{ marginBottom: 40, minHeight: 360 }}>
+            <Swiper
+              modules={[Navigation, Pagination, Autoplay]}
+              style={{ paddingBottom: 40 }}
+              spaceBetween={16}
+              slidesPerView={4}
+              navigation
+              pagination={{ clickable: true }}
+              autoplay={{ delay: 3500, disableOnInteraction: false }}
+              breakpoints={{
+                0: { slidesPerView: 1 },
+                576: { slidesPerView: 2 },
+                992: { slidesPerView: 3 },
+                1200: { slidesPerView: 4 },
+              }}
+            >
+              {serviceData.map((s) => (
+                <SwiperSlide key={s.id}>
+                  <div
+                    style={{
+                      background: "#fff",
+                      boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
+                      padding: 16,
+                      borderRadius: 4,
+                      textAlign: "center",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      height: 320,
+                    }}
+                    className={s.id === service.id ? "current-item" : ""}
+                  >
+                    <ServiceThumb src={`/assets/img/thumb/${s.thumb}`} alt={s.title} />
+                    <h4 style={{ marginBottom: 12, fontSize: 15, width: "100%" }}>{s.title}</h4>
+                    <Link href={`/service-details/${s.id}`} className="btn btn-theme" style={{ margin: "0 auto" }}>
+                      Learn More
+                    </Link>
+                  </div>
+                </SwiperSlide>
+              ))}
+            </Swiper>
+          </div>
+
           <div className="services-details-items">
             <div className="row">
               <div className="col-xl-8 col-lg-7 pl-45 pl-md-15 pl-xs-15 services-single-content order-lg-last">
-               
                 <h2>{service.title}</h2>
                 <p>{service.description}</p>
 
                 {service.id === 4 && <ServiceSchemes />}
               </div>
               <div className="col-xl-4 col-lg-5 mt-md-50 mt-xs-50 services-sidebar">
-                <div className="single-widget quick-contact-widget text-light" style={{ backgroundImage: "url(/assets/img/thumbs/contact.png)" }}>
+                <div
+                  className="single-widget quick-contact-widget text-light"
+                  style={{ backgroundImage: "url(/assets/img/thumbs/contact.png)" }}
+                >
                   <div className="content">
                     <h3>Need Help?</h3>
-                    <p>
-                      Call office and we will connect you with a team member help.
-                    </p>
-                    <h2>+91-487-2370150 <br />+91-487-2370086 </h2>
-                    <h4><a href="mailto:de@kau.in">de@kau.in</a></h4>
-                    <Link className="btn mt-30 circle btn-theme animation btn-md" href="/contact-us">Contact Us</Link>
+                    <p>Call office and we will connect you with a team member help.</p>
+                    <h2>
+                      +91-487-2370150 <br />
+                      +91-487-2370086
+                    </h2>
+                    <h4>
+                      <a href="mailto:de@kau.in">de@kau.in</a>
+                    </h4>
+                    <Link className="btn mt-30 circle btn-theme animation btn-md" href="/contact-us">
+                      Contact Us
+                    </Link>
                   </div>
                 </div>
               </div>

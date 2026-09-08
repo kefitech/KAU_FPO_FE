@@ -10,7 +10,7 @@ import { useLocaleStore } from "@/stores/locale-store";
 const SLIDES = [
   {
     id: 1,
-    bgThumb: "17.jpg",
+    bgThumb: "17.webp",
     subtitleKey: "slide1_subtitle",
     titleKey: "slide1_title",
     descKey: "slide1_desc",
@@ -19,7 +19,7 @@ const SLIDES = [
   },
   {
     id: 2,
-    bgThumb: "2.jpg",
+    bgThumb: "2.webp",
     subtitleKey: "slide2_subtitle",
     titleKey: "slide2_title",
     descKey: "slide2_desc",
