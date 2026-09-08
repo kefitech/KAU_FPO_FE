@@ -4568,7 +4568,7 @@ ul.counter-list li:nth-child(2) {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	height: 420px;              /* pick a value that fits your longest title comfortably */
+	height: 484px;              /* pick a value that fits your longest title comfortably */
 	justify-content: flex-start;
 }
 
@@ -4606,8 +4606,8 @@ ul.counter-list li:nth-child(2) {
 	z-index: 1;
 	margin-bottom: 40px;
 	margin-top: 20px;
-	width: 150px;
-	height: 150px;
+	width: 224px;
+	height: 224px;
 }
 
 .services-style-one .thumb::after {
@@ -4615,8 +4615,8 @@ ul.counter-list li:nth-child(2) {
 	left: 50%;
 	top: 50%;
 	content: "";
-	height: 150px;
-	width: 150px;
+	height: 224px;
+	width: 224px;
 	background: var(--color-secondary);
 	z-index: -1;
 	border-radius: 50%;

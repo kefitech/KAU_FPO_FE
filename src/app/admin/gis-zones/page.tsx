@@ -48,7 +48,7 @@ export default function GisZonesPage() {
   const [previewVersionId, setPreviewVersionId] = useState<number | null>(null);
   const [previewLabel, setPreviewLabel] = useState<string>("");
 
-  const { data: liveZones, isLoading: mapLoading } = useQuery({
+  const { data: liveZones, isLoading: mapLoading, dataUpdatedAt: liveZonesUpdatedAt } = useQuery({
     queryKey: ["gis-zones-map"],
     queryFn: adminGisZonesApi.getLiveZones,
   });
@@ -157,7 +157,11 @@ export default function GisZonesPage() {
       {mapIsLoading ? (
         <div className="h-96 w-full animate-pulse rounded-lg bg-muted" />
       ) : mapData ? (
-        <ZonesMap zones={mapData} mapKey={isPreviewing ? `preview-${previewVersionId}` : "live"} t={t} />
+        <ZonesMap
+          zones={mapData}
+          mapKey={isPreviewing ? `preview-${previewVersionId}` : `live-${liveZonesUpdatedAt}`}
+          t={t}
+        />
       ) : null}
 
       <div>

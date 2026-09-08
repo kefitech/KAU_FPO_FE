@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 
-import { GeoJSON, MapContainer, TileLayer, ZoomControl } from "react-leaflet";
+import { GeoJSON, MapContainer, ScaleControl, TileLayer, ZoomControl } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import "@/lib/gis/leaflet-overrides.css";
 
 import { Layers, Satellite } from "lucide-react";
 
@@ -39,6 +40,7 @@ export function ZonesMap({ zones, mapKey, t }: Props) {
           zoomControl={false}
         >
           <ZoomControl position="bottomright" />
+          <ScaleControl position="bottomleft" imperial={false} />
           {baseLayer === "street" ? (
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -51,11 +53,13 @@ export function ZonesMap({ zones, mapKey, t }: Props) {
                 attribution="Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community"
                 url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
                 maxZoom={19}
+                maxNativeZoom={18}
               />
               <TileLayer
                 attribution="Labels &copy; Esri"
                 url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
                 maxZoom={19}
+                maxNativeZoom={18}
               />
             </>
           )}
@@ -105,7 +109,7 @@ export function ZonesMap({ zones, mapKey, t }: Props) {
         </button>
 
         {showZones && (
-          <div className="pointer-events-none absolute bottom-2 left-2 z-[400] flex flex-col gap-1 rounded-md border bg-background/90 px-2 py-1.5 text-[10px] shadow-sm backdrop-blur-sm">
+          <div className="pointer-events-none absolute bottom-8 left-2 z-[400] flex flex-col gap-1 rounded-md border bg-background/90 px-2 py-1.5 text-[10px] shadow-sm backdrop-blur-sm">
             {Object.entries(ZONE_COLORS).map(([code, color]) => (
               <div key={code} className="flex items-center gap-1.5">
                 <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ backgroundColor: color }} />

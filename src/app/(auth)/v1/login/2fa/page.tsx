@@ -22,7 +22,7 @@ export default function TwoFactorLoginPage() {
       {/* Card */}
       <div className="relative z-10 w-full max-w-md rounded-2xl bg-white/80 dark:bg-neutral-900/90 p-5 sm:p-8 shadow-xl backdrop-blur-md flex flex-col gap-5 sm:gap-6">
         <Link href="/" className="flex items-center gap-2 font-medium">
-          <img src="/assets/img/logo.png" alt="KAU" className="h-8 w-auto" />
+          <img src="/assets/img/logo.webp" alt="KAU" className="h-8 w-auto" />
           KAU-FPO Platform
         </Link>
 

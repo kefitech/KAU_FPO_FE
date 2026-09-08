@@ -1,7 +1,7 @@
 export const bannerData = [
   {
     id: 1,
-    bgThumb: "17.jpg",
+    bgThumb: "17.webp",
     subtitle: "Kerala Agricultural University",
     title: "Empowering Farmers through FPO Linkage",
     description:
@@ -10,7 +10,7 @@ export const bannerData = [
   },
   {
     id: 2,
-    bgThumb: "2.jpg",
+    bgThumb: "2.webp",
     subtitle: "KAU-FPO Platform",
     title: "Smart Agriculture for a Better Tomorrow",
     description:

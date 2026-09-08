@@ -44,7 +44,7 @@ function ServiceThumb({ src, alt }: { src: string; alt: string }) {
       onError={() => {
         if (!hasErrored) {
           setHasErrored(true);
-          setImgSrc("/assets/img/thumb/default.png");
+          setImgSrc("/assets/img/thumb/14.jpg");
         }
       }}
     />

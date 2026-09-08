@@ -62,7 +62,7 @@ const Services = () => {
                       alt={service.title}
                       onError={(e) => {
                         e.currentTarget.onerror = null; // prevent infinite loop if fallback also missing
-                        e.currentTarget.src = "/assets/img/thumb/default.png";
+                        e.currentTarget.src = "/assets/img/thumb/14.jpg";
                       }}
                     />
                   </div>
