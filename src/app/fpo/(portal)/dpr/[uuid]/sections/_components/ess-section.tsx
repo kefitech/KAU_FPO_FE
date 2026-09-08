@@ -8,17 +8,30 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+
 import { useDprSectionForm } from "@/hooks/use-dpr-section-form";
 import { dprMasterApi } from "@/lib/api/dpr-master";
 
+import { CountedTextarea } from "./counted-textarea";
+import { normaliseIntegerInput } from "./dpr-input-normalisers";
 import {
-  MasterSelect,
+  MasterSearchableSelect,
   ModalField,
   ModalRow,
   NestedListCard,
 } from "./nested-list";
+import { SectionHelp } from "./section-help";
 import { SectionShell } from "./section-shell";
+
+// ── Input caps — mirror backend DPRSectionESS + child tables ──
+const MAX_TEXT_CHARS = 200;              // most CharField widths
+const MAX_LONG_CHARS = 300;              // source CharField(300)
+const MAX_OTHER_TEXT_CHARS = 200;        // *_other companions
+const MAX_LONG_TEXT_CHARS = 2000;        // TextField defensive cap
+// Beneficiary counts — realistic 0-1M.
+const MAX_BENEFICIARIES = 1_000_000;
+
+// ── Choices ────────────────────────────────────────────────────────────────
 
 const RESOURCES = [
   { value: "electricity", label: "Electricity" },
@@ -61,9 +74,11 @@ const SUSTAINABILITY = [
   { value: "other", label: "Others (Specify)" },
 ];
 
+// ── Schemas ────────────────────────────────────────────────────────────────
+
 const ImpactSchema = z.object({
   id: z.number().optional(),
-  impact: z.number(),
+  impact: z.number().nullable(),
   impact_other: z.string(),
   estimated_quantity: z.string(),
   source: z.string(),
@@ -74,7 +89,7 @@ type Impact = z.infer<typeof ImpactSchema>;
 
 const ClimateRiskSchema = z.object({
   id: z.number().optional(),
-  risk: z.number(),
+  risk: z.number().nullable(),
   risk_other: z.string(),
   expected_impact: z.string(),
   proposed_mitigation_strategy: z.string(),
@@ -109,6 +124,8 @@ const Schema = z.object({
 });
 type Data = z.infer<typeof Schema>;
 
+// ── Utilities ──────────────────────────────────────────────────────────────
+
 function toInt(v: string | number | null): number | null {
   if (v === null || v === "") return null;
   const n = typeof v === "number" ? v : Number(v);
@@ -121,11 +138,35 @@ const INT_KEYS = [
   "small_marginal_farmers",
 ] as const;
 
+// ── Per-row validators (mirror ess_validators.py) ──────────────────────
+
+type ImpactErrors = Partial<Record<"impact" | "impact_other", string>>;
+function validateImpact(row: Impact, isOtherImpact: (id: number | null) => boolean): ImpactErrors {
+  const e: ImpactErrors = {};
+  if (!row.impact) e.impact = "Environmental impact is required.";
+  if (row.impact && isOtherImpact(row.impact) && !(row.impact_other ?? "").trim()) {
+    e.impact_other = 'Please specify — "Others" was selected for environmental impact.';
+  }
+  return e;
+}
+
+type ClimateRiskErrors = Partial<Record<"risk" | "risk_other", string>>;
+function validateClimateRisk(row: ClimateRisk, isOtherRisk: (id: number | null) => boolean): ClimateRiskErrors {
+  const e: ClimateRiskErrors = {};
+  if (!row.risk) e.risk = "Climate risk is required.";
+  if (row.risk && isOtherRisk(row.risk) && !(row.risk_other ?? "").trim()) {
+    e.risk_other = 'Please specify — "Others" was selected for climate risk.';
+  }
+  return e;
+}
+
 function serializePayload(v: Data): Record<string, unknown> {
   const out: Record<string, unknown> = { ...v };
   for (const k of INT_KEYS) out[k] = toInt(v[k]);
   return out;
 }
+
+// ── Section component ─────────────────────────────────────────────────────
 
 export function ESSSection({ uuid }: { uuid: string }) {
   const impactQuery = useQuery({
@@ -139,7 +180,7 @@ export function ESSSection({ uuid }: { uuid: string }) {
     staleTime: 24 * 60 * 60 * 1000,
   });
 
-  const { form, isLoading, isDirty, isSaving, lastSavedAt, saveError, save, discard } = useDprSectionForm<Data>({
+  const { form, isLoading, isDirty, isSaving, lastSavedAt, saveError, fieldErrors, fieldWarnings, save, discard } = useDprSectionForm<Data>({
     uuid,
     sectionKey: "ess",
     schema: Schema,
@@ -166,12 +207,99 @@ export function ESSSection({ uuid }: { uuid: string }) {
   const impacts = useWatch({ control: form.control, name: "environmental_impacts" }) ?? [];
   const climateRisks = useWatch({ control: form.control, name: "climate_risks" }) ?? [];
 
-  const toggle = (field: "resources_used" | "conservation_measures" | "safety_measures" | "sustainability_initiatives", code: string, checked: boolean) => {
+  // Section-level watched text/textarea values.
+  const conservationOther = useWatch({ control: form.control, name: "conservation_other" }) ?? "";
+  const safetyOther = useWatch({ control: form.control, name: "safety_other" }) ?? "";
+  const sustainabilityOther = useWatch({ control: form.control, name: "sustainability_other" }) ?? "";
+  const annualElectricity = useWatch({ control: form.control, name: "annual_electricity_requirement" }) ?? "";
+  const annualWater = useWatch({ control: form.control, name: "annual_water_requirement" }) ?? "";
+  const annualFuel = useWatch({ control: form.control, name: "annual_fuel_requirement" }) ?? "";
+  const expectedIncomeIncrease = useWatch({ control: form.control, name: "expected_income_increase" }) ?? "";
+  const expectedPostHarvestLossReduction = useWatch({ control: form.control, name: "expected_post_harvest_loss_reduction" }) ?? "";
+  const environmentalInitiatives = useWatch({ control: form.control, name: "environmental_initiatives" }) ?? "";
+  const socialInitiatives = useWatch({ control: form.control, name: "social_initiatives" }) ?? "";
+  const governancePractices = useWatch({ control: form.control, name: "governance_practices" }) ?? "";
+
+  // E card integer watched values.
+  const farmersBenefited = useWatch({ control: form.control, name: "farmers_benefited" });
+  const directJobs = useWatch({ control: form.control, name: "direct_jobs_created" });
+  const indirectJobs = useWatch({ control: form.control, name: "indirect_jobs_created" });
+  const womenBeneficiaries = useWatch({ control: form.control, name: "women_beneficiaries" });
+  const youthBeneficiaries = useWatch({ control: form.control, name: "youth_beneficiaries" });
+  const scStBeneficiaries = useWatch({ control: form.control, name: "sc_st_beneficiaries" });
+  const smallMarginalFarmers = useWatch({ control: form.control, name: "small_marginal_farmers" });
+
+  // Convenience setter — always includes shouldDirty: true.
+  const setField = <K extends keyof Data>(name: K, value: Data[K]) =>
+    form.setValue(name as never, value as never, { shouldDirty: true });
+
+  const toggle = (
+    field: "resources_used" | "conservation_measures" | "safety_measures" | "sustainability_initiatives",
+    code: string,
+    checked: boolean,
+  ) => {
     const cur = form.getValues(field) ?? [];
-    form.setValue(field, checked ? [...cur, code] : cur.filter((c) => c !== code), { shouldDirty: true });
+    setField(field, checked ? [...cur, code] : cur.filter((c) => c !== code));
   };
 
+  // Section-level live errors — mirror ess_validators.py.
+  const LIVE_CHECKED = new Set<string>([
+    "conservation_other",
+    "safety_other",
+    "sustainability_other",
+  ]);
+  const liveErrors: Record<string, string | undefined> = {};
+  if (conservation.includes("other") && !String(conservationOther).trim()) {
+    liveErrors.conservation_other = 'Please specify — "Others" in conservation measures.';
+  }
+  if (safety.includes("other") && !String(safetyOther).trim()) {
+    liveErrors.safety_other = 'Please specify — "Others" in safety measures.';
+  }
+  if (sustainability.includes("other") && !String(sustainabilityOther).trim()) {
+    liveErrors.sustainability_other = 'Please specify — "Others" in sustainability initiatives.';
+  }
+  const err = (name: string): string | undefined =>
+    LIVE_CHECKED.has(name) ? liveErrors[name] : fieldErrors.get(name);
+
+  // Climate-risk warning: count rows without mitigation strategy. Backend
+  // warns (not errors) per row via ess_validators; we surface an aggregate
+  // banner on the C card so the user notices before generating the DPR.
+  const climateRiskMissingMitigation = climateRisks.filter(
+    (r) => !(r.proposed_mitigation_strategy ?? "").trim(),
+  ).length;
+
   const loading = isLoading || impactQuery.isLoading || climateRiskQuery.isLoading;
+
+  const isOtherImpact = (id: number | null) => {
+    if (!id) return false;
+    return impactQuery.data?.find((r) => r.id === id)?.code === "other";
+  };
+  const isOtherRisk = (id: number | null) => {
+    if (!id) return false;
+    return climateRiskQuery.data?.find((r) => r.id === id)?.code === "other";
+  };
+
+  // Reusable integer count input — E card beneficiaries.
+  const intCountInput = (
+    watchedValue: string | number | null | undefined,
+    key: keyof Data,
+    label: string,
+  ) => (
+    <div className="space-y-1.5">
+      <Label className="text-xs">{label}</Label>
+      <Input
+        type="text"
+        inputMode="numeric"
+        maxLength={7}
+        placeholder="e.g. 250"
+        value={watchedValue !== null && watchedValue !== undefined ? String(watchedValue) : ""}
+        onChange={(e) => {
+          const cleaned = normaliseIntegerInput(e.target.value, { max: MAX_BENEFICIARIES, min: 0 });
+          setField(key, (cleaned === "" ? null : cleaned) as Data[keyof Data]);
+        }}
+      />
+    </div>
+  );
 
   return (
     <SectionShell
@@ -184,38 +312,110 @@ export function ESSSection({ uuid }: { uuid: string }) {
       saveError={saveError}
       onSave={save}
       onDiscard={discard}
+      help={
+        <SectionHelp
+          title="Environmental, Social & Sustainability Assessment"
+          purpose="Capture the environmental / social / sustainability footprint of the project — impacts + mitigations, resource use, climate risks, workplace safety, social impact numbers, sustainability initiatives, and ESG narrative. This feeds the ESS chapter of the DPR PDF and satisfies bank appraisal ESG disclosure requirements."
+          whatToFill={[
+            "A — Environmental Impacts. Add one row per identifiable impact (solid waste, wastewater, air emission, noise, etc.). Impact FK is required per row; 'Others' reveals a specify text. Estimated quantity, source, existing control measure + proposed mitigation all optional but expected in a real DPR.",
+            "B — Resource Utilisation. Tick which major resources the project needs (electricity/water/fuel/raw materials/packaging) + conservation measures being applied. 'Others' reveals specify. Annual requirements are free text — include units.",
+            "C — Climate Risks. Add one row per climate risk relevant to the location (erratic monsoon, flooding, heatwave, cyclone, etc.). Backend WARNS if a risk has no mitigation strategy — always fill the mitigation for each risk added.",
+            "D — Occupational Health & Safety. Multi-select from 10 workplace safety measures. Ticking 'Others' requires the specify text.",
+            "E — Social Impact. Numbers of beneficiaries (farmers, jobs, women/youth/SC-ST, small & marginal). Expected income increase + post-harvest loss reduction as free text (include %).",
+            "F — Sustainability Measures. Multi-select from 10 initiatives (renewable energy, organic production, waste recycling, eco packaging, circular economy, etc.). 'Others' requires specify.",
+            "G — ESG Narrative (optional). Three free-text areas: Environmental initiatives, Social initiatives, Governance practices. Used by AI narrative for the ESG paragraph in the DPR PDF.",
+          ]}
+          tips={[
+            "Environmental impacts and climate risks are the two headline sections bank appraisers zoom in on. Even 2-3 well-described rows beat 10 shallow ones.",
+            "Every climate risk should have a mitigation. The backend warns you if not; the DPR PDF renders those as red flags in the risk chapter.",
+            "For social impact numbers, err on the accurate side — inflated 'farmers benefited' numbers get called out in due diligence. Use the FPO member roll as the upper bound.",
+            "Sustainability initiatives dovetail with the Renewable Initiatives Cat J of the Utilities section — tick what you already committed to there.",
+            "ESG narrative (Cat G) is optional but powerful for bankers who filter by ESG-compliant projects. Even 2-3 short sentences per bucket helps.",
+            "Cross-check Cat D safety with Compliance Cat E (Labour) and Utilities Cat I (Fire & Safety) — the three should align.",
+          ]}
+          downstream={[
+            "ESS chapter in the DPR PDF — full A-G profile renders there",
+            "Risk Analysis chapter — climate risks + environmental impacts feed the risk matrix",
+            "Compliance chapter — sustainability initiatives inform Cat C (Environmental Compliance) status",
+            "AI narrative — ESG data feeds the Sustainability paragraph and often the Executive Summary",
+            "Bank appraisal ESG scorecard — most Indian banks now require ESS disclosure at project appraisal stage",
+          ]}
+        />
+      }
     >
       <div className="space-y-4">
-        {/* A. Environmental Impacts */}
+        {/* A. Environmental Impacts — id enables readiness-panel deep-link scroll */}
+        <div id="dpr-field-environmental_impacts" />
         <NestedListCard<Impact>
           title="A. Environmental Impact"
           items={impacts}
           onChange={(next) => form.setValue("environmental_impacts", next, { shouldDirty: true })}
-          emptyRow={{ impact: 0, impact_other: "", estimated_quantity: "", source: "", existing_control_measure: "", proposed_mitigation_measure: "" }}
+          warning={fieldWarnings.get("environmental_impacts")}
+          emptyRow={{ impact: null, impact_other: "", estimated_quantity: "", source: "", existing_control_measure: "", proposed_mitigation_measure: "" }}
           columns={[
             { key: "impact", label: "Impact", render: (v) => (impactQuery.data?.find((r) => r.id === v)?.label as string) ?? "—" },
             { key: "estimated_quantity", label: "Estimated qty" },
             { key: "proposed_mitigation_measure", label: "Mitigation", render: (v) => ((v as string)?.slice(0, 40) ?? "") + ((v as string)?.length > 40 ? "…" : "") },
           ]}
-          isValid={(row) => row.impact > 0}
+          isValid={(row) => Object.keys(validateImpact(row, isOtherImpact)).length === 0}
           addLabel="Add impact"
           editLabel="Edit impact"
-          renderModal={(row, set) => (
-            <>
-              <ModalField label="Impact *">
-                <MasterSelect value={row.impact === 0 ? null : row.impact} options={impactQuery.data ?? []} onChange={(v) => set("impact", (v ?? 0) as number)} />
-              </ModalField>
-              {impactQuery.data?.find((r) => r.id === row.impact)?.code === "other" && (
-                <ModalField label="Specify"><Input value={row.impact_other} onChange={(e) => set("impact_other", e.target.value)} /></ModalField>
-              )}
-              <ModalRow>
-                <ModalField label="Estimated quantity"><Input value={row.estimated_quantity} onChange={(e) => set("estimated_quantity", e.target.value)} /></ModalField>
-                <ModalField label="Source"><Input value={row.source} onChange={(e) => set("source", e.target.value)} /></ModalField>
-              </ModalRow>
-              <ModalField label="Existing control measure"><Textarea rows={2} value={row.existing_control_measure} onChange={(e) => set("existing_control_measure", e.target.value)} /></ModalField>
-              <ModalField label="Proposed mitigation measure"><Textarea rows={2} value={row.proposed_mitigation_measure} onChange={(e) => set("proposed_mitigation_measure", e.target.value)} /></ModalField>
-            </>
-          )}
+          renderModal={(row, set) => {
+            const iErr = validateImpact(row, isOtherImpact);
+            return (
+              <>
+                <ModalField label="Impact *" error={iErr.impact}>
+                  <MasterSearchableSelect
+                    value={row.impact}
+                    options={impactQuery.data ?? []}
+                    onChange={(v) => set("impact", v)}
+                    placeholder="Type to search impact…"
+                  />
+                </ModalField>
+                {isOtherImpact(row.impact) && (
+                  <ModalField label="Please specify (Others) *" error={iErr.impact_other}>
+                    <Input
+                      value={row.impact_other}
+                      maxLength={MAX_OTHER_TEXT_CHARS}
+                      onChange={(e) => set("impact_other", e.target.value.slice(0, MAX_OTHER_TEXT_CHARS))}
+                    />
+                  </ModalField>
+                )}
+                <ModalRow>
+                  <ModalField label="Estimated quantity">
+                    <Input
+                      value={row.estimated_quantity}
+                      maxLength={MAX_TEXT_CHARS}
+                      onChange={(e) => set("estimated_quantity", e.target.value.slice(0, MAX_TEXT_CHARS))}
+                    />
+                  </ModalField>
+                  <ModalField label="Source">
+                    <Input
+                      value={row.source}
+                      maxLength={MAX_LONG_CHARS}
+                      onChange={(e) => set("source", e.target.value.slice(0, MAX_LONG_CHARS))}
+                    />
+                  </ModalField>
+                </ModalRow>
+                <ModalField label="Existing control measure">
+                  <CountedTextarea
+                    rows={2}
+                    maxChars={MAX_LONG_TEXT_CHARS}
+                    value={row.existing_control_measure}
+                    onChange={(v) => set("existing_control_measure", v)}
+                  />
+                </ModalField>
+                <ModalField label="Proposed mitigation measure">
+                  <CountedTextarea
+                    rows={2}
+                    maxChars={MAX_LONG_TEXT_CHARS}
+                    value={row.proposed_mitigation_measure}
+                    onChange={(v) => set("proposed_mitigation_measure", v)}
+                  />
+                </ModalField>
+              </>
+            );
+          }}
         />
 
         {/* B. Resource Utilisation */}
@@ -243,41 +443,108 @@ export function ESSSection({ uuid }: { uuid: string }) {
               ))}
             </div>
             {conservation.includes("other") && (
-              <div className="mt-2 space-y-1.5"><Label className="text-xs">Specify (Others)</Label><Input {...form.register("conservation_other")} /></div>
+              <div id="dpr-field-conservation_other" className="mt-2 space-y-1.5">
+                <Label className={err("conservation_other") ? "text-xs text-destructive" : "text-xs"}>
+                  Please specify (Others) *
+                </Label>
+                <Input
+                  value={conservationOther as string}
+                  maxLength={MAX_OTHER_TEXT_CHARS}
+                  onChange={(e) => setField("conservation_other", e.target.value.slice(0, MAX_OTHER_TEXT_CHARS))}
+                />
+                {err("conservation_other") && (
+                  <p className="text-xs text-destructive">{err("conservation_other")}</p>
+                )}
+              </div>
             )}
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
-            <div className="space-y-1.5"><Label className="text-xs">Annual electricity</Label><Input {...form.register("annual_electricity_requirement")} /></div>
-            <div className="space-y-1.5"><Label className="text-xs">Annual water</Label><Input {...form.register("annual_water_requirement")} /></div>
-            <div className="space-y-1.5"><Label className="text-xs">Annual fuel</Label><Input {...form.register("annual_fuel_requirement")} /></div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Annual electricity</Label>
+              <Input
+                value={annualElectricity as string}
+                maxLength={MAX_TEXT_CHARS}
+                onChange={(e) => setField("annual_electricity_requirement", e.target.value.slice(0, MAX_TEXT_CHARS))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Annual water</Label>
+              <Input
+                value={annualWater as string}
+                maxLength={MAX_TEXT_CHARS}
+                onChange={(e) => setField("annual_water_requirement", e.target.value.slice(0, MAX_TEXT_CHARS))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Annual fuel</Label>
+              <Input
+                value={annualFuel as string}
+                maxLength={MAX_TEXT_CHARS}
+                onChange={(e) => setField("annual_fuel_requirement", e.target.value.slice(0, MAX_TEXT_CHARS))}
+              />
+            </div>
           </div>
         </CardContent></Card>
 
-        {/* C. Climate Risks */}
+        {/* C. Climate Risks — id enables readiness-panel deep-link scroll */}
+        <div id="dpr-field-climate_risks" />
         <NestedListCard<ClimateRisk>
           title="C. Climate Resilience"
           items={climateRisks}
           onChange={(next) => form.setValue("climate_risks", next, { shouldDirty: true })}
-          emptyRow={{ risk: 0, risk_other: "", expected_impact: "", proposed_mitigation_strategy: "" }}
+          warning={
+            climateRiskMissingMitigation > 0
+              ? `${climateRiskMissingMitigation} climate risk${climateRiskMissingMitigation === 1 ? "" : "s"} missing a mitigation strategy — recommended per KAU spec.`
+              : fieldWarnings.get("climate_risks")
+          }
+          emptyRow={{ risk: null, risk_other: "", expected_impact: "", proposed_mitigation_strategy: "" }}
           columns={[
             { key: "risk", label: "Climate risk", render: (v) => (climateRiskQuery.data?.find((r) => r.id === v)?.label as string) ?? "—" },
             { key: "proposed_mitigation_strategy", label: "Mitigation", render: (v) => ((v as string)?.slice(0, 40) ?? "") + ((v as string)?.length > 40 ? "…" : "") },
           ]}
-          isValid={(row) => row.risk > 0}
+          isValid={(row) => Object.keys(validateClimateRisk(row, isOtherRisk)).length === 0}
           addLabel="Add climate risk"
           editLabel="Edit climate risk"
-          renderModal={(row, set) => (
-            <>
-              <ModalField label="Climate risk *">
-                <MasterSelect value={row.risk === 0 ? null : row.risk} options={climateRiskQuery.data ?? []} onChange={(v) => set("risk", (v ?? 0) as number)} />
-              </ModalField>
-              {climateRiskQuery.data?.find((r) => r.id === row.risk)?.code === "other" && (
-                <ModalField label="Specify"><Input value={row.risk_other} onChange={(e) => set("risk_other", e.target.value)} /></ModalField>
-              )}
-              <ModalField label="Expected impact"><Textarea rows={2} value={row.expected_impact} onChange={(e) => set("expected_impact", e.target.value)} /></ModalField>
-              <ModalField label="Proposed mitigation strategy"><Textarea rows={2} value={row.proposed_mitigation_strategy} onChange={(e) => set("proposed_mitigation_strategy", e.target.value)} /></ModalField>
-            </>
-          )}
+          renderModal={(row, set) => {
+            const rErr = validateClimateRisk(row, isOtherRisk);
+            return (
+              <>
+                <ModalField label="Climate risk *" error={rErr.risk}>
+                  <MasterSearchableSelect
+                    value={row.risk}
+                    options={climateRiskQuery.data ?? []}
+                    onChange={(v) => set("risk", v)}
+                    placeholder="Type to search risk…"
+                  />
+                </ModalField>
+                {isOtherRisk(row.risk) && (
+                  <ModalField label="Please specify (Others) *" error={rErr.risk_other}>
+                    <Input
+                      value={row.risk_other}
+                      maxLength={MAX_OTHER_TEXT_CHARS}
+                      onChange={(e) => set("risk_other", e.target.value.slice(0, MAX_OTHER_TEXT_CHARS))}
+                    />
+                  </ModalField>
+                )}
+                <ModalField label="Expected impact">
+                  <CountedTextarea
+                    rows={2}
+                    maxChars={MAX_LONG_TEXT_CHARS}
+                    value={row.expected_impact}
+                    onChange={(v) => set("expected_impact", v)}
+                  />
+                </ModalField>
+                <ModalField label="Proposed mitigation strategy">
+                  <CountedTextarea
+                    rows={2}
+                    maxChars={MAX_LONG_TEXT_CHARS}
+                    value={row.proposed_mitigation_strategy}
+                    onChange={(v) => set("proposed_mitigation_strategy", v)}
+                  />
+                </ModalField>
+              </>
+            );
+          }}
         />
 
         {/* D. Safety */}
@@ -292,7 +559,19 @@ export function ESSSection({ uuid }: { uuid: string }) {
             ))}
           </div>
           {safety.includes("other") && (
-            <div className="space-y-1.5"><Label className="text-xs">Specify (Others)</Label><Input {...form.register("safety_other")} /></div>
+            <div id="dpr-field-safety_other" className="space-y-1.5">
+              <Label className={err("safety_other") ? "text-xs text-destructive" : "text-xs"}>
+                Please specify (Others) *
+              </Label>
+              <Input
+                value={safetyOther as string}
+                maxLength={MAX_OTHER_TEXT_CHARS}
+                onChange={(e) => setField("safety_other", e.target.value.slice(0, MAX_OTHER_TEXT_CHARS))}
+              />
+              {err("safety_other") && (
+                <p className="text-xs text-destructive">{err("safety_other")}</p>
+              )}
+            </div>
           )}
         </CardContent></Card>
 
@@ -300,16 +579,33 @@ export function ESSSection({ uuid }: { uuid: string }) {
         <Card><CardContent className="space-y-3 p-6">
           <h3 className="text-sm font-semibold">E. Social Impact</h3>
           <div className="grid gap-3 sm:grid-cols-3">
-            {[["farmers_benefited","Farmers benefited"],["direct_jobs_created","Direct jobs"],["indirect_jobs_created","Indirect jobs"],["women_beneficiaries","Women"],["youth_beneficiaries","Youth"],["sc_st_beneficiaries","SC/ST"],["small_marginal_farmers","Small & marginal farmers"]].map(([k,l]) => (
-              <div key={k} className="space-y-1.5">
-                <Label className="text-xs">{l}</Label>
-                <Input type="number" min="0" {...form.register(k as keyof Data)} />
-              </div>
-            ))}
+            {intCountInput(farmersBenefited, "farmers_benefited", "Farmers benefited")}
+            {intCountInput(directJobs, "direct_jobs_created", "Direct jobs")}
+            {intCountInput(indirectJobs, "indirect_jobs_created", "Indirect jobs")}
+            {intCountInput(womenBeneficiaries, "women_beneficiaries", "Women")}
+            {intCountInput(youthBeneficiaries, "youth_beneficiaries", "Youth")}
+            {intCountInput(scStBeneficiaries, "sc_st_beneficiaries", "SC/ST")}
+            {intCountInput(smallMarginalFarmers, "small_marginal_farmers", "Small & marginal farmers")}
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5"><Label className="text-xs">Expected farmer income increase</Label><Input {...form.register("expected_income_increase")} /></div>
-            <div className="space-y-1.5"><Label className="text-xs">Expected post-harvest loss reduction</Label><Input {...form.register("expected_post_harvest_loss_reduction")} /></div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Expected farmer income increase</Label>
+              <Input
+                value={expectedIncomeIncrease as string}
+                maxLength={MAX_TEXT_CHARS}
+                placeholder="e.g. ~₹8,000/farmer/year (25-30 %)"
+                onChange={(e) => setField("expected_income_increase", e.target.value.slice(0, MAX_TEXT_CHARS))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Expected post-harvest loss reduction</Label>
+              <Input
+                value={expectedPostHarvestLossReduction as string}
+                maxLength={MAX_TEXT_CHARS}
+                placeholder="e.g. ~15 % (copra spoilage down)"
+                onChange={(e) => setField("expected_post_harvest_loss_reduction", e.target.value.slice(0, MAX_TEXT_CHARS))}
+              />
+            </div>
           </div>
         </CardContent></Card>
 
@@ -325,16 +621,52 @@ export function ESSSection({ uuid }: { uuid: string }) {
             ))}
           </div>
           {sustainability.includes("other") && (
-            <div className="space-y-1.5"><Label className="text-xs">Specify (Others)</Label><Input {...form.register("sustainability_other")} /></div>
+            <div id="dpr-field-sustainability_other" className="space-y-1.5">
+              <Label className={err("sustainability_other") ? "text-xs text-destructive" : "text-xs"}>
+                Please specify (Others) *
+              </Label>
+              <Input
+                value={sustainabilityOther as string}
+                maxLength={MAX_OTHER_TEXT_CHARS}
+                onChange={(e) => setField("sustainability_other", e.target.value.slice(0, MAX_OTHER_TEXT_CHARS))}
+              />
+              {err("sustainability_other") && (
+                <p className="text-xs text-destructive">{err("sustainability_other")}</p>
+              )}
+            </div>
           )}
         </CardContent></Card>
 
         {/* G. ESG */}
         <Card><CardContent className="space-y-3 p-6">
           <h3 className="text-sm font-semibold">G. ESG (Optional)</h3>
-          <div className="space-y-1.5"><Label className="text-xs">Environmental initiatives</Label><Textarea rows={2} {...form.register("environmental_initiatives")} /></div>
-          <div className="space-y-1.5"><Label className="text-xs">Social initiatives</Label><Textarea rows={2} {...form.register("social_initiatives")} /></div>
-          <div className="space-y-1.5"><Label className="text-xs">Governance practices</Label><Textarea rows={2} {...form.register("governance_practices")} /></div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Environmental initiatives</Label>
+            <CountedTextarea
+              rows={2}
+              maxChars={MAX_LONG_TEXT_CHARS}
+              value={environmentalInitiatives as string}
+              onChange={(v) => setField("environmental_initiatives", v)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Social initiatives</Label>
+            <CountedTextarea
+              rows={2}
+              maxChars={MAX_LONG_TEXT_CHARS}
+              value={socialInitiatives as string}
+              onChange={(v) => setField("social_initiatives", v)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Governance practices</Label>
+            <CountedTextarea
+              rows={2}
+              maxChars={MAX_LONG_TEXT_CHARS}
+              value={governancePractices as string}
+              onChange={(v) => setField("governance_practices", v)}
+            />
+          </div>
         </CardContent></Card>
       </div>
     </SectionShell>

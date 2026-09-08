@@ -20,13 +20,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api/client";
 import { dprApi, type DprProjectIdentification } from "@/lib/api/dpr";
@@ -34,6 +28,7 @@ import { dprMasterApi } from "@/lib/api/dpr-master";
 import { useDprWizardStore } from "@/stores/dpr-store";
 
 import { FieldError } from "./field-error";
+import { SectionHelp } from "./section-help";
 import { SectionShell } from "./section-shell";
 
 const AUTOSAVE_DEBOUNCE_MS = 5000;
@@ -123,7 +118,13 @@ export function IdentificationSection({ uuid }: { uuid: string }) {
       markClean("identification");
       setForm(data);
       queryClient.setQueryData(["dpr-identification", uuid], data);
+      // Two readiness query keys reference the same underlying data:
+      //   • ["dpr-identification-readiness", uuid]     → this file's own inline FieldError map
+      //   • ["dpr-readiness", uuid, "identification"] → the visible <ReadinessPanel> + sidebar dot
+      // Both must be refetched after a save, otherwise the panel + sidebar
+      // silently stay stale until React Query's natural expiry.
       queryClient.refetchQueries({ queryKey: ["dpr-identification-readiness", uuid] });
+      queryClient.refetchQueries({ queryKey: ["dpr-readiness", uuid, "identification"] });
       setIsDirty(false);
       setLastSavedAt(new Date());
     },
@@ -141,11 +142,14 @@ export function IdentificationSection({ uuid }: { uuid: string }) {
     setIsDirty(true);
     markDirty("identification");
     if (timerRef.current) clearTimeout(timerRef.current);
+    // The autosave callback calls `mutation.mutate()` directly — NOT wrapped
+    // in another `setForm(cur => { … })` updater. React 19 warns loudly when
+    // a state-updater function has side effects (mutation.mutate → onMutate
+    // → markSaving on a Zustand store → setState on <SaveIndicator/> during
+    // <IdentificationSection/>'s render commit). We already have `k` and
+    // `v` in closure — no need to peek at current `form` to fire the patch.
     timerRef.current = setTimeout(() => {
-      setForm((cur) => {
-        if (cur) mutation.mutate({ [k]: v } as Partial<DprProjectIdentification>);
-        return cur;
-      });
+      mutation.mutate({ [k]: v } as Partial<DprProjectIdentification>);
     }, AUTOSAVE_DEBOUNCE_MS);
   }
 
@@ -201,13 +205,41 @@ export function IdentificationSection({ uuid }: { uuid: string }) {
       saveError={saveError}
       onSave={save}
       onDiscard={discard}
+      help={
+        <SectionHelp
+          title="Project Identification"
+          purpose="This is the foundation of your DPR. It captures the high-level identity of the project — what it is, what it produces, and what you hope to achieve. Every downstream section, the financial calculation, and the AI-generated narrative all pull from what you fill in here, so it is worth being clear and specific."
+          whatToFill={[
+            "Project title — a short, descriptive name (e.g. 'Coconut Oil Extraction — 500 L/day'). Shows on the DPR cover page.",
+            "Project type — tick one or more (New / Expansion / Diversification …). Multi-select supported.",
+            "Brief description — 2–3 sentences (minimum 50 characters). Explain what you plan to do in plain language.",
+            "Primary commodity — pick the ONE commodity you're producing most of. Drives AI knowledge-base retrieval + narrative context.",
+            "Secondary commodities — optional; pick any additional ones you also produce.",
+            "Project objectives — tick at least one, or type your own in 'Other'. This is your stated intent for the project.",
+            "Expected outcomes — tick at least one, or type your own in 'Other'. What success looks like when the project is running.",
+          ]}
+          tips={[
+            "Your commodity choice matters — the AI narrative and the Knowledge Base filter both use it to pick relevant Kerala PoP practices, market prices, and applicable schemes.",
+            "Description too short? The 'X / 50 chars minimum' counter turns amber when you're under. The validator won't accept anything shorter than 50 chars.",
+            "You can leave the 'Other' text blank for objectives / outcomes as long as you tick at least one from the pre-defined list.",
+            "Auto-save fires ~5 seconds after your last keystroke. You'll see 'All changes saved' in the header. No need to click Save manually.",
+            "Click any error in the readiness panel on the right — the page scrolls to the offending field.",
+          ]}
+          downstream={[
+            "DPR PDF cover page — title + commodity + brief description",
+            "AI Executive Summary chapter — uses the description, objectives and outcomes as prompt context",
+            "Knowledge Base retrieval — every section queries the KB using this commodity to surface Kerala-specific practices, schemes and market data",
+            "PDF header on every page — 'DPR for <title>'",
+          ]}
+        />
+      }
     >
       {form && (
         <div className="space-y-4">
           {/* 1. Project title */}
           <Card><CardContent className="space-y-4 p-6">
             <h3 className="text-sm font-semibold">1. Proposed Project Title</h3>
-            <div className="space-y-1.5">
+            <div id="dpr-field-title" className="space-y-1.5">
               <Label className={`text-xs ${fieldErrors.has("title") ? "text-destructive" : ""}`}>
                 Project title *
               </Label>
@@ -221,7 +253,7 @@ export function IdentificationSection({ uuid }: { uuid: string }) {
           </CardContent></Card>
 
           {/* 2. Project type */}
-          <Card><CardContent className="space-y-4 p-6">
+          <Card id="dpr-field-project_types"><CardContent className="space-y-4 p-6">
             <h3 className={`text-sm font-semibold ${fieldErrors.has("project_types") ? "text-destructive" : ""}`}>
               2. Project Type *
             </h3>
@@ -243,7 +275,7 @@ export function IdentificationSection({ uuid }: { uuid: string }) {
           </CardContent></Card>
 
           {/* 3. Brief description */}
-          <Card><CardContent className="space-y-4 p-6">
+          <Card id="dpr-field-brief_description"><CardContent className="space-y-4 p-6">
             <div className="flex items-center justify-between">
               <h3 className={`text-sm font-semibold ${fieldErrors.has("brief_description") ? "text-destructive" : ""}`}>
                 3. Brief Description *
@@ -265,21 +297,23 @@ export function IdentificationSection({ uuid }: { uuid: string }) {
           <Card><CardContent className="space-y-4 p-6">
             <h3 className="text-sm font-semibold">4 & 5. Commodities</h3>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
+              <div id="dpr-field-primary_commodity" className="space-y-1.5">
                 <Label className={`text-xs ${fieldErrors.has("primary_commodity") ? "text-destructive" : ""}`}>
                   Primary commodity *
                 </Label>
-                <Select
+                {/* KAU spec §2.2 field 4: "Dropdown + Search" — 83 commodities is too
+                    long to scroll. SearchableSelect gives a type-to-filter input. */}
+                <SearchableSelect
                   value={form.primary_commodity !== null ? String(form.primary_commodity) : ""}
-                  onValueChange={(v) => update("primary_commodity", v === "" ? null : Number(v))}
-                >
+                  onChange={(v) => update("primary_commodity", v === "" ? null : Number(v))}
+                  options={(commodityQ.data ?? []).map((c) => ({ value: String(c.id), label: c.label }))}
+                  placeholder="Type to search commodity…"
+                />
+                {/* Original shadcn Select left commented for reference (no built-in search):
+                <Select value={form.primary_commodity !== null ? String(form.primary_commodity) : ""} onValueChange={(v) => update("primary_commodity", v === "" ? null : Number(v))}>
                   <SelectTrigger><SelectValue placeholder="Select commodity" /></SelectTrigger>
-                  <SelectContent>
-                    {(commodityQ.data ?? []).map((c) => (
-                      <SelectItem key={c.id} value={String(c.id)}>{c.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <SelectContent>{(commodityQ.data ?? []).map((c) => (<SelectItem key={c.id} value={String(c.id)}>{c.label}</SelectItem>))}</SelectContent>
+                </Select> */}
                 <FieldError name="primary_commodity" errors={fieldErrors} warnings={fieldWarnings} />
               </div>
               <div className="space-y-1.5">
@@ -299,59 +333,86 @@ export function IdentificationSection({ uuid }: { uuid: string }) {
             </div>
           </CardContent></Card>
 
-          {/* 6. Objectives */}
-          <Card><CardContent className="space-y-4 p-6">
-            <h3 className={`text-sm font-semibold ${fieldErrors.has("project_objectives") ? "text-destructive" : ""}`}>
-              6. Project Objective(s) *
-            </h3>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {(objectivesQ.data ?? []).map((o) => (
-                <label key={o.id} className="flex cursor-pointer items-center gap-2 text-sm">
-                  <Checkbox
-                    checked={form.project_objectives.includes(o.id)}
-                    onCheckedChange={() => update("project_objectives", toggleId(form.project_objectives, o.id))}
-                  />
-                  <span>{o.label}</span>
-                </label>
-              ))}
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Other objective (if not listed)</Label>
-              <Input
-                value={form.project_objectives_other}
-                onChange={(e) => update("project_objectives_other", e.target.value)}
-                placeholder="Describe any additional objective"
-              />
-            </div>
-            <FieldError name="project_objectives" errors={fieldErrors} warnings={fieldWarnings} />
-          </CardContent></Card>
+          {/* 6. Objectives — "Other" text box only shows when the user
+              ticks the master option with code === 'other'. */}
+          {(() => {
+            const otherObjectiveId = (objectivesQ.data ?? []).find(
+              (o) => o.code === "other",
+            )?.id;
+            const otherObjectiveChecked =
+              otherObjectiveId !== undefined &&
+              form.project_objectives.includes(otherObjectiveId);
+            return (
+              <Card id="dpr-field-project_objectives"><CardContent className="space-y-4 p-6">
+                <h3 className={`text-sm font-semibold ${fieldErrors.has("project_objectives") ? "text-destructive" : ""}`}>
+                  6. Project Objective(s) *
+                </h3>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {(objectivesQ.data ?? []).map((o) => (
+                    <label key={o.id} className="flex cursor-pointer items-center gap-2 text-sm">
+                      <Checkbox
+                        checked={form.project_objectives.includes(o.id)}
+                        onCheckedChange={() => update("project_objectives", toggleId(form.project_objectives, o.id))}
+                      />
+                      <span>{o.label}</span>
+                    </label>
+                  ))}
+                </div>
+                {otherObjectiveChecked && (
+                  <div className="space-y-1.5 border-l-2 border-primary/30 pl-4">
+                    <Label className="text-xs">Other objective — please specify *</Label>
+                    <Input
+                      value={form.project_objectives_other}
+                      onChange={(e) => update("project_objectives_other", e.target.value)}
+                      placeholder="Describe the objective you selected 'Other' for"
+                      autoFocus
+                    />
+                  </div>
+                )}
+                <FieldError name="project_objectives" errors={fieldErrors} warnings={fieldWarnings} />
+              </CardContent></Card>
+            );
+          })()}
 
-          {/* 7. Outcomes */}
-          <Card><CardContent className="space-y-4 p-6">
-            <h3 className={`text-sm font-semibold ${fieldErrors.has("expected_outcomes") ? "text-destructive" : ""}`}>
-              7. Expected Outcome(s) *
-            </h3>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {(outcomesQ.data ?? []).map((o) => (
-                <label key={o.id} className="flex cursor-pointer items-center gap-2 text-sm">
-                  <Checkbox
-                    checked={form.expected_outcomes.includes(o.id)}
-                    onCheckedChange={() => update("expected_outcomes", toggleId(form.expected_outcomes, o.id))}
-                  />
-                  <span>{o.label}</span>
-                </label>
-              ))}
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Other outcome (if not listed)</Label>
-              <Input
-                value={form.expected_outcomes_other}
-                onChange={(e) => update("expected_outcomes_other", e.target.value)}
-                placeholder="Describe any additional outcome"
-              />
-            </div>
-            <FieldError name="expected_outcomes" errors={fieldErrors} warnings={fieldWarnings} />
-          </CardContent></Card>
+          {/* 7. Outcomes — same "Other" pattern. */}
+          {(() => {
+            const otherOutcomeId = (outcomesQ.data ?? []).find(
+              (o) => o.code === "other",
+            )?.id;
+            const otherOutcomeChecked =
+              otherOutcomeId !== undefined &&
+              form.expected_outcomes.includes(otherOutcomeId);
+            return (
+              <Card id="dpr-field-expected_outcomes"><CardContent className="space-y-4 p-6">
+                <h3 className={`text-sm font-semibold ${fieldErrors.has("expected_outcomes") ? "text-destructive" : ""}`}>
+                  7. Expected Outcome(s) *
+                </h3>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {(outcomesQ.data ?? []).map((o) => (
+                    <label key={o.id} className="flex cursor-pointer items-center gap-2 text-sm">
+                      <Checkbox
+                        checked={form.expected_outcomes.includes(o.id)}
+                        onCheckedChange={() => update("expected_outcomes", toggleId(form.expected_outcomes, o.id))}
+                      />
+                      <span>{o.label}</span>
+                    </label>
+                  ))}
+                </div>
+                {otherOutcomeChecked && (
+                  <div className="space-y-1.5 border-l-2 border-primary/30 pl-4">
+                    <Label className="text-xs">Other outcome — please specify *</Label>
+                    <Input
+                      value={form.expected_outcomes_other}
+                      onChange={(e) => update("expected_outcomes_other", e.target.value)}
+                      placeholder="Describe the outcome you selected 'Other' for"
+                      autoFocus
+                    />
+                  </div>
+                )}
+                <FieldError name="expected_outcomes" errors={fieldErrors} warnings={fieldWarnings} />
+              </CardContent></Card>
+            );
+          })()}
         </div>
       )}
     </SectionShell>

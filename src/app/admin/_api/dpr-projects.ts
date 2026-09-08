@@ -10,6 +10,7 @@
  */
 
 import { api } from "@/lib/api/client";
+import type { DataTableParams, PaginatedResponse } from "@/types/pagination";
 
 export type DPRProjectStatus = "draft" | "in_progress" | "submitted" | "generated";
 
@@ -27,23 +28,10 @@ export interface DPRProjectRow {
   } | null;
 }
 
-interface PaginatedResponse<T> {
-  status: string;
-  data: {
-    count: number;
-    next: string | null;
-    previous: string | null;
-    results: T[];
-  };
-}
-
-export interface DPRProjectListFilters {
-  status?: DPRProjectStatus | "";
-  district?: string;
-  search?: string;
-  page?: number;
-  page_size?: number;
-}
+// DataTable uses the standard `PaginatedResponse<T>` shape from
+// `@/types/pagination`, which matches the backend `StandardPagination`
+// wire format directly. No flattening needed — DataTable reads
+// `.data[]` for rows + `.meta.pagination` for paging controls.
 
 export interface DPRReadinessItem {
   code: string;
@@ -85,21 +73,45 @@ export interface DPRProjectDetail {
   >;
 }
 
-export const adminDprProjectsApi = {
-  list: async (filters: DPRProjectListFilters = {}) => {
-    const params: Record<string, string | number> = {};
-    if (filters.status) params.status = filters.status;
-    if (filters.district) params.district = filters.district;
-    if (filters.search) params.search = filters.search;
-    if (filters.page) params.page = filters.page;
-    if (filters.page_size) params.page_size = filters.page_size;
+// Applicability preview types — Phase 6e admin visibility surface for
+// KAU during UAT rule validation. Shape mirrors the backend
+// AdminProjectApplicabilityView response.
+export interface AdminApplicabilityPreview {
+  engine_enabled: boolean;
+  applicability: Record<string, "M" | "O" | "H">;
+  visible_sections: string[];
+  mandatory_sections: string[];
+  selected_components: Array<{ id: number; code: string; label: string }>;
+  /** section_key → list of rules that touched it, so admin sees WHY it's M/H. */
+  triggering_rules: Record<
+    string,
+    Array<{
+      component_code: string;
+      component_label: string;
+      applicability: "M" | "O" | "H";
+      notes: string;
+    }>
+  >;
+}
 
+export const adminDprProjectsApi = {
+  // DataTable-compatible signature: returns the raw StandardPagination shape
+  // directly (data + meta.pagination) — DataTable consumes it as-is.
+  getAll: async (params: DataTableParams): Promise<PaginatedResponse<DPRProjectRow>> => {
     const r = await api.get<PaginatedResponse<DPRProjectRow>>("/admin/dpr/projects/", { params });
-    return r.data.data;
+    return r.data;
   },
 
   detail: async (uuid: string) => {
     const r = await api.get<{ status: string; data: DPRProjectDetail }>(`/admin/dpr/projects/${uuid}/`);
+    return r.data.data;
+  },
+
+  /** Phase 6e — preview which sections the rule engine hides for this project. */
+  applicability: async (uuid: string): Promise<AdminApplicabilityPreview> => {
+    const r = await api.get<{ status: string; data: AdminApplicabilityPreview }>(
+      `/admin/dpr/projects/${uuid}/applicability/`,
+    );
     return r.data.data;
   },
 };

@@ -87,6 +87,7 @@ export function TranslationAutoTranslateDialog({ open, onClose, languages, categ
     }
 
     try {
+      // @ts-expect-error TODO(aleena): expose autoTranslateStatus() on translationApi; backend endpoint exists (US-155), FE client not yet wired
       const status = await translationApi.autoTranslateStatus(taskId);
 
       if (status.state === "SUCCESS") {
@@ -118,6 +119,7 @@ export function TranslationAutoTranslateDialog({ open, onClose, languages, categ
     pollAttempts.current = 0;
 
     try {
+      // @ts-expect-error TODO(aleena): expose autoTranslate() on translationApi; backend endpoint exists (US-150), FE client not yet wired
       const res = await translationApi.autoTranslate({
         language_code: languageCode,
         ...(categoryCode ? { category_code: categoryCode } : {}),

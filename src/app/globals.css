@@ -283,3 +283,26 @@ input:-webkit-autofill {
   animation-name: onAutoFillStart;
   animation-duration: 0.001s;
 }
+/* Flash-highlight for DPR readiness-panel deep-links.
+   Applied for ~2.4s (three pulses) when the user clicks an error/warning
+   and we scroll to the target.
+
+   Uses `background-color` + `box-shadow: inset` — both of these are painted
+   INSIDE the element's border box, so they survive:
+     • ancestor `overflow: hidden` (which clips outline / outset shadows)
+     • the target Card's own `overflow-hidden` (which would clip outset shadows)
+   The inset shadow acts as a visible "ring" that hugs the interior of the
+   element. Combined with a red background tint, it's impossible to miss
+   whether the target scrolls or is already in view. */
+@keyframes dpr-flash {
+  0%   { background-color: rgba(239, 68, 68, 0.18); box-shadow: inset 0 0 0 3px rgba(239, 68, 68, 0.95); }
+  20%  { background-color: rgba(239, 68, 68, 0);    box-shadow: inset 0 0 0 3px rgba(239, 68, 68, 0); }
+  40%  { background-color: rgba(239, 68, 68, 0.18); box-shadow: inset 0 0 0 3px rgba(239, 68, 68, 0.95); }
+  60%  { background-color: rgba(239, 68, 68, 0);    box-shadow: inset 0 0 0 3px rgba(239, 68, 68, 0); }
+  80%  { background-color: rgba(239, 68, 68, 0.18); box-shadow: inset 0 0 0 3px rgba(239, 68, 68, 0.95); }
+  100% { background-color: rgba(239, 68, 68, 0);    box-shadow: inset 0 0 0 3px rgba(239, 68, 68, 0); }
+}
+.dpr-flash {
+  animation: dpr-flash 2.4s ease-in-out !important;
+  border-radius: 0.75rem;
+}

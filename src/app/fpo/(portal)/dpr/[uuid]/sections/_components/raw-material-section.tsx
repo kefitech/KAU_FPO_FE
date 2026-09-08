@@ -8,19 +8,136 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { useDprSectionForm } from "@/hooks/use-dpr-section-form";
 import { dprMasterApi } from "@/lib/api/dpr-master";
 import { api } from "@/lib/api/client";
 
+import { SearchableSelect } from "@/components/ui/searchable-select";
+
+import { CountedTextarea } from "./counted-textarea";
+import {
+  normaliseDecimalInput,
+  normaliseIntegerInput,
+} from "./dpr-input-normalisers";
 import {
   ChoiceSelect,
-  MasterSelect,
+  MasterSearchableSelect,
   ModalField,
   ModalRow,
   NestedListCard,
 } from "./nested-list";
+import { SectionHelp } from "./section-help";
 import { SectionShell } from "./section-shell";
+
+// ── Input caps — mirror backend DPRSectionRawMaterial + nested models ───
+// Text CharField widths (most 200, some 300, one 50).
+const MAX_NAME_CHARS = 200;
+const MAX_SCIENTIFIC_CHARS = 200;
+const MAX_VARIETY_CHARS = 100;
+const MAX_SEASON_CHARS = 200;
+const MAX_GRADE_CHARS = 50;
+const MAX_OTHER_TEXT_CHARS = 200;
+const MAX_METHOD_TEXT_CHARS = 300;      // collection_method, transportation_arrangement
+const MAX_LONG_TEXT_CHARS = 2000;       // TextField defensive cap — off_season_strategy,
+                                        // quality_remarks, mitigation, existing_practices,
+                                        // previous_experience, purpose fields, supplier
+
+// Numeric bounds — matched to real business ranges (not backend column max).
+// Decimal(18, 3) supports trillions; capped here to 1 billion units — larger
+// than any credible FPO annual requirement.
+const MAX_QTY = 1_000_000_000;
+const MAX_PRICE_INR = 100_000_000;      // ₹10 crore per unit — very high
+const MAX_COST_INR = 10_000_000_000;    // ₹1000 crore section-level cost cap
+const MAX_FARMERS = 100_000;
+// MAX_VILLAGES reserved for `num_supplying_villages` when that widget is
+// added to the material modal (currently in the schema but not rendered).
+
+// ── Per-row validator helpers (mirror raw_material_validators.py) ──────
+// One helper per modal — used both for the modal Save-button gate AND
+// (later) for surfacing inline field errors as the user types.
+type MaterialErrors = Partial<Record<
+  "name" | "unit_of_purchase" | "estimated_annual_requirement" | "primary_source"
+  | "procurement_method" | "estimated_qty_available_annual" | "num_supplying_farmers"
+  | "available_months" | "peak_harvest_season" | "off_season_strategy"
+  | "quality_standard" | "current_purchase_price"
+, string>>;
+
+function validateMaterial(row: {
+  name: string;
+  unit_of_purchase: number | null;
+  estimated_annual_requirement: string | number | null;
+  primary_source: number | null;
+  procurement_method: number | null;
+  estimated_qty_available_annual: string | number | null;
+  num_supplying_farmers: string | number | null;
+  available_months: string[];
+  available_throughout_year: boolean;
+  peak_harvest_season?: string;
+  off_season_strategy?: string;
+  quality_standards_applicable: boolean;
+  quality_standard: number | null;
+  current_purchase_price: string | number | null;
+}): MaterialErrors {
+  const e: MaterialErrors = {};
+  const gt0 = (v: unknown) => {
+    if (v === null || v === undefined || v === "") return false;
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0;
+  };
+
+  if (!(row.name ?? "").trim()) e.name = "Raw Material Name shall not be blank.";
+  if (!row.unit_of_purchase) e.unit_of_purchase = "Unit of Purchase shall be specified.";
+  if (!gt0(row.estimated_annual_requirement)) {
+    e.estimated_annual_requirement = "Estimated Annual Requirement shall be greater than zero.";
+  }
+  if (!row.primary_source) e.primary_source = "Primary Source of Supply shall be specified.";
+  if (!row.procurement_method) e.procurement_method = "Procurement Method shall be specified.";
+  if (!gt0(row.estimated_qty_available_annual)) {
+    e.estimated_qty_available_annual = "Estimated Quantity Available shall be greater than zero.";
+  }
+  if (!gt0(row.num_supplying_farmers)) {
+    e.num_supplying_farmers = "Number of Supplying Farmers shall be greater than zero.";
+  }
+  if (!row.available_months || row.available_months.length === 0) {
+    e.available_months = "At least one month of availability shall be specified.";
+  }
+  if (!row.available_throughout_year) {
+    if (!(row.peak_harvest_season ?? "").trim()) {
+      e.peak_harvest_season = "Peak Harvest Season is required when material is not available year-round.";
+    }
+    if (!(row.off_season_strategy ?? "").trim()) {
+      e.off_season_strategy = "Off-season Procurement Strategy is required when material is not available year-round.";
+    }
+  }
+  if (row.quality_standards_applicable && !row.quality_standard) {
+    e.quality_standard = "Quality Standard is required when quality standards are applicable.";
+  }
+  if (!gt0(row.current_purchase_price)) {
+    e.current_purchase_price = "Purchase Price shall be greater than zero.";
+  }
+  return e;
+}
+
+function validateRisk(row: { risk_type: string; mitigation_strategy: string }) {
+  const e: Partial<Record<"risk_type" | "mitigation_strategy", string>> = {};
+  if (!row.risk_type) e.risk_type = "Risk type is required.";
+  if (!(row.mitigation_strategy ?? "").trim()) {
+    e.mitigation_strategy = "Mitigation strategy is required.";
+  }
+  return e;
+}
+
+function validatePackaging(row: { material_name: string }) {
+  const e: Partial<Record<"material_name", string>> = {};
+  if (!(row.material_name ?? "").trim()) e.material_name = "Material name is required.";
+  return e;
+}
+
+function validateConsumable(row: { name: string }) {
+  const e: Partial<Record<"name", string>> = {};
+  if (!(row.name ?? "").trim()) e.name = "Consumable name is required.";
+  return e;
+}
 
 /**
  * §2.3.10 Raw Material — 5 tables (biggest section by field count).
@@ -222,7 +339,7 @@ export function RawMaterialSection({ uuid }: { uuid: string }) {
   const qParamsQuery = useQuery({ queryKey: ["dpr-master", "quality-parameters"], queryFn: () => dprMasterApi.list("quality-parameters"), staleTime: 24 * 60 * 60 * 1000 });
   const commodityQuery = useQuery({ queryKey: ["public-master", "commodity"], queryFn: fetchCommodities, staleTime: 24 * 60 * 60 * 1000 });
 
-  const { form, isLoading, isDirty, isSaving, lastSavedAt, saveError, save, discard } = useDprSectionForm<Data>({
+  const { form, isLoading, isDirty, isSaving, lastSavedAt, saveError, fieldErrors, fieldWarnings, save, discard } = useDprSectionForm<Data>({
     uuid,
     sectionKey: "raw-material",
     schema: Schema,
@@ -244,6 +361,52 @@ export function RawMaterialSection({ uuid }: { uuid: string }) {
   const consumables = useWatch({ control: form.control, name: "consumables" }) ?? [];
   const procurementModel = useWatch({ control: form.control, name: "procurement_model" });
   const procurementFrequency = useWatch({ control: form.control, name: "procurement_frequency" });
+  // Section-level C sub-card — converted from register() to controlled so
+  // Save button + autosave fire reliably on every keystroke (fixes the
+  // same Location F3 regression risk).
+  const collectionMethod = useWatch({ control: form.control, name: "collection_method" }) ?? "";
+  const transportArrangement = useWatch({ control: form.control, name: "transportation_arrangement" }) ?? "";
+  const avgProcurementCost = useWatch({ control: form.control, name: "avg_procurement_cost" });
+  const loadingCost = useWatch({ control: form.control, name: "loading_cost" });
+  const unloadingCost = useWatch({ control: form.control, name: "unloading_cost" });
+  const sortingGradingCost = useWatch({ control: form.control, name: "sorting_grading_cost" });
+  const handlingCharges = useWatch({ control: form.control, name: "handling_charges" });
+
+  // Convenience setter — always includes shouldDirty: true.
+  const setField = <K extends keyof Data>(name: K, value: Data[K]) =>
+    form.setValue(name as never, value as never, { shouldDirty: true });
+
+  // ── Live required-field validation (section-level only) ────────────────
+  // Mirrors `raw_material_validators.py` for the 3 section-level errors +
+  // 2 advisory warnings. Per-row rules stay backend-driven for now — those
+  // will graduate to a per-modal validateRow() helper in a later pass
+  // (same pattern products-section uses). Backend `fieldErrors` still
+  // wins when present.
+  const liveErrors: Record<string, string | undefined> = {};
+  const liveWarnings: Record<string, string | undefined> = {};
+
+  if (materials.length === 0) {
+    liveErrors.materials = "At least one primary raw material shall be specified.";
+  }
+  if (!procurementModel) {
+    liveErrors.procurement_model = "Procurement Model shall be specified.";
+  }
+  if (!procurementFrequency) {
+    liveErrors.procurement_frequency = "Procurement Frequency shall be specified.";
+  }
+  if (packaging.length === 0) {
+    liveWarnings.packaging_materials =
+      "No packaging materials defined. Mandatory if finished products are marketed.";
+  }
+  if (risks.length === 0) {
+    liveWarnings.risks =
+      "No supply risks specified. Consider identifying at least one for a complete DPR.";
+  }
+
+  const err = (name: string): string | undefined =>
+    fieldErrors.get(name) ?? liveErrors[name];
+  const warn = (name: string): string | undefined =>
+    fieldWarnings.get(name) ?? liveWarnings[name];
 
   const EMPTY_MATERIAL: Material = {
     order: 0, name: "", scientific_name: "", variety_grade: "", commodity: null,
@@ -272,55 +435,180 @@ export function RawMaterialSection({ uuid }: { uuid: string }) {
       saveError={saveError}
       onSave={save}
       onDiscard={discard}
+      help={
+        <SectionHelp
+          title="Raw Material Assessment & Supply System"
+          purpose="The biggest section in the wizard. Captures your entire raw-material supply chain — what you're sourcing, from where, how much, when it's available, the quality, at what price, plus procurement logistics, supply risks, packaging, and consumables. Every field flows into the DPR PDF's Raw Material chapter and into the Financial Analysis chapter's working-capital and cost-of-goods-sold calculations."
+          whatToFill={[
+            "A/B/D/E — Primary Raw Materials (required, ≥ 1 row). Click 'Add raw material' to open the detail modal. Every row captures one material end-to-end: identity, availability, quality, and price. Multiple materials are normal for integrated projects (e.g. coconut oil unit: copra + packaging + fuel).",
+            "For each material row — Name + Unit of Purchase + Estimated Annual Requirement (> 0) + Primary Source + Procurement Method are required. Also: Available Months (or tick 'Available throughout the year'), Number of Supplying Farmers, Purchase Price. If not available year-round, Peak Harvest Season and Off-season Procurement Strategy become required.",
+            "C — Procurement System (section-level, required). Pick Procurement Model (Aggregation / Cluster / Direct etc.) and Procurement Frequency (Daily / Weekly / …). Collection method, transport arrangement and the 5 cost fields (procurement, loading, unloading, sorting, handling) are optional but feed the working-capital calc.",
+            "F — Supply Risk Assessment (advisory). Add rows for each risk your supply chain faces — seasonal shortage, climate risk, price fluctuation, transport, etc. Each row requires a risk type and a mitigation strategy. Empty list produces a warning, not an error.",
+            "G — Packaging Materials (advisory). Add one row per SKU (500 ml bottles, 1 L cans, cartons). Only Material Name is required. Empty list produces a warning — reminds you it's mandatory if you sell finished products, but doesn't block submission.",
+            "H — Other Consumables (optional). Filter cloth, cleaning solvents, oils, lubricants — anything not a raw material and not packaging but consumed regularly. Only Name is required.",
+          ]}
+          tips={[
+            "Numbers flow into Finance directly. Estimated Annual Requirement × Purchase Price becomes your Y1 cost of goods sold. Realistic numbers matter — 20% inflation vs actual will distort every projection downstream.",
+            "Availability months are the months you can actually source the material — not the months you plan to run production. A coconut oil unit ticks Oct–Feb + Jul for copra availability (peak harvest windows), even though the unit runs year-round from buffer stock.",
+            "Off-season strategy is required when a material isn't year-round. Concrete details help ('15,000 kg buffer during Nov-Jan peak; balance from Karnataka border traders during monsoon lean months at ~5% premium') vs vague answers ('will manage during off-season').",
+            "Numeric fields silently clip runaway pastes. Farmers is integer-only (2.5 → 25). Quantities and prices cap at large but sane values (1 billion units, ₹10 crore/unit). You cannot enter negatives.",
+            "Every text field has a character cap matching backend column widths. Long-form fields (off-season strategy, mitigation, existing practices) go into 2000-char CountedTextareas with an amber/red counter — plenty for a page of text.",
+            "Click any row in a table to open the read-only detail drawer; click the pencil to jump straight into edit; the delete icon prompts before removing. The status icon on each row shows whether every required field is filled.",
+          ]}
+          downstream={[
+            "Raw Material chapter in the DPR PDF — every field surfaces there",
+            "Financial Analysis chapter — annual requirement × purchase price feeds Y1 cost of goods sold + working capital calc",
+            "Risk Analysis chapter — supply-chain risks appear alongside production and market risks",
+            "AI-generated narrative — procurement model + primary source + seasonality inform the supply chain paragraph",
+            "PDF procurement-cost table — the 5 section-level cost fields render as a summary",
+          ]}
+        />
+      }
     >
       <div className="space-y-4">
-        {/* Materials */}
+        {/* Materials — id lets readiness-panel deep-links scroll here */}
+        <div id="dpr-field-materials" />
         <NestedListCard<Material>
           title="A/B/D/E. Primary Raw Materials"
           items={materials}
           onChange={(next) => form.setValue("materials", next, { shouldDirty: true })}
           emptyRow={EMPTY_MATERIAL}
+          error={err("materials")}
+          warning={warn("materials")}
           columns={[
             { key: "name", label: "Name" },
             { key: "primary_source", label: "Source", render: (v) => (sourceQuery.data?.find((r) => r.id === v)?.label as string) ?? "—" },
             { key: "estimated_annual_requirement", label: "Annual req." },
             { key: "current_purchase_price", label: "Price/unit (₹)" },
           ]}
-          isValid={(row) => row.name.trim().length > 0}
+          // isValid mirrors backend per-row rules — Save button in the modal
+          // stays disabled until every backend-required field is satisfied.
+          isValid={(row) => Object.keys(validateMaterial(row)).length === 0}
           addLabel="Add raw material"
           editLabel="Edit raw material"
-          renderModal={(row, set) => (
+          renderModal={(row, set) => {
+            // Live per-field errors from the same validator. Mirrors the
+            // products-section validateRow pattern — every field with a
+            // problem shows inline red the moment the user leaves it invalid,
+            // no wait for save.
+            const rErr = validateMaterial(row);
+            const monthsError =
+              !row.available_throughout_year && row.available_months.length === 0
+                ? rErr.available_months
+                : undefined;
+            return (
             <>
               <div className="space-y-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">A. Primary raw material</p>
-                <ModalField label="Raw material name *"><Input value={row.name} onChange={(e) => set("name", e.target.value)} /></ModalField>
+                <ModalField label="Raw material name *" error={rErr.name}>
+                  <Input
+                    value={row.name}
+                    maxLength={MAX_NAME_CHARS}
+                    onChange={(e) => set("name", e.target.value.slice(0, MAX_NAME_CHARS))}
+                  />
+                </ModalField>
                 <ModalRow>
-                  <ModalField label="Scientific name"><Input value={row.scientific_name ?? ""} onChange={(e) => set("scientific_name", e.target.value)} /></ModalField>
-                  <ModalField label="Variety / grade"><Input value={row.variety_grade ?? ""} onChange={(e) => set("variety_grade", e.target.value)} /></ModalField>
+                  <ModalField label="Scientific name">
+                    <Input
+                      value={row.scientific_name ?? ""}
+                      maxLength={MAX_SCIENTIFIC_CHARS}
+                      onChange={(e) => set("scientific_name", e.target.value.slice(0, MAX_SCIENTIFIC_CHARS))}
+                    />
+                  </ModalField>
+                  <ModalField label="Variety / grade">
+                    <Input
+                      value={row.variety_grade ?? ""}
+                      maxLength={MAX_VARIETY_CHARS}
+                      onChange={(e) => set("variety_grade", e.target.value.slice(0, MAX_VARIETY_CHARS))}
+                    />
+                  </ModalField>
                 </ModalRow>
                 <ModalRow>
-                  <ModalField label="Commodity"><MasterSelect value={row.commodity} options={commodityQuery.data ?? []} onChange={(v) => set("commodity", v)} /></ModalField>
-                  <ModalField label="Unit of purchase *"><MasterSelect value={row.unit_of_purchase} options={unitQuery.data ?? []} onChange={(v) => set("unit_of_purchase", v)} /></ModalField>
+                  <ModalField label="Commodity"><MasterSearchableSelect value={row.commodity} options={commodityQuery.data ?? []} onChange={(v) => set("commodity", v)} placeholder="Type to search commodity…" /></ModalField>
+                  <ModalField label="Unit of purchase *" error={rErr.unit_of_purchase}>
+                    <MasterSearchableSelect value={row.unit_of_purchase} options={unitQuery.data ?? []} onChange={(v) => set("unit_of_purchase", v)} placeholder="Type to search unit…" />
+                  </ModalField>
                 </ModalRow>
                 <ModalRow>
-                  <ModalField label="Estimated annual requirement *"><Input type="number" step="0.001" value={row.estimated_annual_requirement ?? ""} onChange={(e) => set("estimated_annual_requirement", e.target.value || null)} /></ModalField>
-                  <ModalField label="Approx. purchase price / unit (₹)"><Input type="number" step="0.01" value={row.approx_purchase_price ?? ""} onChange={(e) => set("approx_purchase_price", e.target.value || null)} /></ModalField>
+                  <ModalField label="Estimated annual requirement *" error={rErr.estimated_annual_requirement}>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      maxLength={14}
+                      placeholder="e.g. 72000"
+                      value={row.estimated_annual_requirement !== null && row.estimated_annual_requirement !== undefined ? String(row.estimated_annual_requirement) : ""}
+                      onChange={(e) => {
+                        const cleaned = normaliseDecimalInput(e.target.value, { max: MAX_QTY, maxDecimals: 3 });
+                        set("estimated_annual_requirement", cleaned === "" ? null : cleaned);
+                      }}
+                    />
+                  </ModalField>
+                  <ModalField label="Approx. purchase price / unit (₹)">
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      maxLength={14}
+                      placeholder="e.g. 90"
+                      value={row.approx_purchase_price !== null && row.approx_purchase_price !== undefined ? String(row.approx_purchase_price) : ""}
+                      onChange={(e) => {
+                        const cleaned = normaliseDecimalInput(e.target.value, { max: MAX_PRICE_INR, maxDecimals: 2 });
+                        set("approx_purchase_price", cleaned === "" ? null : cleaned);
+                      }}
+                    />
+                  </ModalField>
                 </ModalRow>
                 <ModalRow>
-                  <ModalField label="Primary source *"><MasterSelect value={row.primary_source} options={sourceQuery.data ?? []} onChange={(v) => set("primary_source", v)} /></ModalField>
-                  <ModalField label="Procurement method"><MasterSelect value={row.procurement_method} options={procModelQuery.data ?? []} onChange={(v) => set("procurement_method", v)} /></ModalField>
+                  <ModalField label="Primary source *" error={rErr.primary_source}>
+                    <MasterSearchableSelect value={row.primary_source} options={sourceQuery.data ?? []} onChange={(v) => set("primary_source", v)} placeholder="Type to search source…" />
+                  </ModalField>
+                  <ModalField label="Procurement method *" error={rErr.procurement_method}>
+                    <MasterSearchableSelect value={row.procurement_method} options={procModelQuery.data ?? []} onChange={(v) => set("procurement_method", v)} placeholder="Type to search method…" />
+                  </ModalField>
                 </ModalRow>
               </div>
 
               <div className="mt-4 space-y-3 border-t pt-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">B. Availability</p>
                 <ModalRow>
-                  <ModalField label="Estimated qty available annually *"><Input type="number" step="0.001" value={row.estimated_qty_available_annual ?? ""} onChange={(e) => set("estimated_qty_available_annual", e.target.value || null)} /></ModalField>
-                  <ModalField label="Supplying farmers"><Input type="number" min="0" value={row.num_supplying_farmers ?? ""} onChange={(e) => set("num_supplying_farmers", e.target.value || null)} /></ModalField>
+                  <ModalField label="Estimated qty available annually *" error={rErr.estimated_qty_available_annual}>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      maxLength={14}
+                      placeholder="e.g. 95000"
+                      value={row.estimated_qty_available_annual !== null && row.estimated_qty_available_annual !== undefined ? String(row.estimated_qty_available_annual) : ""}
+                      onChange={(e) => {
+                        const cleaned = normaliseDecimalInput(e.target.value, { max: MAX_QTY, maxDecimals: 3 });
+                        set("estimated_qty_available_annual", cleaned === "" ? null : cleaned);
+                      }}
+                    />
+                  </ModalField>
+                  <ModalField label="Supplying farmers *" error={rErr.num_supplying_farmers}>
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      placeholder="e.g. 240"
+                      value={row.num_supplying_farmers !== null && row.num_supplying_farmers !== undefined ? String(row.num_supplying_farmers) : ""}
+                      onChange={(e) => {
+                        const cleaned = normaliseIntegerInput(e.target.value, { max: MAX_FARMERS });
+                        set("num_supplying_farmers", cleaned === "" ? null : cleaned);
+                      }}
+                    />
+                  </ModalField>
                 </ModalRow>
                 <div>
-                  <Label className="text-xs">Months of availability</Label>
-                  <div className="mt-2 grid grid-cols-6 gap-1.5 sm:grid-cols-12">
+                  <Label className={`text-xs ${monthsError ? "text-destructive" : ""}`}>
+                    Months of availability *
+                    <span className="ml-1 text-[10px] font-normal text-muted-foreground">
+                      (or tick “Available throughout the year” below)
+                    </span>
+                  </Label>
+                  <div
+                    className={`mt-2 grid grid-cols-6 gap-1.5 rounded-md sm:grid-cols-12 ${
+                      monthsError ? "border border-destructive/50 bg-destructive/[0.03] p-2" : ""
+                    }`}
+                  >
                     {MONTHS.map(([code, label]) => {
                       const active = row.available_months.includes(code);
                       return (
@@ -335,6 +623,9 @@ export function RawMaterialSection({ uuid }: { uuid: string }) {
                       );
                     })}
                   </div>
+                  {monthsError && (
+                    <p className="mt-1 text-xs text-destructive">{monthsError}</p>
+                  )}
                 </div>
                 <label className="flex cursor-pointer items-center gap-2 text-sm">
                   <Checkbox checked={row.available_throughout_year} onCheckedChange={(c) => set("available_throughout_year", !!c)} />
@@ -343,10 +634,30 @@ export function RawMaterialSection({ uuid }: { uuid: string }) {
                 {!row.available_throughout_year && (
                   <>
                     <ModalRow>
-                      <ModalField label="Peak harvest season *"><Input value={row.peak_harvest_season ?? ""} onChange={(e) => set("peak_harvest_season", e.target.value)} /></ModalField>
-                      <ModalField label="Lean season"><Input value={row.lean_season ?? ""} onChange={(e) => set("lean_season", e.target.value)} /></ModalField>
+                      <ModalField label="Peak harvest season *" error={rErr.peak_harvest_season}>
+                        <Input
+                          value={row.peak_harvest_season ?? ""}
+                          maxLength={MAX_SEASON_CHARS}
+                          onChange={(e) => set("peak_harvest_season", e.target.value.slice(0, MAX_SEASON_CHARS))}
+                        />
+                      </ModalField>
+                      <ModalField label="Lean season">
+                        <Input
+                          value={row.lean_season ?? ""}
+                          maxLength={MAX_SEASON_CHARS}
+                          onChange={(e) => set("lean_season", e.target.value.slice(0, MAX_SEASON_CHARS))}
+                        />
+                      </ModalField>
                     </ModalRow>
-                    <ModalField label="Off-season procurement strategy *"><Textarea rows={2} value={row.off_season_strategy ?? ""} onChange={(e) => set("off_season_strategy", e.target.value)} /></ModalField>
+                    <ModalField label="Off-season procurement strategy *" error={rErr.off_season_strategy}>
+                      <CountedTextarea
+                        rows={2}
+                        maxChars={MAX_LONG_TEXT_CHARS}
+                        value={row.off_season_strategy ?? ""}
+                        onChange={(v) => set("off_season_strategy", v)}
+                        error={Boolean(rErr.off_season_strategy)}
+                      />
+                    </ModalField>
                   </>
                 )}
               </div>
@@ -359,8 +670,16 @@ export function RawMaterialSection({ uuid }: { uuid: string }) {
                 </label>
                 {row.quality_standards_applicable && (
                   <ModalRow>
-                    <ModalField label="Quality standard *"><MasterSelect value={row.quality_standard} options={qStandardQuery.data ?? []} onChange={(v) => set("quality_standard", v)} /></ModalField>
-                    <ModalField label="Grade"><Input value={row.grade ?? ""} onChange={(e) => set("grade", e.target.value)} /></ModalField>
+                    <ModalField label="Quality standard *" error={rErr.quality_standard}>
+                      <MasterSearchableSelect value={row.quality_standard} options={qStandardQuery.data ?? []} onChange={(v) => set("quality_standard", v)} placeholder="Type to search standard…" />
+                    </ModalField>
+                    <ModalField label="Grade">
+                      <Input
+                        value={row.grade ?? ""}
+                        maxLength={MAX_GRADE_CHARS}
+                        onChange={(e) => set("grade", e.target.value.slice(0, MAX_GRADE_CHARS))}
+                      />
+                    </ModalField>
                   </ModalRow>
                 )}
                 <div>
@@ -382,11 +701,29 @@ export function RawMaterialSection({ uuid }: { uuid: string }) {
               <div className="mt-4 space-y-3 border-t pt-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">E. Price</p>
                 <ModalRow>
-                  <ModalField label="Current purchase price / unit (₹) *"><Input type="number" step="0.01" value={row.current_purchase_price ?? ""} onChange={(e) => set("current_purchase_price", e.target.value || null)} /></ModalField>
+                  <ModalField label="Current purchase price / unit (₹) *" error={rErr.current_purchase_price}>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      maxLength={14}
+                      placeholder="e.g. 90"
+                      value={row.current_purchase_price !== null && row.current_purchase_price !== undefined ? String(row.current_purchase_price) : ""}
+                      onChange={(e) => {
+                        const cleaned = normaliseDecimalInput(e.target.value, { max: MAX_PRICE_INR, maxDecimals: 2 });
+                        set("current_purchase_price", cleaned === "" ? null : cleaned);
+                      }}
+                    />
+                  </ModalField>
                   <ModalField label="Basis of pricing"><ChoiceSelect value={row.price_estimation_basis} options={PRICE_BASIS} onChange={(v) => set("price_estimation_basis", v)} /></ModalField>
                 </ModalRow>
                 {row.price_estimation_basis === "other" && (
-                  <ModalField label="Please specify (Others) *"><Input value={row.price_estimation_basis_other ?? ""} onChange={(e) => set("price_estimation_basis_other", e.target.value)} /></ModalField>
+                  <ModalField label="Please specify (Others) *">
+                    <Input
+                      value={row.price_estimation_basis_other ?? ""}
+                      maxLength={MAX_OTHER_TEXT_CHARS}
+                      onChange={(e) => set("price_estimation_basis_other", e.target.value.slice(0, MAX_OTHER_TEXT_CHARS))}
+                    />
+                  </ModalField>
                 )}
                 <label className="flex cursor-pointer items-center gap-2 text-sm">
                   <Checkbox checked={row.price_varies_seasonally} onCheckedChange={(c) => set("price_varies_seasonally", !!c)} />
@@ -397,81 +734,242 @@ export function RawMaterialSection({ uuid }: { uuid: string }) {
                 )}
               </div>
             </>
-          )}
+          );
+          }}
         />
 
         {/* C. Procurement System (section-level) */}
         <Card><CardContent className="space-y-4 p-6">
           <h3 className="text-sm font-semibold">C. Procurement System</h3>
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5"><Label className="text-xs">Procurement model *</Label><MasterSelect value={procurementModel} options={procModelQuery.data ?? []} onChange={(v) => form.setValue("procurement_model", v, { shouldDirty: true })} /></div>
-            <div className="space-y-1.5"><Label className="text-xs">Procurement frequency *</Label><ChoiceSelect value={procurementFrequency ?? ""} options={FREQUENCY} onChange={(v) => form.setValue("procurement_frequency", v, { shouldDirty: true })} /></div>
+            <div id="dpr-field-procurement_model" className="space-y-1.5">
+              <Label className={`text-xs ${err("procurement_model") ? "text-destructive" : ""}`}>
+                Procurement model *
+              </Label>
+              <MasterSearchableSelect
+                value={procurementModel}
+                options={procModelQuery.data ?? []}
+                onChange={(v) => form.setValue("procurement_model", v, { shouldDirty: true })}
+                placeholder="Type to search model…"
+              />
+              {err("procurement_model") && (
+                <p className="text-xs text-destructive">{err("procurement_model")}</p>
+              )}
+            </div>
+            <div id="dpr-field-procurement_frequency" className="space-y-1.5">
+              <Label className={`text-xs ${err("procurement_frequency") ? "text-destructive" : ""}`}>
+                Procurement frequency *
+              </Label>
+              <SearchableSelect
+                value={procurementFrequency ?? ""}
+                options={FREQUENCY}
+                onChange={(v) => form.setValue("procurement_frequency", v, { shouldDirty: true })}
+                placeholder="Type to search frequency…"
+              />
+              {err("procurement_frequency") && (
+                <p className="text-xs text-destructive">{err("procurement_frequency")}</p>
+              )}
+            </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5"><Label className="text-xs">Collection method</Label><Input {...form.register("collection_method")} /></div>
-            <div className="space-y-1.5"><Label className="text-xs">Transportation arrangement</Label><Input {...form.register("transportation_arrangement")} /></div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Collection method</Label>
+              <Input
+                value={collectionMethod as string}
+                maxLength={MAX_METHOD_TEXT_CHARS}
+                onChange={(e) => setField("collection_method", e.target.value.slice(0, MAX_METHOD_TEXT_CHARS))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Transportation arrangement</Label>
+              <Input
+                value={transportArrangement as string}
+                maxLength={MAX_METHOD_TEXT_CHARS}
+                onChange={(e) => setField("transportation_arrangement", e.target.value.slice(0, MAX_METHOD_TEXT_CHARS))}
+              />
+            </div>
           </div>
+          {/* 5 cost fields — controlled + normaliser (money pattern). */}
           <div className="grid gap-3 sm:grid-cols-2">
-            {[["avg_procurement_cost","Avg. procurement cost"],["loading_cost","Loading cost"],["unloading_cost","Unloading cost"],["sorting_grading_cost","Sorting / grading"],["handling_charges","Handling charges"]].map(([k,l]) => (
-              <div key={k} className="space-y-1.5"><Label className="text-xs">{l} (₹)</Label><Input type="number" step="0.01" {...form.register(k as keyof Data)} /></div>
-            ))}
+            {(() => {
+              const costFields: Array<[keyof Data, string, string | number | null | undefined]> = [
+                ["avg_procurement_cost", "Avg. procurement cost", avgProcurementCost as string | number | null | undefined],
+                ["loading_cost", "Loading cost", loadingCost as string | number | null | undefined],
+                ["unloading_cost", "Unloading cost", unloadingCost as string | number | null | undefined],
+                ["sorting_grading_cost", "Sorting / grading", sortingGradingCost as string | number | null | undefined],
+                ["handling_charges", "Handling charges", handlingCharges as string | number | null | undefined],
+              ];
+              return costFields.map(([key, label, value]) => (
+                <div key={key as string} className="space-y-1.5">
+                  <Label className="text-xs">{label} (₹)</Label>
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    maxLength={14}
+                    placeholder="e.g. 1.5"
+                    value={value !== null && value !== undefined ? String(value) : ""}
+                    onChange={(e) => {
+                      const cleaned = normaliseDecimalInput(e.target.value, {
+                        max: MAX_COST_INR,
+                        maxDecimals: 2,
+                      });
+                      setField(key, (cleaned === "" ? null : cleaned) as Data[typeof key]);
+                    }}
+                  />
+                </div>
+              ));
+            })()}
           </div>
         </CardContent></Card>
 
         {/* F. Risks */}
+        <div id="dpr-field-risks" />
         <NestedListCard<Risk>
           title="F. Supply Risk Assessment"
           items={risks}
           onChange={(next) => form.setValue("risks", next, { shouldDirty: true })}
           emptyRow={{ risk_type: "", risk_type_other: "", mitigation_strategy: "", existing_practices: "", previous_experience: "" }}
+          error={err("risks")}
+          warning={warn("risks")}
           columns={[
             { key: "risk_type", label: "Risk", render: (v) => RISK_TYPES.find((o) => o.value === v)?.label ?? "—" },
             { key: "mitigation_strategy", label: "Mitigation", render: (v) => ((v as string)?.slice(0, 40) ?? "") + ((v as string)?.length > 40 ? "…" : "") },
           ]}
-          isValid={(row) => !!row.risk_type && row.mitigation_strategy.trim().length > 0}
+          // Save button in modal gated by validateRisk — mirrors backend
+          // per-row rules: risk_type required + mitigation strategy required.
+          isValid={(row) => Object.keys(validateRisk(row)).length === 0}
           addLabel="Add risk"
           editLabel="Edit risk"
-          renderModal={(row, set) => (
+          renderModal={(row, set) => {
+            const rErr = validateRisk(row);
+            return (
             <>
-              <ModalField label="Risk *"><ChoiceSelect value={row.risk_type} options={RISK_TYPES} onChange={(v) => set("risk_type", v)} /></ModalField>
+              <ModalField label="Risk *" error={rErr.risk_type}>
+                {/* SearchableSelect — 10 risk types is long enough to benefit
+                    from type-to-filter (same pattern as districts / blocks
+                    / expansion year elsewhere in the wizard). */}
+                <SearchableSelect
+                  value={row.risk_type}
+                  options={RISK_TYPES}
+                  onChange={(v) => set("risk_type", v)}
+                  placeholder="Type to search risk…"
+                />
+              </ModalField>
               {row.risk_type === "other" && (
-                <ModalField label="Specify"><Input value={row.risk_type_other} onChange={(e) => set("risk_type_other", e.target.value)} /></ModalField>
+                <ModalField label="Specify">
+                  <Input
+                    value={row.risk_type_other}
+                    maxLength={MAX_OTHER_TEXT_CHARS}
+                    onChange={(e) => set("risk_type_other", e.target.value.slice(0, MAX_OTHER_TEXT_CHARS))}
+                  />
+                </ModalField>
               )}
-              <ModalField label="Mitigation strategy *"><Textarea rows={2} value={row.mitigation_strategy} onChange={(e) => set("mitigation_strategy", e.target.value)} /></ModalField>
-              <ModalField label="Existing practices"><Textarea rows={2} value={row.existing_practices} onChange={(e) => set("existing_practices", e.target.value)} /></ModalField>
-              <ModalField label="Previous experience"><Textarea rows={2} value={row.previous_experience} onChange={(e) => set("previous_experience", e.target.value)} /></ModalField>
+              <ModalField label="Mitigation strategy *" error={rErr.mitigation_strategy}>
+                <CountedTextarea
+                  rows={2}
+                  maxChars={MAX_LONG_TEXT_CHARS}
+                  value={row.mitigation_strategy}
+                  onChange={(v) => set("mitigation_strategy", v)}
+                  error={Boolean(rErr.mitigation_strategy)}
+                />
+              </ModalField>
+              <ModalField label="Existing practices">
+                <CountedTextarea
+                  rows={2}
+                  maxChars={MAX_LONG_TEXT_CHARS}
+                  value={row.existing_practices}
+                  onChange={(v) => set("existing_practices", v)}
+                />
+              </ModalField>
+              <ModalField label="Previous experience">
+                <CountedTextarea
+                  rows={2}
+                  maxChars={MAX_LONG_TEXT_CHARS}
+                  value={row.previous_experience}
+                  onChange={(v) => set("previous_experience", v)}
+                />
+              </ModalField>
             </>
-          )}
+            );
+          }}
         />
 
         {/* G. Packaging */}
+        <div id="dpr-field-packaging_materials" />
         <NestedListCard<Packaging>
           title="G. Packaging Materials"
           items={packaging}
           onChange={(next) => form.setValue("packaging_materials", next, { shouldDirty: true })}
           emptyRow={{ order: 0, material_name: "", purpose: "", unit: null, estimated_annual_requirement: null, unit_cost: null, supplier: "" }}
+          error={err("packaging_materials")}
+          warning={warn("packaging_materials")}
           columns={[
             { key: "material_name", label: "Material" },
             { key: "purpose", label: "Purpose" },
             { key: "estimated_annual_requirement", label: "Annual req." },
           ]}
-          isValid={(row) => row.material_name.trim().length > 0}
+          isValid={(row) => Object.keys(validatePackaging(row)).length === 0}
           addLabel="Add packaging"
           editLabel="Edit packaging"
-          renderModal={(row, set) => (
+          renderModal={(row, set) => {
+            const rErr = validatePackaging(row);
+            return (
             <>
-              <ModalField label="Material name *"><Input value={row.material_name} onChange={(e) => set("material_name", e.target.value)} /></ModalField>
-              <ModalField label="Purpose"><Input value={row.purpose} onChange={(e) => set("purpose", e.target.value)} /></ModalField>
+              <ModalField label="Material name *" error={rErr.material_name}>
+                <Input
+                  value={row.material_name}
+                  maxLength={MAX_NAME_CHARS}
+                  onChange={(e) => set("material_name", e.target.value.slice(0, MAX_NAME_CHARS))}
+                />
+              </ModalField>
+              <ModalField label="Purpose">
+                <Input
+                  value={row.purpose}
+                  maxLength={MAX_NAME_CHARS}
+                  onChange={(e) => set("purpose", e.target.value.slice(0, MAX_NAME_CHARS))}
+                />
+              </ModalField>
               <ModalRow>
-                <ModalField label="Unit"><MasterSelect value={row.unit} options={unitQuery.data ?? []} onChange={(v) => set("unit", v)} /></ModalField>
-                <ModalField label="Estimated annual requirement"><Input type="number" step="0.001" value={row.estimated_annual_requirement ?? ""} onChange={(e) => set("estimated_annual_requirement", e.target.value || null)} /></ModalField>
+                <ModalField label="Unit"><MasterSearchableSelect value={row.unit} options={unitQuery.data ?? []} onChange={(v) => set("unit", v)} placeholder="Type to search unit…" /></ModalField>
+                <ModalField label="Estimated annual requirement">
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    maxLength={14}
+                    placeholder="e.g. 240000"
+                    value={row.estimated_annual_requirement !== null && row.estimated_annual_requirement !== undefined ? String(row.estimated_annual_requirement) : ""}
+                    onChange={(e) => {
+                      const cleaned = normaliseDecimalInput(e.target.value, { max: MAX_QTY, maxDecimals: 3 });
+                      set("estimated_annual_requirement", cleaned === "" ? null : cleaned);
+                    }}
+                  />
+                </ModalField>
               </ModalRow>
               <ModalRow>
-                <ModalField label="Unit cost (₹)"><Input type="number" step="0.01" value={row.unit_cost ?? ""} onChange={(e) => set("unit_cost", e.target.value || null)} /></ModalField>
-                <ModalField label="Supplier"><Input value={row.supplier} onChange={(e) => set("supplier", e.target.value)} /></ModalField>
+                <ModalField label="Unit cost (₹)">
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    maxLength={14}
+                    placeholder="e.g. 6.5"
+                    value={row.unit_cost !== null && row.unit_cost !== undefined ? String(row.unit_cost) : ""}
+                    onChange={(e) => {
+                      const cleaned = normaliseDecimalInput(e.target.value, { max: MAX_PRICE_INR, maxDecimals: 2 });
+                      set("unit_cost", cleaned === "" ? null : cleaned);
+                    }}
+                  />
+                </ModalField>
+                <ModalField label="Supplier">
+                  <Input
+                    value={row.supplier}
+                    maxLength={MAX_NAME_CHARS}
+                    onChange={(e) => set("supplier", e.target.value.slice(0, MAX_NAME_CHARS))}
+                  />
+                </ModalField>
               </ModalRow>
             </>
-          )}
+            );
+          }}
         />
 
         {/* H. Consumables */}
@@ -485,20 +983,59 @@ export function RawMaterialSection({ uuid }: { uuid: string }) {
             { key: "estimated_annual_requirement", label: "Annual req." },
             { key: "unit_cost", label: "Unit cost (₹)" },
           ]}
-          isValid={(row) => row.name.trim().length > 0}
+          isValid={(row) => Object.keys(validateConsumable(row)).length === 0}
           addLabel="Add consumable"
           editLabel="Edit consumable"
-          renderModal={(row, set) => (
+          renderModal={(row, set) => {
+            const rErr = validateConsumable(row);
+            return (
             <>
-              <ModalField label="Consumable name *"><Input value={row.name} onChange={(e) => set("name", e.target.value)} /></ModalField>
-              <ModalField label="Purpose"><Input value={row.purpose} onChange={(e) => set("purpose", e.target.value)} /></ModalField>
+              <ModalField label="Consumable name *" error={rErr.name}>
+                <Input
+                  value={row.name}
+                  maxLength={MAX_NAME_CHARS}
+                  onChange={(e) => set("name", e.target.value.slice(0, MAX_NAME_CHARS))}
+                />
+              </ModalField>
+              <ModalField label="Purpose">
+                <Input
+                  value={row.purpose}
+                  maxLength={MAX_NAME_CHARS}
+                  onChange={(e) => set("purpose", e.target.value.slice(0, MAX_NAME_CHARS))}
+                />
+              </ModalField>
               <ModalRow>
-                <ModalField label="Unit"><MasterSelect value={row.unit} options={unitQuery.data ?? []} onChange={(v) => set("unit", v)} /></ModalField>
-                <ModalField label="Estimated annual requirement"><Input type="number" step="0.001" value={row.estimated_annual_requirement ?? ""} onChange={(e) => set("estimated_annual_requirement", e.target.value || null)} /></ModalField>
+                <ModalField label="Unit"><MasterSearchableSelect value={row.unit} options={unitQuery.data ?? []} onChange={(v) => set("unit", v)} placeholder="Type to search unit…" /></ModalField>
+                <ModalField label="Estimated annual requirement">
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    maxLength={14}
+                    placeholder="e.g. 180"
+                    value={row.estimated_annual_requirement !== null && row.estimated_annual_requirement !== undefined ? String(row.estimated_annual_requirement) : ""}
+                    onChange={(e) => {
+                      const cleaned = normaliseDecimalInput(e.target.value, { max: MAX_QTY, maxDecimals: 3 });
+                      set("estimated_annual_requirement", cleaned === "" ? null : cleaned);
+                    }}
+                  />
+                </ModalField>
               </ModalRow>
-              <ModalField label="Unit cost (₹)"><Input type="number" step="0.01" value={row.unit_cost ?? ""} onChange={(e) => set("unit_cost", e.target.value || null)} /></ModalField>
+              <ModalField label="Unit cost (₹)">
+                <Input
+                  type="text"
+                  inputMode="decimal"
+                  maxLength={14}
+                  placeholder="e.g. 120"
+                  value={row.unit_cost !== null && row.unit_cost !== undefined ? String(row.unit_cost) : ""}
+                  onChange={(e) => {
+                    const cleaned = normaliseDecimalInput(e.target.value, { max: MAX_PRICE_INR, maxDecimals: 2 });
+                    set("unit_cost", cleaned === "" ? null : cleaned);
+                  }}
+                />
+              </ModalField>
             </>
-          )}
+            );
+          }}
         />
       </div>
     </SectionShell>

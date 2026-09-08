@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { useDprSectionForm } from "@/hooks/use-dpr-section-form";
 import { dprMasterApi } from "@/lib/api/dpr-master";
 
+import { SectionHelp } from "./section-help";
 import { SectionShell } from "./section-shell";
 
 const Schema = z.object({
@@ -64,8 +65,38 @@ export function NatureOfBusinessSection({ uuid }: { uuid: string }) {
       saveError={saveError}
       onSave={save}
       onDiscard={discard}
+      help={
+        <SectionHelp
+          title="Nature of Business"
+          purpose="Tick every business model your project will operate under. Different from Project Components — Components describe WHAT ACTIVITIES the project does (extract oil, store copra, sell bottles); Nature of Business describes HOW the FPO earns revenue from those activities (processing income, retail margins, export earnings). An integrated FPO usually spans several business models at once."
+          whatToFill={[
+            "Browse the 15 business model options — Primary Production, Aggregation, Processing, Value Addition, Storage, Packaging, Marketing, Trading, Retail Sales, Input Supply, Service Delivery, Custom Hiring, Export, Integrated Enterprise, Others.",
+            "Tick every option that describes a way your project will generate revenue. At least one is required.",
+            "Multi-select is normal — a coconut oil FPO typically ticks Processing + Value Addition + Packaging + Marketing + Retail Sales all together.",
+            "If your business model isn't listed, tick 'Others' and describe it in the text field that appears.",
+            "When 'Others' is ticked, the specify text is required (e.g. 'Franchisee operator for edible-oil brand').",
+          ]}
+          tips={[
+            "Nature of Business ≠ Components. Coconut oil unit's Components = Processing + Storage + Marketing (physical activities). Its Nature of Business = Processing + Value Addition + Packaging + Marketing + Retail Sales (revenue streams).",
+            "Along with Components, this drives which fields the rest of the wizard shows. If you later add or remove a business model, some fields further in the wizard may appear or hide accordingly.",
+            "The 'Others' text stays in the database even if you un-tick it — so re-ticking restores what you typed.",
+            "If you're unsure whether to tick Value Addition — ask: does the FPO transform the raw commodity into something worth more? Cold-pressed coconut oil vs bulk copra → yes, tick it.",
+          ]}
+          downstream={[
+            "Dynamic questionnaire — some field-level rules key on your Nature of Business selection",
+            "AI Project Background chapter — business-model list appears in the prompt context",
+            "AI Financial Analysis chapter — informs revenue-model narrative",
+            "AI Market Analysis chapter — informs marketing-strategy narrative",
+            "PDF cover page + Business Model section",
+          ]}
+        />
+      }
     >
-      <Card>
+      {/* id="dpr-field-natures" is the scroll target used by the readiness
+          panel — clicking "At least one Nature of Business shall be selected"
+          deep-links here. Placed on the outer Card so the scroll lands
+          above the whole checkbox grid. */}
+      <Card id="dpr-field-natures">
         <CardContent className="space-y-5 p-6">
           <div>
             <div className="mb-3 text-sm font-semibold">
@@ -88,11 +119,15 @@ export function NatureOfBusinessSection({ uuid }: { uuid: string }) {
           </div>
 
           {showOther && (
-            <div className="space-y-1.5">
-              <Label htmlFor="nature_other">Please specify (Others)</Label>
+            // id="dpr-field-nature_other" — separate anchor for the
+            // "Please specify the other nature of business" readiness error
+            // when Others is ticked but the text is left blank.
+            <div id="dpr-field-nature_other" className="space-y-1.5 border-l-2 border-primary/30 pl-4">
+              <Label htmlFor="nature_other">Please specify (Others) *</Label>
               <Input
                 id="nature_other"
                 placeholder="Describe the other business model…"
+                autoFocus
                 {...form.register("nature_other")}
               />
             </div>

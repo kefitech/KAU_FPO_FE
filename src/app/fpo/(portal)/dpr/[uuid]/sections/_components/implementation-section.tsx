@@ -7,17 +7,26 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+
 import { useDprSectionForm } from "@/hooks/use-dpr-section-form";
 
-import { FieldError } from "./field-error";
+import { CountedTextarea } from "./counted-textarea";
+import { normaliseIntegerInput } from "./dpr-input-normalisers";
 import {
-  ChoiceSelect,
   ModalField,
   ModalRow,
   NestedListCard,
 } from "./nested-list";
+import { SectionHelp } from "./section-help";
 import { SectionShell } from "./section-shell";
+
+// ── Input caps — mirror backend DPRSectionImplementation + child tables ──
+const MAX_LONG_CHARS = 300;              // activity_name, supplier_finalisation_method, monitoring_authority, responsible_person
+const MAX_TEXT_CHARS = 200;              // *_other companions
+const MAX_SHORT_CHARS = 100;             // estimated_duration, expected_procurement_period
+const MAX_LONG_TEXT_CHARS = 2000;        // TextField defensive cap
+const MAX_QUOTATIONS = 50;               // realistic upper bound
 
 const PROCUREMENT = [
   { value: "direct_purchase", label: "Direct Purchase" },
@@ -95,6 +104,32 @@ const Schema = z.object({
 });
 type Data = z.infer<typeof Schema>;
 
+// ── Per-row validators (mirror implementation_validators.py) ──
+
+type ActivityErrors = Partial<Record<"activity_name" | "proposed_start_date", string>>;
+function validateActivity(row: Activity): ActivityErrors {
+  const e: ActivityErrors = {};
+  if (!(row.activity_name ?? "").trim()) {
+    e.activity_name = "Activity name is required.";
+  }
+  if (row.proposed_start_date && row.proposed_completion_date) {
+    if (row.proposed_start_date > row.proposed_completion_date) {
+      e.proposed_start_date = "Start Date shall precede Completion Date.";
+    }
+  }
+  return e;
+}
+
+type MilestoneErrors = Partial<Record<"milestone_type" | "milestone_type_other", string>>;
+function validateMilestone(row: Milestone): MilestoneErrors {
+  const e: MilestoneErrors = {};
+  if (!row.milestone_type) e.milestone_type = "Milestone type is required.";
+  if (row.milestone_type === "other" && !(row.milestone_type_other ?? "").trim()) {
+    e.milestone_type_other = 'Please specify — "Others" was selected for milestone type.';
+  }
+  return e;
+}
+
 function serializePayload(v: Data): Record<string, unknown> {
   const toInt = (x: string | number | null): number | null => {
     if (x === null || x === "") return null;
@@ -140,13 +175,49 @@ export function ImplementationSection({ uuid }: { uuid: string }) {
   const milestones = useWatch({ control: form.control, name: "milestones" }) ?? [];
   const agencies = useWatch({ control: form.control, name: "responsibility_agencies" }) ?? [];
   const procurementMethod = useWatch({ control: form.control, name: "procurement_method" });
+  const procurementMethodOther = useWatch({ control: form.control, name: "procurement_method_other" }) ?? "";
   const tenderRequired = useWatch({ control: form.control, name: "tender_required" });
+  const numQuotations = useWatch({ control: form.control, name: "num_quotations_proposed" });
+  const supplierFinalisationMethod = useWatch({ control: form.control, name: "supplier_finalisation_method" }) ?? "";
+  const expectedProcurementPeriod = useWatch({ control: form.control, name: "expected_procurement_period" }) ?? "";
+  const responsibilityAgencyOther = useWatch({ control: form.control, name: "responsibility_agency_other" }) ?? "";
+  const responsibilityRemarks = useWatch({ control: form.control, name: "responsibility_remarks" }) ?? "";
   const monitoringFrequency = useWatch({ control: form.control, name: "monitoring_frequency" });
+  const monitoringAuthority = useWatch({ control: form.control, name: "monitoring_authority" }) ?? "";
+  const reportingMechanism = useWatch({ control: form.control, name: "reporting_mechanism" }) ?? "";
+  const correctiveActionProcess = useWatch({ control: form.control, name: "corrective_action_process" }) ?? "";
+
+  // Convenience setter — always includes shouldDirty: true.
+  const setField = <K extends keyof Data>(name: K, value: Data[K]) =>
+    form.setValue(name as never, value as never, { shouldDirty: true });
 
   const toggleAgency = (code: string, checked: boolean) => {
     const cur = form.getValues("responsibility_agencies") ?? [];
-    form.setValue("responsibility_agencies", checked ? [...cur, code] : cur.filter((c) => c !== code), { shouldDirty: true });
+    setField("responsibility_agencies", checked ? [...cur, code] : cur.filter((c) => c !== code));
   };
+
+  // Section-level live errors — mirror implementation_validators.py.
+  const LIVE_CHECKED = new Set<string>([
+    "procurement_method",
+    "procurement_method_other",
+    "responsibility_agency_other",
+    "monitoring_frequency",
+  ]);
+  const liveErrors: Record<string, string | undefined> = {};
+  if (!procurementMethod) {
+    liveErrors.procurement_method = "Procurement Method shall be specified.";
+  }
+  if (procurementMethod === "other" && !String(procurementMethodOther).trim()) {
+    liveErrors.procurement_method_other = 'Please specify — "Others" was selected for procurement method.';
+  }
+  if (agencies.includes("other") && !String(responsibilityAgencyOther).trim()) {
+    liveErrors.responsibility_agency_other = 'Please specify — "Others" was selected in responsibility agencies.';
+  }
+  if (!monitoringFrequency) {
+    liveErrors.monitoring_frequency = "Monitoring Frequency shall be specified.";
+  }
+  const err = (name: string): string | undefined =>
+    LIVE_CHECKED.has(name) ? liveErrors[name] : fieldErrors.get(name);
 
   return (
     <SectionShell
@@ -159,13 +230,44 @@ export function ImplementationSection({ uuid }: { uuid: string }) {
       saveError={saveError}
       onSave={save}
       onDiscard={discard}
+      help={
+        <SectionHelp
+          title="Project Implementation Plan"
+          purpose="Capture the project implementation roadmap — activity schedule (Gantt-style with start + completion dates), procurement plan, responsibility matrix, critical milestones, and monitoring framework. Feeds the Implementation chapter of the DPR PDF, drives the Gantt chart, and sets up appraisal-time monitoring expectations."
+          whatToFill={[
+            "A — Implementation Schedule. Add one row per project activity (financial closure → site prep → civil works → machinery procurement → installation → commissioning → trial → commercial launch). Activity name required per row. Start/completion dates optional but strongly recommended (they drive the Gantt chart). Start must precede completion.",
+            "B — Procurement Plan. Procurement method (mandatory): direct purchase / tender / quotation-based / rate contract / empanelled / others. 'Others' reveals specify. Tender required checkbox, expected number of quotations, supplier finalisation method, expected procurement period all optional.",
+            "C — Implementation Responsibility. Multi-select which agencies own execution (FPO Board / CEO / PM / Consultant / Contractor / Machinery Supplier / Govt Dept / Bank / Others). 'Others' reveals specify. Free-text remarks below.",
+            "D — Critical Milestones. Add one row per milestone: financial closure, civil completion, machinery install, trial production, commercial production, first sale, break-even. Type mandatory; 'Others' reveals specify. Expected date + remarks optional.",
+            "E — Project Monitoring. Monitoring frequency (mandatory): weekly / fortnightly / monthly / quarterly. Responsible authority, reporting mechanism, corrective action process all optional.",
+          ]}
+          tips={[
+            "Only 3 hard-required fields on this whole page — procurement_method (B), monitoring_frequency (E), and activity_name per activity row (A). Everything else is 'strongly recommended but not blocking'.",
+            "Activity start/end dates are what drive the Gantt chart in the DPR PDF. Empty dates mean the PDF renders activities without timeline bars — noticeably weaker to a banker.",
+            "Milestone dates should align with the Activity schedule — e.g. 'Machinery Installation' milestone date should match the corresponding activity's completion date.",
+            "Monthly monitoring is the most common frequency for FPO-scale projects. Quarterly is fine for slower-moving projects; weekly is heavy for anything smaller than ₹5-cr projects.",
+            "If you tick 'Tender required' but pick 'Quotation-based' as method, note it in the supplier_finalisation_method — that combination triggers questions from bankers.",
+            "Responsibility Cat C should include the FPO Board even if execution is largely outsourced — the Board is ultimately accountable and appraisers expect that name in the mix.",
+          ]}
+          downstream={[
+            "Implementation chapter in the DPR PDF — activities render as Gantt bars, milestones as timeline markers",
+            "Investment section — activity duration informs pre-operative expenses timeline",
+            "Compliance chapter — procurement method + tender toggle cross-reference procurement/compliance rules",
+            "Finance section — expected procurement period + activity dates feed the capital tranche schedule (Cat J)",
+            "Risk Analysis chapter — activity delays surface as project execution risks",
+            "AI narrative — activity + milestone + monitoring profile feed the Project Execution paragraph",
+          ]}
+        />
+      }
     >
       <div className="space-y-4">
-        {/* A. Activities */}
+        {/* A. Activities — id enables readiness-panel deep-link scroll */}
+        <div id="dpr-field-activities" />
         <NestedListCard<Activity>
           title="A. Implementation Schedule"
           items={activities}
           onChange={(next) => form.setValue("activities", next, { shouldDirty: true })}
+          warning={fieldWarnings.get("activities")}
           emptyRow={{ order: 0, activity_name: "", proposed_start_date: null, proposed_completion_date: null, estimated_duration: "", responsible_person_or_agency: "" }}
           columns={[
             { key: "activity_name", label: "Activity" },
@@ -173,46 +275,130 @@ export function ImplementationSection({ uuid }: { uuid: string }) {
             { key: "proposed_completion_date", label: "Complete" },
             { key: "responsible_person_or_agency", label: "Owner" },
           ]}
-          isValid={(row) => row.activity_name.trim().length > 0}
+          isValid={(row) => Object.keys(validateActivity(row)).length === 0}
           addLabel="Add activity"
           editLabel="Edit activity"
-          renderModal={(row, set) => (
-            <>
-              <ModalField label="Activity name *"><Input value={row.activity_name} onChange={(e) => set("activity_name", e.target.value)} placeholder="e.g. Land Acquisition" /></ModalField>
-              <ModalRow>
-                <ModalField label="Proposed start date"><Input type="date" value={row.proposed_start_date ?? ""} onChange={(e) => set("proposed_start_date", e.target.value || null)} /></ModalField>
-                <ModalField label="Proposed completion date"><Input type="date" value={row.proposed_completion_date ?? ""} onChange={(e) => set("proposed_completion_date", e.target.value || null)} /></ModalField>
-              </ModalRow>
-              <ModalField label="Estimated duration"><Input placeholder='e.g. "45 days"' value={row.estimated_duration} onChange={(e) => set("estimated_duration", e.target.value)} /></ModalField>
-              <ModalField label="Responsible person / agency"><Input value={row.responsible_person_or_agency} onChange={(e) => set("responsible_person_or_agency", e.target.value)} /></ModalField>
-            </>
-          )}
+          renderModal={(row, set) => {
+            const aErr = validateActivity(row);
+            return (
+              <>
+                <ModalField label="Activity name *" error={aErr.activity_name}>
+                  <Input
+                    value={row.activity_name}
+                    maxLength={MAX_LONG_CHARS}
+                    placeholder="e.g. Land Acquisition"
+                    onChange={(e) => set("activity_name", e.target.value.slice(0, MAX_LONG_CHARS))}
+                  />
+                </ModalField>
+                <ModalRow>
+                  <ModalField label="Proposed start date" error={aErr.proposed_start_date}>
+                    <Input
+                      type="date"
+                      value={row.proposed_start_date ?? ""}
+                      onChange={(e) => set("proposed_start_date", e.target.value || null)}
+                    />
+                  </ModalField>
+                  <ModalField label="Proposed completion date">
+                    <Input
+                      type="date"
+                      value={row.proposed_completion_date ?? ""}
+                      onChange={(e) => set("proposed_completion_date", e.target.value || null)}
+                    />
+                  </ModalField>
+                </ModalRow>
+                <ModalField label="Estimated duration">
+                  <Input
+                    placeholder='e.g. "45 days"'
+                    value={row.estimated_duration}
+                    maxLength={MAX_SHORT_CHARS}
+                    onChange={(e) => set("estimated_duration", e.target.value.slice(0, MAX_SHORT_CHARS))}
+                  />
+                </ModalField>
+                <ModalField label="Responsible person / agency">
+                  <Input
+                    value={row.responsible_person_or_agency}
+                    maxLength={MAX_LONG_CHARS}
+                    onChange={(e) => set("responsible_person_or_agency", e.target.value.slice(0, MAX_LONG_CHARS))}
+                  />
+                </ModalField>
+              </>
+            );
+          }}
         />
 
         {/* B. Procurement Plan */}
         <Card><CardContent className="space-y-4 p-6">
           <h3 className="text-sm font-semibold">B. Procurement Plan</h3>
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label className={`text-xs ${fieldErrors.has("procurement_method") ? "text-destructive" : ""}`}>Procurement method *</Label>
-              <ChoiceSelect value={procurementMethod ?? ""} options={PROCUREMENT} onChange={(v) => form.setValue("procurement_method", v, { shouldDirty: true })} />
-              <FieldError name="procurement_method" errors={fieldErrors} warnings={fieldWarnings} />
+            <div id="dpr-field-procurement_method" className="space-y-1.5">
+              <Label className={err("procurement_method") ? "text-xs text-destructive" : "text-xs"}>
+                Procurement method *
+              </Label>
+              <SearchableSelect
+                value={procurementMethod ?? ""}
+                options={PROCUREMENT}
+                onChange={(v: string) => setField("procurement_method", v)}
+                placeholder="Type to search…"
+              />
+              {err("procurement_method") && (
+                <p className="text-xs text-destructive">{err("procurement_method")}</p>
+              )}
             </div>
             <div className="flex items-end">
               <label className="flex cursor-pointer items-center gap-2 text-sm">
-                <Checkbox checked={tenderRequired === true} onCheckedChange={(c) => form.setValue("tender_required", !!c, { shouldDirty: true })} />
+                <Checkbox checked={tenderRequired === true} onCheckedChange={(c) => setField("tender_required", !!c)} />
                 Tender required
               </label>
             </div>
           </div>
           {procurementMethod === "other" && (
-            <div className="space-y-1.5"><Label className="text-xs">Specify (Others)</Label><Input {...form.register("procurement_method_other")} /></div>
+            <div id="dpr-field-procurement_method_other" className="space-y-1.5">
+              <Label className={err("procurement_method_other") ? "text-xs text-destructive" : "text-xs"}>
+                Please specify (Others) *
+              </Label>
+              <Input
+                value={procurementMethodOther as string}
+                maxLength={MAX_TEXT_CHARS}
+                onChange={(e) => setField("procurement_method_other", e.target.value.slice(0, MAX_TEXT_CHARS))}
+              />
+              {err("procurement_method_other") && (
+                <p className="text-xs text-destructive">{err("procurement_method_other")}</p>
+              )}
+            </div>
           )}
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5"><Label className="text-xs">Number of quotations proposed</Label><Input type="number" min="0" {...form.register("num_quotations_proposed")} /></div>
-            <div className="space-y-1.5"><Label className="text-xs">Expected procurement period</Label><Input placeholder='e.g. "3 months"' {...form.register("expected_procurement_period")} /></div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Number of quotations proposed</Label>
+              <Input
+                type="text"
+                inputMode="numeric"
+                maxLength={3}
+                placeholder="e.g. 3"
+                value={numQuotations !== null && numQuotations !== undefined ? String(numQuotations) : ""}
+                onChange={(e) => {
+                  const cleaned = normaliseIntegerInput(e.target.value, { max: MAX_QUOTATIONS, min: 0 });
+                  setField("num_quotations_proposed", (cleaned === "" ? null : cleaned) as Data["num_quotations_proposed"]);
+                }}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Expected procurement period</Label>
+              <Input
+                placeholder='e.g. "3 months"'
+                value={expectedProcurementPeriod as string}
+                maxLength={MAX_SHORT_CHARS}
+                onChange={(e) => setField("expected_procurement_period", e.target.value.slice(0, MAX_SHORT_CHARS))}
+              />
+            </div>
           </div>
-          <div className="space-y-1.5"><Label className="text-xs">Supplier finalisation method</Label><Input {...form.register("supplier_finalisation_method")} /></div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Supplier finalisation method</Label>
+            <Input
+              value={supplierFinalisationMethod as string}
+              maxLength={MAX_LONG_CHARS}
+              onChange={(e) => setField("supplier_finalisation_method", e.target.value.slice(0, MAX_LONG_CHARS))}
+            />
+          </div>
         </CardContent></Card>
 
         {/* C. Responsibility */}
@@ -228,49 +414,132 @@ export function ImplementationSection({ uuid }: { uuid: string }) {
             ))}
           </div>
           {agencies.includes("other") && (
-            <div className="space-y-1.5"><Label className="text-xs">Specify (Others)</Label><Input {...form.register("responsibility_agency_other")} /></div>
+            <div id="dpr-field-responsibility_agency_other" className="space-y-1.5">
+              <Label className={err("responsibility_agency_other") ? "text-xs text-destructive" : "text-xs"}>
+                Please specify (Others) *
+              </Label>
+              <Input
+                value={responsibilityAgencyOther as string}
+                maxLength={MAX_TEXT_CHARS}
+                onChange={(e) => setField("responsibility_agency_other", e.target.value.slice(0, MAX_TEXT_CHARS))}
+              />
+              {err("responsibility_agency_other") && (
+                <p className="text-xs text-destructive">{err("responsibility_agency_other")}</p>
+              )}
+            </div>
           )}
-          <div className="space-y-1.5"><Label className="text-xs">Remarks</Label><Textarea rows={2} {...form.register("responsibility_remarks")} /></div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Remarks</Label>
+            <CountedTextarea
+              rows={2}
+              maxChars={MAX_LONG_TEXT_CHARS}
+              value={responsibilityRemarks as string}
+              onChange={(v) => setField("responsibility_remarks", v)}
+            />
+          </div>
         </CardContent></Card>
 
-        {/* D. Milestones */}
+        {/* D. Milestones — id enables readiness-panel deep-link scroll */}
+        <div id="dpr-field-milestones" />
         <NestedListCard<Milestone>
           title="D. Critical Milestones"
           items={milestones}
           onChange={(next) => form.setValue("milestones", next, { shouldDirty: true })}
+          warning={fieldWarnings.get("milestones")}
           emptyRow={{ order: 0, milestone_type: "", milestone_type_other: "", expected_date: null, remarks: "" }}
           columns={[
             { key: "milestone_type", label: "Milestone", render: (v) => MILESTONE_TYPES.find((o) => o.value === v)?.label ?? "—" },
             { key: "expected_date", label: "Expected date" },
           ]}
-          isValid={(row) => !!row.milestone_type}
+          isValid={(row) => Object.keys(validateMilestone(row)).length === 0}
           addLabel="Add milestone"
           editLabel="Edit milestone"
-          renderModal={(row, set) => (
-            <>
-              <ModalField label="Milestone type *"><ChoiceSelect value={row.milestone_type} options={MILESTONE_TYPES} onChange={(v) => set("milestone_type", v)} /></ModalField>
-              {row.milestone_type === "other" && (
-                <ModalField label="Specify"><Input value={row.milestone_type_other} onChange={(e) => set("milestone_type_other", e.target.value)} /></ModalField>
-              )}
-              <ModalField label="Expected date"><Input type="date" value={row.expected_date ?? ""} onChange={(e) => set("expected_date", e.target.value || null)} /></ModalField>
-              <ModalField label="Remarks"><Textarea rows={2} value={row.remarks} onChange={(e) => set("remarks", e.target.value)} /></ModalField>
-            </>
-          )}
+          renderModal={(row, set) => {
+            const mErr = validateMilestone(row);
+            return (
+              <>
+                <ModalField label="Milestone type *" error={mErr.milestone_type}>
+                  <SearchableSelect
+                    value={row.milestone_type}
+                    options={MILESTONE_TYPES}
+                    onChange={(v: string) => set("milestone_type", v)}
+                    placeholder="Type to search…"
+                  />
+                </ModalField>
+                {row.milestone_type === "other" && (
+                  <ModalField label="Please specify (Others) *" error={mErr.milestone_type_other}>
+                    <Input
+                      value={row.milestone_type_other}
+                      maxLength={MAX_TEXT_CHARS}
+                      onChange={(e) => set("milestone_type_other", e.target.value.slice(0, MAX_TEXT_CHARS))}
+                    />
+                  </ModalField>
+                )}
+                <ModalField label="Expected date">
+                  <Input
+                    type="date"
+                    value={row.expected_date ?? ""}
+                    onChange={(e) => set("expected_date", e.target.value || null)}
+                  />
+                </ModalField>
+                <ModalField label="Remarks">
+                  <CountedTextarea
+                    rows={2}
+                    maxChars={MAX_LONG_TEXT_CHARS}
+                    value={row.remarks}
+                    onChange={(v) => set("remarks", v)}
+                  />
+                </ModalField>
+              </>
+            );
+          }}
         />
 
         {/* E. Monitoring */}
         <Card><CardContent className="space-y-3 p-6">
           <h3 className="text-sm font-semibold">E. Project Monitoring</h3>
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label className={`text-xs ${fieldErrors.has("monitoring_frequency") ? "text-destructive" : ""}`}>Monitoring frequency *</Label>
-              <ChoiceSelect value={monitoringFrequency ?? ""} options={FREQUENCY} onChange={(v) => form.setValue("monitoring_frequency", v, { shouldDirty: true })} />
-              <FieldError name="monitoring_frequency" errors={fieldErrors} warnings={fieldWarnings} />
+            <div id="dpr-field-monitoring_frequency" className="space-y-1.5">
+              <Label className={err("monitoring_frequency") ? "text-xs text-destructive" : "text-xs"}>
+                Monitoring frequency *
+              </Label>
+              <SearchableSelect
+                value={monitoringFrequency ?? ""}
+                options={FREQUENCY}
+                onChange={(v: string) => setField("monitoring_frequency", v)}
+                placeholder="Type to search…"
+              />
+              {err("monitoring_frequency") && (
+                <p className="text-xs text-destructive">{err("monitoring_frequency")}</p>
+              )}
             </div>
-            <div className="space-y-1.5"><Label className="text-xs">Responsible monitoring authority</Label><Input {...form.register("monitoring_authority")} /></div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Responsible monitoring authority</Label>
+              <Input
+                value={monitoringAuthority as string}
+                maxLength={MAX_LONG_CHARS}
+                onChange={(e) => setField("monitoring_authority", e.target.value.slice(0, MAX_LONG_CHARS))}
+              />
+            </div>
           </div>
-          <div className="space-y-1.5"><Label className="text-xs">Reporting mechanism</Label><Textarea rows={2} {...form.register("reporting_mechanism")} /></div>
-          <div className="space-y-1.5"><Label className="text-xs">Corrective action process</Label><Textarea rows={2} {...form.register("corrective_action_process")} /></div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Reporting mechanism</Label>
+            <CountedTextarea
+              rows={2}
+              maxChars={MAX_LONG_TEXT_CHARS}
+              value={reportingMechanism as string}
+              onChange={(v) => setField("reporting_mechanism", v)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Corrective action process</Label>
+            <CountedTextarea
+              rows={2}
+              maxChars={MAX_LONG_TEXT_CHARS}
+              value={correctiveActionProcess as string}
+              onChange={(v) => setField("corrective_action_process", v)}
+            />
+          </div>
         </CardContent></Card>
       </div>
     </SectionShell>

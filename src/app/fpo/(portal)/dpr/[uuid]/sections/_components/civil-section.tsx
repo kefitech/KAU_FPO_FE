@@ -1,44 +1,79 @@
 "use client";
 
-import { useState } from "react";
-
 import { useQuery } from "@tanstack/react-query";
-import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useWatch } from "react-hook-form";
 import { z } from "zod";
 
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Textarea } from "@/components/ui/textarea";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+
 import { useDprSectionForm } from "@/hooks/use-dpr-section-form";
 import { dprMasterApi } from "@/lib/api/dpr-master";
 
+import { CountedTextarea } from "./counted-textarea";
+import { normaliseDecimalInput, normaliseIntegerInput } from "./dpr-input-normalisers";
+import {
+  ChoiceSelect,
+  MasterSearchableSelect,
+  ModalField,
+  ModalRow,
+  NestedListCard,
+} from "./nested-list";
+import { SectionHelp } from "./section-help";
 import { SectionShell } from "./section-shell";
+
+// ── Input caps — mirror backend DPRSectionCivil / DPRExistingBuilding /
+//    DPRProposedBuilding / DPRSiteDevelopmentItem columns ──
+const MAX_TEXT_CHARS = 200;            // most CharField widths
+const MAX_PURPOSE_CHARS = 500;         // purpose CharField(500)
+const MAX_LOCATION_CHARS = 300;        // proposed_location_within_site CharField(300)
+const MAX_COMPLETION_CHARS = 100;      // estimated_completion_period CharField(100)
+const MAX_OTHER_TEXT_CHARS = 200;      // *_other companions
+const MAX_LONG_TEXT_CHARS = 2000;      // TextField defensive cap
+// Cost fields — Decimal(18, 2). Cap at ₹1000 crore (1e10) per prior sections.
+const MAX_COST_INR = 10_000_000_000;
+// Floor area — Decimal(12, 2). 1M sq. units is a soft ceiling (bigger than any
+// single FPO project realistically needs).
+const MAX_FLOOR_AREA = 1_000_000;
+// Year for existing-building construction — realistic 1900 to current+5.
+const MAX_INFRA_YEAR = new Date().getFullYear() + 5;
+// Floors — a small integer cap prevents typos like 100 floors.
+const MAX_FLOORS = 20;
+
+// ── Choices ────────────────────────────────────────────────────────────────
+
+const AREA_UNITS = [
+  { value: "sqft", label: "sq. ft." },
+  { value: "sqm", label: "sq. m." },
+];
+
+const OWNERSHIP_CHOICES = [
+  { value: "fpo_owned", label: "FPO Owned" },
+  { value: "member_owned", label: "Member Owned" },
+  { value: "leased", label: "Leased" },
+  { value: "rented", label: "Rented" },
+  { value: "govt_allotted", label: "Government Allotted" },
+  { value: "other", label: "Others" },
+];
+
+const PROPOSED_ACTIONS = [
+  { value: "continue", label: "Continue as Existing" },
+  { value: "renovate", label: "Renovate" },
+  { value: "expand", label: "Expand" },
+  { value: "demolish", label: "Demolish" },
+  { value: "convert_use", label: "Convert to Different Use" },
+];
+
+const COST_BASIS = [
+  { value: "engineer", label: "Engineer's Estimate" },
+  { value: "contractor", label: "Contractor Quotation" },
+  { value: "similar", label: "Previous Similar Project" },
+  { value: "consultant", label: "Consultant Estimate" },
+  { value: "other", label: "Others (Specify)" },
+];
 
 // ── Schemas ────────────────────────────────────────────────────────────────
 
@@ -76,7 +111,7 @@ type ProposedBuilding = z.infer<typeof ProposedBuildingSchema>;
 const SiteDevItemSchema = z.object({
   id: z.number().optional(),
   order: z.number(),
-  category: z.number(),
+  category: z.number().nullable(),
   category_other: z.string(),
   estimated_quantity: z.string(),
   estimated_cost: z.union([z.string(), z.number()]).nullable(),
@@ -112,38 +147,6 @@ const Schema = z.object({
 });
 type Data = z.infer<typeof Schema>;
 
-// ── Choices ────────────────────────────────────────────────────────────────
-
-const AREA_UNITS = [
-  { value: "sqft", label: "sq. ft." },
-  { value: "sqm", label: "sq. m." },
-];
-
-const OWNERSHIP_CHOICES = [
-  { value: "fpo_owned", label: "FPO Owned" },
-  { value: "member_owned", label: "Member Owned" },
-  { value: "leased", label: "Leased" },
-  { value: "rented", label: "Rented" },
-  { value: "govt_allotted", label: "Government Allotted" },
-  { value: "other", label: "Others" },
-];
-
-const PROPOSED_ACTIONS = [
-  { value: "continue", label: "Continue as Existing" },
-  { value: "renovate", label: "Renovate" },
-  { value: "expand", label: "Expand" },
-  { value: "demolish", label: "Demolish" },
-  { value: "convert_use", label: "Convert to Different Use" },
-];
-
-const COST_BASIS = [
-  { value: "engineer", label: "Engineer's Estimate" },
-  { value: "contractor", label: "Contractor Quotation" },
-  { value: "similar", label: "Previous Similar Project" },
-  { value: "consultant", label: "Consultant Estimate" },
-  { value: "other", label: "Others (Specify)" },
-];
-
 // ── Utilities ──────────────────────────────────────────────────────────────
 
 function toDecStr(v: string | number | null): string | null {
@@ -163,6 +166,41 @@ const COST_KEYS = [
   "cost_electrical", "cost_fire_protection", "cost_landscaping", "cost_other_civil",
   "estimated_future_investment",
 ] as const;
+
+// ── Per-row validators (mirror civil_validators.py) ──────────────────────
+
+type ExistingBuildingErrors = Partial<Record<"building_name" | "floor_area", string>>;
+function validateExistingBuilding(row: ExistingBuilding): ExistingBuildingErrors {
+  const e: ExistingBuildingErrors = {};
+  if (!(row.building_name ?? "").trim()) {
+    e.building_name = "Building Name shall be specified.";
+  }
+  const fa = row.floor_area;
+  const faNum = fa !== null && fa !== undefined && fa !== "" ? Number(fa) : null;
+  if (faNum === null || !Number.isFinite(faNum) || faNum <= 0) {
+    e.floor_area = "Floor Area shall be greater than zero.";
+  }
+  return e;
+}
+
+type ProposedBuildingErrors = Partial<Record<"building_type" | "floor_area", string>>;
+function validateProposedBuilding(row: ProposedBuilding): ProposedBuildingErrors {
+  const e: ProposedBuildingErrors = {};
+  if (!row.building_type) e.building_type = "Building Type shall be specified.";
+  const fa = row.floor_area;
+  const faNum = fa !== null && fa !== undefined && fa !== "" ? Number(fa) : null;
+  if (faNum === null || !Number.isFinite(faNum) || faNum <= 0) {
+    e.floor_area = "Floor Area shall be greater than zero.";
+  }
+  return e;
+}
+
+type SiteDevErrors = Partial<Record<"category", string>>;
+function validateSiteDev(row: SiteDevItem): SiteDevErrors {
+  const e: SiteDevErrors = {};
+  if (!row.category) e.category = "Category is required.";
+  return e;
+}
 
 function serializePayload(v: Data): Record<string, unknown> {
   const out: Record<string, unknown> = { ...v };
@@ -203,7 +241,7 @@ export function CivilSection({ uuid }: { uuid: string }) {
     staleTime: 24 * 60 * 60 * 1000,
   });
 
-  const { form, isLoading, isDirty, isSaving, lastSavedAt, saveError, save, discard } = useDprSectionForm<Data>({
+  const { form, isLoading, isDirty, isSaving, lastSavedAt, saveError, fieldErrors, fieldWarnings, save, discard } = useDprSectionForm<Data>({
     uuid,
     sectionKey: "civil",
     schema: Schema,
@@ -241,6 +279,40 @@ export function CivilSection({ uuid }: { uuid: string }) {
   const hasCost = useWatch({ control: form.control, name: "has_civil_cost_estimate" });
   const hasExpansion = useWatch({ control: form.control, name: "has_future_expansion" });
   const basisOfEstimate = useWatch({ control: form.control, name: "basis_of_estimate" });
+  const basisOfEstimateOther = useWatch({ control: form.control, name: "basis_of_estimate_other" }) ?? "";
+
+  // D card cost inputs — watched values
+  const costs = {
+    cost_site_development: useWatch({ control: form.control, name: "cost_site_development" }),
+    cost_building_construction: useWatch({ control: form.control, name: "cost_building_construction" }),
+    cost_internal_roads: useWatch({ control: form.control, name: "cost_internal_roads" }),
+    cost_compound_wall: useWatch({ control: form.control, name: "cost_compound_wall" }),
+    cost_drainage: useWatch({ control: form.control, name: "cost_drainage" }),
+    cost_water_supply: useWatch({ control: form.control, name: "cost_water_supply" }),
+    cost_sanitation: useWatch({ control: form.control, name: "cost_sanitation" }),
+    cost_electrical: useWatch({ control: form.control, name: "cost_electrical" }),
+    cost_fire_protection: useWatch({ control: form.control, name: "cost_fire_protection" }),
+    cost_landscaping: useWatch({ control: form.control, name: "cost_landscaping" }),
+    cost_other_civil: useWatch({ control: form.control, name: "cost_other_civil" }),
+  } as const;
+
+  // E card — watched values
+  const spaceReservedForExpansion = useWatch({ control: form.control, name: "space_reserved_for_expansion" }) ?? "";
+  const futureBuildingsPlanned = useWatch({ control: form.control, name: "future_buildings_planned" }) ?? "";
+  const futureCivilWorksRequired = useWatch({ control: form.control, name: "future_civil_works_required" }) ?? "";
+  const estimatedFutureInvestment = useWatch({ control: form.control, name: "estimated_future_investment" });
+
+  // Convenience setter — always includes shouldDirty: true.
+  const setField = <K extends keyof Data>(name: K, value: Data[K]) =>
+    form.setValue(name as never, value as never, { shouldDirty: true });
+
+  // Section-level live errors — mirror civil_validators.py.
+  const liveErrors: Record<string, string | undefined> = {};
+  if (basisOfEstimate === "other" && !String(basisOfEstimateOther).trim()) {
+    liveErrors.basis_of_estimate_other = 'Please specify — "Others" was selected for cost estimation basis.';
+  }
+  const err = (name: string): string | undefined =>
+    fieldErrors.get(name) ?? liveErrors[name];
 
   const loading = isLoading || buildingTypeQuery.isLoading || civilCategoryQuery.isLoading;
 
@@ -255,13 +327,44 @@ export function CivilSection({ uuid }: { uuid: string }) {
       saveError={saveError}
       onSave={save}
       onDiscard={discard}
+      help={
+        <SectionHelp
+          title="Building, Civil Works & Physical Infrastructure"
+          purpose="Capture the built-environment picture of the project — existing buildings on site, new buildings proposed, site development works (drainage / roads / boundary / etc.), an itemised civil-infrastructure cost estimate, and provisions for future expansion. This feeds the Civil Works chapter of the DPR PDF and drives the civil-works cost line in the Investment summary."
+          whatToFill={[
+            "A — Existing Buildings (optional list). Click 'Add existing building' for each pre-existing structure on the parcel. Building name + floor area are required per row. Purpose, ownership, present condition, proposed action (continue/renovate/expand/demolish), year of construction, and number of floors are all optional but help the site plan.",
+            "B — Proposed Buildings (add ≥ 1 for any construction project). Building type (FK from master data — 18 types like processing hall, storage warehouse, cold storage, etc.) + floor area are required. Purpose, area unit (sq. ft. / sq. m.), location within site, floors, estimated cost + completion period are all optional.",
+            "C — Site Development Works (optional list). Non-building civil works — boundary wall, drainage, internal roads, landscaping, etc. Category (FK from master data) is required per row; qty, cost, and remarks are optional. 'Others' category reveals a specify field.",
+            "D — Civil Infrastructure Cost. Tick 'Estimated civil infrastructure cost available' to reveal the 11 cost line-items (site dev, buildings, roads, wall, drainage, water, sanitation, electrical, fire, landscaping, other). All 11 are optional. Basis of estimate (engineer / contractor / consultant / prev project / other) is a dropdown; if 'Others' → specify text becomes required.",
+            "E — Future Expansion Provision (optional). Tick 'Future expansion planned' to reveal 4 fields: space reserved (free text), future buildings planned (textarea), future civil works required (textarea), estimated future investment (₹).",
+          ]}
+          tips={[
+            "Split existing vs proposed carefully. Existing = already built; Proposed = will be built as part of this project. Rebuilding on the same footprint = 1 existing row (proposed_action=demolish) + 1 proposed row.",
+            "Floor area is required per row for both A and B. Use the same area_unit (sq. m. or sq. ft.) across all rows in one project — mixing units makes the totals hard to audit.",
+            "Number of floors caps at 20 — for anything taller, this DPR module is the wrong tool.",
+            "D card cost line-items add up to the civil-works line in the Investment section. Don't leave everything blank if you ticked 'available' — that's confusing.",
+            "'Basis of estimate' matters for bankers. 'Contractor Quotation' + 'Engineer's Estimate' carry the most weight; 'Previous Similar Project' is acceptable for early-stage DPR; 'Others' needs an explanation.",
+            "Existing buildings without a defined proposed_action (continue/renovate/expand/demolish/convert) read as untouched in the PDF — banker may ask what you plan to do with them.",
+          ]}
+          downstream={[
+            "Civil Works chapter in the DPR PDF — all 3 nested lists + D cost table + E expansion section all render there",
+            "Investment section — 11 D cost line-items sum into the civil-works line under 'Project Cost'",
+            "Machinery section — proposed buildings' floor area constrains machinery layout options",
+            "Site section — proposed_location_within_site cross-references the parcel layout on Site card A",
+            "Risk Analysis chapter — buildings with proposed_action=demolish or in poor condition flag as project risks",
+            "AI narrative — building profile + cost estimation basis feed the Civil Works paragraph",
+          ]}
+        />
+      }
     >
       <div className="space-y-4">
-        {/* A. Existing Buildings */}
+        {/* A. Existing Buildings — id enables readiness-panel deep-link scroll */}
+        <div id="dpr-field-existing_buildings" />
         <NestedListCard<ExistingBuilding>
           title="A. Existing Buildings"
           items={existing}
           onChange={(next) => form.setValue("existing_buildings", next, { shouldDirty: true })}
+          warning={fieldWarnings.get("existing_buildings")}
           emptyRow={{
             order: 0, building_name: "", purpose: "", floor_area: null, area_unit: "",
             present_condition: "", ownership_status: "", proposed_action: "",
@@ -273,58 +376,128 @@ export function CivilSection({ uuid }: { uuid: string }) {
             { key: "ownership_status", label: "Ownership", render: (v) => OWNERSHIP_CHOICES.find((o) => o.value === v)?.label ?? "—" },
             { key: "proposed_action", label: "Action", render: (v) => PROPOSED_ACTIONS.find((o) => o.value === v)?.label ?? "—" },
           ]}
-          renderModal={(row, set) => (
-            <>
-              <ModalField label="Building name *">
-                <Input value={row.building_name} onChange={(e) => set("building_name", e.target.value)} />
-              </ModalField>
-              <ModalField label="Purpose">
-                <Input value={row.purpose} onChange={(e) => set("purpose", e.target.value)} />
-              </ModalField>
-              <ModalRow>
-                <ModalField label="Floor area">
-                  <Input type="number" step="0.01" value={row.floor_area ?? ""} onChange={(e) => set("floor_area", e.target.value || null)} />
-                </ModalField>
-                <ModalField label="Area unit">
-                  <ChoiceSelect value={row.area_unit} options={AREA_UNITS} onChange={(v) => set("area_unit", v)} />
-                </ModalField>
-              </ModalRow>
-              <ModalRow>
-                <ModalField label="Present condition">
-                  <Input value={row.present_condition} onChange={(e) => set("present_condition", e.target.value)} />
-                </ModalField>
-                <ModalField label="Ownership status">
-                  <ChoiceSelect value={row.ownership_status} options={OWNERSHIP_CHOICES} onChange={(v) => set("ownership_status", v)} />
-                </ModalField>
-              </ModalRow>
-              <ModalRow>
-                <ModalField label="Proposed action">
-                  <ChoiceSelect value={row.proposed_action} options={PROPOSED_ACTIONS} onChange={(v) => set("proposed_action", v)} />
-                </ModalField>
-                <ModalField label="Year of construction">
-                  <Input type="number" min="1900" value={row.year_of_construction ?? ""} onChange={(e) => set("year_of_construction", e.target.value || null)} />
-                </ModalField>
-              </ModalRow>
-              <ModalRow>
-                <ModalField label="Number of floors">
-                  <Input type="number" min="1" value={row.num_floors ?? ""} onChange={(e) => set("num_floors", e.target.value || null)} />
-                </ModalField>
-                <ModalField label="Current utilisation">
-                  <Input value={row.current_utilisation} onChange={(e) => set("current_utilisation", e.target.value)} />
-                </ModalField>
-              </ModalRow>
-            </>
-          )}
-          isValid={(row) => row.building_name.trim().length > 0}
+          isValid={(row) => Object.keys(validateExistingBuilding(row)).length === 0}
           addLabel="Add existing building"
           editLabel="Edit existing building"
+          renderModal={(row, set) => {
+            const eErr = validateExistingBuilding(row);
+            return (
+              <>
+                <ModalField label="Building name *" error={eErr.building_name}>
+                  <Input
+                    value={row.building_name}
+                    maxLength={MAX_TEXT_CHARS}
+                    onChange={(e) => set("building_name", e.target.value.slice(0, MAX_TEXT_CHARS))}
+                  />
+                </ModalField>
+                <ModalField label="Purpose">
+                  <Input
+                    value={row.purpose}
+                    maxLength={MAX_PURPOSE_CHARS}
+                    onChange={(e) => set("purpose", e.target.value.slice(0, MAX_PURPOSE_CHARS))}
+                  />
+                </ModalField>
+                <ModalRow>
+                  <ModalField label="Floor area *" error={eErr.floor_area}>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      maxLength={12}
+                      placeholder="e.g. 40"
+                      value={row.floor_area !== null && row.floor_area !== undefined ? String(row.floor_area) : ""}
+                      onChange={(e) => {
+                        const cleaned = normaliseDecimalInput(e.target.value, {
+                          max: MAX_FLOOR_AREA,
+                          maxDecimals: 2,
+                        });
+                        set("floor_area", cleaned === "" ? null : cleaned);
+                      }}
+                    />
+                  </ModalField>
+                  <ModalField label="Area unit">
+                    <ChoiceSelect value={row.area_unit} options={AREA_UNITS} onChange={(v) => set("area_unit", v)} />
+                  </ModalField>
+                </ModalRow>
+                <ModalRow>
+                  <ModalField label="Present condition">
+                    <Input
+                      value={row.present_condition}
+                      maxLength={MAX_TEXT_CHARS}
+                      onChange={(e) => set("present_condition", e.target.value.slice(0, MAX_TEXT_CHARS))}
+                    />
+                  </ModalField>
+                  <ModalField label="Ownership status">
+                    <SearchableSelect
+                      value={row.ownership_status}
+                      options={OWNERSHIP_CHOICES}
+                      onChange={(v: string) => set("ownership_status", v)}
+                      placeholder="Type to search…"
+                    />
+                  </ModalField>
+                </ModalRow>
+                <ModalRow>
+                  <ModalField label="Proposed action">
+                    <SearchableSelect
+                      value={row.proposed_action}
+                      options={PROPOSED_ACTIONS}
+                      onChange={(v: string) => set("proposed_action", v)}
+                      placeholder="Type to search…"
+                    />
+                  </ModalField>
+                  <ModalField label="Year of construction">
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={4}
+                      placeholder="e.g. 2015"
+                      value={row.year_of_construction !== null && row.year_of_construction !== undefined ? String(row.year_of_construction) : ""}
+                      onChange={(e) => {
+                        const cleaned = normaliseIntegerInput(e.target.value, {
+                          max: MAX_INFRA_YEAR,
+                          min: 1900,
+                        });
+                        set("year_of_construction", cleaned === "" ? null : cleaned);
+                      }}
+                    />
+                  </ModalField>
+                </ModalRow>
+                <ModalRow>
+                  <ModalField label="Number of floors">
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={3}
+                      placeholder="e.g. 1"
+                      value={row.num_floors !== null && row.num_floors !== undefined ? String(row.num_floors) : ""}
+                      onChange={(e) => {
+                        const cleaned = normaliseIntegerInput(e.target.value, {
+                          max: MAX_FLOORS,
+                          min: 1,
+                        });
+                        set("num_floors", cleaned === "" ? null : cleaned);
+                      }}
+                    />
+                  </ModalField>
+                  <ModalField label="Current utilisation">
+                    <Input
+                      value={row.current_utilisation}
+                      maxLength={MAX_TEXT_CHARS}
+                      onChange={(e) => set("current_utilisation", e.target.value.slice(0, MAX_TEXT_CHARS))}
+                    />
+                  </ModalField>
+                </ModalRow>
+              </>
+            );
+          }}
         />
 
-        {/* B. Proposed Buildings */}
+        {/* B. Proposed Buildings — id enables readiness-panel deep-link scroll */}
+        <div id="dpr-field-proposed_buildings" />
         <NestedListCard<ProposedBuilding>
           title="B. Proposed Buildings"
           items={proposed}
           onChange={(next) => form.setValue("proposed_buildings", next, { shouldDirty: true })}
+          warning={fieldWarnings.get("proposed_buildings")}
           emptyRow={{
             order: 0, building_type: null, building_type_other: "", purpose: "",
             floor_area: null, area_unit: "", proposed_location_within_site: "",
@@ -339,54 +512,122 @@ export function CivilSection({ uuid }: { uuid: string }) {
             { key: "floor_area", label: "Floor area" },
             { key: "estimated_construction_cost", label: "Est. cost" },
           ]}
-          renderModal={(row, set) => (
-            <>
-              <ModalField label="Building type *">
-                <MasterSelect
-                  value={row.building_type}
-                  options={buildingTypeQuery.data ?? []}
-                  onChange={(v) => set("building_type", v)}
-                />
-              </ModalField>
-              <ModalField label="Purpose">
-                <Input value={row.purpose} onChange={(e) => set("purpose", e.target.value)} />
-              </ModalField>
-              <ModalRow>
-                <ModalField label="Floor area">
-                  <Input type="number" step="0.01" value={row.floor_area ?? ""} onChange={(e) => set("floor_area", e.target.value || null)} />
-                </ModalField>
-                <ModalField label="Area unit">
-                  <ChoiceSelect value={row.area_unit} options={AREA_UNITS} onChange={(v) => set("area_unit", v)} />
-                </ModalField>
-              </ModalRow>
-              <ModalField label="Proposed location within site">
-                <Input value={row.proposed_location_within_site} onChange={(e) => set("proposed_location_within_site", e.target.value)} />
-              </ModalField>
-              <ModalRow>
-                <ModalField label="Number of floors">
-                  <Input type="number" min="1" value={row.num_floors ?? ""} onChange={(e) => set("num_floors", e.target.value || null)} />
-                </ModalField>
-                <ModalField label="Estimated construction cost (₹)">
-                  <Input type="number" step="0.01" min="0" value={row.estimated_construction_cost ?? ""} onChange={(e) => set("estimated_construction_cost", e.target.value || null)} />
-                </ModalField>
-              </ModalRow>
-              <ModalField label="Estimated completion period">
-                <Input placeholder="e.g. 6 months" value={row.estimated_completion_period} onChange={(e) => set("estimated_completion_period", e.target.value)} />
-              </ModalField>
-            </>
-          )}
-          isValid={(row) => row.building_type !== null}
+          isValid={(row) => Object.keys(validateProposedBuilding(row)).length === 0}
           addLabel="Add proposed building"
           editLabel="Edit proposed building"
+          renderModal={(row, set) => {
+            const pErr = validateProposedBuilding(row);
+            const isOtherType = buildingTypeQuery.data?.find((r) => r.id === row.building_type)?.code === "other";
+            return (
+              <>
+                <ModalField label="Building type *" error={pErr.building_type}>
+                  <MasterSearchableSelect
+                    value={row.building_type}
+                    options={buildingTypeQuery.data ?? []}
+                    onChange={(v) => set("building_type", v)}
+                    placeholder="Type to search building type…"
+                  />
+                </ModalField>
+                {isOtherType && (
+                  <ModalField label="Please specify (Others)">
+                    <Input
+                      value={row.building_type_other}
+                      maxLength={MAX_OTHER_TEXT_CHARS}
+                      onChange={(e) => set("building_type_other", e.target.value.slice(0, MAX_OTHER_TEXT_CHARS))}
+                    />
+                  </ModalField>
+                )}
+                <ModalField label="Purpose">
+                  <Input
+                    value={row.purpose}
+                    maxLength={MAX_PURPOSE_CHARS}
+                    onChange={(e) => set("purpose", e.target.value.slice(0, MAX_PURPOSE_CHARS))}
+                  />
+                </ModalField>
+                <ModalRow>
+                  <ModalField label="Floor area *" error={pErr.floor_area}>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      maxLength={12}
+                      placeholder="e.g. 120"
+                      value={row.floor_area !== null && row.floor_area !== undefined ? String(row.floor_area) : ""}
+                      onChange={(e) => {
+                        const cleaned = normaliseDecimalInput(e.target.value, {
+                          max: MAX_FLOOR_AREA,
+                          maxDecimals: 2,
+                        });
+                        set("floor_area", cleaned === "" ? null : cleaned);
+                      }}
+                    />
+                  </ModalField>
+                  <ModalField label="Area unit">
+                    <ChoiceSelect value={row.area_unit} options={AREA_UNITS} onChange={(v) => set("area_unit", v)} />
+                  </ModalField>
+                </ModalRow>
+                <ModalField label="Proposed location within site">
+                  <Input
+                    value={row.proposed_location_within_site}
+                    maxLength={MAX_LOCATION_CHARS}
+                    onChange={(e) => set("proposed_location_within_site", e.target.value.slice(0, MAX_LOCATION_CHARS))}
+                  />
+                </ModalField>
+                <ModalRow>
+                  <ModalField label="Number of floors">
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={3}
+                      placeholder="e.g. 1"
+                      value={row.num_floors !== null && row.num_floors !== undefined ? String(row.num_floors) : ""}
+                      onChange={(e) => {
+                        const cleaned = normaliseIntegerInput(e.target.value, {
+                          max: MAX_FLOORS,
+                          min: 1,
+                        });
+                        set("num_floors", cleaned === "" ? null : cleaned);
+                      }}
+                    />
+                  </ModalField>
+                  <ModalField label="Estimated construction cost (₹)">
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      maxLength={16}
+                      placeholder="e.g. 1500000"
+                      value={row.estimated_construction_cost !== null && row.estimated_construction_cost !== undefined ? String(row.estimated_construction_cost) : ""}
+                      onChange={(e) => {
+                        const cleaned = normaliseDecimalInput(e.target.value, {
+                          max: MAX_COST_INR,
+                          maxDecimals: 2,
+                        });
+                        set("estimated_construction_cost", cleaned === "" ? null : cleaned);
+                      }}
+                    />
+                  </ModalField>
+                </ModalRow>
+                <ModalField label="Estimated completion period">
+                  <Input
+                    placeholder="e.g. 6 months"
+                    value={row.estimated_completion_period}
+                    maxLength={MAX_COMPLETION_CHARS}
+                    onChange={(e) => set("estimated_completion_period", e.target.value.slice(0, MAX_COMPLETION_CHARS))}
+                  />
+                </ModalField>
+              </>
+            );
+          }}
         />
 
-        {/* C. Site Development */}
+        {/* C. Site Development Works — id enables readiness-panel deep-link scroll */}
+        <div id="dpr-field-site_development_items" />
         <NestedListCard<SiteDevItem>
           title="C. Site Development Works"
           items={siteDev}
           onChange={(next) => form.setValue("site_development_items", next, { shouldDirty: true })}
+          warning={fieldWarnings.get("site_development_items")}
           emptyRow={{
-            order: 0, category: 0, category_other: "", estimated_quantity: "",
+            order: 0, category: null, category_other: "", estimated_quantity: "",
             estimated_cost: null, remarks: "",
           }}
           columns={[
@@ -398,36 +639,68 @@ export function CivilSection({ uuid }: { uuid: string }) {
             { key: "estimated_quantity", label: "Qty" },
             { key: "estimated_cost", label: "Cost" },
           ]}
-          renderModal={(row, set) => (
-            <>
-              <ModalField label="Category *">
-                <MasterSelect
-                  value={row.category === 0 ? null : row.category}
-                  options={civilCategoryQuery.data ?? []}
-                  onChange={(v) => set("category", (v ?? 0) as number)}
-                />
-              </ModalField>
-              {civilCategoryQuery.data?.find((r) => r.id === row.category)?.code === "other" && (
-                <ModalField label="Specify (Others)">
-                  <Input value={row.category_other} onChange={(e) => set("category_other", e.target.value)} />
-                </ModalField>
-              )}
-              <ModalRow>
-                <ModalField label="Estimated quantity">
-                  <Input placeholder='e.g. 500 m' value={row.estimated_quantity} onChange={(e) => set("estimated_quantity", e.target.value)} />
-                </ModalField>
-                <ModalField label="Estimated cost (₹)">
-                  <Input type="number" step="0.01" min="0" value={row.estimated_cost ?? ""} onChange={(e) => set("estimated_cost", e.target.value || null)} />
-                </ModalField>
-              </ModalRow>
-              <ModalField label="Remarks">
-                <Textarea rows={2} value={row.remarks} onChange={(e) => set("remarks", e.target.value)} />
-              </ModalField>
-            </>
-          )}
-          isValid={(row) => row.category > 0}
+          isValid={(row) => Object.keys(validateSiteDev(row)).length === 0}
           addLabel="Add site development work"
           editLabel="Edit site development work"
+          renderModal={(row, set) => {
+            const sErr = validateSiteDev(row);
+            const isOtherCategory = civilCategoryQuery.data?.find((r) => r.id === row.category)?.code === "other";
+            return (
+              <>
+                <ModalField label="Category *" error={sErr.category}>
+                  <MasterSearchableSelect
+                    value={row.category}
+                    options={civilCategoryQuery.data ?? []}
+                    onChange={(v) => set("category", v)}
+                    placeholder="Type to search category…"
+                  />
+                </ModalField>
+                {isOtherCategory && (
+                  <ModalField label="Please specify (Others)">
+                    <Input
+                      value={row.category_other}
+                      maxLength={MAX_OTHER_TEXT_CHARS}
+                      onChange={(e) => set("category_other", e.target.value.slice(0, MAX_OTHER_TEXT_CHARS))}
+                    />
+                  </ModalField>
+                )}
+                <ModalRow>
+                  <ModalField label="Estimated quantity">
+                    <Input
+                      placeholder="e.g. 500 m"
+                      value={row.estimated_quantity}
+                      maxLength={MAX_TEXT_CHARS}
+                      onChange={(e) => set("estimated_quantity", e.target.value.slice(0, MAX_TEXT_CHARS))}
+                    />
+                  </ModalField>
+                  <ModalField label="Estimated cost (₹)">
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      maxLength={16}
+                      placeholder="e.g. 240000"
+                      value={row.estimated_cost !== null && row.estimated_cost !== undefined ? String(row.estimated_cost) : ""}
+                      onChange={(e) => {
+                        const cleaned = normaliseDecimalInput(e.target.value, {
+                          max: MAX_COST_INR,
+                          maxDecimals: 2,
+                        });
+                        set("estimated_cost", cleaned === "" ? null : cleaned);
+                      }}
+                    />
+                  </ModalField>
+                </ModalRow>
+                <ModalField label="Remarks">
+                  <CountedTextarea
+                    rows={2}
+                    maxChars={MAX_LONG_TEXT_CHARS}
+                    value={row.remarks}
+                    onChange={(v) => set("remarks", v)}
+                  />
+                </ModalField>
+              </>
+            );
+          }}
         />
 
         {/* D. Costs */}
@@ -444,37 +717,66 @@ export function CivilSection({ uuid }: { uuid: string }) {
             {hasCost && (
               <div className="space-y-3 border-l-2 border-primary/30 pl-4">
                 <div className="grid gap-3 sm:grid-cols-2">
-                  {[
-                    ["cost_site_development", "Site development"],
-                    ["cost_building_construction", "Building construction"],
-                    ["cost_internal_roads", "Internal roads"],
-                    ["cost_compound_wall", "Compound wall"],
-                    ["cost_drainage", "Drainage"],
-                    ["cost_water_supply", "Water supply"],
-                    ["cost_sanitation", "Sanitation"],
-                    ["cost_electrical", "Electrical"],
-                    ["cost_fire_protection", "Fire protection"],
-                    ["cost_landscaping", "Landscaping"],
-                    ["cost_other_civil", "Other civil"],
-                  ].map(([key, label]) => (
-                    <div key={key} className="space-y-1.5">
-                      <Label className="text-xs">{label} (₹)</Label>
-                      <Input type="number" step="0.01" min="0" {...form.register(key as keyof Data)} />
-                    </div>
-                  ))}
+                  {(() => {
+                    const costFields: Array<[keyof typeof costs, string]> = [
+                      ["cost_site_development", "Site development"],
+                      ["cost_building_construction", "Building construction"],
+                      ["cost_internal_roads", "Internal roads"],
+                      ["cost_compound_wall", "Compound wall"],
+                      ["cost_drainage", "Drainage"],
+                      ["cost_water_supply", "Water supply"],
+                      ["cost_sanitation", "Sanitation"],
+                      ["cost_electrical", "Electrical"],
+                      ["cost_fire_protection", "Fire protection"],
+                      ["cost_landscaping", "Landscaping"],
+                      ["cost_other_civil", "Other civil"],
+                    ];
+                    return costFields.map(([key, label]) => {
+                      const value = costs[key];
+                      return (
+                        <div key={key as string} className="space-y-1.5">
+                          <Label className="text-xs">{label} (₹)</Label>
+                          <Input
+                            type="text"
+                            inputMode="decimal"
+                            maxLength={16}
+                            placeholder="₹"
+                            value={value !== null && value !== undefined ? String(value) : ""}
+                            onChange={(e) => {
+                              const cleaned = normaliseDecimalInput(e.target.value, {
+                                max: MAX_COST_INR,
+                                maxDecimals: 2,
+                              });
+                              setField(key as keyof Data, (cleaned === "" ? null : cleaned) as Data[keyof Data]);
+                            }}
+                          />
+                        </div>
+                      );
+                    });
+                  })()}
                 </div>
                 <div className="space-y-1.5">
                   <Label>Basis of cost estimation</Label>
-                  <ChoiceSelect
+                  <SearchableSelect
                     value={basisOfEstimate ?? ""}
                     options={COST_BASIS}
-                    onChange={(v) => form.setValue("basis_of_estimate", v, { shouldDirty: true })}
+                    onChange={(v: string) => setField("basis_of_estimate", v)}
+                    placeholder="Type to search basis…"
                   />
                 </div>
                 {basisOfEstimate === "other" && (
-                  <div className="space-y-1.5">
-                    <Label>Specify (Others)</Label>
-                    <Input {...form.register("basis_of_estimate_other")} />
+                  <div id="dpr-field-basis_of_estimate_other" className="space-y-1.5">
+                    <Label className={err("basis_of_estimate_other") ? "text-destructive" : undefined}>
+                      Please specify (Others) *
+                    </Label>
+                    <Input
+                      value={basisOfEstimateOther as string}
+                      maxLength={MAX_OTHER_TEXT_CHARS}
+                      onChange={(e) => setField("basis_of_estimate_other", e.target.value.slice(0, MAX_OTHER_TEXT_CHARS))}
+                    />
+                    {err("basis_of_estimate_other") && (
+                      <p className="text-xs text-destructive">{err("basis_of_estimate_other")}</p>
+                    )}
                   </div>
                 )}
               </div>
@@ -497,19 +799,46 @@ export function CivilSection({ uuid }: { uuid: string }) {
               <div className="space-y-3 border-l-2 border-primary/30 pl-4">
                 <div className="space-y-1.5">
                   <Label>Space reserved for expansion</Label>
-                  <Input {...form.register("space_reserved_for_expansion")} />
+                  <Input
+                    value={spaceReservedForExpansion as string}
+                    maxLength={MAX_TEXT_CHARS}
+                    onChange={(e) => setField("space_reserved_for_expansion", e.target.value.slice(0, MAX_TEXT_CHARS))}
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Future buildings planned</Label>
-                  <Textarea rows={2} {...form.register("future_buildings_planned")} />
+                  <CountedTextarea
+                    rows={2}
+                    maxChars={MAX_LONG_TEXT_CHARS}
+                    value={futureBuildingsPlanned as string}
+                    onChange={(v) => setField("future_buildings_planned", v)}
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Future civil works required</Label>
-                  <Textarea rows={2} {...form.register("future_civil_works_required")} />
+                  <CountedTextarea
+                    rows={2}
+                    maxChars={MAX_LONG_TEXT_CHARS}
+                    value={futureCivilWorksRequired as string}
+                    onChange={(v) => setField("future_civil_works_required", v)}
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Estimated future investment (₹)</Label>
-                  <Input type="number" step="0.01" min="0" {...form.register("estimated_future_investment")} />
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    maxLength={16}
+                    placeholder="₹"
+                    value={estimatedFutureInvestment !== null && estimatedFutureInvestment !== undefined ? String(estimatedFutureInvestment) : ""}
+                    onChange={(e) => {
+                      const cleaned = normaliseDecimalInput(e.target.value, {
+                        max: MAX_COST_INR,
+                        maxDecimals: 2,
+                      });
+                      setField("estimated_future_investment", (cleaned === "" ? null : cleaned) as Data["estimated_future_investment"]);
+                    }}
+                  />
                 </div>
               </div>
             )}
@@ -517,215 +846,5 @@ export function CivilSection({ uuid }: { uuid: string }) {
         </Card>
       </div>
     </SectionShell>
-  );
-}
-
-// ── Reusable nested-list card + modal ──────────────────────────────────────
-
-interface Column<T> {
-  key: keyof T;
-  label: string;
-  render?: (value: unknown, row: T) => React.ReactNode;
-}
-
-function NestedListCard<T extends { id?: number }>({
-  title,
-  items,
-  onChange,
-  emptyRow,
-  columns,
-  renderModal,
-  isValid,
-  addLabel,
-  editLabel,
-}: {
-  title: string;
-  items: T[];
-  onChange: (next: T[]) => void;
-  emptyRow: T;
-  columns: Column<T>[];
-  renderModal: (row: T, set: <K extends keyof T>(k: K, v: T[K]) => void) => React.ReactNode;
-  isValid: (row: T) => boolean;
-  addLabel: string;
-  editLabel: string;
-}) {
-  const [editing, setEditing] = useState<{ index: number; row: T } | null>(null);
-
-  function openAdd() {
-    setEditing({ index: items.length, row: { ...emptyRow } });
-  }
-  function openEdit(idx: number) {
-    setEditing({ index: idx, row: { ...items[idx] } });
-  }
-  function commit(row: T) {
-    if (!editing) return;
-    const next = [...items];
-    if (editing.index >= items.length) next.push(row);
-    else next[editing.index] = row;
-    onChange(next);
-    setEditing(null);
-  }
-  function deleteAt(idx: number) {
-    onChange(items.filter((_, i) => i !== idx));
-  }
-
-  return (
-    <>
-      <Card>
-        <CardContent className="p-6">
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold">{title}</h3>
-            <Button size="sm" onClick={openAdd}>
-              <Plus className="mr-1 h-4 w-4" /> {addLabel}
-            </Button>
-          </div>
-          {items.length === 0 ? (
-            <div className="rounded-md border border-dashed py-6 text-center text-xs text-muted-foreground">
-              No items yet.
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-10">#</TableHead>
-                  {columns.map((c) => <TableHead key={String(c.key)}>{c.label}</TableHead>)}
-                  <TableHead className="w-20 text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.map((row, idx) => (
-                  <TableRow key={row.id ?? `new-${idx}`}>
-                    <TableCell className="text-muted-foreground">{idx + 1}</TableCell>
-                    {columns.map((c) => {
-                      const val = row[c.key];
-                      const rendered = c.render ? c.render(val, row) : (val ?? "—");
-                      return (
-                        <TableCell key={String(c.key)} className="text-sm">
-                          {rendered as React.ReactNode}
-                        </TableCell>
-                      );
-                    })}
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(idx)}>
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-destructive hover:text-destructive"
-                        onClick={() => deleteAt(idx)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-
-      {editing && (
-        <RowModal
-          title={editing.index >= items.length ? addLabel : editLabel}
-          initial={editing.row}
-          isValid={isValid}
-          renderFields={renderModal}
-          onCancel={() => setEditing(null)}
-          onSave={commit}
-        />
-      )}
-    </>
-  );
-}
-
-function RowModal<T>({
-  title,
-  initial,
-  isValid,
-  renderFields,
-  onCancel,
-  onSave,
-}: {
-  title: string;
-  initial: T;
-  isValid: (row: T) => boolean;
-  renderFields: (row: T, set: <K extends keyof T>(k: K, v: T[K]) => void) => React.ReactNode;
-  onCancel: () => void;
-  onSave: (row: T) => void;
-}) {
-  const [row, setRow] = useState<T>(initial);
-  function set<K extends keyof T>(key: K, value: T[K]) {
-    setRow((prev) => ({ ...prev, [key]: value }));
-  }
-  return (
-    <Dialog open onOpenChange={(v) => { if (!v) onCancel(); }}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4 py-2">{renderFields(row, set)}</div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onCancel}>Cancel</Button>
-          <Button disabled={!isValid(row)} onClick={() => onSave(row)}>Save</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// ── Small helpers ──────────────────────────────────────────────────────────
-
-function ModalRow({ children }: { children: React.ReactNode }) {
-  return <div className="grid gap-3 sm:grid-cols-2">{children}</div>;
-}
-function ModalField({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-xs">{label}</Label>
-      {children}
-    </div>
-  );
-}
-
-function ChoiceSelect({
-  value,
-  options,
-  onChange,
-}: {
-  value: string | undefined;
-  options: { value: string; label: string }[];
-  onChange: (v: string) => void;
-}) {
-  return (
-    <Select value={value ?? ""} onValueChange={onChange}>
-      <SelectTrigger className="h-9"><SelectValue placeholder="Select" /></SelectTrigger>
-      <SelectContent>
-        {options.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-      </SelectContent>
-    </Select>
-  );
-}
-
-function MasterSelect({
-  value,
-  options,
-  onChange,
-}: {
-  value: number | null | undefined;
-  options: { id: number; label: string }[];
-  onChange: (v: number | null) => void;
-}) {
-  return (
-    <Select
-      value={value !== null && value !== undefined ? String(value) : ""}
-      onValueChange={(v) => onChange(v === "" ? null : Number(v))}
-    >
-      <SelectTrigger className="h-9"><SelectValue placeholder="Select" /></SelectTrigger>
-      <SelectContent>
-        {options.map((o) => <SelectItem key={o.id} value={String(o.id)}>{o.label}</SelectItem>)}
-      </SelectContent>
-    </Select>
   );
 }

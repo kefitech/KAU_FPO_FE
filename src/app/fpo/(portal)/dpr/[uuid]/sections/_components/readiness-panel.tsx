@@ -5,13 +5,46 @@ import { AlertCircle, AlertTriangle, CheckCircle2 } from "lucide-react";
 
 import { dprApi, type DprSectionKey } from "@/lib/api/dpr";
 
+import { humaniseFieldPath } from "./humanise-field";
+
 /**
  * Reusable readiness display for any section.
  *
  * Fetches /readiness/ (backend runs the section's validator, returns
  * {errors[], warnings[], is_complete}) and renders it as color-coded panels.
  * Refetches automatically when the section save mutation invalidates its cache.
+ *
+ * Every error/warning is a clickable button — clicking dispatches
+ * `dpr:field-focus` on window, and any section-side listener that recognises
+ * the root key scrolls its card into view and flashes a highlight. Nested-row
+ * fields (`materials[0].xxx`) also carry the row index so a NestedListCard
+ * ref can pop open the exact row's modal.
  */
+function focusField(field: string) {
+  if (typeof window === "undefined" || !field) return;
+  // Scroll to any element tagged with the root key so the user's eye lands
+  // on the correct card even before the modal auto-opens. Falls back
+  // gracefully — if the section hasn't wired an id yet, nothing breaks.
+  const rootKey = field.split(/[.[]/)[0];
+  const targetId = `dpr-field-${rootKey}`;
+  const target = document.getElementById(targetId);
+  if (target) {
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+    // Temporary flash highlight — CSS class defined globally.
+    // Force restart the animation in case the class was already applied.
+    target.classList.remove("dpr-flash");
+    // Force reflow so the animation restarts even on rapid re-clicks.
+    void target.offsetWidth;
+    target.classList.add("dpr-flash");
+    window.setTimeout(() => target.classList.remove("dpr-flash"), 2400);
+  } else if (typeof console !== "undefined") {
+    // Non-fatal — the section just hasn't tagged this field yet. Log so we
+    // know which id is missing and can add it in the next round.
+    console.warn(`[DPR readiness] No scroll target #${targetId} for field "${field}". Tag the field with id="${targetId}" in the section component.`);
+  }
+  // Sections can listen and do more (open modal for the specific row, etc.).
+  window.dispatchEvent(new CustomEvent("dpr:field-focus", { detail: { field } }));
+}
 export function ReadinessPanel({
   uuid,
   sectionKey,
@@ -52,7 +85,13 @@ export function ReadinessPanel({
           <ul className="list-disc space-y-1 pl-6 text-xs text-destructive/90">
             {errors.map((e, i) => (
               <li key={`${e.code}-${i}`}>
-                <span className="font-medium">{e.field}</span> — {e.message}
+                <button
+                  type="button"
+                  onClick={() => focusField(e.field)}
+                  className="text-left underline-offset-2 hover:underline focus:outline-none focus-visible:underline"
+                >
+                  <span className="font-medium">{humaniseFieldPath(e.field, sectionKey)}</span> — {e.message}
+                </button>
               </li>
             ))}
           </ul>
@@ -67,7 +106,13 @@ export function ReadinessPanel({
           <ul className="list-disc space-y-1 pl-6 text-xs text-amber-800 dark:text-amber-300">
             {warnings.map((w, i) => (
               <li key={`${w.code}-${i}`}>
-                <span className="font-medium">{w.field}</span> — {w.message}
+                <button
+                  type="button"
+                  onClick={() => focusField(w.field)}
+                  className="text-left underline-offset-2 hover:underline focus:outline-none focus-visible:underline"
+                >
+                  <span className="font-medium">{humaniseFieldPath(w.field, sectionKey)}</span> — {w.message}
+                </button>
               </li>
             ))}
           </ul>

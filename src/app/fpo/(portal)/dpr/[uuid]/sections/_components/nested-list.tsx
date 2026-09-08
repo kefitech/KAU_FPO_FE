@@ -1,11 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { forwardRef, useImperativeHandle, useState } from "react";
 
 import { Pencil, Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   Table,
   TableBody,
@@ -48,20 +48,17 @@ export interface NestedColumn<T> {
   render?: (value: unknown, row: T) => React.ReactNode;
 }
 
-export function NestedListCard<T extends { id?: number }>({
-  title,
-  items,
-  onChange,
-  emptyRow,
-  columns,
-  renderModal,
-  isValid,
-  addLabel,
-  editLabel,
-  emptyHint,
-  error,
-  warning,
-}: {
+/**
+ * Imperative handle exposed to parents via ref. Lets the caller open the
+ * edit modal for a specific row from outside NestedListCard — used e.g. by
+ * the products-section's ViewSheet Edit button to close the read-only view
+ * and pop the edit modal for the same row.
+ */
+export interface NestedListHandle {
+  openEdit: (idx: number) => void;
+}
+
+interface NestedListProps<T> {
   title: string;
   items: T[];
   onChange: (next: T[]) => void;
@@ -76,7 +73,34 @@ export function NestedListCard<T extends { id?: number }>({
   error?: string;
   /** Backend list-level warning (e.g. "Consider adding at least one for a complete DPR"). Renders amber. */
   warning?: string;
-}) {
+  /**
+   * When set, clicking anywhere on a row (not the pencil / delete icons) fires
+   * this callback instead of doing nothing. Callers typically use it to open a
+   * read-only `ViewSheet` — mirrors the `/fpo/products` pattern. The pencil
+   * icon still opens the edit modal directly for users who want to skip the
+   * intermediate view step.
+   */
+  onRowClick?: (row: T, idx: number) => void;
+}
+
+function NestedListCardInner<T extends { id?: number }>(
+  {
+    title,
+    items,
+    onChange,
+    emptyRow,
+    columns,
+    renderModal,
+    isValid,
+    addLabel,
+    editLabel,
+    emptyHint,
+    error,
+    warning,
+    onRowClick,
+  }: NestedListProps<T>,
+  ref: React.Ref<NestedListHandle>,
+) {
   const [editing, setEditing] = useState<{ index: number; row: T } | null>(null);
 
   function openAdd() {
@@ -85,6 +109,11 @@ export function NestedListCard<T extends { id?: number }>({
   function openEdit(idx: number) {
     setEditing({ index: idx, row: { ...items[idx] } });
   }
+
+  // Expose openEdit to parents through the ref — callers use this to trigger
+  // the edit modal from a ViewSheet's Edit button (or any other external
+  // affordance).
+  useImperativeHandle(ref, () => ({ openEdit }), [items]);
   function commit(row: T) {
     if (!editing) return;
     const next = [...items];
@@ -99,64 +128,137 @@ export function NestedListCard<T extends { id?: number }>({
 
   return (
     <>
-      <Card>
-        <CardContent className="p-6">
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className={`text-sm font-semibold ${error ? "text-destructive" : ""}`}>{title}</h3>
-            <Button size="sm" onClick={openAdd}>
-              <Plus className="mr-1 h-4 w-4" /> {addLabel}
-            </Button>
+      {/* No outer Card — the table has its own border/shadow. Card would
+          double-border and feel over-designed. Sections stacking multiple
+          nested lists use space-y between them for visual separation. */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className={`text-sm font-semibold ${error ? "text-destructive" : ""}`}>{title}</h3>
+          <Button size="sm" onClick={openAdd}>
+            <Plus className="mr-1 h-4 w-4" /> {addLabel}
+          </Button>
+        </div>
+        {error && <p className="text-xs text-destructive">{error}</p>}
+        {!error && warning && <p className="text-xs text-amber-600 dark:text-amber-500">{warning}</p>}
+        {items.length === 0 ? (
+          <div className="rounded-md border border-dashed py-6 text-center text-xs text-muted-foreground">
+            {emptyHint ?? "No items yet."}
           </div>
-          {error && <p className="mb-3 text-xs text-destructive">{error}</p>}
-          {!error && warning && <p className="mb-3 text-xs text-amber-600 dark:text-amber-500">{warning}</p>}
-          {items.length === 0 ? (
-            <div className="rounded-md border border-dashed py-6 text-center text-xs text-muted-foreground">
-              {emptyHint ?? "No items yet."}
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-10">#</TableHead>
-                  {columns.map((c) => (
-                    <TableHead key={String(c.key)}>{c.label}</TableHead>
-                  ))}
-                  <TableHead className="w-20 text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.map((row, idx) => (
-                  <TableRow key={row.id ?? `new-${idx}`}>
-                    <TableCell className="text-muted-foreground">{idx + 1}</TableCell>
-                    {columns.map((c) => {
-                      const val = row[c.key];
-                      const rendered = c.render ? c.render(val, row) : (val ?? "—");
-                      return (
-                        <TableCell key={String(c.key)} className="text-sm">
-                          {rendered as React.ReactNode}
-                        </TableCell>
-                      );
-                    })}
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(idx)}>
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-destructive hover:text-destructive"
-                        onClick={() => deleteAt(idx)}
+        ) : (
+          // Styled to match `components/data-table/data-table.tsx` — dark
+          // slate header, zebra-striped rows, muted SL No column, subtle
+          // row hover. No pagination (nested lists are always short).
+          <div className="relative overflow-x-auto border border-border shadow-sm">
+            <Table className="min-w-full">
+                <TableHeader>
+                  <TableRow className="border-b border-slate-700 bg-slate-800 hover:bg-slate-800 dark:bg-slate-900 dark:border-slate-700">
+                    <TableHead
+                      className="w-14 text-center text-xs font-semibold uppercase tracking-wider text-slate-300"
+                      style={{ width: 56 }}
+                    >
+                      SL No
+                    </TableHead>
+                    {columns.map((c) => (
+                      <TableHead
+                        key={String(c.key)}
+                        className="text-xs font-semibold uppercase tracking-wider text-slate-300"
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </TableCell>
+                        {c.label}
+                      </TableHead>
+                    ))}
+                    <TableHead
+                      className="w-24 text-right text-xs font-semibold uppercase tracking-wider text-slate-300"
+                      style={{ width: 96 }}
+                    >
+                      Actions
+                    </TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {items.map((row, idx) => {
+                    // Row is clickable only when the caller supplied
+                    // `onRowClick` — behaviour is opt-in so sections that
+                    // don't yet wire a ViewSheet keep their old UX unchanged.
+                    // The pencil / delete icons stop propagation so clicking
+                    // them doesn't also fire the row's onClick.
+                    const clickable = Boolean(onRowClick);
+                    return (
+                    <TableRow
+                      key={row.id ?? `new-${idx}`}
+                      onClick={clickable ? () => onRowClick?.(row, idx) : undefined}
+                      role={clickable ? "button" : undefined}
+                      tabIndex={clickable ? 0 : undefined}
+                      onKeyDown={
+                        clickable
+                          ? (e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                onRowClick?.(row, idx);
+                              }
+                            }
+                          : undefined
+                      }
+                      className={[
+                        "border-b border-border/50 transition-colors",
+                        idx % 2 === 1
+                          ? "bg-slate-50 dark:bg-slate-900/40"
+                          : "bg-white dark:bg-background",
+                        "hover:bg-slate-100 dark:hover:bg-slate-800/40",
+                        clickable ? "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40" : "",
+                      ].join(" ")}
+                    >
+                      <TableCell className="text-center text-xs font-medium text-muted-foreground/60 bg-slate-50 dark:bg-slate-900/20">
+                        {idx + 1}
+                      </TableCell>
+                      {columns.map((c) => {
+                        const val = row[c.key];
+                        const rendered = c.render ? c.render(val, row) : (val ?? "—");
+                        // Show full text on hover via `title` when the rendered
+                        // value is a plain string/number — otherwise skip
+                        // (complex React children can't be stringified safely).
+                        const isSimple = typeof rendered === "string" || typeof rendered === "number";
+                        return (
+                          <TableCell
+                            key={String(c.key)}
+                            className="max-w-[220px] truncate text-sm"
+                            title={isSimple ? String(rendered) : undefined}
+                          >
+                            {rendered as React.ReactNode}
+                          </TableCell>
+                        );
+                      })}
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEdit(idx);
+                          }}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive hover:text-destructive"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteAt(idx);
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
 
       {editing && (
         <RowModal
@@ -171,6 +273,19 @@ export function NestedListCard<T extends { id?: number }>({
     </>
   );
 }
+
+/**
+ * Public export. `forwardRef` swallows the generic type parameter, so we
+ * cast back to a generic function signature — the standard workaround for
+ * forwardRef + generics. Consumers keep writing `<NestedListCard<Foo> …>`
+ * and pass a `ref` typed as `React.Ref<NestedListHandle>` when they want
+ * imperative access to `openEdit`.
+ */
+export const NestedListCard = forwardRef(NestedListCardInner) as <
+  T extends { id?: number },
+>(
+  props: NestedListProps<T> & { ref?: React.Ref<NestedListHandle> },
+) => React.ReactElement;
 
 function RowModal<T>({
   title,
@@ -199,7 +314,21 @@ function RowModal<T>({
         Material, etc.) do not exceed viewport. All DPR nested-list modals
         share this width — change once, apply everywhere.
       */}
-      <DialogContent className="!max-w-5xl w-[92vw] max-h-[90vh] overflow-y-auto">
+      <DialogContent
+        className="!max-w-5xl w-[92vw] max-h-[90vh] overflow-y-auto"
+        // Prevent accidental data loss: clicking the dark backdrop no longer
+        // closes the modal. Escape key prompts for confirmation (only closes
+        // if user confirms). Cancel button remains the deliberate exit path.
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => {
+          e.preventDefault();
+          const ok = window.confirm(
+            "Close this form? Any unsaved changes in this row will be lost.",
+          );
+          if (ok) onCancel();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
@@ -223,14 +352,24 @@ export function ModalRow({ children }: { children: React.ReactNode }) {
 export function ModalField({
   label,
   children,
+  error,
+  warning,
 }: {
   label: string;
   children: React.ReactNode;
+  /** Backend-driven inline error — turns the label red + renders message below. */
+  error?: string;
+  /** Backend-driven inline warning — renders amber message below (only when no error). */
+  warning?: string;
 }) {
   return (
     <div className="space-y-1.5">
-      <Label className="text-xs">{label}</Label>
+      <Label className={`text-xs ${error ? "text-destructive" : ""}`}>{label}</Label>
       {children}
+      {error && <p className="text-xs text-destructive">{error}</p>}
+      {!error && warning && (
+        <p className="text-xs text-amber-600 dark:text-amber-500">{warning}</p>
+      )}
     </div>
   );
 }
@@ -289,5 +428,32 @@ export function MasterSelect({
         ))}
       </SelectContent>
     </Select>
+  );
+}
+
+/**
+ * Same API as MasterSelect (numeric id in/out) but backed by SearchableSelect
+ * — gives the user a type-to-filter input + a selection chip below with a
+ * ✕ to clear. Use for any master-data dropdown with many options
+ * (commodities, machinery categories, marketing channels, etc.).
+ */
+export function MasterSearchableSelect({
+  value,
+  options,
+  onChange,
+  placeholder = "Type to search…",
+}: {
+  value: number | null | undefined;
+  options: { id: number; label: string }[];
+  onChange: (v: number | null) => void;
+  placeholder?: string;
+}) {
+  return (
+    <SearchableSelect
+      value={value !== null && value !== undefined ? String(value) : ""}
+      onChange={(v) => onChange(v === "" ? null : Number(v))}
+      options={options.map((o) => ({ value: String(o.id), label: o.label }))}
+      placeholder={placeholder}
+    />
   );
 }

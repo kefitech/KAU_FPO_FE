@@ -7,20 +7,39 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { KERALA_DISTRICT_OPTIONS } from "@/lib/kerala-districts";
+import { LAND_UNIT_OPTIONS } from "@/lib/land-area";
 import { useWatch } from "react-hook-form";
 
 import { useDprSectionForm } from "@/hooks/use-dpr-section-form";
 import { dprMasterApi } from "@/lib/api/dpr-master";
 
+import { CountedTextarea } from "./counted-textarea";
+import { normaliseDecimalInput, normaliseIntegerInput } from "./dpr-input-normalisers";
 import {
-  ChoiceSelect,
-  MasterSelect,
+  MasterSearchableSelect,
   ModalField,
   ModalRow,
   NestedListCard,
 } from "./nested-list";
+import { SectionHelp } from "./section-help";
 import { SectionShell } from "./section-shell";
+
+// ── Input caps — mirror backend DPRSectionSite + DPRLandParcel columns ──
+const MAX_TEXT_CHARS = 200;             // most CharField widths
+const MAX_SHORT_CHARS = 100;            // village, taluk, district
+const MAX_OTHER_TEXT_CHARS = 200;       // *_other companion fields
+const MAX_APPROVALS_OTHER_CHARS = 300;  // approvals_other is CharField(300)
+const MAX_LONG_TEXT_CHARS = 2000;       // TextField defensive cap
+// Distances — Decimal(8, 2). 10,000 km is more than Earth's circumference,
+// safe upper bound for any distance on this planet.
+const MAX_DISTANCE_KM = 10_000;
+// Land area — Decimal(15, 4). Cap at 1,000,000 (any unit) — an FPO with 1M
+// acres would be a country, not a farmer co-op.
+const MAX_LAND_AREA = 1_000_000;
+// Year for infrastructure construction — realistic 1900 to current+5.
+const MAX_INFRA_YEAR = new Date().getFullYear() + 5;
 
 // ── Choices ────────────────────────────────────────────────────────────────
 
@@ -102,7 +121,13 @@ const ParcelSchema = z.object({
   order: z.number(),
   total_land_available: z.union([z.string(), z.number()]).nullable(),
   land_proposed_for_project: z.union([z.string(), z.number()]).nullable(),
-  unit: z.number().nullable(),
+  // Legacy `unit` FK (points to DPRCapacityUnit — kg/mt/litres/etc) is now
+  // excluded from backend serialiser output (deprecated 2026-09-02).
+  // Kept as optional in the schema for one release cycle so any in-flight
+  // FE responses that still carry it don't fail Zod parsing.
+  unit: z.number().nullable().optional(),
+  // Per KAU RCD B.3 (2026-09-02) — 5 fixed land-area units. See src/lib/land-area.ts.
+  land_unit: z.enum(["acre", "cent", "are", "hectare", "sqm"]),
   village: z.string(),
   taluk: z.string(),
   district: z.string(),
@@ -113,6 +138,8 @@ const ParcelSchema = z.object({
   date_of_acquisition: z.string().nullable(),
   present_land_use: z.string(),
   previous_land_use: z.string(),
+  // KAU RCD B.8 — per-parcel component mapping. Array of DPRComponent IDs.
+  components: z.array(z.number()),
 });
 type Parcel = z.infer<typeof ParcelSchema>;
 
@@ -199,6 +226,61 @@ function toInt(v: string | number | null): number | null {
   return Number.isFinite(n) ? Math.trunc(n) : null;
 }
 
+// ── Per-row validators (mirror site_validators.py) ──────────────────────
+type ParcelErrors = Partial<Record<
+  "total_land_available" | "ownership" | "ownership_other" | "components" | "proposed_exceeds_total"
+, string>>;
+
+function validateParcel(
+  row: Parcel,
+  ownershipOtherCode: (id: number | null) => boolean,
+): ParcelErrors {
+  const e: ParcelErrors = {};
+  const total = row.total_land_available;
+  const totalNum = total !== null && total !== undefined && total !== "" ? Number(total) : null;
+  if (totalNum === null || !Number.isFinite(totalNum) || totalNum <= 0) {
+    e.total_land_available = "Land area shall be greater than zero.";
+  }
+  if (!row.ownership) e.ownership = "Land ownership status shall be specified.";
+  if (row.ownership && ownershipOtherCode(row.ownership) && !(row.ownership_other ?? "").trim()) {
+    e.ownership_other = 'Please specify — "Others" was selected for ownership.';
+  }
+  if (!row.components || row.components.length === 0) {
+    e.components = "At least one project component shall be mapped to this parcel.";
+  }
+  // Advisory sanity check — proposed > total is nonsensical (F6).
+  const proposed = row.land_proposed_for_project;
+  const proposedNum = proposed !== null && proposed !== undefined && proposed !== "" ? Number(proposed) : null;
+  if (proposedNum !== null && totalNum !== null && proposedNum > totalNum) {
+    e.proposed_exceeds_total = `Land proposed for project (${proposedNum}) cannot exceed total land available (${totalNum}).`;
+  }
+  return e;
+}
+
+type ConstraintErrors = Partial<Record<
+  "constraint_type" | "constraint_type_other" | "mitigation_measure"
+, string>>;
+function validateConstraint(row: Constraint): ConstraintErrors {
+  const e: ConstraintErrors = {};
+  if (!row.constraint_type) e.constraint_type = "Constraint type is required.";
+  if (row.constraint_type === "other" && !(row.constraint_type_other ?? "").trim()) {
+    e.constraint_type_other = 'Please specify — "Others" was selected in constraint type.';
+  }
+  if (!(row.mitigation_measure ?? "").trim()) {
+    e.mitigation_measure = "Mitigation Measure is required for each site constraint.";
+  }
+  return e;
+}
+
+function validateInfra(row: Infra) {
+  const e: Partial<Record<"infrastructure_type" | "infrastructure_type_other", string>> = {};
+  if (!row.infrastructure_type) e.infrastructure_type = "Infrastructure type is required.";
+  if (row.infrastructure_type === "other" && !(row.infrastructure_type_other ?? "").trim()) {
+    e.infrastructure_type_other = 'Please specify — "Others" was selected in infrastructure type.';
+  }
+  return e;
+}
+
 const DIST_KEYS = [
   "dist_major_market_km", "dist_major_raw_material_source_km", "dist_all_weather_road_km",
   "dist_state_highway_km", "dist_national_highway_km", "dist_railway_station_km",
@@ -235,8 +317,16 @@ export function SiteSection({ uuid }: { uuid: string }) {
     queryFn: () => dprMasterApi.list("land-ownership-types"),
     staleTime: 24 * 60 * 60 * 1000,
   });
+  // KAU RCD B.8 — per-parcel component picker. Full master list; ideally we'd
+  // narrow to just the project's selected components (from the Components
+  // section) but that requires an extra fetch. Full list is fine for now.
+  const componentsQuery = useQuery({
+    queryKey: ["dpr-master", "components"],
+    queryFn: () => dprMasterApi.list("components"),
+    staleTime: 24 * 60 * 60 * 1000,
+  });
 
-  const { form, isLoading, isDirty, isSaving, lastSavedAt, saveError, save, discard } = useDprSectionForm<Data>({
+  const { form, isLoading, isDirty, isSaving, lastSavedAt, saveError, fieldErrors, fieldWarnings, save, discard } = useDprSectionForm<Data>({
     uuid,
     sectionKey: "site",
     schema: Schema,
@@ -284,15 +374,90 @@ export function SiteSection({ uuid }: { uuid: string }) {
     has_mobile_network: hasMobile,
     internet_unavailable: internetUnavailable,
   };
+  // Section-level text/textarea watched values — converted from register()
+  // to controlled so Save button + autosave fire reliably (Location F3 fix).
+  const pendingApprovalsRemarks = useWatch({ control: form.control, name: "pending_approvals_remarks" }) ?? "";
+  const futureBuildingsPlanned = useWatch({ control: form.control, name: "future_buildings_planned" }) ?? "";
+  const utilityExpansionFeasibility = useWatch({ control: form.control, name: "utility_expansion_feasibility" }) ?? "";
+
+  // B. Site characteristics — 7 CharField(200) text inputs
+  const topography = useWatch({ control: form.control, name: "topography" }) ?? "";
+  const soilType = useWatch({ control: form.control, name: "soil_type" }) ?? "";
+  const soilBearingCapacity = useWatch({ control: form.control, name: "soil_bearing_capacity" }) ?? "";
+  const waterLogging = useWatch({ control: form.control, name: "water_logging" }) ?? "";
+  const drainageCondition = useWatch({ control: form.control, name: "drainage_condition" }) ?? "";
+  const slope = useWatch({ control: form.control, name: "slope" }) ?? "";
+  const groundWaterLevel = useWatch({ control: form.control, name: "ground_water_level" }) ?? "";
+
+  // D. Distance inputs (Decimal 8,2 each)
+  const distances = {
+    dist_major_market_km: useWatch({ control: form.control, name: "dist_major_market_km" }),
+    dist_major_raw_material_source_km: useWatch({ control: form.control, name: "dist_major_raw_material_source_km" }),
+    dist_all_weather_road_km: useWatch({ control: form.control, name: "dist_all_weather_road_km" }),
+    dist_state_highway_km: useWatch({ control: form.control, name: "dist_state_highway_km" }),
+    dist_national_highway_km: useWatch({ control: form.control, name: "dist_national_highway_km" }),
+    dist_railway_station_km: useWatch({ control: form.control, name: "dist_railway_station_km" }),
+    dist_airport_km: useWatch({ control: form.control, name: "dist_airport_km" }),
+    dist_seaport_km: useWatch({ control: form.control, name: "dist_seaport_km" }),
+    dist_collection_centre_km: useWatch({ control: form.control, name: "dist_collection_centre_km" }),
+    dist_processing_centre_km: useWatch({ control: form.control, name: "dist_processing_centre_km" }),
+  } as const;
+
+  // E/F/G — remaining register-based text inputs
+  const waterSourceOther = useWatch({ control: form.control, name: "water_source_other" }) ?? "";
+  const approvalsOther = useWatch({ control: form.control, name: "approvals_other" }) ?? "";
+  const additionalLandAvailable = useWatch({ control: form.control, name: "additional_land_available" }) ?? "";
+  const areaReservedForExpansion = useWatch({ control: form.control, name: "area_reserved_for_expansion" }) ?? "";
+
+  // Convenience setter — always includes shouldDirty: true.
+  const setField = <K extends keyof Data>(name: K, value: Data[K]) =>
+    form.setValue(name as never, value as never, { shouldDirty: true });
 
   const toggleWaterSource = (code: string, checked: boolean) => {
     const cur = form.getValues("water_sources") ?? [];
-    form.setValue("water_sources", checked ? [...cur, code] : cur.filter((c) => c !== code), { shouldDirty: true });
+    setField("water_sources", checked ? [...cur, code] : cur.filter((c) => c !== code));
   };
   const toggleApproval = (code: string, checked: boolean) => {
     const cur = form.getValues("approvals_available") ?? [];
-    form.setValue("approvals_available", checked ? [...cur, code] : cur.filter((c) => c !== code), { shouldDirty: true });
+    setField("approvals_available", checked ? [...cur, code] : cur.filter((c) => c !== code));
   };
+
+  /**
+   * Internet-availability mutex — "Not available" is mutually exclusive with
+   * Fibre / Broadband / Mobile. Same pattern applied on Location F2. Ticking
+   * "Not available" auto-unchecks the other three; ticking any of the other
+   * three auto-unchecks "Not available". No spec rule enforces this — it's
+   * pure data-integrity (a site can't simultaneously have and not-have
+   * connectivity).
+   */
+  const toggleInternet = (key: "has_fibre" | "has_broadband" | "has_mobile_network" | "internet_unavailable", checked: boolean) => {
+    setField(key, checked as never);
+    if (!checked) return;
+    if (key === "internet_unavailable") {
+      // Ticking "Not available" clears the other three.
+      if (hasFibre) setField("has_fibre", false as never);
+      if (hasBroadband) setField("has_broadband", false as never);
+      if (hasMobile) setField("has_mobile_network", false as never);
+    } else if (internetUnavailable) {
+      // Ticking any of Fibre/Broadband/Mobile clears "Not available".
+      setField("internet_unavailable", false as never);
+    }
+  };
+
+  // Section-level live errors — mirror site_validators.py.
+  const liveErrors: Record<string, string | undefined> = {};
+  if (parcels.length === 0) {
+    liveErrors.parcels = "At least one land parcel shall be specified.";
+  }
+  if (!terrain) {
+    liveErrors.terrain = "Terrain shall be specified.";
+  }
+  const terrainOtherWatch = useWatch({ control: form.control, name: "terrain_other" }) ?? "";
+  if (terrain === "other" && !String(terrainOtherWatch).trim()) {
+    liveErrors.terrain_other = 'Please specify — "Others" was selected for terrain.';
+  }
+  const err = (name: string): string | undefined =>
+    fieldErrors.get(name) ?? liveErrors[name];
 
   const loading = isLoading || unitQuery.isLoading || ownershipQuery.isLoading;
 
@@ -307,19 +472,56 @@ export function SiteSection({ uuid }: { uuid: string }) {
       saveError={saveError}
       onSave={save}
       onDiscard={discard}
+      help={
+        <SectionHelp
+          title="Land, Site Suitability & Infrastructure Readiness"
+          purpose="Capture the physical land + site story — how many parcels, ownership + terrain + soil, distances to markets/highways/ports, utility availability, statutory approvals status, future expansion room, and site constraints with mitigations. Each parcel must be mapped to the project components (processing / storage / marketing / etc.) that will use it. This section feeds the Land & Infrastructure chapter of the DPR PDF and informs civil-works, utilities, and risk sections downstream."
+          whatToFill={[
+            "A — Land Parcels. Click 'Add parcel' to open the modal. Required per parcel: total area available, ownership (FK), land unit (acre / cent / are / hectare / sqm), district, and at least one component the parcel will host. If ownership is 'Others', the specify text becomes required. Add one parcel per contiguous plot — split rows if plots are non-contiguous.",
+            "B — Site Characteristics. Terrain is required (plain / hilly / sloping / valley / mixed / other). If 'Others', specify text is required. Fill soil type, bearing capacity, water logging, drainage, slope, ground-water level as free-text — all optional but strongly recommended for bankability.",
+            "C — Existing Infrastructure. Optional list. Click 'Add infrastructure' to record what's already built on the parcel (approach road, electricity, water tank, boundary wall, etc.). Type is required per row.",
+            "D — Distances (km). All optional. Enter distances to major market, raw-material source, all-weather road, state highway, national highway, railway station, airport, seaport, collection centre, processing centre. Numeric-only; caps at 10000 km.",
+            "E — Utilities. Tick availability of Electricity / Water / Road / Internet. Water sources and internet options are multi-select from master data. 'Not available' internet option is mutually exclusive with Fibre / Broadband / Mobile.",
+            "F — Statutory Approvals. Tick which approvals are already obtained (Land Conversion, Panchayat NOC, Pollution Board NOC, etc.). Remarks field (max 300 chars) for approvals still pending.",
+            "G — Future Expansion. Tick 'Future expansion planned' to reveal fields: additional land available adjacent, area reserved for expansion, planned buildings, utility expansion feasibility. All optional.",
+            "H — Site Constraints. At least one constraint recommended (water scarcity, flood risk, soil issues, etc.). Mitigation measure is required per row. 'Others' constraint type requires specify text.",
+          ]}
+          tips={[
+            "Component mapping in parcel modal is a KAU RCD requirement (B.8). Tick every component the parcel will host — Processing, Storage, Marketing, Cold Storage, etc. A parcel with 0 components blocks Save.",
+            "Land unit is fixed to 5 options (acre / cent / are / hectare / sqm) per KAU RCD B.3. If your land is measured in something else, convert first — 1 cent = 40.47 sqm, 1 acre = 40.47 are, 1 hectare = 100 are.",
+            "Distances feed the market-linkage scoring downstream. A processing unit > 50 km from the raw-material source is a red flag for logistics viability — the AI narrative flags this automatically.",
+            "GPS coordinates for the parcel go on the Location section (§2.3.2), not here. This section is about area + ownership + characteristics.",
+            "'Land proposed for project' should be ≤ 'Total land available' per parcel — the FE surfaces a soft warning if you violate this, backend accepts either.",
+            "Add at least 1 constraint. A DPR with 0 site constraints reads as either unrealistic or under-prepared to a bank appraiser — water scarcity, flood risk, or approach road width are all worth documenting.",
+          ]}
+          downstream={[
+            "Land & Infrastructure chapter in the DPR PDF — parcel table + distances table + utilities checklist all render there",
+            "Civil Works section — parcel area and terrain inform civil-works estimate (levelling, foundation, boundary wall)",
+            "Utilities section — infrastructure availability + distance to nearest grid line inform utility connection costs",
+            "Risk Analysis chapter — constraints + mitigations appear alongside technical / market / financial risks",
+            "AI narrative — terrain + soil + distances + constraints feed the Site Suitability paragraph",
+            "Statutory checklist — pending approvals surface in the Compliance chapter as action items",
+          ]}
+        />
+      }
     >
       <div className="space-y-4">
-        {/* A. Land Parcels */}
+        {/* A. Land Parcels — id enables readiness-panel deep-link scroll */}
+        <div id="dpr-field-parcels" />
         <NestedListCard<Parcel>
           title="A. Land Parcels"
           items={parcels}
           onChange={(next) => form.setValue("parcels", next, { shouldDirty: true })}
+          error={err("parcels")}
+          warning={fieldWarnings.get("parcels")}
           emptyRow={{
             order: 0, total_land_available: null, land_proposed_for_project: null,
-            unit: null, village: "", taluk: "", district: "",
+            unit: null, land_unit: "acre",
+            village: "", taluk: "", district: "",
             ownership: null, ownership_other: "",
             survey_number: "", resurvey_number: "", date_of_acquisition: null,
             present_land_use: "", previous_land_use: "",
+            components: [],
           }}
           columns={[
             { key: "village", label: "Village" },
@@ -331,60 +533,209 @@ export function SiteSection({ uuid }: { uuid: string }) {
               render: (v) => (ownershipQuery.data?.find((r) => r.id === v)?.label as string) ?? "—",
             },
           ]}
-          isValid={(row) => row.total_land_available !== null && row.total_land_available !== "" && !!row.district}
+          isValid={(row) =>
+            Object.keys(
+              validateParcel(row, (id) => {
+                if (!id) return false;
+                const opt = ownershipQuery.data?.find((r) => r.id === id);
+                return Boolean(opt && (opt.code === "other" || opt.code?.endsWith?.("_other")));
+              }),
+            ).length === 0
+          }
           addLabel="Add parcel"
           editLabel="Edit parcel"
-          renderModal={(row, set) => (
+          renderModal={(row, set) => {
+            const isOtherOwnership = (id: number | null) => {
+              if (!id) return false;
+              const opt = ownershipQuery.data?.find((r) => r.id === id);
+              return Boolean(opt && (opt.code === "other" || opt.code?.endsWith?.("_other")));
+            };
+            const pErr = validateParcel(row, isOtherOwnership);
+            return (
             <>
               <ModalRow>
-                <ModalField label="Total land available *">
-                  <Input type="number" step="0.0001" value={row.total_land_available ?? ""} onChange={(e) => set("total_land_available", e.target.value || null)} />
+                <ModalField label="Total land available *" error={pErr.total_land_available}>
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    maxLength={12}
+                    placeholder="e.g. 0.75"
+                    value={row.total_land_available !== null && row.total_land_available !== undefined ? String(row.total_land_available) : ""}
+                    onChange={(e) => {
+                      const cleaned = normaliseDecimalInput(e.target.value, {
+                        max: MAX_LAND_AREA,
+                        maxDecimals: 4,
+                      });
+                      set("total_land_available", cleaned === "" ? null : cleaned);
+                    }}
+                  />
                 </ModalField>
-                <ModalField label="Land proposed for project">
-                  <Input type="number" step="0.0001" value={row.land_proposed_for_project ?? ""} onChange={(e) => set("land_proposed_for_project", e.target.value || null)} />
+                <ModalField label="Land proposed for project" error={pErr.proposed_exceeds_total}>
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    maxLength={12}
+                    placeholder="e.g. 0.5"
+                    value={row.land_proposed_for_project !== null && row.land_proposed_for_project !== undefined ? String(row.land_proposed_for_project) : ""}
+                    onChange={(e) => {
+                      const cleaned = normaliseDecimalInput(e.target.value, {
+                        max: MAX_LAND_AREA,
+                        maxDecimals: 4,
+                      });
+                      set("land_proposed_for_project", cleaned === "" ? null : cleaned);
+                    }}
+                  />
                 </ModalField>
               </ModalRow>
-              <ModalField label="Unit">
-                <MasterSelect value={row.unit} options={unitQuery.data ?? []} onChange={(v) => set("unit", v)} />
+              {/* KAU RCD B.3 (2026-09-02) — land unit is a fixed 5-option list
+                  (acre/cent/are/hectare/sqm). Old FK to DPRCapacityUnit stayed
+                  because it showed kg/mt/litres for land parcels — nonsense.
+                  Backend stores this as a CharField on DPRLandParcel.land_unit;
+                  canonical acre conversion is available via land-area helper. */}
+              <ModalField label="Land unit *">
+                <SearchableSelect
+                  value={row.land_unit}
+                  options={LAND_UNIT_OPTIONS}
+                  onChange={(v) => set("land_unit", (v as Parcel["land_unit"]) || "acre")}
+                  placeholder="Type to search unit…"
+                />
               </ModalField>
               <ModalRow>
-                <ModalField label="Village"><Input value={row.village} onChange={(e) => set("village", e.target.value)} /></ModalField>
-                <ModalField label="Taluk"><Input value={row.taluk} onChange={(e) => set("taluk", e.target.value)} /></ModalField>
+                <ModalField label="Village">
+                  <Input
+                    value={row.village}
+                    maxLength={MAX_SHORT_CHARS}
+                    onChange={(e) => set("village", e.target.value.slice(0, MAX_SHORT_CHARS))}
+                  />
+                </ModalField>
+                <ModalField label="Taluk">
+                  <Input
+                    value={row.taluk}
+                    maxLength={MAX_SHORT_CHARS}
+                    onChange={(e) => set("taluk", e.target.value.slice(0, MAX_SHORT_CHARS))}
+                  />
+                </ModalField>
               </ModalRow>
-              <ModalField label="District *"><Input value={row.district} onChange={(e) => set("district", e.target.value)} /></ModalField>
-              <ModalField label="Ownership">
-                <MasterSelect value={row.ownership} options={ownershipQuery.data ?? []} onChange={(v) => set("ownership", v)} />
+              <ModalField label="District *">
+                <SearchableSelect
+                  value={row.district}
+                  options={KERALA_DISTRICT_OPTIONS}
+                  onChange={(v) => set("district", v)}
+                  placeholder="Type to search district…"
+                />
               </ModalField>
-              {ownershipQuery.data?.find((r) => r.id === row.ownership)?.code === "other" && (
-                <ModalField label="Specify (Others)"><Input value={row.ownership_other} onChange={(e) => set("ownership_other", e.target.value)} /></ModalField>
+              <ModalField label="Ownership *" error={pErr.ownership}>
+                <MasterSearchableSelect
+                  value={row.ownership}
+                  options={ownershipQuery.data ?? []}
+                  onChange={(v) => set("ownership", v)}
+                  placeholder="Type to search ownership…"
+                />
+              </ModalField>
+              {isOtherOwnership(row.ownership) && (
+                <ModalField label="Please specify (Others) *" error={pErr.ownership_other}>
+                  <Input
+                    value={row.ownership_other}
+                    maxLength={MAX_OTHER_TEXT_CHARS}
+                    onChange={(e) => set("ownership_other", e.target.value.slice(0, MAX_OTHER_TEXT_CHARS))}
+                  />
+                </ModalField>
               )}
               <ModalRow>
-                <ModalField label="Survey number(s)"><Input value={row.survey_number} onChange={(e) => set("survey_number", e.target.value)} /></ModalField>
-                <ModalField label="Re-survey number(s)"><Input value={row.resurvey_number} onChange={(e) => set("resurvey_number", e.target.value)} /></ModalField>
+                <ModalField label="Survey number(s)">
+                  <Input
+                    value={row.survey_number}
+                    maxLength={MAX_TEXT_CHARS}
+                    onChange={(e) => set("survey_number", e.target.value.slice(0, MAX_TEXT_CHARS))}
+                  />
+                </ModalField>
+                <ModalField label="Re-survey number(s)">
+                  <Input
+                    value={row.resurvey_number}
+                    maxLength={MAX_TEXT_CHARS}
+                    onChange={(e) => set("resurvey_number", e.target.value.slice(0, MAX_TEXT_CHARS))}
+                  />
+                </ModalField>
               </ModalRow>
               <ModalRow>
                 <ModalField label="Date of acquisition">
                   <Input type="date" value={row.date_of_acquisition ?? ""} onChange={(e) => set("date_of_acquisition", e.target.value || null)} />
                 </ModalField>
-                <ModalField label="Present land use"><Input value={row.present_land_use} onChange={(e) => set("present_land_use", e.target.value)} /></ModalField>
+                <ModalField label="Present land use">
+                  <Input
+                    value={row.present_land_use}
+                    maxLength={MAX_TEXT_CHARS}
+                    onChange={(e) => set("present_land_use", e.target.value.slice(0, MAX_TEXT_CHARS))}
+                  />
+                </ModalField>
               </ModalRow>
-              <ModalField label="Previous land use"><Input value={row.previous_land_use} onChange={(e) => set("previous_land_use", e.target.value)} /></ModalField>
+              <ModalField label="Previous land use">
+                <Input
+                  value={row.previous_land_use}
+                  maxLength={MAX_TEXT_CHARS}
+                  onChange={(e) => set("previous_land_use", e.target.value.slice(0, MAX_TEXT_CHARS))}
+                />
+              </ModalField>
+
+              {/* KAU RCD B.8 — per-parcel component mapping. Backend rejects
+                  parcels with 0 components. Multi-select checkbox grid. */}
+              <ModalField label="Project components on this parcel *">
+                <div className="grid gap-2 rounded-md border p-3 sm:grid-cols-2">
+                  {(componentsQuery.data ?? []).length === 0 ? (
+                    <p className="text-xs text-muted-foreground">Loading components…</p>
+                  ) : (
+                    (componentsQuery.data ?? []).map((c) => {
+                      const checked = row.components.includes(c.id);
+                      return (
+                        <label key={c.id} className="flex cursor-pointer items-center gap-2 text-xs">
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={(v) => {
+                              const next = v
+                                ? [...row.components, c.id]
+                                : row.components.filter((id) => id !== c.id);
+                              set("components", next);
+                            }}
+                          />
+                          <span>{c.label}</span>
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
+                {pErr.components && (
+                  <p className="mt-1 text-xs text-destructive">
+                    {pErr.components}
+                  </p>
+                )}
+              </ModalField>
             </>
-          )}
+            );
+          }}
         />
 
         {/* B. Site Characteristics */}
         <Card><CardContent className="space-y-4 p-6">
           <h3 className="text-sm font-semibold">B. Site Characteristics</h3>
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label>Terrain *</Label>
-              <ChoiceSelect value={terrain ?? ""} options={TERRAIN} onChange={(v) => form.setValue("terrain", v, { shouldDirty: true })} />
+            <div id="dpr-field-terrain" className="space-y-1.5">
+              <Label className={err("terrain") ? "text-destructive" : undefined}>Terrain *</Label>
+              <SearchableSelect value={terrain ?? ""} options={TERRAIN} onChange={(v) => setField("terrain", v)} placeholder="Type to search terrain…" />
+              {err("terrain") && (
+                <p className="text-xs text-destructive">{err("terrain")}</p>
+              )}
             </div>
             {terrain === "other" && (
               <div className="space-y-1.5">
-                <Label>Specify (Others)</Label>
-                <Input {...form.register("terrain_other")} />
+                <Label className={err("terrain_other") ? "text-destructive" : undefined}>Please specify (Others) *</Label>
+                <Input
+                  value={terrainOtherWatch as string}
+                  maxLength={MAX_OTHER_TEXT_CHARS}
+                  onChange={(e) => setField("terrain_other", e.target.value.slice(0, MAX_OTHER_TEXT_CHARS))}
+                />
+                {err("terrain_other") && (
+                  <p className="text-xs text-destructive">{err("terrain_other")}</p>
+                )}
               </div>
             )}
           </div>
@@ -399,12 +750,27 @@ export function SiteSection({ uuid }: { uuid: string }) {
             </label>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            {[["topography","Topography"],["soil_type","Soil type"],["soil_bearing_capacity","Soil bearing capacity"],["water_logging","Water logging"],["drainage_condition","Drainage condition"],["slope","Slope"],["ground_water_level","Ground water level"]].map(([k,l]) => (
-              <div key={k} className="space-y-1.5">
-                <Label className="text-xs">{l}</Label>
-                <Input {...form.register(k as keyof Data)} />
-              </div>
-            ))}
+            {(() => {
+              const bFields: Array<[keyof Data, string, string]> = [
+                ["topography", "Topography", topography as string],
+                ["soil_type", "Soil type", soilType as string],
+                ["soil_bearing_capacity", "Soil bearing capacity", soilBearingCapacity as string],
+                ["water_logging", "Water logging", waterLogging as string],
+                ["drainage_condition", "Drainage condition", drainageCondition as string],
+                ["slope", "Slope", slope as string],
+                ["ground_water_level", "Ground water level", groundWaterLevel as string],
+              ];
+              return bFields.map(([key, label, value]) => (
+                <div key={key as string} className="space-y-1.5">
+                  <Label className="text-xs">{label}</Label>
+                  <Input
+                    value={value}
+                    maxLength={MAX_TEXT_CHARS}
+                    onChange={(e) => setField(key, e.target.value.slice(0, MAX_TEXT_CHARS) as Data[typeof key])}
+                  />
+                </div>
+              ));
+            })()}
           </div>
         </CardContent></Card>
 
@@ -419,21 +785,65 @@ export function SiteSection({ uuid }: { uuid: string }) {
             { key: "condition", label: "Condition" },
             { key: "approximate_area", label: "Area" },
           ]}
-          isValid={(row) => !!row.infrastructure_type}
+          isValid={(row) => Object.keys(validateInfra(row)).length === 0}
           addLabel="Add infrastructure"
           editLabel="Edit infrastructure"
           renderModal={(row, set) => (
             <>
-              <ModalField label="Type *">
-                <ChoiceSelect value={row.infrastructure_type} options={INFRA_TYPES} onChange={(v) => set("infrastructure_type", v)} />
+              <ModalField label="Type *" error={validateInfra(row).infrastructure_type}>
+                <SearchableSelect value={row.infrastructure_type} options={INFRA_TYPES} onChange={(v: string) => set("infrastructure_type", v)} placeholder="Type to search…" />
               </ModalField>
               {row.infrastructure_type === "other" && (
-                <ModalField label="Specify"><Input value={row.infrastructure_type_other} onChange={(e) => set("infrastructure_type_other", e.target.value)} /></ModalField>
+                <ModalField label="Please specify (Others)">
+                  <Input
+                    value={row.infrastructure_type_other}
+                    maxLength={MAX_OTHER_TEXT_CHARS}
+                    onChange={(e) => set("infrastructure_type_other", e.target.value.slice(0, MAX_OTHER_TEXT_CHARS))}
+                  />
+                </ModalField>
               )}
-              <ModalField label="Condition"><Input value={row.condition} onChange={(e) => set("condition", e.target.value)} /></ModalField>
+              <ModalField label="Condition">
+                <Input
+                  value={row.condition}
+                  maxLength={MAX_TEXT_CHARS}
+                  onChange={(e) => set("condition", e.target.value.slice(0, MAX_TEXT_CHARS))}
+                />
+              </ModalField>
               <ModalRow>
-                <ModalField label="Approximate area"><Input type="number" step="0.01" value={row.approximate_area ?? ""} onChange={(e) => set("approximate_area", e.target.value || null)} /></ModalField>
-                <ModalField label="Year of construction"><Input type="number" value={row.year_of_construction ?? ""} onChange={(e) => set("year_of_construction", e.target.value || null)} /></ModalField>
+                <ModalField label="Approximate area">
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    maxLength={12}
+                    placeholder="sq m"
+                    value={row.approximate_area !== null && row.approximate_area !== undefined ? String(row.approximate_area) : ""}
+                    onChange={(e) => {
+                      const cleaned = normaliseDecimalInput(e.target.value, {
+                        max: MAX_LAND_AREA,
+                        maxDecimals: 2,
+                      });
+                      set("approximate_area", cleaned === "" ? null : cleaned);
+                    }}
+                  />
+                </ModalField>
+                <ModalField label="Year of construction">
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={4}
+                    placeholder="e.g. 2022"
+                    value={row.year_of_construction !== null && row.year_of_construction !== undefined ? String(row.year_of_construction) : ""}
+                    onChange={(e) => {
+                      // Cap at reasonable upper bound (current year + 5) — a
+                      // building "constructed" in 2200 is invalid input.
+                      const cleaned = normaliseIntegerInput(e.target.value, {
+                        max: MAX_INFRA_YEAR,
+                        min: 1900,
+                      });
+                      set("year_of_construction", cleaned === "" ? null : cleaned);
+                    }}
+                  />
+                </ModalField>
               </ModalRow>
               <label className="flex cursor-pointer items-center gap-2 text-sm">
                 <Checkbox checked={!!row.renovation_required} onCheckedChange={(c) => set("renovation_required", !!c)} />
@@ -447,12 +857,42 @@ export function SiteSection({ uuid }: { uuid: string }) {
         <Card><CardContent className="space-y-3 p-6">
           <h3 className="text-sm font-semibold">D. Site Accessibility (distances in km)</h3>
           <div className="grid gap-3 sm:grid-cols-2">
-            {[["dist_major_market_km","Major market"],["dist_major_raw_material_source_km","Major raw material source"],["dist_all_weather_road_km","All-weather road"],["dist_state_highway_km","State highway"],["dist_national_highway_km","National highway"],["dist_railway_station_km","Railway station"],["dist_airport_km","Airport"],["dist_seaport_km","Seaport"],["dist_collection_centre_km","Collection centre"],["dist_processing_centre_km","Processing centre"]].map(([k,l]) => (
-              <div key={k} className="space-y-1.5">
-                <Label className="text-xs">{l}</Label>
-                <Input type="number" step="0.01" {...form.register(k as keyof Data)} />
-              </div>
-            ))}
+            {(() => {
+              const distFields: Array<[keyof typeof distances, string]> = [
+                ["dist_major_market_km", "Major market"],
+                ["dist_major_raw_material_source_km", "Major raw material source"],
+                ["dist_all_weather_road_km", "All-weather road"],
+                ["dist_state_highway_km", "State highway"],
+                ["dist_national_highway_km", "National highway"],
+                ["dist_railway_station_km", "Railway station"],
+                ["dist_airport_km", "Airport"],
+                ["dist_seaport_km", "Seaport"],
+                ["dist_collection_centre_km", "Collection centre"],
+                ["dist_processing_centre_km", "Processing centre"],
+              ];
+              return distFields.map(([key, label]) => {
+                const value = distances[key];
+                return (
+                  <div key={key as string} className="space-y-1.5">
+                    <Label className="text-xs">{label}</Label>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      maxLength={10}
+                      placeholder="km"
+                      value={value !== null && value !== undefined ? String(value) : ""}
+                      onChange={(e) => {
+                        const cleaned = normaliseDecimalInput(e.target.value, {
+                          max: MAX_DISTANCE_KM,
+                          maxDecimals: 2,
+                        });
+                        setField(key as keyof Data, (cleaned === "" ? null : cleaned) as Data[keyof Data]);
+                      }}
+                    />
+                  </div>
+                );
+              });
+            })()}
           </div>
         </CardContent></Card>
 
@@ -462,15 +902,15 @@ export function SiteSection({ uuid }: { uuid: string }) {
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="space-y-1.5">
               <Label className="text-xs">Electricity</Label>
-              <ChoiceSelect value={electricity ?? ""} options={ELECTRICITY} onChange={(v) => form.setValue("electricity_availability", v, { shouldDirty: true })} />
+              <SearchableSelect value={electricity ?? ""} options={ELECTRICITY} onChange={(v) => form.setValue("electricity_availability", v, { shouldDirty: true })} placeholder="Type to search…" />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Water</Label>
-              <ChoiceSelect value={waterAvail ?? ""} options={WATER_AVAIL} onChange={(v) => form.setValue("water_availability", v, { shouldDirty: true })} />
+              <SearchableSelect value={waterAvail ?? ""} options={WATER_AVAIL} onChange={(v) => form.setValue("water_availability", v, { shouldDirty: true })} placeholder="Type to search…" />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Road connectivity</Label>
-              <ChoiceSelect value={roadConnectivity ?? ""} options={ROAD} onChange={(v) => form.setValue("road_connectivity", v, { shouldDirty: true })} />
+              <SearchableSelect value={roadConnectivity ?? ""} options={ROAD} onChange={(v) => form.setValue("road_connectivity", v, { shouldDirty: true })} placeholder="Type to search…" />
             </div>
           </div>
           <div>
@@ -485,17 +925,29 @@ export function SiteSection({ uuid }: { uuid: string }) {
             </div>
             {waterSources.includes("other") && (
               <div className="mt-2 space-y-1.5">
-                <Label className="text-xs">Specify (Others)</Label>
-                <Input {...form.register("water_source_other")} />
+                <Label className="text-xs">Please specify (Others)</Label>
+                <Input
+                  value={waterSourceOther as string}
+                  maxLength={MAX_OTHER_TEXT_CHARS}
+                  onChange={(e) => setField("water_source_other", e.target.value.slice(0, MAX_OTHER_TEXT_CHARS))}
+                />
               </div>
             )}
           </div>
           <div>
             <Label>Internet (check all applicable)</Label>
             <div className="mt-2 grid gap-2 sm:grid-cols-4">
-              {[["has_fibre","Fibre"],["has_broadband","Broadband"],["has_mobile_network","Mobile"],["internet_unavailable","Not available"]].map(([k,l]) => (
+              {([
+                ["has_fibre","Fibre"],
+                ["has_broadband","Broadband"],
+                ["has_mobile_network","Mobile"],
+                ["internet_unavailable","Not available"],
+              ] as const).map(([k,l]) => (
                 <label key={k} className="flex cursor-pointer items-center gap-2 text-sm">
-                  <Checkbox checked={!!internetChecks[k]} onCheckedChange={(c) => form.setValue(k as keyof Data, !!c as never, { shouldDirty: true })} />
+                  <Checkbox
+                    checked={!!internetChecks[k]}
+                    onCheckedChange={(c) => toggleInternet(k, !!c)}
+                  />
                   {l}
                 </label>
               ))}
@@ -516,13 +968,22 @@ export function SiteSection({ uuid }: { uuid: string }) {
           </div>
           {approvals.includes("other") && (
             <div className="space-y-1.5">
-              <Label className="text-xs">Specify (Others)</Label>
-              <Input {...form.register("approvals_other")} />
+              <Label className="text-xs">Please specify (Others)</Label>
+              <Input
+                value={approvalsOther as string}
+                maxLength={MAX_APPROVALS_OTHER_CHARS}
+                onChange={(e) => setField("approvals_other", e.target.value.slice(0, MAX_APPROVALS_OTHER_CHARS))}
+              />
             </div>
           )}
           <div className="space-y-1.5">
             <Label className="text-xs">Remarks regarding pending approvals</Label>
-            <Textarea rows={2} {...form.register("pending_approvals_remarks")} />
+            <CountedTextarea
+              rows={2}
+              maxChars={MAX_LONG_TEXT_CHARS}
+              value={pendingApprovalsRemarks as string}
+              onChange={(v) => setField("pending_approvals_remarks", v)}
+            />
           </div>
         </CardContent></Card>
 
@@ -536,16 +997,49 @@ export function SiteSection({ uuid }: { uuid: string }) {
           {hasExpansion && (
             <div className="space-y-3 border-l-2 border-primary/30 pl-4">
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5"><Label className="text-xs">Additional land available</Label><Input {...form.register("additional_land_available")} /></div>
-                <div className="space-y-1.5"><Label className="text-xs">Area reserved for expansion</Label><Input {...form.register("area_reserved_for_expansion")} /></div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Additional land available</Label>
+                  <Input
+                    value={additionalLandAvailable as string}
+                    maxLength={MAX_TEXT_CHARS}
+                    placeholder="e.g. ~0.25 acre adjacent"
+                    onChange={(e) => setField("additional_land_available", e.target.value.slice(0, MAX_TEXT_CHARS))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Area reserved for expansion</Label>
+                  <Input
+                    value={areaReservedForExpansion as string}
+                    maxLength={MAX_TEXT_CHARS}
+                    placeholder="e.g. 0.15 acre within existing plot"
+                    onChange={(e) => setField("area_reserved_for_expansion", e.target.value.slice(0, MAX_TEXT_CHARS))}
+                  />
+                </div>
               </div>
-              <div className="space-y-1.5"><Label className="text-xs">Future buildings planned</Label><Textarea rows={2} {...form.register("future_buildings_planned")} /></div>
-              <div className="space-y-1.5"><Label className="text-xs">Utility expansion feasibility</Label><Textarea rows={2} {...form.register("utility_expansion_feasibility")} /></div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Future buildings planned</Label>
+                <CountedTextarea
+                  rows={2}
+                  maxChars={MAX_LONG_TEXT_CHARS}
+                  value={futureBuildingsPlanned as string}
+                  onChange={(v) => setField("future_buildings_planned", v)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Utility expansion feasibility</Label>
+                <CountedTextarea
+                  rows={2}
+                  maxChars={MAX_LONG_TEXT_CHARS}
+                  value={utilityExpansionFeasibility as string}
+                  onChange={(v) => setField("utility_expansion_feasibility", v)}
+                />
+              </div>
             </div>
           )}
         </CardContent></Card>
 
-        {/* H. Site Constraints */}
+        {/* H. Site Constraints — id enables readiness-panel deep-link scroll */}
+        <div id="dpr-field-constraints" />
         <NestedListCard<Constraint>
           title="H. Site Constraints & Mitigation"
           items={constraints}
@@ -555,23 +1049,45 @@ export function SiteSection({ uuid }: { uuid: string }) {
             { key: "constraint_type", label: "Constraint", render: (v) => CONSTRAINT_TYPES.find((o) => o.value === v)?.label ?? "—" },
             { key: "mitigation_measure", label: "Mitigation", render: (v) => ((v as string)?.slice(0, 60) ?? "") + ((v as string)?.length > 60 ? "…" : "") },
           ]}
-          isValid={(row) => !!row.constraint_type && row.mitigation_measure.trim().length > 0}
+          isValid={(row) => Object.keys(validateConstraint(row)).length === 0}
           addLabel="Add constraint"
           editLabel="Edit constraint"
           renderModal={(row, set) => (
             <>
-              <ModalField label="Constraint type *">
-                <ChoiceSelect value={row.constraint_type} options={CONSTRAINT_TYPES} onChange={(v) => set("constraint_type", v)} />
-              </ModalField>
-              {row.constraint_type === "other" && (
-                <ModalField label="Specify"><Input value={row.constraint_type_other} onChange={(e) => set("constraint_type_other", e.target.value)} /></ModalField>
-              )}
-              <ModalField label="Proposed mitigation measure *">
-                <Textarea rows={3} value={row.mitigation_measure} onChange={(e) => set("mitigation_measure", e.target.value)} />
-              </ModalField>
-              <ModalField label="Existing situation (optional)">
-                <Textarea rows={2} value={row.existing_situation} onChange={(e) => set("existing_situation", e.target.value)} />
-              </ModalField>
+              {(() => {
+                const cErr = validateConstraint(row);
+                return (<>
+                  <ModalField label="Constraint type *" error={cErr.constraint_type}>
+                    <SearchableSelect value={row.constraint_type} options={CONSTRAINT_TYPES} onChange={(v: string) => set("constraint_type", v)} placeholder="Type to search…" />
+                  </ModalField>
+                  {row.constraint_type === "other" && (
+                    <ModalField label='Please specify (Others) *' error={cErr.constraint_type_other}>
+                      <Input
+                        value={row.constraint_type_other}
+                        maxLength={MAX_OTHER_TEXT_CHARS}
+                        onChange={(e) => set("constraint_type_other", e.target.value.slice(0, MAX_OTHER_TEXT_CHARS))}
+                      />
+                    </ModalField>
+                  )}
+                  <ModalField label="Proposed mitigation measure *" error={cErr.mitigation_measure}>
+                    <CountedTextarea
+                      rows={3}
+                      maxChars={MAX_LONG_TEXT_CHARS}
+                      value={row.mitigation_measure}
+                      onChange={(v) => set("mitigation_measure", v)}
+                      error={Boolean(cErr.mitigation_measure)}
+                    />
+                  </ModalField>
+                  <ModalField label="Existing situation (optional)">
+                    <CountedTextarea
+                      rows={2}
+                      maxChars={MAX_LONG_TEXT_CHARS}
+                      value={row.existing_situation}
+                      onChange={(v) => set("existing_situation", v)}
+                    />
+                  </ModalField>
+                </>);
+              })()}
             </>
           )}
         />
