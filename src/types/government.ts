@@ -3,7 +3,6 @@
  * Based on SRS Section 3.2.2
  */
 
-
 export interface GovtDashboardStats {
   total: number;
   by_status: Record<string, number>;
@@ -215,7 +214,6 @@ export interface GovtDashboardStats {
   jurisdiction_type: "state" | "district";
 }
 
-
 // Added for enriched FPO Directory detail view
 export interface GovtFPODetail {
   id: number;
@@ -272,7 +270,6 @@ export interface GovtFPODetail {
   updated_at: string;
 }
 
-
 // Added for Training Sessions and Schemes write access
 export interface GovtTrainingSession {
   id: number;
@@ -310,7 +307,6 @@ export interface GovtTrainingSessionPayload {
   venue?: string;
 }
 
-
 export interface GovtScheme {
   id: number;
   name_en: string;
@@ -326,6 +322,8 @@ export interface GovtScheme {
   last_updated: string | null;
   is_active: boolean;
   order: number;
+  created_by: number | null;
+  created_by_name: string | null;
   created_at: string;
   updated_at: string;
 }

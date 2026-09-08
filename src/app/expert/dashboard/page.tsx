@@ -1,12 +1,13 @@
 "use client";
 import { useState } from "react";
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { expertDashboardApi, type ExpertBooking } from "@/app/expert/_api/dashboard";
+import { type ExpertBooking, expertDashboardApi } from "@/app/expert/_api/dashboard";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -74,9 +75,7 @@ export default function ExpertDashboardPage() {
         <p className="text-muted-foreground text-sm">Manage your appointment requests</p>
       </div>
 
-      {bookings.length === 0 && (
-        <p className="text-muted-foreground text-sm">No bookings yet.</p>
-      )}
+      {bookings.length === 0 && <p className="text-muted-foreground text-sm">No bookings yet.</p>}
 
       {pending.length > 0 && (
         <div className="flex flex-col gap-3">
@@ -92,18 +91,33 @@ export default function ExpertDashboardPage() {
                   <span className="font-medium">{booking.requested_date}</span> at{" "}
                   <span className="font-medium">{booking.requested_time}</span>
                 </p>
-                {booking.fpo_application_id && <p className="text-muted-foreground text-xs">Application ID: {booking.fpo_application_id}</p>}
-                {booking.fpo_contact_name && <p className="text-muted-foreground text-xs">Contact: {booking.fpo_contact_name}</p>}
+                {booking.fpo_application_id && (
+                  <p className="text-muted-foreground text-xs">Application ID: {booking.fpo_application_id}</p>
+                )}
+                {booking.fpo_contact_name && (
+                  <p className="text-muted-foreground text-xs">Contact: {booking.fpo_contact_name}</p>
+                )}
                 {booking.fpo_email && <p className="text-muted-foreground text-xs">Email: {booking.fpo_email}</p>}
                 {booking.fpo_phone && <p className="text-muted-foreground text-xs">Phone: {booking.fpo_phone}</p>}
                 {booking.topic && <p className="text-muted-foreground text-sm">Topic: {booking.topic}</p>}
                 {booking.notes && <p className="text-muted-foreground text-sm">Notes: {booking.notes}</p>}
-                {booking.fpo_location && <p className="text-muted-foreground text-xs">Location: {booking.fpo_location}</p>}
+                {booking.fpo_location && (
+                  <p className="text-muted-foreground text-xs">Location: {booking.fpo_location}</p>
+                )}
                 <div className="flex gap-2">
-                  <Button size="sm" onClick={() => confirmMutation.mutate(booking.id)} disabled={confirmMutation.isPending}>
+                  <Button
+                    size="sm"
+                    onClick={() => confirmMutation.mutate(booking.id)}
+                    disabled={confirmMutation.isPending}
+                  >
                     Confirm
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => handleReject(booking)} disabled={rejectMutation.isPending}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleReject(booking)}
+                    disabled={rejectMutation.isPending}
+                  >
                     Reject
                   </Button>
                 </div>
@@ -122,10 +136,26 @@ export default function ExpertDashboardPage() {
                 <CardTitle className="text-base">{booking.fpo_name}</CardTitle>
                 <Badge className={STATUS_COLORS[booking.status]}>{booking.status_display}</Badge>
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex flex-col gap-1">
                 <p className="text-sm">
                   {booking.requested_date} at {booking.requested_time}
                 </p>
+                {booking.fpo_application_id && (
+                  <p className="text-muted-foreground text-xs">Application ID: {booking.fpo_application_id}</p>
+                )}
+                {booking.fpo_contact_name && (
+                  <p className="text-muted-foreground text-xs">Contact: {booking.fpo_contact_name}</p>
+                )}
+                {booking.fpo_email && <p className="text-muted-foreground text-xs">Email: {booking.fpo_email}</p>}
+                {booking.fpo_phone && <p className="text-muted-foreground text-xs">Phone: {booking.fpo_phone}</p>}
+                {booking.topic && <p className="text-muted-foreground text-sm">Topic: {booking.topic}</p>}
+                {booking.notes && <p className="text-muted-foreground text-sm">Notes: {booking.notes}</p>}
+                {booking.fpo_location && (
+                  <p className="text-muted-foreground text-xs">Location: {booking.fpo_location}</p>
+                )}
+                {booking.cancellation_reason && (
+                  <p className="text-muted-foreground text-xs">Reason: {booking.cancellation_reason}</p>
+                )}
               </CardContent>
             </Card>
           ))}
