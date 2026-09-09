@@ -9,7 +9,7 @@ const BreadCrumb = ({ title, breadCrumb }: Props) => {
   return (
     <div
       className="breadcrumb-area text-center shadow dark bg-fixed text-light"
-      style={{ backgroundImage: "url(/assets/img/banner/5.jpg)" }}
+      style={{ backgroundImage: "url(/assets/img/banner/5.webp)" }}
     >
       <div className="container">
         <div className="row">
@@ -18,7 +18,9 @@ const BreadCrumb = ({ title, breadCrumb }: Props) => {
             <nav aria-label="breadcrumb">
               <ol className="breadcrumb">
                 <li>
-                  <Link href="/"><i className="fas fa-home" /> Home</Link>
+                  <Link href="/">
+                    <i className="fas fa-home" /> Home
+                  </Link>
                 </li>
                 <li className="active">{breadCrumb}</li>
               </ol>
