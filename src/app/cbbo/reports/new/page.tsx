@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -15,17 +15,32 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Textarea } from "@/components/ui/textarea";
+import { translationsApi } from "@/lib/api/translations";
+import { useLocaleStore } from "@/stores/locale-store";
+
+type T = Record<string, string>;
 
 export default function NewCBBOReportPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const presetFpoId = searchParams.get("fpo_id");
+  const locale = useLocaleStore((s) => s.locale);
+  const [t, setT] = useState<T>({});
 
   const [fpoId, setFpoId] = useState(presetFpoId ?? "");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [activities, setActivities] = useState("");
   const [participantsCount, setParticipantsCount] = useState("0");
   const [outcomes, setOutcomes] = useState("");
+
+  useEffect(() => {
+    translationsApi
+      .getPublic(locale, "cbbo_reports_new,common")
+      .then((data) => {
+        setT({ ...(data.cbbo_reports_new ?? {}), ...(data.common ?? {}) });
+      })
+      .catch(() => undefined);
+  }, [locale]);
 
   const { data: assignedFpos, isLoading: fposLoading } = useQuery({
     queryKey: ["cbbo", "fpos", "select-options"],
@@ -53,21 +68,21 @@ export default function NewCBBOReportPage() {
         outcomes,
       }),
     onSuccess: () => {
-      toast.success("Report saved as draft");
+      toast.success(t.toast_saved ?? "Report saved as draft");
       router.push("/cbbo/reports");
     },
     onError: (error: unknown) => {
       const msg = (error as { data?: { message?: string } })?.data?.message;
-      toast.error(msg ?? "Failed to save report");
+      toast.error(msg ?? (t.toast_save_failed ?? "Failed to save report"));
     },
   });
 
   return (
     <div className="flex flex-col gap-6 p-6">
       <div>
-        <h1 className="font-bold text-2xl">New Report</h1>
+        <h1 className="font-bold text-2xl">{t.page_title ?? "New Report"}</h1>
         <p className="mt-0.5 text-muted-foreground text-sm">
-          This report saves as a draft — submit it separately once ready.
+          {t.page_description ?? "This report saves as a draft - submit it separately once ready."}
         </p>
       </div>
 
@@ -75,11 +90,11 @@ export default function NewCBBOReportPage() {
         onSubmit={(e) => {
           e.preventDefault();
           if (!fpoId) {
-            toast.error("Select an FPO");
+            toast.error(t.error_select_fpo ?? "Select an FPO");
             return;
           }
           if (activities.trim().length < 10) {
-            toast.error("Activities must be at least 10 characters");
+            toast.error(t.error_activities_length ?? "Activities must be at least 10 characters");
             return;
           }
           mutation.mutate();
@@ -88,35 +103,35 @@ export default function NewCBBOReportPage() {
         <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Report Details</CardTitle>
+              <CardTitle className="text-base">{t.section_title ?? "Report Details"}</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
               <Field>
                 <FieldLabel htmlFor="fpo-id">
-                  FPO <span className="text-destructive">*</span>
+                  {t.field_fpo ?? "FPO"} <span className="text-destructive">*</span>
                 </FieldLabel>
                 <SearchableSelect
                   value={fpoId}
                   onChange={setFpoId}
                   options={fpoOptions}
-                  placeholder={fposLoading ? "Loading FPOs..." : "Search your assigned FPOs..."}
+                  placeholder={fposLoading ? (t.placeholder_fpo_loading ?? "Loading FPOs...") : (t.placeholder_fpo_search ?? "Search your assigned FPOs...")}
                   disabled={!!presetFpoId || fposLoading}
                 />
                 {fpo && (
                   <p className="mt-1 text-muted-foreground text-xs">
-                    Selected: {fpo.name} ({fpo.district_display ?? fpo.district})
+                    {t.label_selected ?? "Selected"}: {fpo.name} ({fpo.district_display ?? fpo.district})
                   </p>
                 )}
               </Field>
               <FieldGroup className="grid grid-cols-2 gap-4">
                 <Field>
                   <FieldLabel htmlFor="report-date">
-                    Date <span className="text-destructive">*</span>
+                    {t.field_date ?? "Date"} <span className="text-destructive">*</span>
                   </FieldLabel>
                   <Input id="report-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
                 </Field>
                 <Field>
-                  <FieldLabel htmlFor="participants">Participants Count</FieldLabel>
+                  <FieldLabel htmlFor="participants">{t.field_participants ?? "Participants Count"}</FieldLabel>
                   <Input
                     id="participants"
                     type="number"
@@ -128,18 +143,18 @@ export default function NewCBBOReportPage() {
               </FieldGroup>
               <Field>
                 <FieldLabel htmlFor="activities">
-                  Activities <span className="text-destructive">*</span>
+                  {t.field_activities ?? "Activities"} <span className="text-destructive">*</span>
                 </FieldLabel>
                 <Textarea
                   id="activities"
                   value={activities}
                   onChange={(e) => setActivities(e.target.value)}
-                  placeholder="What was done during the visit (min 10 characters)"
+                  placeholder={t.placeholder_activities ?? "What was done during the visit (min 10 characters)"}
                   rows={4}
                 />
               </Field>
               <Field>
-                <FieldLabel htmlFor="outcomes">Outcomes</FieldLabel>
+                <FieldLabel htmlFor="outcomes">{t.field_outcomes ?? "Outcomes"}</FieldLabel>
                 <Textarea id="outcomes" value={outcomes} onChange={(e) => setOutcomes(e.target.value)} rows={3} />
               </Field>
             </CardContent>
@@ -147,10 +162,10 @@ export default function NewCBBOReportPage() {
 
           <div className="flex items-center justify-end gap-3">
             <Button type="button" variant="outline" onClick={() => router.push("/cbbo/reports")}>
-              Cancel
+              {t.btn_cancel ?? "Cancel"}
             </Button>
             <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? "Saving..." : "Save Draft"}
+              {mutation.isPending ? (t.btn_saving ?? "Saving...") : (t.btn_save ?? "Save Draft")}
             </Button>
           </div>
         </div>

@@ -16,12 +16,28 @@ export default function GovernmentDashboardPage() {
   const locale = useLocaleStore((s) => s.locale);
   const [t, setT] = useState<T>({});
 
+  const [tDistricts, setTDistricts] = useState<T>({});
+
   useEffect(() => {
     translationsApi
-      .getPublic(locale, "government_dashboard")
-      .then((data) => setT(data.government_dashboard ?? {}))
+      .getPublic(locale, "government_dashboard,districts")
+      .then((data) => {
+        setT(data.government_dashboard ?? {});
+        setTDistricts(data.districts ?? {});
+      })
       .catch(() => undefined);
   }, [locale]);
+
+  function getStatusLabel(status: string | undefined, fallback: string | undefined) {
+    if (!status) return fallback ?? "";
+    const key = String(status).toLowerCase().replace(/ /g, "_");
+    return t[`status_${key}`] ?? fallback ?? status;
+  }
+
+  function getDistrictLabel(code: string | undefined, fallback: string | undefined) {
+    if (!code) return fallback ?? "";
+    return tDistricts[`district_${code}`] ?? fallback ?? code;
+  }
 
   const {
     data: stats,
@@ -158,7 +174,7 @@ export default function GovernmentDashboardPage() {
             )}
             {byDistrictEntries.map(([district, count]) => (
               <div key={district} className="flex items-center justify-between rounded-lg border p-3">
-                <span className="text-sm">{district}</span>
+                <span className="text-sm">{getDistrictLabel(district, district)}</span>
                 <span className="font-medium text-sm">{count} FPOs</span>
               </div>
             ))}
@@ -177,7 +193,7 @@ export default function GovernmentDashboardPage() {
             {byStatusEntries.map(([label, count]) => (
               <div key={label} className="rounded-lg border p-3">
                 <div className="mb-1 flex items-center justify-between">
-                  <span className="font-medium text-sm">{label}</span>
+                  <span className="font-medium text-sm">{getStatusLabel(label, label)}</span>
                   <span className="text-muted-foreground text-xs">{count} FPOs</span>
                 </div>
                 <div className="h-2 w-full rounded-full bg-muted">
@@ -209,7 +225,7 @@ export default function GovernmentDashboardPage() {
                 <p className="font-medium text-sm">{f.name}</p>
                 <p className="text-muted-foreground text-xs">{f.district_display ?? f.district}</p>
               </div>
-              <span className="rounded bg-muted px-2 py-1 text-xs">{f.status_display}</span>
+              <span className="rounded bg-muted px-2 py-1 text-xs">{getStatusLabel(f.status, f.status_display)}</span>
             </div>
           ))}
         </CardContent>

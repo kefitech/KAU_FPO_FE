@@ -191,7 +191,7 @@ export const governmentNavigationConfig: NavigationConfig = {
         {
           id: "training",
           title: "Training Sessions",
-          translations: { ml: "Training Sessions" },
+          translations: { ml: "പരിശീലന സെഷനുകൾ" },
           url: "/government/training",
           icon: "GraduationCap",
         },

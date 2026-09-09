@@ -12,20 +12,20 @@ import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { authApi } from "@/lib/api/auth";
+import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 
-const profileSchema = z.object({
-  first_name: z.string().min(1, { message: "First name is required." }),
-  last_name: z.string().min(1, { message: "Last name is required." }),
-  phone: z.string().optional(),
-  preferred_language: z.string().optional(),
-});
-type ProfileValues = z.infer<typeof profileSchema>;
+type T = Record<string, string>;
 
-const LANGUAGES = [
-  { value: "en", label: "English" },
-  { value: "ml", label: "Malayalam" },
-];
+function makeProfileSchema(t: T) {
+  return z.object({
+    first_name: z.string().min(1, { message: t.val_first_name_required ?? "First name is required." }),
+    last_name: z.string().min(1, { message: t.val_last_name_required ?? "Last name is required." }),
+    phone: z.string().optional(),
+    preferred_language: z.string().optional(),
+  });
+}
+type ProfileValues = { first_name: string; last_name: string; phone?: string; preferred_language?: string };
 
 function UserAvatar({ name }: { name: string }) {
   const initials = name
@@ -69,6 +69,21 @@ export default function SettingsProfilePage() {
   const queryClient = useQueryClient();
   const locale = useLocaleStore((s) => s.locale);
   const [editing, setEditing] = useState(false);
+  const [t, setT] = useState<T>({});
+
+  useEffect(() => {
+    translationsApi
+      .getPublic(locale, "fpo_settings,common")
+      .then((data) => {
+        setT({ ...(data.common ?? {}), ...(data.fpo_settings ?? {}) });
+      })
+      .catch(() => undefined);
+  }, [locale]);
+
+  const LANGUAGES = [
+    { value: "en", label: t.lang_english ?? "English" },
+    { value: "ml", label: t.lang_malayalam ?? "Malayalam" },
+  ];
 
   const { data, isLoading } = useQuery({
     queryKey: ["auth-me", locale],
@@ -80,7 +95,7 @@ export default function SettingsProfilePage() {
   const fullName = user ? `${user.first_name} ${user.last_name ?? ""}`.trim() : "";
 
   const form = useForm<ProfileValues>({
-    resolver: zodResolver(profileSchema),
+    resolver: zodResolver(makeProfileSchema(t)),
     defaultValues: { first_name: "", last_name: "", phone: "", preferred_language: "en" },
   });
 
@@ -99,11 +114,11 @@ export default function SettingsProfilePage() {
     mutationFn: authApi.updateProfile,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["auth-me"] });
-      toast.success("Profile updated successfully.");
+      toast.success(t.toast_updated ?? "Profile updated successfully.");
       setEditing(false);
     },
     onError: (error: unknown) => {
-      toast.error(error instanceof Error ? error.message : "Failed to update profile.");
+      toast.error(error instanceof Error ? error.message : (t.toast_failed ?? "Failed to update profile."));
     },
   });
 
@@ -116,7 +131,7 @@ export default function SettingsProfilePage() {
       payload.preferred_language = values.preferred_language;
 
     if (Object.keys(payload).length === 0) {
-      toast.info("No changes to save.");
+      toast.info(t.toast_no_changes ?? "No changes to save.");
       setEditing(false);
       return;
     }
@@ -145,40 +160,37 @@ export default function SettingsProfilePage() {
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-1">
-      {/* ── Profile section ── */}
       <div className="flex items-center justify-between">
-        <SectionHeading title="Profile" />
+        <SectionHeading title={t.section_profile ?? "Profile"} />
         {!editing ? (
           <Button type="button" size="sm" variant="outline" onClick={() => setEditing(true)}>
-            Edit
+            {t.btn_edit ?? "Edit"}
           </Button>
         ) : (
           <div className="flex gap-2">
             <Button type="button" size="sm" variant="ghost" onClick={handleCancel}>
-              Cancel
+              {t.btn_cancel ?? "Cancel"}
             </Button>
             <Button type="submit" size="sm" disabled={mutation.isPending}>
-              {mutation.isPending ? "Saving..." : "Save"}
+              {mutation.isPending ? (t.btn_saving ?? "Saving...") : (t.btn_save ?? "Save")}
             </Button>
           </div>
         )}
       </div>
 
       <div className="flex flex-col">
-        {/* Avatar row */}
-        <SettingRow label="Avatar">
+        <SettingRow label={t.label_avatar ?? "Avatar"}>
           {fullName ? <UserAvatar name={fullName} /> : <span className="text-muted-foreground text-sm">—</span>}
         </SettingRow>
 
-        {/* First name */}
         <Controller
           control={form.control}
           name="first_name"
           render={({ field, fieldState }) => (
-            <SettingRow label="First Name">
+            <SettingRow label={t.label_first_name ?? "First Name"}>
               {editing ? (
                 <div className="flex flex-col gap-1">
-                  <Input {...field} id="first-name" placeholder="First name" aria-invalid={fieldState.invalid} />
+                  <Input {...field} id="first-name" placeholder={t.label_first_name ?? "First name"} aria-invalid={fieldState.invalid} />
                   {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                 </div>
               ) : (
@@ -188,15 +200,14 @@ export default function SettingsProfilePage() {
           )}
         />
 
-        {/* Last name */}
         <Controller
           control={form.control}
           name="last_name"
           render={({ field, fieldState }) => (
-            <SettingRow label="Last Name">
+            <SettingRow label={t.label_last_name ?? "Last Name"}>
               {editing ? (
                 <div className="flex flex-col gap-1">
-                  <Input {...field} id="last-name" placeholder="Last name" aria-invalid={fieldState.invalid} />
+                  <Input {...field} id="last-name" placeholder={t.label_last_name ?? "Last name"} aria-invalid={fieldState.invalid} />
                   {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                 </div>
               ) : (
@@ -206,12 +217,11 @@ export default function SettingsProfilePage() {
           )}
         />
 
-        {/* Phone */}
         <Controller
           control={form.control}
           name="phone"
           render={({ field, fieldState }) => (
-            <SettingRow label="Phone" description="Used for SMS notifications and account recovery.">
+            <SettingRow label={t.label_phone ?? "Phone"} description={t.label_phone_desc ?? "Used for SMS notifications and account recovery."}>
               {editing ? (
                 <div className="flex flex-col gap-1">
                   <Input
@@ -230,12 +240,11 @@ export default function SettingsProfilePage() {
           )}
         />
 
-        {/* Preferred language */}
         <Controller
           control={form.control}
           name="preferred_language"
           render={({ field, fieldState }) => (
-            <SettingRow label="Preferred Language" description="Language used for notifications and emails.">
+            <SettingRow label={t.label_language ?? "Preferred Language"} description={t.label_language_desc ?? "Language used for notifications and emails."}>
               {editing ? (
                 <select
                   {...field}
@@ -259,15 +268,14 @@ export default function SettingsProfilePage() {
         />
       </div>
 
-      {/* ── Account section ── */}
-      <SectionHeading title="Account" />
+      <SectionHeading title={t.section_account ?? "Account"} />
 
       <div className="flex flex-col">
-        <SettingRow label="Email Address" description="Your email cannot be changed.">
+        <SettingRow label={t.label_email ?? "Email Address"} description={t.label_email_desc ?? "Your email cannot be changed."}>
           <span className="text-muted-foreground text-sm">{user?.email}</span>
         </SettingRow>
 
-        <SettingRow label="Role">
+        <SettingRow label={t.label_role ?? "Role"}>
           <span className="inline-flex items-center rounded-md border px-2 py-0.5 font-medium text-xs capitalize">
             {user?.role?.replace(/_/g, " ") || "—"}
           </span>

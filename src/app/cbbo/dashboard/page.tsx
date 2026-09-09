@@ -15,9 +15,14 @@ import { useLocaleStore } from "@/stores/locale-store";
 type T = Record<string, string>;
 
 const STATUS_BADGE_STYLES: Record<string, string> = {
-  Approved: "border-green-500/40 bg-green-500/10 text-green-700 dark:text-green-400",
-  Rejected: "border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-400",
-  Pending: "border-yellow-500/40 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
+  draft: "border-muted text-muted-foreground",
+  submitted: "border-blue-500/40 bg-blue-500/10 text-blue-700 dark:text-blue-400",
+  under_review: "border-yellow-500/40 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
+  info_required: "border-orange-500/40 bg-orange-500/10 text-orange-700 dark:text-orange-400",
+  approved: "border-green-500/40 bg-green-500/10 text-green-700 dark:text-green-400",
+  rejected: "border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-400",
+  suspended: "border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-400",
+  claimed: "border-blue-500/40 bg-blue-500/10 text-blue-700 dark:text-blue-400",
 };
 
 const STRIP_COLORS = ["bg-violet-500", "bg-blue-500", "bg-amber-500", "bg-emerald-500", "bg-rose-500", "bg-cyan-500"];
@@ -62,8 +67,13 @@ export default function CbboDashboardPage() {
   const draftReports = reports.filter((r) => r.status === "draft").length;
   const submittedReports = reports.filter((r) => r.status === "submitted").length;
 
+  function getStatusLabel(status: string | undefined, fallback: string | undefined) {
+    if (!status) return fallback ?? "Unknown";
+    return t[`status_${status}`] ?? fallback ?? status;
+  }
+
   const statusCounts = fpos.reduce<Record<string, number>>((acc, f) => {
-    const key = f.status_display ?? f.status ?? "Unknown";
+    const key = f.status ?? "unknown";
     acc[key] = (acc[key] ?? 0) + 1;
     return acc;
   }, {});
@@ -169,8 +179,8 @@ export default function CbboDashboardPage() {
               <p className="text-muted-foreground text-sm">{t.empty_no_fpos ?? "No FPOs assigned yet."}</p>
             )}
             {fpos.slice(0, 5).map((f) => {
-              const label = f.status_display ?? f.status ?? "Unknown";
-              const badgeStyle = STATUS_BADGE_STYLES[label] ?? "border-muted text-muted-foreground";
+              const label = getStatusLabel(f.status, f.status_display);
+              const badgeStyle = STATUS_BADGE_STYLES[f.status ?? ""] ?? "border-muted text-muted-foreground";
               return (
                 <div key={f.id} className="flex items-center justify-between rounded-lg border p-3">
                   <div>
@@ -195,10 +205,10 @@ export default function CbboDashboardPage() {
             {Object.entries(statusCounts).length === 0 && (
               <p className="text-muted-foreground text-sm">{t.empty_no_data ?? "No data yet."}</p>
             )}
-            {Object.entries(statusCounts).map(([label, count], i) => (
-              <div key={label} className="flex flex-col gap-1.5">
+            {Object.entries(statusCounts).map(([code, count], i) => (
+              <div key={code} className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="font-medium text-sm">{label}</span>
+                  <span className="font-medium text-sm">{getStatusLabel(code, code)}</span>
                   <span className="text-muted-foreground text-sm">{count} FPOs</span>
                 </div>
                 <div className="h-2 w-full overflow-hidden rounded-full bg-muted">

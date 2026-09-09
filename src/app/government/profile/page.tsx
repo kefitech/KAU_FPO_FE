@@ -13,20 +13,20 @@ import { FieldError } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { fpoProfileApi } from "@/app/fpo/_api/profile";
 import { authApi } from "@/lib/api/auth";
+import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 
-const profileSchema = z.object({
-  first_name: z.string().min(1, { message: "First name is required." }),
-  last_name: z.string().min(1, { message: "Last name is required." }),
-  phone: z.string().optional(),
-  preferred_language: z.string().optional(),
-});
-type ProfileValues = z.infer<typeof profileSchema>;
+type T = Record<string, string>;
 
-const LANGUAGES = [
-  { value: "en", label: "English" },
-  { value: "ml", label: "Malayalam" },
-];
+function makeProfileSchema(t: T) {
+  return z.object({
+    first_name: z.string().min(1, { message: t.val_first_name_required ?? "First name is required." }),
+    last_name: z.string().min(1, { message: t.val_last_name_required ?? "Last name is required." }),
+    phone: z.string().optional(),
+    preferred_language: z.string().optional(),
+  });
+}
+type ProfileValues = { first_name: string; last_name: string; phone?: string; preferred_language?: string };
 
 function UserAvatar({ name }: { name: string }) {
   const initials = name
@@ -66,15 +66,16 @@ function SectionHeading({ title }: { title: string }) {
   return <h2 className="pt-2 pb-1 font-semibold text-base">{title}</h2>;
 }
 
-
 function PhoneOtpBlock({
   newPhone,
   onVerified,
   onCancel,
+  t,
 }: {
   newPhone: string;
   onVerified: () => void;
   onCancel: () => void;
+  t: T;
 }) {
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState("");
@@ -89,7 +90,7 @@ function PhoneOtpBlock({
     },
     onError: (err: unknown) => {
       const axiosErr = err as { response?: { data?: { message?: string } }; message?: string } | undefined;
-      toast.error(axiosErr?.response?.data?.message ?? axiosErr?.message ?? "Failed to send OTP.");
+      toast.error(axiosErr?.response?.data?.message ?? axiosErr?.message ?? (t.otp_error_default ?? "Failed to send OTP."));
     },
   });
 
@@ -99,12 +100,12 @@ function PhoneOtpBlock({
       return authApi.updateProfile({ phone: newPhone });
     },
     onSuccess: () => {
-      toast.success("Phone number updated and verified.");
+      toast.success(t.toast_updated ?? "Phone number updated and verified.");
       onVerified();
     },
     onError: (err: unknown) => {
       const axiosErr = err as { response?: { data?: { message?: string } }; message?: string } | undefined;
-      setOtpError(axiosErr?.response?.data?.message ?? axiosErr?.message ?? "Invalid or expired OTP.");
+      setOtpError(axiosErr?.response?.data?.message ?? axiosErr?.message ?? (t.otp_error_default ?? "Invalid or expired OTP."));
     },
   });
 
@@ -117,9 +118,9 @@ function PhoneOtpBlock({
   return (
     <div className="flex flex-col gap-4 rounded-lg border bg-muted/30 p-4">
       <div className="flex flex-col gap-1">
-        <span className="font-medium text-sm">Verify new phone number</span>
+        <span className="font-medium text-sm">{t.otp_title ?? "Verify new phone number"}</span>
         <p className="text-muted-foreground text-xs">
-          We will send a one-time password to confirm this number. It will not be saved until verified.
+          {t.otp_desc ?? "We will send a one-time password to confirm this number. It will not be saved until verified."}
         </p>
       </div>
 
@@ -127,7 +128,7 @@ function PhoneOtpBlock({
         <div className="flex items-start gap-2.5 rounded-lg border border-green-200 bg-green-50 px-3 py-2.5 dark:border-green-800 dark:bg-green-950/30">
           <Smartphone className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
           <p className="text-green-700 text-xs dark:text-green-300">
-            OTP sent to <span className="font-medium font-mono">{newPhone}</span>
+            {t.otp_sent_msg ?? "OTP sent to"} <span className="font-medium font-mono">{newPhone}</span>
           </p>
         </div>
       )}
@@ -135,7 +136,7 @@ function PhoneOtpBlock({
       {otpSent && (
         <div className="flex flex-col gap-1">
           <Input
-            placeholder="6-digit OTP"
+            placeholder={t.otp_placeholder ?? "6-digit OTP"}
             maxLength={6}
             value={otp}
             onChange={(e) => {
@@ -155,10 +156,10 @@ function PhoneOtpBlock({
           disabled={confirmMutation.isPending || otp.length < 6}
           onClick={() => confirmMutation.mutate()}
         >
-          {confirmMutation.isPending ? "Verifying..." : "Confirm & Save"}
+          {confirmMutation.isPending ? (t.otp_confirming_btn ?? "Verifying...") : (t.otp_confirm_btn ?? "Confirm & Save")}
         </Button>
         <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
-          Cancel
+          {t.otp_cancel_btn ?? "Cancel"}
         </Button>
         <button
           type="button"
@@ -166,18 +167,34 @@ function PhoneOtpBlock({
           disabled={sendMutation.isPending}
           className="ml-auto text-muted-foreground text-xs underline underline-offset-4 hover:text-foreground disabled:opacity-50"
         >
-          {sendMutation.isPending ? "Sending..." : "Resend OTP"}
+          {sendMutation.isPending ? (t.otp_resending_btn ?? "Sending...") : (t.otp_resend_btn ?? "Resend OTP")}
         </button>
       </div>
     </div>
   );
 }
+
 export default function SettingsProfilePage() {
   const queryClient = useQueryClient();
   const locale = useLocaleStore((s) => s.locale);
   const [editing, setEditing] = useState(false);
   const [otpStep, setOtpStep] = useState(false);
   const [pendingPhone, setPendingPhone] = useState<string | null>(null);
+  const [t, setT] = useState<T>({});
+
+  useEffect(() => {
+    translationsApi
+      .getPublic(locale, "fpo_settings,common")
+      .then((data) => {
+        setT({ ...(data.common ?? {}), ...(data.fpo_settings ?? {}) });
+      })
+      .catch(() => undefined);
+  }, [locale]);
+
+  const LANGUAGES = [
+    { value: "en", label: t.lang_english ?? "English" },
+    { value: "ml", label: t.lang_malayalam ?? "Malayalam" },
+  ];
 
   const { data, isLoading } = useQuery({
     queryKey: ["auth-me", locale],
@@ -189,7 +206,7 @@ export default function SettingsProfilePage() {
   const fullName = user ? `${user.first_name} ${user.last_name ?? ""}`.trim() : "";
 
   const form = useForm<ProfileValues>({
-    resolver: zodResolver(profileSchema),
+    resolver: zodResolver(makeProfileSchema(t)),
     defaultValues: { first_name: "", last_name: "", phone: "", preferred_language: "en" },
   });
 
@@ -208,11 +225,11 @@ export default function SettingsProfilePage() {
     mutationFn: authApi.updateProfile,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["auth-me"] });
-      toast.success("Profile updated successfully.");
+      toast.success(t.toast_updated ?? "Profile updated successfully.");
       setEditing(false);
     },
     onError: (error: unknown) => {
-      toast.error(error instanceof Error ? error.message : "Failed to update profile.");
+      toast.error(error instanceof Error ? error.message : (t.toast_failed ?? "Failed to update profile."));
     },
   });
 
@@ -226,7 +243,7 @@ export default function SettingsProfilePage() {
     const phoneChanged = values.phone !== (user?.phone ?? "");
 
     if (Object.keys(payload).length === 0 && !phoneChanged) {
-      toast.info("No changes to save.");
+      toast.info(t.toast_no_changes ?? "No changes to save.");
       setEditing(false);
       return;
     }
@@ -277,40 +294,37 @@ export default function SettingsProfilePage() {
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-1">
-      {/* ── Profile section ── */}
       <div className="flex items-center justify-between">
-        <SectionHeading title="Profile" />
+        <SectionHeading title={t.section_profile ?? "Profile"} />
         {!editing ? (
           <Button type="button" size="sm" variant="outline" onClick={() => setEditing(true)}>
-            Edit
+            {t.btn_edit ?? "Edit"}
           </Button>
         ) : (
           <div className="flex gap-2">
             <Button type="button" size="sm" variant="ghost" onClick={handleCancel}>
-              Cancel
+              {t.btn_cancel ?? "Cancel"}
             </Button>
             <Button type="submit" size="sm" disabled={mutation.isPending}>
-              {mutation.isPending ? "Saving..." : "Save"}
+              {mutation.isPending ? (t.btn_saving ?? "Saving...") : (t.btn_save ?? "Save")}
             </Button>
           </div>
         )}
       </div>
 
       <div className="flex flex-col">
-        {/* Avatar row */}
-        <SettingRow label="Avatar">
+        <SettingRow label={t.label_avatar ?? "Avatar"}>
           {fullName ? <UserAvatar name={fullName} /> : <span className="text-muted-foreground text-sm">—</span>}
         </SettingRow>
 
-        {/* First name */}
         <Controller
           control={form.control}
           name="first_name"
           render={({ field, fieldState }) => (
-            <SettingRow label="First Name">
+            <SettingRow label={t.label_first_name ?? "First Name"}>
               {editing ? (
                 <div className="flex flex-col gap-1">
-                  <Input {...field} id="first-name" placeholder="First name" aria-invalid={fieldState.invalid} />
+                  <Input {...field} id="first-name" placeholder={t.label_first_name ?? "First name"} aria-invalid={fieldState.invalid} />
                   {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                 </div>
               ) : (
@@ -320,15 +334,14 @@ export default function SettingsProfilePage() {
           )}
         />
 
-        {/* Last name */}
         <Controller
           control={form.control}
           name="last_name"
           render={({ field, fieldState }) => (
-            <SettingRow label="Last Name">
+            <SettingRow label={t.label_last_name ?? "Last Name"}>
               {editing ? (
                 <div className="flex flex-col gap-1">
-                  <Input {...field} id="last-name" placeholder="Last name" aria-invalid={fieldState.invalid} />
+                  <Input {...field} id="last-name" placeholder={t.label_last_name ?? "Last name"} aria-invalid={fieldState.invalid} />
                   {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                 </div>
               ) : (
@@ -338,14 +351,13 @@ export default function SettingsProfilePage() {
           )}
         />
 
-        {/* Phone */}
         <Controller
           control={form.control}
           name="phone"
           render={({ field, fieldState }) => (
-            <SettingRow label="Phone" description="Used for SMS notifications and account recovery.">
+            <SettingRow label={t.label_phone ?? "Phone"} description={t.label_phone_desc ?? "Used for SMS notifications and account recovery."}>
               {otpStep && pendingPhone ? (
-                <PhoneOtpBlock newPhone={pendingPhone} onVerified={handlePhoneVerified} onCancel={handlePhoneCancel} />
+                <PhoneOtpBlock newPhone={pendingPhone} onVerified={handlePhoneVerified} onCancel={handlePhoneCancel} t={t} />
               ) : editing ? (
                 <div className="flex flex-col gap-1">
                   <Input
@@ -364,12 +376,11 @@ export default function SettingsProfilePage() {
           )}
         />
 
-        {/* Preferred language */}
         <Controller
           control={form.control}
           name="preferred_language"
           render={({ field, fieldState }) => (
-            <SettingRow label="Preferred Language" description="Language used for notifications and emails.">
+            <SettingRow label={t.label_language ?? "Preferred Language"} description={t.label_language_desc ?? "Language used for notifications and emails."}>
               {editing ? (
                 <select
                   {...field}
@@ -393,15 +404,14 @@ export default function SettingsProfilePage() {
         />
       </div>
 
-      {/* ── Account section ── */}
-      <SectionHeading title="Account" />
+      <SectionHeading title={t.section_account ?? "Account"} />
 
       <div className="flex flex-col">
-        <SettingRow label="Email Address" description="Your email cannot be changed.">
+        <SettingRow label={t.label_email ?? "Email Address"} description={t.label_email_desc ?? "Your email cannot be changed."}>
           <span className="text-muted-foreground text-sm">{user?.email}</span>
         </SettingRow>
 
-        <SettingRow label="Role">
+        <SettingRow label={t.label_role ?? "Role"}>
           <span className="inline-flex items-center rounded-md border px-2 py-0.5 font-medium text-xs capitalize">
             {user?.role?.replace(/_/g, " ") || "—"}
           </span>

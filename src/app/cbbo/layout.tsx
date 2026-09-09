@@ -3,8 +3,10 @@
 import "@/app/globals.css";
 
 import { DynamicSidebar } from "@/components/layout/dynamic-sidebar";
+import { LocaleSwitcher } from "@/components/layout/locale-switcher";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { cbboNavigationConfig } from "@/config/navigation-defaults";
 import { usePortalNavigation } from "@/hooks/use-navigation";
 import { useLocaleStore } from "@/stores/locale-store";
@@ -34,7 +36,16 @@ export default function CbboLayout({ children }: { children: React.ReactNode }) 
   return (
     <SidebarProvider>
       <DynamicSidebar config={config} locale={locale} />
-      <SidebarInset>{children}</SidebarInset>
+      <SidebarInset>
+        <div className="flex items-center justify-between border-b px-4 py-2">
+          <SidebarTrigger />
+          <div className="flex items-center gap-2">
+            <LocaleSwitcher />
+            <ThemeToggle />
+          </div>
+        </div>
+        {children}
+      </SidebarInset>
       <ConfirmDialog />
     </SidebarProvider>
   );

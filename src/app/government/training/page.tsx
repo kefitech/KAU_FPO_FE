@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
@@ -9,10 +9,32 @@ import { govtTrainingApi } from "@/app/government/_api/training";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { translationsApi } from "@/lib/api/translations";
+import { useLocaleStore } from "@/stores/locale-store";
+
+type T = Record<string, string>;
 
 export default function GovernmentTrainingPage() {
   const router = useRouter();
+  const locale = useLocaleStore((s) => s.locale);
+  const [t, setT] = useState<T>({});
+  const [tDistricts, setTDistricts] = useState<T>({});
   const [topic, setTopic] = useState("");
+
+  useEffect(() => {
+    translationsApi
+      .getPublic(locale, "government_training,districts")
+      .then((data) => {
+        setT(data.government_training ?? {});
+        setTDistricts(data.districts ?? {});
+      })
+      .catch(() => undefined);
+  }, [locale]);
+
+  function getDistrictLabel(code: string | undefined, fallback: string | undefined) {
+    if (!code) return fallback ?? "";
+    return tDistricts[`district_${code}`] ?? fallback ?? code;
+  }
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["government", "training-sessions", topic],
@@ -25,30 +47,30 @@ export default function GovernmentTrainingPage() {
     <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-bold text-2xl">Training Sessions</h1>
+          <h1 className="font-bold text-2xl">{t.page_title ?? "Training Sessions"}</h1>
           <p className="mt-0.5 text-muted-foreground text-sm">
-            Sessions you&apos;ve conducted for FPOs in your jurisdiction
+            {t.page_description ?? "Sessions you have conducted for FPOs in your jurisdiction"}
           </p>
         </div>
         <Button size="sm" onClick={() => router.push("/government/training/new")}>
           <Plus className="mr-1.5 h-4 w-4" />
-          New Session
+          {t.btn_new_session ?? "New Session"}
         </Button>
       </div>
 
       <input
         value={topic}
         onChange={(e) => setTopic(e.target.value)}
-        placeholder="Filter by topic..."
+        placeholder={t.placeholder_filter_topic ?? "Filter by topic..."}
         className="h-9 max-w-sm rounded-md border bg-background px-3 text-sm"
       />
 
       {isLoading && (
-        <div className="flex h-40 items-center justify-center text-muted-foreground text-sm">Loading...</div>
+        <div className="flex h-40 items-center justify-center text-muted-foreground text-sm">{t.loading ?? "Loading..."}</div>
       )}
       {isError && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700 text-sm">
-          Couldn&apos;t load training sessions.
+          {t.error_load ?? "Couldn't load training sessions."}
         </div>
       )}
 
@@ -56,7 +78,7 @@ export default function GovernmentTrainingPage() {
         <Card>
           <CardContent className="p-0">
             {sessions.length === 0 && (
-              <p className="p-6 text-center text-muted-foreground text-sm">No training sessions yet.</p>
+              <p className="p-6 text-center text-muted-foreground text-sm">{t.empty_no_sessions ?? "No training sessions yet."}</p>
             )}
             {sessions.map((s, i) => (
               <div
@@ -66,10 +88,14 @@ export default function GovernmentTrainingPage() {
                 <div>
                   <p className="font-medium text-sm">{s.topic}</p>
                   <p className="text-muted-foreground text-xs">
-                    {s.fpo_name} &middot; {s.district} &middot; {s.date} &middot; {s.duration_hours}h
+                    {s.fpo_name} &middot; {getDistrictLabel(s.district, s.district)} &middot; {s.date} &middot; {s.duration_hours}h
                   </p>
                 </div>
-                <Badge variant="outline">{s.attendance_count}/{s.participants_count} attended</Badge>
+                <Badge variant="outline">
+                  {(t.badge_attended ?? "{attended}/{total} attended")
+                    .replace("{attended}", String(s.attendance_count))
+                    .replace("{total}", String(s.participants_count))}
+                </Badge>
               </div>
             ))}
           </CardContent>

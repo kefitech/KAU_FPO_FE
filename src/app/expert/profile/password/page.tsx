@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
@@ -13,29 +13,35 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { authApi } from "@/lib/api/auth";
+import { translationsApi } from "@/lib/api/translations";
+import { useLocaleStore } from "@/stores/locale-store";
 
-const passwordSchema = z
-  .object({
-    current_password: z.string().min(1, { message: "Current password is required." }),
-    new_password: z
-      .string()
-      .min(8, { message: "Password must be at least 8 characters." })
-      .regex(/[A-Z]/, { message: "Password must contain at least one uppercase letter." })
-      .regex(/[a-z]/, { message: "Password must contain at least one lowercase letter." })
-      .regex(/[0-9]/, { message: "Password must contain at least one number." })
-      .regex(/[^A-Za-z0-9]/, { message: "Password must contain at least one special character." }),
-    confirm_password: z.string().min(1, { message: "Please confirm your new password." }),
-  })
-  .refine((d) => d.new_password !== d.current_password, {
-    message: "New password cannot be the same as your current password.",
-    path: ["new_password"],
-  })
-  .refine((d) => d.new_password === d.confirm_password, {
-    message: "Passwords do not match.",
-    path: ["confirm_password"],
-  });
-type PasswordValues = z.infer<typeof passwordSchema>;
+type T = Record<string, string>;
+type PasswordValues = { current_password: string; new_password: string; confirm_password: string };
 const passwordDefaults: PasswordValues = { current_password: "", new_password: "", confirm_password: "" };
+
+function makePasswordSchema(t: T) {
+  return z
+    .object({
+      current_password: z.string().min(1, { message: t.val_pwd_current_required ?? "Current password is required." }),
+      new_password: z
+        .string()
+        .min(8, { message: t.val_pwd_min_8 ?? "Password must be at least 8 characters." })
+        .regex(/[A-Z]/, { message: t.val_pwd_uppercase ?? "Password must contain at least one uppercase letter." })
+        .regex(/[a-z]/, { message: t.val_pwd_lowercase ?? "Password must contain at least one lowercase letter." })
+        .regex(/[0-9]/, { message: t.val_pwd_number ?? "Password must contain at least one number." })
+        .regex(/[^A-Za-z0-9]/, { message: t.val_pwd_special ?? "Password must contain at least one special character." }),
+      confirm_password: z.string().min(1, { message: t.val_pwd_confirm_required ?? "Please confirm your new password." }),
+    })
+    .refine((d) => d.new_password !== d.current_password, {
+      message: t.val_pwd_same_as_current ?? "New password cannot be the same as your current password.",
+      path: ["new_password"],
+    })
+    .refine((d) => d.new_password === d.confirm_password, {
+      message: t.val_pwd_not_match ?? "Passwords do not match.",
+      path: ["confirm_password"],
+    });
+}
 
 function PasswordInput({
   id,
@@ -78,17 +84,29 @@ function PasswordInput({
   );
 }
 
-export default function FpoSettingsPasswordPage() {
-  const form = useForm<PasswordValues>({ resolver: zodResolver(passwordSchema), defaultValues: passwordDefaults });
+export default function ExpertSettingsPasswordPage() {
+  const locale = useLocaleStore((s) => s.locale);
+  const [t, setT] = useState<T>({});
+
+  useEffect(() => {
+    translationsApi
+      .getPublic(locale, "fpo_settings,common")
+      .then((data) => {
+        setT({ ...(data.common ?? {}), ...(data.fpo_settings ?? {}) });
+      })
+      .catch(() => undefined);
+  }, [locale]);
+
+  const form = useForm<PasswordValues>({ resolver: zodResolver(makePasswordSchema(t)), defaultValues: passwordDefaults });
 
   const mutation = useMutation({
     mutationFn: authApi.changeCurrentPassword,
     onSuccess: () => {
       form.reset(passwordDefaults);
-      toast.success("Password changed successfully.");
+      toast.success(t.pwd_toast_success ?? "Password changed successfully.");
     },
     onError: (error: unknown) => {
-      const message = (error as { message?: string })?.message ?? "Incorrect current password.";
+      const message = (error as { message?: string })?.message ?? (t.pwd_toast_failed ?? "Incorrect current password.");
       toast.error(message);
     },
   });
@@ -96,8 +114,8 @@ export default function FpoSettingsPasswordPage() {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h2 className="font-semibold text-base">Change Password</h2>
-        <p className="mt-0.5 text-muted-foreground text-sm">Update your account password.</p>
+        <h2 className="font-semibold text-base">{t.pwd_section_title ?? "Change Password"}</h2>
+        <p className="mt-0.5 text-muted-foreground text-sm">{t.pwd_section_desc ?? "Update your account password."}</p>
       </div>
 
       <form
@@ -108,30 +126,30 @@ export default function FpoSettingsPasswordPage() {
           control={form.control}
           name="current_password"
           render={({ field, fieldState }) => (
-            <PasswordInput id="cur-pw" field={field} fieldState={fieldState} label="Current Password" />
+            <PasswordInput id="cur-pw" field={field} fieldState={fieldState} label={t.pwd_label_current ?? "Current Password"} />
           )}
         />
         <Controller
           control={form.control}
           name="new_password"
           render={({ field, fieldState }) => (
-            <PasswordInput id="new-pw" field={field} fieldState={fieldState} label="New Password" />
+            <PasswordInput id="new-pw" field={field} fieldState={fieldState} label={t.pwd_label_new ?? "New Password"} />
           )}
         />
         <Controller
           control={form.control}
           name="confirm_password"
           render={({ field, fieldState }) => (
-            <PasswordInput id="conf-pw" field={field} fieldState={fieldState} label="Confirm New Password" />
+            <PasswordInput id="conf-pw" field={field} fieldState={fieldState} label={t.pwd_label_confirm ?? "Confirm New Password"} />
           )}
         />
 
         <div className="flex items-center justify-end gap-2 pt-1">
           <Button type="button" variant="ghost" size="sm" onClick={() => form.reset(passwordDefaults)}>
-            Reset
+            {t.pwd_btn_reset ?? "Reset"}
           </Button>
           <Button type="submit" size="sm" disabled={mutation.isPending}>
-            {mutation.isPending ? "Saving..." : "Change Password"}
+            {mutation.isPending ? (t.pwd_btn_saving ?? "Saving...") : (t.pwd_btn_change ?? "Change Password")}
           </Button>
         </div>
       </form>

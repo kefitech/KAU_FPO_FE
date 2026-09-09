@@ -20,6 +20,7 @@ export interface CBBOReportListItem {
   fpo: number;
   fpo_name: string;
   district: string;
+  district_display: string;
   date: string;
   status: ReportStatus;
   participants_count: number;

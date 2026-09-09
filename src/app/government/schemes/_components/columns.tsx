@@ -140,7 +140,7 @@ export function getSchemeColumns(
               : "bg-muted text-muted-foreground"
           }
         >
-          {row.original.is_active ? (tCommon.badge_active ?? "Active") : (tCommon.badge_inactive ?? "Inactive")}
+          {row.original.is_active ? (t.badge_active ?? tCommon.badge_active ?? "Active") : (t.badge_inactive ?? tCommon.badge_inactive ?? "Inactive")}
         </Badge>
       ),
     },

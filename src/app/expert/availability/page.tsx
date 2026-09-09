@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { DateRange } from "react-day-picker";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2 } from "lucide-react";
@@ -12,16 +12,10 @@ import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { translationsApi } from "@/lib/api/translations";
+import { useLocaleStore } from "@/stores/locale-store";
 
-const WEEKDAYS = [
-  { value: 0, label: "Sun" },
-  { value: 1, label: "Mon" },
-  { value: 2, label: "Tue" },
-  { value: 3, label: "Wed" },
-  { value: 4, label: "Thu" },
-  { value: 5, label: "Fri" },
-  { value: 6, label: "Sat" },
-];
+type T = Record<string, string>;
 
 interface TimeSlot {
   start: string;
@@ -45,6 +39,28 @@ function toLocalISODate(date: Date) {
 
 export default function ExpertAvailabilityPage() {
   const queryClient = useQueryClient();
+  const locale = useLocaleStore((s) => s.locale);
+  const [t, setT] = useState<T>({});
+
+  useEffect(() => {
+    translationsApi
+      .getPublic(locale, "expert_availability,common")
+      .then((data) => {
+        setT({ ...(data.common ?? {}), ...(data.expert_availability ?? {}) });
+      })
+      .catch(() => undefined);
+  }, [locale]);
+
+  const WEEKDAYS = [
+    { value: 0, label: t.weekday_sun ?? "Sun" },
+    { value: 1, label: t.weekday_mon ?? "Mon" },
+    { value: 2, label: t.weekday_tue ?? "Tue" },
+    { value: 3, label: t.weekday_wed ?? "Wed" },
+    { value: 4, label: t.weekday_thu ?? "Thu" },
+    { value: 5, label: t.weekday_fri ?? "Fri" },
+    { value: 6, label: t.weekday_sat ?? "Sat" },
+  ];
+
   const [mode, setMode] = useState<"range" | "single" | "absent">("range");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [singleDates, setSingleDates] = useState<Date[]>([]);
@@ -105,7 +121,7 @@ export default function ExpertAvailabilityPage() {
       const edited = updated[index];
       const isDuplicate = updated.some((s, i) => i !== index && s.start === edited.start && s.end === edited.end);
       if (isDuplicate) {
-        toast.error("This time slot duplicates another one. Please use a different time.");
+        toast.error(t.error_duplicate_slot ?? "This time slot duplicates another one. Please use a different time.");
         return prev;
       }
       return updated;
@@ -117,7 +133,7 @@ export default function ExpertAvailabilityPage() {
       const newSlot = { start: "09:00", end: "10:00" };
       const isDuplicate = prev.some((s) => s.start === newSlot.start && s.end === newSlot.end);
       if (isDuplicate) {
-        toast.error("That time slot already exists. Adjust it before adding another.");
+        toast.error(t.error_duplicate_slot_add ?? "That time slot already exists. Adjust it before adding another.");
         return prev;
       }
       return [...prev, newSlot];
@@ -159,33 +175,34 @@ export default function ExpertAvailabilityPage() {
     onSuccess: () => {
       toast.success(
         mode === "absent"
-          ? `Marked ${matchingDates.length} date(s) as absent`
-          : `Availability saved for ${matchingDates.length} date(s)`
+          ? (t.toast_marked_absent ?? "Marked {count} date(s) as absent").replace("{count}", String(matchingDates.length))
+          : (t.toast_saved ?? "Availability saved for {count} date(s)").replace("{count}", String(matchingDates.length))
       );
       setDateRange(undefined);
       setSingleDates([]);
       queryClient.invalidateQueries({ queryKey: ["my-availability", myProfile?.id] });
     },
-    onError: () => toast.error("Failed to update availability. Make sure your account is linked to an expert profile."),
+    onError: () => toast.error(t.toast_failed ?? "Failed to update availability. Make sure your account is linked to an expert profile."),
   });
 
   if (!myProfile) {
-    return <p className="text-muted-foreground text-sm">Loading your profile...</p>;
+    return <p className="text-muted-foreground text-sm">{t.loading ?? "Loading your profile..."}</p>;
   }
 
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h2 className="font-bold text-2xl">Set Availability</h2>
+        <h2 className="font-bold text-2xl">{t.page_title ?? "Set Availability"}</h2>
         <p className="text-muted-foreground text-sm">
-          Pick a date range, choose which days of the week to include, and set your time slots — all dates in range get saved at once.
-          Use "Mark Absent" to explicitly block dates you're unavailable, even if they were previously marked available.
+          {t.page_description_1 ?? "Pick a date range, choose which days of the week to include, and set your time slots - all dates in range get saved at once."}
+          {" "}
+          {t.page_description_2 ?? "Use \"Mark Absent\" to explicitly block dates you are unavailable, even if they were previously marked available."}
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">1. Pick date(s)</CardTitle>
+          <CardTitle className="text-base">{t.step1_title ?? "1. Pick date(s)"}</CardTitle>
           <div className="flex gap-2 pt-2">
             <Button
               type="button"
@@ -193,7 +210,7 @@ export default function ExpertAvailabilityPage() {
               variant={mode === "range" ? "default" : "outline"}
               onClick={() => setMode("range")}
             >
-              Date Range
+              {t.btn_date_range ?? "Date Range"}
             </Button>
             <Button
               type="button"
@@ -201,7 +218,7 @@ export default function ExpertAvailabilityPage() {
               variant={mode === "single" ? "default" : "outline"}
               onClick={() => setMode("single")}
             >
-              Single Date
+              {t.btn_single_date ?? "Single Date"}
             </Button>
             <Button
               type="button"
@@ -209,7 +226,7 @@ export default function ExpertAvailabilityPage() {
               variant={mode === "absent" ? "destructive" : "outline"}
               onClick={() => setMode("absent")}
             >
-              Mark Absent
+              {t.btn_mark_absent ?? "Mark Absent"}
             </Button>
           </div>
         </CardHeader>
@@ -269,7 +286,7 @@ export default function ExpertAvailabilityPage() {
       {mode === "range" && (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">2. Which days of the week?</CardTitle>
+          <CardTitle className="text-base">{t.step2_title ?? "2. Which days of the week?"}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-4">
           {WEEKDAYS.map((day) => (
@@ -288,7 +305,7 @@ export default function ExpertAvailabilityPage() {
       {mode !== "absent" && (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">3. Time slots for each date</CardTitle>
+          <CardTitle className="text-base">{t.step3_title ?? "3. Time slots for each date"}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           {timeSlots.map((slot, index) => (
@@ -299,7 +316,7 @@ export default function ExpertAvailabilityPage() {
                 onChange={(e) => updateSlot(index, "start", e.target.value)}
                 className="w-32"
               />
-              <span className="text-muted-foreground text-sm">to</span>
+              <span className="text-muted-foreground text-sm">{t.label_to ?? "to"}</span>
               <Input
                 type="time"
                 value={slot.end}
@@ -313,7 +330,7 @@ export default function ExpertAvailabilityPage() {
           ))}
           <Button type="button" size="sm" variant="outline" onClick={addSlot} className="w-fit">
             <Plus className="h-4 w-4 mr-1" />
-            Add time slot
+            {t.btn_add_slot ?? "Add time slot"}
           </Button>
         </CardContent>
       </Card>
@@ -322,7 +339,7 @@ export default function ExpertAvailabilityPage() {
       {mode === "range" && matchingDates.length > 0 && (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Preview: dates that will be saved</CardTitle>
+          <CardTitle className="text-base">{t.preview_title ?? "Preview: dates that will be saved"}</CardTitle>
         </CardHeader>
         <CardContent>
           <Calendar
@@ -337,13 +354,15 @@ export default function ExpertAvailabilityPage() {
 
       {matchingDates.length > 0 && mode !== "absent" && (
         <p className="text-muted-foreground text-sm">
-          This will set availability for <span className="font-medium text-foreground">{matchingDates.length}</span> date(s), each with <span className="font-medium text-foreground">{timeSlots.length}</span> time slot(s).
+          {(t.summary_availability ?? "This will set availability for {count} date(s), each with {slots} time slot(s).")
+            .replace("{count}", String(matchingDates.length))
+            .replace("{slots}", String(timeSlots.length))}
         </p>
       )}
 
       {matchingDates.length > 0 && mode === "absent" && (
         <p className="text-muted-foreground text-sm">
-          This will mark <span className="font-medium text-foreground">{matchingDates.length}</span> date(s) as absent.
+          {(t.summary_absent ?? "This will mark {count} date(s) as absent.").replace("{count}", String(matchingDates.length))}
         </p>
       )}
 
@@ -354,10 +373,10 @@ export default function ExpertAvailabilityPage() {
         className="w-fit"
       >
         {mutation.isPending
-          ? "Saving..."
+          ? (t.btn_saving ?? "Saving...")
           : mode === "absent"
-          ? `Mark ${matchingDates.length} date(s) as Absent`
-          : `Save Availability for ${matchingDates.length} date(s)`}
+          ? (t.btn_mark_absent_count ?? "Mark {count} date(s) as Absent").replace("{count}", String(matchingDates.length))
+          : (t.btn_save_availability ?? "Save Availability for {count} date(s)").replace("{count}", String(matchingDates.length))}
       </Button>
     </div>
   );

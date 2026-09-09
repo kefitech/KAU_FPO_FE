@@ -7,14 +7,19 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { officialRegisterApi } from "./_api";
 import { Button } from "@/components/ui/button";
+import { LocaleSwitcher } from "@/components/layout/locale-switcher";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { DISTRICT_OPTIONS } from "@/types/fpo";
+import { translationsApi } from "@/lib/api/translations";
+import { useLocaleStore } from "@/stores/locale-store";
+
+type T = Record<string, string>;
 
 const USER_CATEGORIES = [
   { value: "agri_officer", label: "Agri Officer (PEN, 6 digits)" },
@@ -42,63 +47,78 @@ const ID_LABELS: Record<string, string> = {
   nabard_official: "Employee Index Number - 5 or 6-digit number",
   atma_specialist: "Employee ID (6-8 digits) or PAN (10 characters)",
 };
-const baseSchema = z.object({
-  mode: z.enum(["government", "cbbo"]),
-  first_name: z.string().min(1, { message: "First name is required." }),
-  last_name: z.string().optional(),
-  email: z.string().email({ message: "Please enter a valid email address." }),
-  phone: z.string().regex(/^[6-9]\d{9}$/, { message: "Enter a valid 10-digit Indian mobile number." }),
-  password: z.string().min(8, { message: "Password must be at least 8 characters." }),
-  designation: z.string().optional(),
-  department: z.string().optional(),
-  user_category: z.string().optional(),
-  id_number: z.string().optional(),
-  jurisdiction_type: z.enum(["district", "state"]).optional(),
-  assigned_district: z.string().optional(),
-  organisation: z.string().optional(),
-  level: z.enum(["district", "state"]).optional(),
-  district_code: z.string().optional(),
-});
 
-const registerSchema = baseSchema.superRefine((data, ctx) => {
-  if (data.mode === "government") {
-    if (!data.department) {
-      ctx.addIssue({ code: "custom", message: "Department is required.", path: ["department"] });
-    }
-    if (!data.id_number) {
-      ctx.addIssue({ code: "custom", message: "ID number is required.", path: ["id_number"] });
-    } else {
-      const patterns = ID_PATTERNS[data.user_category ?? ""];
-      const value = data.id_number.trim().toUpperCase();
-      const matches = patterns?.some((p) => p.test(value));
-      if (!matches) {
-        ctx.addIssue({
-          code: "custom",
-          message: `Invalid format. Expected: ${ID_LABELS[data.user_category ?? ""]}`,
-          path: ["id_number"],
-        });
+function makeBaseSchema(t: T) {
+  return z.object({
+    mode: z.enum(["government", "cbbo"]),
+    first_name: z.string().min(1, { message: t.val_first_name_required ?? "First name is required." }),
+    last_name: z.string().optional(),
+    email: z.string().email({ message: t.val_email_invalid ?? "Please enter a valid email address." }),
+    phone: z.string().regex(/^[6-9]\d{9}$/, { message: t.val_phone_invalid ?? "Enter a valid 10-digit Indian mobile number." }),
+    password: z.string().min(8, { message: t.val_password_min ?? "Password must be at least 8 characters." }),
+    designation: z.string().optional(),
+    department: z.string().optional(),
+    user_category: z.string().optional(),
+    id_number: z.string().optional(),
+    jurisdiction_type: z.enum(["district", "state"]).optional(),
+    assigned_district: z.string().optional(),
+    organisation: z.string().optional(),
+    level: z.enum(["district", "state"]).optional(),
+    district_code: z.string().optional(),
+  });
+}
+
+function makeRegisterSchema(t: T) {
+  return makeBaseSchema(t).superRefine((data, ctx) => {
+    if (data.mode === "government") {
+      if (!data.department) {
+        ctx.addIssue({ code: "custom", message: t.val_department_required ?? "Department is required.", path: ["department"] });
+      }
+      if (!data.id_number) {
+        ctx.addIssue({ code: "custom", message: t.val_id_number_required ?? "ID number is required.", path: ["id_number"] });
+      } else {
+        const patterns = ID_PATTERNS[data.user_category ?? ""];
+        const value = data.id_number.trim().toUpperCase();
+        const matches = patterns?.some((p) => p.test(value));
+        if (!matches) {
+          ctx.addIssue({
+            code: "custom",
+            message: `Invalid format. Expected: ${ID_LABELS[data.user_category ?? ""]}`,
+            path: ["id_number"],
+          });
+        }
+      }
+      if (data.jurisdiction_type === "district" && !data.assigned_district) {
+        ctx.addIssue({ code: "custom", message: t.val_district_required ?? "District is required.", path: ["assigned_district"] });
       }
     }
-    if (data.jurisdiction_type === "district" && !data.assigned_district) {
-      ctx.addIssue({ code: "custom", message: "District is required.", path: ["assigned_district"] });
+    if (data.mode === "cbbo") {
+      if (!data.organisation) {
+        ctx.addIssue({ code: "custom", message: t.val_organisation_required ?? "Organisation is required.", path: ["organisation"] });
+      }
+      if (data.level === "district" && !data.district_code) {
+        ctx.addIssue({ code: "custom", message: t.val_district_code_required ?? "District code is required.", path: ["district_code"] });
+      }
     }
-  }
-  if (data.mode === "cbbo") {
-    if (!data.organisation) {
-      ctx.addIssue({ code: "custom", message: "Organisation is required.", path: ["organisation"] });
-    }
-    if (data.level === "district" && !data.district_code) {
-      ctx.addIssue({ code: "custom", message: "District code is required.", path: ["district_code"] });
-    }
-  }
-});
+  });
+}
 
-type RegisterValues = z.infer<typeof registerSchema>;
+type RegisterValues = { mode: "government" | "cbbo"; first_name: string; last_name?: string; email: string; phone: string; password: string; designation?: string; department?: string; user_category?: string; id_number?: string; jurisdiction_type?: "district" | "state"; assigned_district?: string; organisation?: string; level?: "district" | "state"; district_code?: string };
+
 export default function OfficialRegisterPage() {
   const router = useRouter();
+  const locale = useLocaleStore((s) => s.locale);
+  const [t, setT] = useState<T>({});
+
+  useEffect(() => {
+    translationsApi
+      .getPublic(locale, "official_register")
+      .then((data) => setT(data.official_register ?? {}))
+      .catch(() => undefined);
+  }, [locale]);
 
   const form = useForm<RegisterValues>({
-    resolver: zodResolver(registerSchema),
+    resolver: zodResolver(makeRegisterSchema(t)),
     defaultValues: {
       mode: "government",
       first_name: "",
@@ -139,12 +159,12 @@ export default function OfficialRegisterPage() {
         assigned_district: vars.jurisdiction_type === "district" ? vars.assigned_district : null,
       }),
     onSuccess: () => {
-      toast.success("Registration submitted. An administrator will review your account.");
+      toast.success(t.toast_success ?? "Registration submitted. An administrator will review your account.");
       router.push("/v1/login");
     },
     onError: (error: unknown) => {
       const errors = (error as { data?: { errors?: Record<string, string[]> } })?.data?.errors;
-      toast.error(errors ? Object.values(errors)[0]?.[0] : "Registration failed");
+      toast.error(errors ? Object.values(errors)[0]?.[0] : (t.toast_failed ?? "Registration failed"));
     },
   });
 
@@ -157,12 +177,12 @@ export default function OfficialRegisterPage() {
         district_codes: vars.level === "district" && vars.district_code ? [vars.district_code] : [],
       }),
     onSuccess: () => {
-      toast.success("Registration submitted. An administrator will review your account.");
+      toast.success(t.toast_success ?? "Registration submitted. An administrator will review your account.");
       router.push("/v1/login");
     },
     onError: (error: unknown) => {
       const errors = (error as { data?: { errors?: Record<string, string[]> } })?.data?.errors;
-      toast.error(errors ? Object.values(errors)[0]?.[0] : "Registration failed");
+      toast.error(errors ? Object.values(errors)[0]?.[0] : (t.toast_failed ?? "Registration failed"));
     },
   });
 
@@ -200,10 +220,11 @@ export default function OfficialRegisterPage() {
           <span className="hidden sm:inline">KAU-FPO Platform</span>
         </a>
         <div className="flex items-center gap-2 sm:gap-3">
+          <LocaleSwitcher />
           <span className="text-muted-foreground text-sm">
-            <span className="hidden sm:inline">Already registered? </span>
+            <span className="hidden sm:inline">{t.header_already_registered ?? "Already registered?"} </span>
             <a href="/v1/login" className="font-medium text-green-600 hover:underline">
-              Sign in
+              {t.header_sign_in ?? "Sign in"}
             </a>
           </span>
         </div>
@@ -211,25 +232,25 @@ export default function OfficialRegisterPage() {
       <div className="flex items-center justify-center p-6">
         <div className="w-full max-w-2xl">
           <div className="mb-6 text-center">
-            <h1 className="font-bold text-2xl">Official Registration</h1>
+            <h1 className="font-bold text-2xl">{t.page_title ?? "Official Registration"}</h1>
             <p className="mt-1 text-muted-foreground text-sm">
-              Your account will be reviewed by a KAU Super Admin before activation.
+              {t.page_description ?? "Your account will be reviewed by a KAU Super Admin before activation."}
             </p>
           </div>
 
           <div className="mb-6 flex justify-center gap-2">
             <Button type="button" variant={mode === "government" ? "default" : "outline"} onClick={() => handleModeSwitch("government")}>
-              Government Official
+              {t.mode_government ?? "Government Official"}
             </Button>
             <Button type="button" variant={mode === "cbbo" ? "default" : "outline"} onClick={() => handleModeSwitch("cbbo")}>
-              CBBO / NGO Officer
+              {t.mode_cbbo ?? "CBBO / NGO Officer"}
             </Button>
           </div>
 
           <form onSubmit={form.handleSubmit(onSubmit)} noValidate>
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Account</CardTitle>
+                <CardTitle className="text-base">{t.section_account ?? "Account"}</CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
                 <FieldGroup className="grid grid-cols-2 gap-4">
@@ -238,7 +259,7 @@ export default function OfficialRegisterPage() {
                     name="first_name"
                     render={({ field, fieldState }) => (
                       <Field data-invalid={fieldState.invalid}>
-                        <FieldLabel htmlFor="first-name">First Name *</FieldLabel>
+                        <FieldLabel htmlFor="first-name">{t.field_first_name ?? "First Name"} *</FieldLabel>
                         <Input {...field} id="first-name" aria-invalid={fieldState.invalid} />
                         {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                       </Field>
@@ -249,7 +270,7 @@ export default function OfficialRegisterPage() {
                     name="last_name"
                     render={({ field }) => (
                       <Field>
-                        <FieldLabel htmlFor="last-name">Last Name</FieldLabel>
+                        <FieldLabel htmlFor="last-name">{t.field_last_name ?? "Last Name"}</FieldLabel>
                         <Input {...field} id="last-name" />
                       </Field>
                     )}
@@ -260,7 +281,7 @@ export default function OfficialRegisterPage() {
                   name="email"
                   render={({ field, fieldState }) => (
                     <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel htmlFor="email">Email *</FieldLabel>
+                      <FieldLabel htmlFor="email">{t.field_email ?? "Email"} *</FieldLabel>
                       <Input {...field} id="email" type="email" aria-invalid={fieldState.invalid} />
                       {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                     </Field>
@@ -272,7 +293,7 @@ export default function OfficialRegisterPage() {
                     name="phone"
                     render={({ field, fieldState }) => (
                       <Field data-invalid={fieldState.invalid}>
-                        <FieldLabel htmlFor="phone">Phone *</FieldLabel>
+                        <FieldLabel htmlFor="phone">{t.field_phone ?? "Phone"} *</FieldLabel>
                         <Input {...field} id="phone" aria-invalid={fieldState.invalid} />
                         {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                       </Field>
@@ -283,7 +304,7 @@ export default function OfficialRegisterPage() {
                     name="password"
                     render={({ field, fieldState }) => (
                       <Field data-invalid={fieldState.invalid}>
-                        <FieldLabel htmlFor="password">Password *</FieldLabel>
+                        <FieldLabel htmlFor="password">{t.field_password ?? "Password"} *</FieldLabel>
                         <Input {...field} id="password" type="password" aria-invalid={fieldState.invalid} />
                         {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                       </Field>
@@ -295,7 +316,7 @@ export default function OfficialRegisterPage() {
                   name="designation"
                   render={({ field }) => (
                     <Field>
-                      <FieldLabel htmlFor="designation">Designation</FieldLabel>
+                      <FieldLabel htmlFor="designation">{t.field_designation ?? "Designation"}</FieldLabel>
                       <Input {...field} id="designation" />
                     </Field>
                   )}
@@ -306,7 +327,7 @@ export default function OfficialRegisterPage() {
             {mode === "government" && (
               <Card className="mt-6">
                 <CardHeader>
-                  <CardTitle className="text-base">Government Details</CardTitle>
+                  <CardTitle className="text-base">{t.section_govt_details ?? "Government Details"}</CardTitle>
                 </CardHeader>
                 <CardContent className="flex flex-col gap-4">
                   <Controller
@@ -314,8 +335,8 @@ export default function OfficialRegisterPage() {
                     name="department"
                     render={({ field, fieldState }) => (
                       <Field data-invalid={fieldState.invalid}>
-                        <FieldLabel htmlFor="department">Department *</FieldLabel>
-                        <Input {...field} id="department" placeholder="e.g. Department of Agriculture" aria-invalid={fieldState.invalid} />
+                        <FieldLabel htmlFor="department">{t.field_department ?? "Department"} *</FieldLabel>
+                        <Input {...field} id="department" placeholder={t.placeholder_department ?? "e.g. Department of Agriculture"} aria-invalid={fieldState.invalid} />
                         {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                       </Field>
                     )}
@@ -325,7 +346,7 @@ export default function OfficialRegisterPage() {
                     name="user_category"
                     render={({ field }) => (
                       <Field>
-                        <FieldLabel htmlFor="user-category">User Category *</FieldLabel>
+                        <FieldLabel htmlFor="user-category">{t.field_user_category ?? "User Category"} *</FieldLabel>
                         <select
                           {...field}
                           id="user-category"
@@ -343,8 +364,8 @@ export default function OfficialRegisterPage() {
                     name="id_number"
                     render={({ field, fieldState }) => (
                       <Field data-invalid={fieldState.invalid}>
-                        <FieldLabel htmlFor="id-number">ID Number *</FieldLabel>
-                        <Input {...field} id="id-number" placeholder="Matching the format for your selected category" aria-invalid={fieldState.invalid} />
+                        <FieldLabel htmlFor="id-number">{t.field_id_number ?? "ID Number"} *</FieldLabel>
+                        <Input {...field} id="id-number" placeholder={t.placeholder_id_number ?? "Matching the format for your selected category"} aria-invalid={fieldState.invalid} />
                         {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                       </Field>
                     )}
@@ -354,14 +375,14 @@ export default function OfficialRegisterPage() {
                     name="jurisdiction_type"
                     render={({ field }) => (
                       <Field>
-                        <FieldLabel htmlFor="jurisdiction-type">Jurisdiction *</FieldLabel>
+                        <FieldLabel htmlFor="jurisdiction-type">{t.field_jurisdiction ?? "Jurisdiction"} *</FieldLabel>
                         <select
                           {...field}
                           id="jurisdiction-type"
                           className="h-9 w-full rounded-md border bg-background px-3 text-sm"
                         >
-                          <option value="district">District</option>
-                          <option value="state">State</option>
+                          <option value="district">{t.option_district ?? "District"}</option>
+                          <option value="state">{t.option_state ?? "State"}</option>
                         </select>
                       </Field>
                     )}
@@ -372,13 +393,13 @@ export default function OfficialRegisterPage() {
                       name="assigned_district"
                       render={({ field, fieldState }) => (
                         <Field data-invalid={fieldState.invalid}>
-                          <FieldLabel htmlFor="district">District *</FieldLabel>
+                          <FieldLabel htmlFor="district">{t.field_district ?? "District"} *</FieldLabel>
                           <select
                             {...field}
                             id="district"
                             className="h-9 w-full rounded-md border bg-background px-3 text-sm"
                           >
-                            <option value="">Select a district</option>
+                            <option value="">{t.placeholder_select_district ?? "Select a district"}</option>
                             {DISTRICT_OPTIONS.map((d) => (
                               <option key={d.value} value={d.value}>{d.label}</option>
                             ))}
@@ -394,7 +415,7 @@ export default function OfficialRegisterPage() {
             {mode === "cbbo" && (
               <Card className="mt-6">
                 <CardHeader>
-                  <CardTitle className="text-base">CBBO / NGO Details</CardTitle>
+                  <CardTitle className="text-base">{t.section_cbbo_details ?? "CBBO / NGO Details"}</CardTitle>
                 </CardHeader>
                 <CardContent className="flex flex-col gap-4">
                   <Controller
@@ -402,13 +423,13 @@ export default function OfficialRegisterPage() {
                     name="organisation"
                     render={({ field, fieldState }) => (
                       <Field data-invalid={fieldState.invalid}>
-                        <FieldLabel htmlFor="organisation">Organisation *</FieldLabel>
+                        <FieldLabel htmlFor="organisation">{t.field_organisation ?? "Organisation"} *</FieldLabel>
                         <select
                           {...field}
                           id="organisation"
                           className="h-9 w-full rounded-md border bg-background px-3 text-sm"
                         >
-                          <option value="">Select an organisation</option>
+                          <option value="">{t.placeholder_select_org ?? "Select an organisation"}</option>
                           {organisations.map((org) => (
                             <option key={org.id} value={org.id}>{org.name} ({org.org_type_display})</option>
                           ))}
@@ -422,14 +443,14 @@ export default function OfficialRegisterPage() {
                     name="level"
                     render={({ field }) => (
                       <Field>
-                        <FieldLabel htmlFor="level">Level *</FieldLabel>
+                        <FieldLabel htmlFor="level">{t.field_level ?? "Level"} *</FieldLabel>
                         <select
                           {...field}
                           id="level"
                           className="h-9 w-full rounded-md border bg-background px-3 text-sm"
                         >
-                          <option value="district">District</option>
-                          <option value="state">State</option>
+                          <option value="district">{t.option_district ?? "District"}</option>
+                          <option value="state">{t.option_state ?? "State"}</option>
                         </select>
                       </Field>
                     )}
@@ -440,13 +461,13 @@ export default function OfficialRegisterPage() {
                       name="district_code"
                       render={({ field, fieldState }) => (
                         <Field data-invalid={fieldState.invalid}>
-                          <FieldLabel htmlFor="district-code">District Code *</FieldLabel>
+                          <FieldLabel htmlFor="district-code">{t.field_district_code ?? "District Code"} *</FieldLabel>
                           <select
                             {...field}
                             id="district-code"
                             className="h-9 w-full rounded-md border bg-background px-3 text-sm"
                           >
-                            <option value="">Select a district</option>
+                            <option value="">{t.placeholder_select_district ?? "Select a district"}</option>
                             {DISTRICT_OPTIONS.map((d) => (
                               <option key={d.value} value={d.value}>{d.label}</option>
                             ))}
@@ -461,10 +482,10 @@ export default function OfficialRegisterPage() {
             )}
             <div className="mt-6 flex items-center gap-3">
               <a href="/v1/login" className="text-muted-foreground text-sm hover:text-foreground">
-                ← Back to Login
+                {t.btn_back_to_login ?? "\u2190 Back to Login"}
               </a>
               <Button type="submit" className="flex-1" disabled={mutation.isPending}>
-                {mutation.isPending ? "Registering..." : "Register"}
+                {mutation.isPending ? (t.btn_registering ?? "Registering...") : (t.btn_register ?? "Register")}
               </Button>
             </div>
           </form>
