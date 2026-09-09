@@ -7,17 +7,17 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Eye, Loader2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 
-import { adminGisZonesApi, type ZoneVersion } from "@/app/admin/_api/gis-zones";
+import { adminSoilRegionsApi, type SoilRegionVersion } from "@/app/admin/_api/soil-regions";
 import { DataTable } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
-import { getZoneVersionColumns } from "./_components/columns";
+import { getSoilRegionVersionColumns } from "./_components/columns";
 
 type T = Record<string, string>;
 
-const ZonesMap = dynamic(
-  () => import("./_components/zones-map").then((m) => ({ default: m.ZonesMap })),
+const SoilRegionsMap = dynamic(
+  () => import("./_components/soil-regions-map").then((m) => ({ default: m.SoilRegionsMap })),
   {
     ssr: false,
     loading: () => (
@@ -28,7 +28,7 @@ const ZonesMap = dynamic(
   },
 );
 
-export default function GisZonesPage() {
+export default function SoilRegionsPage() {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const locale = useLocaleStore((s) => s.locale);
@@ -39,8 +39,8 @@ export default function GisZonesPage() {
   useEffect(() => {
     setTranslationsLoading(true);
     translationsApi
-      .getPublic(locale, "admin_gis_zones")
-      .then((data) => setT(data.admin_gis_zones ?? {}))
+      .getPublic(locale, "admin_soil_regions")
+      .then((data) => setT(data.admin_soil_regions ?? {}))
       .catch(() => undefined)
       .finally(() => setTranslationsLoading(false));
   }, [locale]);
@@ -48,14 +48,14 @@ export default function GisZonesPage() {
   const [previewVersionId, setPreviewVersionId] = useState<number | null>(null);
   const [previewLabel, setPreviewLabel] = useState<string>("");
 
-  const { data: liveZones, isLoading: mapLoading, dataUpdatedAt: liveZonesUpdatedAt } = useQuery({
-    queryKey: ["gis-zones-map"],
-    queryFn: adminGisZonesApi.getLiveZones,
+  const { data: liveRegions, isLoading: mapLoading, dataUpdatedAt: liveRegionsUpdatedAt } = useQuery({
+    queryKey: ["soil-regions-map"],
+    queryFn: adminSoilRegionsApi.getLiveSoilRegions,
   });
 
   const { data: previewData, isLoading: previewLoading } = useQuery({
-    queryKey: ["gis-zone-version-preview", previewVersionId],
-    queryFn: () => adminGisZonesApi.getVersionDetail(previewVersionId as number),
+    queryKey: ["soil-region-version-preview", previewVersionId],
+    queryFn: () => adminSoilRegionsApi.getVersionDetail(previewVersionId as number),
     enabled: previewVersionId !== null,
   });
 
@@ -63,19 +63,21 @@ export default function GisZonesPage() {
     mutationFn: (file: File) => {
       const formData = new FormData();
       formData.append("geojson_file", file);
-      return adminGisZonesApi.upload(formData);
+      return adminSoilRegionsApi.upload(formData);
     },
     onSuccess: (version) => {
       toast.success((t.toast_uploaded ?? 'Uploaded "{label}" — not yet live.').replace("{label}", version.label));
-      queryClient.invalidateQueries({ queryKey: ["gis-zone-versions"] });
+      queryClient.invalidateQueries({ queryKey: ["soil-region-versions"] });
     },
     onError: (error: unknown) => {
-      // Backend returns validation problems as a flat string[] in `errors`
-      // (see _validate_zone_geojson), not the {field: [msgs]} dict shape
-      // most other admin forms get from DRF serializers.
+      // The backend returns validation problems as a flat string[] in
+      // `errors` (see _validate_soil_geojson), NOT the {field: [msgs]}
+      // dict shape most other admin forms get from DRF serializers — so
+      // this reads it as a list rather than reusing the dict-shaped
+      // Object.values(...)[0][0] pattern those forms use.
       const data = (error as { data?: { errors?: string[]; message?: string } })?.data;
       const msg = data?.errors?.[0] ?? data?.message;
-      toast.error(msg ?? t.toast_upload_failed ?? "Failed to upload zone boundaries");
+      toast.error(msg ?? t.toast_upload_failed ?? "Failed to upload soil regions");
     },
   });
 
@@ -85,7 +87,7 @@ export default function GisZonesPage() {
     e.target.value = "";
   }
 
-  function handleRowClick(version: ZoneVersion) {
+  function handleRowClick(version: SoilRegionVersion) {
     setPreviewVersionId(version.id);
     setPreviewLabel(version.label);
   }
@@ -96,7 +98,7 @@ export default function GisZonesPage() {
   }
 
   const isPreviewing = previewVersionId !== null;
-  const mapData = isPreviewing ? previewData?.geojson_data : liveZones;
+  const mapData = isPreviewing ? previewData?.geojson_data : liveRegions;
   const mapIsLoading = isPreviewing ? previewLoading : mapLoading;
 
   if (translationsLoading) {
@@ -112,9 +114,10 @@ export default function GisZonesPage() {
     <div className="flex flex-col gap-6 py-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-bold text-2xl">{t.page_title ?? "Agro-Climatic Zone Boundaries"}</h1>
+          <h1 className="font-bold text-2xl">{t.page_title ?? "Soil Regions"}</h1>
           <p className="mt-0.5 text-muted-foreground text-sm">
-            {t.page_description ?? 'Click a row below to preview it on the map — this does NOT make it live. Only "Activate" does that.'}
+            {t.page_description ??
+              'Soil type by location, independent of agro-climatic zone boundaries. Click a row below to preview it on the map — this does NOT make it live. Only "Activate" does that.'}
           </p>
         </div>
         <div>
@@ -141,7 +144,7 @@ export default function GisZonesPage() {
           <div className="flex items-center gap-2 text-amber-800 dark:text-amber-400">
             <Eye className="h-4 w-4" />
             <span>
-              {(t.preview_banner ?? "Previewing {label} — not live, farmers still see the current active zones.").replace(
+              {(t.preview_banner ?? "Previewing {label} — not live, farmers still see the current active soil regions.").replace(
                 "{label}",
                 previewLabel,
               )}
@@ -154,16 +157,16 @@ export default function GisZonesPage() {
         </div>
       ) : (
         <div className="rounded-lg border bg-muted/30 px-4 py-2.5 text-muted-foreground text-sm">
-          {t.live_banner ?? "Showing the currently LIVE zones — what every farmer sees right now."}
+          {t.live_banner ?? "Showing the currently LIVE soil regions — what every recommendation lookup uses right now."}
         </div>
       )}
 
       {mapIsLoading ? (
         <div className="h-96 w-full animate-pulse rounded-lg bg-muted" />
       ) : mapData ? (
-        <ZonesMap
-          zones={mapData}
-          mapKey={isPreviewing ? `preview-${previewVersionId}` : `live-${liveZonesUpdatedAt}`}
+        <SoilRegionsMap
+          regions={mapData}
+          mapKey={isPreviewing ? `preview-${previewVersionId}` : `live-${liveRegionsUpdatedAt}`}
           t={t}
         />
       ) : null}
@@ -177,9 +180,9 @@ export default function GisZonesPage() {
 
       <Suspense>
         <DataTable
-          queryKey="gis-zone-versions"
-          queryFn={adminGisZonesApi.getVersions}
-          columns={getZoneVersionColumns(t)}
+          queryKey="soil-region-versions"
+          queryFn={adminSoilRegionsApi.getVersions}
+          columns={getSoilRegionVersionColumns(t)}
           columnsLabel="Columns"
           toggleColumnsLabel="Toggle columns"
           searchPlaceholder="Search..."
