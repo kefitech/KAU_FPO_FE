@@ -127,7 +127,15 @@ export function CropRecommendationDisplay() {
       }
     } catch (err) {
       const msg = (err as { message?: string })?.message;
-      setError(msg ?? "Could not get a recommendation right now. Please try again.");
+      // Backend returns this specific (currently untranslated) key when the
+      // FPO's location is outside Kerala's supported zones — rejected
+      // synchronously before any DB write or Celery dispatch happens, so
+      // there's no polling/async result to wait for here.
+      if (msg === "recommendations.outside_kerala") {
+        setError("Crop recommendations are only available for locations within Kerala. Check your cultivation area boundary above.");
+      } else {
+        setError(msg ?? "Could not get a recommendation right now. Please try again.");
+      }
     } finally {
       setRequesting(false);
     }
@@ -158,6 +166,11 @@ export function CropRecommendationDisplay() {
   const isWorking = recommendation?.status === "pending" || recommendation?.status === "processing";
   const isFailed = recommendation?.status === "failed";
   const isReady = recommendation?.status === "completed" && recommendation.recommendations.length > 0;
+  // Backend skips the ML call entirely (rather than returning a fake
+  // recommendation) when the farm's location doesn't fall inside any
+  // Kerala agro-climatic zone — input_snapshot.agro_zone is null in
+  // exactly that case, distinguishing it from a generic service failure.
+  const isOutsideKerala = isFailed && !recommendation?.input_snapshot?.agro_zone;
 
   return (
     <div className="flex flex-col gap-4">
@@ -232,7 +245,16 @@ export function CropRecommendationDisplay() {
         </div>
       )}
 
-      {isFailed && (
+      {isFailed && isOutsideKerala && (
+        <div className="flex h-32 flex-col items-center justify-center gap-2 rounded-lg border bg-muted/30 text-center">
+          <p className="text-muted-foreground text-sm">Crop recommendations are only available for locations within Kerala.</p>
+          <p className="text-muted-foreground text-xs">
+            Check your cultivation area boundary above — it looks like it falls outside Kerala&apos;s supported zones.
+          </p>
+        </div>
+      )}
+
+      {isFailed && !isOutsideKerala && (
         <div className="flex h-32 flex-col items-center justify-center gap-2 rounded-lg border bg-muted/30 text-center">
           <p className="text-muted-foreground text-sm">Couldn&apos;t generate a recommendation this time.</p>
           <p className="text-muted-foreground text-xs">Try again using the button above.</p>
