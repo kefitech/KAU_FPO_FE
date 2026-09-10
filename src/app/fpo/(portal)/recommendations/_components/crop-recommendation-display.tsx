@@ -5,9 +5,23 @@ import { useEffect, useRef, useState } from "react";
 import { Loader2, RefreshCw, Sparkles, Star, ThumbsUp, TrendingUp } from "lucide-react";
 
 import { getMyRecommendation, requestFreshRecommendation, submitRecommendationFeedback } from "@/lib/api/recommendation";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import type { MyRecommendation } from "@/types/recommendation";
 
 const POLL_INTERVAL_MS = 4000;
+
+const SEASON_OPTIONS: { value: string; label: string }[] = [
+  { value: "", label: "Auto-detect" },
+  { value: "southwest_monsoon", label: "South-West Monsoon" },
+  { value: "northeast_monsoon", label: "North-East Monsoon" },
+  { value: "dry_season", label: "Dry Season" },
+];
+
+const SEASON_LABELS: Record<string, string> = {
+  southwest_monsoon: "South-West Monsoon",
+  northeast_monsoon: "North-East Monsoon",
+  dry_season: "Dry Season",
+};
 
 function StarRating({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   return (
@@ -38,6 +52,7 @@ export function CropRecommendationDisplay() {
   const [feedbackComment, setFeedbackComment] = useState("");
   const [submittingFeedback, setSubmittingFeedback] = useState(false);
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+  const [selectedSeason, setSelectedSeason] = useState("");
 
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -103,7 +118,7 @@ export function CropRecommendationDisplay() {
     setRequesting(true);
     setError(null);
     try {
-      const result = await requestFreshRecommendation();
+      const result = await requestFreshRecommendation(selectedSeason || undefined);
       setRecommendation(result);
       setFeedbackRating(result.feedback_rating ?? 0);
       setFeedbackSubmitted(!!result.feedback_rating);
@@ -153,18 +168,38 @@ export function CropRecommendationDisplay() {
             AI Crop Recommendations
           </h2>
           {recommendation && (
-            <p className="text-muted-foreground text-xs">For financial year {recommendation.financial_year}</p>
+            <p className="text-muted-foreground text-xs">
+              For financial year {recommendation.financial_year}
+              {recommendation.input_snapshot?.season && (
+                <> — generated for {SEASON_LABELS[recommendation.input_snapshot.season] ?? recommendation.input_snapshot.season}</>
+              )}
+            </p>
           )}
         </div>
-        <button
-          type="button"
-          onClick={handleRequest}
-          disabled={requesting || isWorking}
-          className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 font-medium text-primary-foreground text-xs disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {requesting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-          {recommendation ? "Refresh recommendations" : "Get recommendations"}
-        </button>
+        <div className="flex items-center gap-2">
+          <NativeSelect
+            size="sm"
+            value={selectedSeason}
+            onChange={(e) => setSelectedSeason(e.target.value)}
+            disabled={requesting || isWorking}
+            aria-label="Season"
+          >
+            {SEASON_OPTIONS.map((opt) => (
+              <NativeSelectOption key={opt.value} value={opt.value}>
+                {opt.label}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+          <button
+            type="button"
+            onClick={handleRequest}
+            disabled={requesting || isWorking}
+            className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 font-medium text-primary-foreground text-xs disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {requesting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+            {recommendation ? "Refresh recommendations" : "Get recommendations"}
+          </button>
+        </div>
       </div>
 
       {error && <p className="text-destructive text-xs">{error}</p>}

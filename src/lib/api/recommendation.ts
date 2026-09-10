@@ -37,9 +37,17 @@ export async function getMyRecommendation(): Promise<MyRecommendation | null> {
  * ML service (FastAPI) with the FPO's current district/zone/soil/
  * season/commodities/tier, derived server-side. Replaces any existing
  * cached recommendation for this financial year.
+ *
+ * `season` is an optional manual override (one of "southwest_monsoon" |
+ * "northeast_monsoon" | "dry_season") — omit it to let the backend
+ * auto-detect the season from today's date, same as before this param
+ * existed.
  */
-export async function requestFreshRecommendation(): Promise<MyRecommendation> {
-  const response = await apiClient.post<ApiResponse<MyRecommendation>>(RECOMMENDATION_REQUEST_PATH);
+export async function requestFreshRecommendation(season?: string): Promise<MyRecommendation> {
+  const response = await apiClient.post<ApiResponse<MyRecommendation>>(
+    RECOMMENDATION_REQUEST_PATH,
+    season ? { season } : {},
+  );
   return response.data.data;
 }
 

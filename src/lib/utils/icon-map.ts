@@ -8,6 +8,9 @@ export const iconMap: Record<string, LucideIcon> = Object.fromEntries(
 export function getIcon(name: string): LucideIcon {
   if (!name) return LucideIcons.HelpCircle;
   if (iconMap[name]) return iconMap[name];
-  const capitalized = name.charAt(0).toUpperCase() + name.slice(1);
-  return iconMap[capitalized] ?? LucideIcons.HelpCircle;
+  const pascal = name
+    .split(/[-_]/)
+    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+    .join("");
+  return iconMap[pascal] ?? LucideIcons.HelpCircle;
 }
