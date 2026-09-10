@@ -57,6 +57,8 @@ export default function CBBOsPage() {
           queryFn={cbbosApi.getAll}
           columns={getCBBOColumns(tTable, tConfirm, tCommon)}
           onRowClick={(row) => setCbboView({ open: true, row })}
+          columnsLabel={tCommon.col_header ?? "Columns"}
+          toggleColumnsLabel={tCommon.col_toggle_columns ?? "Toggle columns"}
         />
       </Suspense>
 

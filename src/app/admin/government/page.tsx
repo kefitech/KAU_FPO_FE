@@ -1,7 +1,9 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
+
 import { useRouter } from "next/navigation";
+
 import { Pencil, Plus } from "lucide-react";
 
 import { governmentApi } from "@/app/admin/_api/government";
@@ -47,7 +49,12 @@ export default function GovernmentPage() {
             {tTable.page_description ?? "Manage government official accounts and their jurisdiction"}
           </p>
         </div>
-        <Button size="sm" variant="outline" className="self-start sm:self-auto" onClick={() => router.push("/admin/government/pending")}>
+        <Button
+          size="sm"
+          variant="outline"
+          className="self-start sm:self-auto"
+          onClick={() => router.push("/admin/government/pending")}
+        >
           {tTable.pending_approvals_button ?? "Pending Approvals"}
         </Button>
         <Button size="sm" className="self-start sm:self-auto" onClick={() => router.push("/admin/government/new")}>
@@ -62,6 +69,8 @@ export default function GovernmentPage() {
           queryFn={governmentApi.getAll}
           columns={getGovernmentColumns(tTable, tConfirm, tCommon)}
           onRowClick={(row) => setOfficialView({ open: true, row })}
+          columnsLabel={tCommon.col_header ?? "Columns"}
+          toggleColumnsLabel={tCommon.col_toggle_columns ?? "Toggle columns"}
         />
       </Suspense>
 
@@ -71,7 +80,13 @@ export default function GovernmentPage() {
         title={tTable.view_title ?? "Official Details"}
         actions={
           officialView.row
-            ? [{ label: tCommon.edit ?? "Edit", icon: Pencil, onClick: () => router.push(`/admin/government/${officialView.row?.id}/edit`) }]
+            ? [
+                {
+                  label: tCommon.edit ?? "Edit",
+                  icon: Pencil,
+                  onClick: () => router.push(`/admin/government/${officialView.row?.id}/edit`),
+                },
+              ]
             : []
         }
         fields={
