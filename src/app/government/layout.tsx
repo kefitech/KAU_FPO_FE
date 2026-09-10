@@ -1,23 +1,15 @@
 "use client";
 import "@/app/globals.css";
 
-import { DynamicSidebar } from "@/components/layout/dynamic-sidebar";
 import { LocaleSwitcher } from "@/components/layout/locale-switcher";
+import { RoleMenuSidebar } from "@/components/layout/role-menu-sidebar";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { governmentNavigationConfig } from "@/config/navigation-defaults";
-import { usePortalNavigation } from "@/hooks/use-navigation";
-import { useLocaleStore } from "@/stores/locale-store";
 
 export default function GovernmentLayout({ children }: { children: React.ReactNode }) {
-  const { data: navConfig } = usePortalNavigation("government");
-  const locale = useLocaleStore((state) => state.locale);
-
-  const config = navConfig ?? governmentNavigationConfig;
-
   return (
     <SidebarProvider>
-      <DynamicSidebar config={config} locale={locale} />
+      <RoleMenuSidebar title="KAU-FPO" subtitle="Government Portal" />
       <SidebarInset>
         <div className="flex items-center justify-between border-b px-4 py-2">
           <SidebarTrigger />
