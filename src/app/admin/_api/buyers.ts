@@ -15,6 +15,8 @@ export interface AdminBuyer {
   status: BuyerStatus;
   is_verified: boolean;
   fpo: number | null;
+  user: number | null;
+  account_active: boolean | null;
   created_at: string;
   updated_at: string;
 }
@@ -26,4 +28,10 @@ export const adminBuyersApi = {
   verify: (id: number) => api.post(`${BASE}${id}/verify/`).then((r) => r.data),
 
   reject: (id: number) => api.post(`${BASE}${id}/reject/`).then((r) => r.data),
+
+  deactivate: (id: number): Promise<void> => api.post(`${BASE}${id}/deactivate/`).then(() => undefined),
+
+  activate: (id: number): Promise<void> => api.post(`${BASE}${id}/activate/`).then(() => undefined),
+
+  resetPassword: (id: number): Promise<void> => api.post(`${BASE}${id}/reset-password/`).then(() => undefined),
 };

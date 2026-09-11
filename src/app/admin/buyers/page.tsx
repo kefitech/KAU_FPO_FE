@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 
 import { adminBuyersApi } from "@/app/admin/_api/buyers";
 import { DataTable } from "@/components/data-table";
@@ -21,6 +21,22 @@ export default function AdminBuyersPage() {
       setT(data.buyers_table ?? {});
     });
   }, [locale]);
+
+  const STATUS_FILTERS = useMemo(
+    () => [
+      {
+        key: "status",
+        label: t.filter_status ?? "Status",
+        options: [
+          { label: t.status_pending ?? "Pending", value: "pending" },
+          { label: t.status_verified ?? "Verified", value: "verified" },
+          { label: t.status_deactivated ?? "Deactivated", value: "deactivated" },
+          { label: t.status_rejected ?? "Rejected", value: "rejected" },
+        ],
+      },
+    ],
+    [t],
+  );
 
   return (
     <div className="flex flex-col gap-6 px-8 py-6">
@@ -48,6 +64,7 @@ export default function AdminBuyersPage() {
           queryKey={`admin-buyers-${buyerType}`}
           queryFn={(params) => adminBuyersApi.getAll({ ...params, buyer_type: buyerType || undefined })}
           columns={getBuyerColumns(t)}
+          filters={STATUS_FILTERS}
         />
       </Suspense>
     </div>
