@@ -19,6 +19,9 @@ export const fpoNavigationConfig: NavigationConfig = {
         { id: "experts", title: "Expert Directory", translations: { ml: "വിദഗ്ധ ഡയറക്ടറി" }, url: "/fpo/experts", icon: "BookOpen" },
         { id: "tier-assessment", title: "Tier Assessment", translations: { ml: "ടയർ അസസ്മെന്റ്" }, url: "/fpo/tier-assessment", icon: "ClipboardList" },
         { id: "dpr", title: "DPR Projects", translations: { ml: "DPR പ്രൊജക്ടുകൾ" }, url: "/fpo/dpr", icon: "FileBarChart" },
+        //arunima
+        { id: "buyer-directory", title: "Buyer Directory", translations: { ml: "ക്രേതാവ് ഡയറക്ടറി" }, url: "/fpo/buyer-directory", icon: "ShoppingCart" },
+
       ],
     },
   ],
@@ -53,6 +56,8 @@ export const adminNavigationConfig: NavigationConfig = {
         { id: "dpr", title: "DPR Projects", translations: { ml: "DPR പ്രൊജക്ടുകൾ" }, url: "/admin/dpr", icon: "FileBarChart" },
         { id: "dpr-config", title: "DPR Config", translations: { ml: "DPR കോൺഫിഗ്" }, url: "/admin/dpr-config", icon: "SlidersHorizontal" },
         { id: "ai-services", title: "AI Services", translations: { ml: "AI സേവനങ്ങൾ" }, url: "/admin/ai-services", icon: "Bot" },
+        //arunima
+        { id: "buyers", title: "Buyer Directory", translations: { ml: "ക്രേതാവ് ഡയറക്ടറി" }, url: "/admin/buyers", icon: "ShoppingCart" },
       ],
     },
     {
@@ -124,3 +129,24 @@ export const cbboNavigationConfig: NavigationConfig = {
     { id: "logout", title: "Logout", translations: { ml: "ലോഗൗട്ട്" }, url: "/logout", icon: "LogOut" },
   ],
 };
+// arunima 07rd sep 2026-------------------------------
+export const buyerNavigationConfig: NavigationConfig = {
+  logo: { title: "KAU-FPO Platform", subtitle: "Buyer Portal", icon: "Sprout" },
+  groups: [
+    {
+      id: "main",
+      label: "Menu",
+      translations: { ml: "മെനു" },
+      items: [
+        { id: "dashboard", title: "Dashboard", translations: { ml: "ഡാഷ്‌ബോർഡ്" }, url: "/buyer/dashboard", icon: "LayoutDashboard" },
+        { id: "products", title: "Explore Products", translations: { ml: "ഉൽപ്പന്നങ്ങൾ പര്യവേക്ഷണം ചെയ്യുക" }, url: "/buyer/products", icon: "Package" },
+      ],
+    },
+  ],
+  footerItems: [
+    { id: "settings", title: "Settings", translations: { ml: "ക്രമീകരണങ്ങൾ" }, url: "/buyer/settings", icon: "Settings" },
+    { id: "logout", title: "Logout", translations: { ml: "ലോഗൗട്ട്" }, url: "/logout", icon: "LogOut" },
+  ],
+};
+    
+//----------------------------------------------------

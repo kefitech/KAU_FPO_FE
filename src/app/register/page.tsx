@@ -1,8 +1,10 @@
 "use client";
-
-import { useEffect, useMemo, useRef, useState } from "react";
-
-import { useRouter } from "next/navigation";
+// Arunima 02 september 2026
+// import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+// import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+//----------------------------------------------------------------------------
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
@@ -187,7 +189,6 @@ function EligibilityStep({ onPass, t }: { onPass: (token: string) => void; t: T 
         />
         {formState.errors.member_count && <FieldError errors={[formState.errors.member_count]} />}
       </Field>
-
       <div className="flex flex-col gap-3 rounded-lg border p-4">
         <div className="flex items-center justify-between">
           <p className="font-medium text-muted-foreground text-sm">{t.eligibility_requirements ?? "Requirements"}</p>
@@ -251,10 +252,20 @@ function EligibilityStep({ onPass, t }: { onPass: (token: string) => void; t: T 
 function PhoneOtpStep({
   onPass,
   onBack,
+  //arunima s 02 sep 2026
+  showBack = true,
+  isBuyerMode = false,
+  onEmailVerified,
+  //-------------
   t,
 }: {
   onPass: (phoneToken: string, phone: string) => void;
   onBack: () => void;
+  //Arunima 02 sep
+  showBack?: boolean;
+  isBuyerMode?: boolean;
+  onEmailVerified?: (emailToken: string, email: string) => void;
+  //------------------
   t: T;
 }) {
   const [phone, setPhone] = useState("");
@@ -263,6 +274,57 @@ function PhoneOtpStep({
   const [maskedPhone, setMaskedPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [otpError, setOtpError] = useState("");
+
+    //Arunima s — 02 sep 2026 — buyer-only email verification
+
+  const [phoneVerified, setPhoneVerified] = useState(false);
+  const [phoneToken, setPhoneToken] = useState("");
+  const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [emailOtpSent, setEmailOtpSent] = useState(false);
+  const [maskedEmail, setMaskedEmail] = useState("");
+  const [emailOtp, setEmailOtp] = useState("");
+  const [emailOtpError, setEmailOtpError] = useState("");
+  const [emailVerified, setEmailVerified] = useState(false);
+
+  const sendEmailMutation = useMutation({
+    mutationFn: () => fpoRegistrationApi.sendBuyerEmailOtp(email),
+    onSuccess: (data) => {
+      setMaskedEmail(data.email);
+      setEmailOtpSent(true);
+      setEmailError("");
+    },
+    onError: (err: unknown) => {
+      const axiosErr = err as { response?: { data?: { message?: string } }; message?: string } | undefined;
+      setEmailError(
+        axiosErr?.response?.data?.message ?? axiosErr?.message ?? t.email_err_send_failed ?? "Failed to send OTP. Please try again.",
+      );
+    },
+  });
+
+  const verifyEmailMutation = useMutation({
+    mutationFn: () => fpoRegistrationApi.verifyBuyerEmailOtp(email, emailOtp),
+    onSuccess: (data) => {
+      setEmailVerified(true);
+      onEmailVerified?.(data.email_token, email);
+    },
+    onError: (err: unknown) => {
+      const axiosErr = err as { response?: { data?: { message?: string } }; message?: string } | undefined;
+      setEmailOtpError(
+        axiosErr?.response?.data?.message ?? axiosErr?.message ?? t.email_err_invalid_otp ?? "Invalid OTP. Please try again.",
+      );
+    },
+  });
+
+  function handleSendEmail() {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setEmailError(t.email_err_invalid ?? "Enter a valid email address");
+      return;
+    }
+    setEmailError("");
+    sendEmailMutation.mutate();
+  }
+  //-----------------------------------------------------------------------
 
   const sendMutation = useMutation({
     mutationFn: () => fpoRegistrationApi.sendPreRegisterOtp(phone),
@@ -285,7 +347,11 @@ function PhoneOtpStep({
   const verifyMutation = useMutation({
     mutationFn: () => fpoRegistrationApi.verifyPreRegisterOtp(phone, otp),
     onSuccess: (data) => {
-      onPass(data.phone_token, phone);
+      //Arunima S 03 sep 2026
+      // onPass(data.phone_token, phone);
+      setPhoneVerified(true);
+      setPhoneToken(data.phone_token);
+      //--------------------------------------------
     },
     onError: (err: unknown) => {
       const axiosErr = err as { response?: { data?: { message?: string } }; message?: string } | undefined;
@@ -309,12 +375,16 @@ function PhoneOtpStep({
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h2 className="font-semibold text-lg">{t.phone_heading ?? "Verify Phone Number"}</h2>
-        <p className="mt-0.5 text-muted-foreground text-sm">
-          {t.phone_subheading ?? "We'll send a one-time password to confirm your mobile number."}
-        </p>
-      </div>
+    <div>
+      <h2 className="font-semibold text-lg">
+        {isBuyerMode ? (t.phone_heading_buyer ?? "Verify Phone Number and Email") : (t.phone_heading ?? "Verify Phone Number")}
+      </h2>
+      <p className="mt-0.5 text-muted-foreground text-sm">
+        {isBuyerMode
+          ? (t.phone_subheading_buyer ?? "We'll send one-time passwords to confirm your mobile number and email address.")
+          : (t.phone_subheading ?? "We'll send a one-time password to confirm your mobile number.")}
+      </p>
+    </div>
 
       <Field>
         <FieldLabel htmlFor="phone">
@@ -352,6 +422,7 @@ function PhoneOtpStep({
         {phoneError && <p className="mt-1 text-destructive text-xs">{phoneError}</p>}
       </Field>
 
+
       {otpSent && (
         <div className="flex flex-col gap-4">
           <div className="flex items-start gap-2.5 rounded-lg border border-green-200 bg-green-50 px-3 py-2.5 dark:border-green-800 dark:bg-green-950/30">
@@ -360,8 +431,8 @@ function PhoneOtpStep({
               {t.phone_otp_sent ?? "OTP sent to"} <span className="font-medium font-mono">{maskedPhone}</span>
             </p>
           </div>
-
-          <Field>
+          {/* Arunima S 03 september */}
+          {/* <Field>
             <FieldLabel htmlFor="otp">{t.phone_otp_label ?? "Enter OTP"}</FieldLabel>
             <Input
               id="otp"
@@ -375,24 +446,154 @@ function PhoneOtpStep({
               className="w-40 text-center font-mono text-lg tracking-widest"
             />
             {otpError && <p className="mt-1 text-destructive text-xs">{otpError}</p>}
-          </Field>
+          </Field> */}
+
+
+            {!phoneVerified && (
+            <Field>
+              <FieldLabel htmlFor="otp">{t.phone_otp_label ?? "Enter OTP"}</FieldLabel>
+              <div className="flex gap-2 items-start">
+                <Input
+                  id="otp"
+                  placeholder={t.phone_otp_placeholder ?? "6-digit OTP"}
+                  maxLength={6}
+                  value={otp}
+                  onChange={(e) => {
+                    setOtp(e.target.value);
+                    setOtpError("");
+                  }}
+                  className="w-40 text-center font-mono text-lg tracking-widest"
+                />
+                <Button
+                  type="button"
+                  className="gap-1.5 bg-green-600 hover:bg-green-700"
+                  onClick={() => verifyMutation.mutate()}
+                  disabled={verifyMutation.isPending || otp.length < 6}
+                >
+                  {verifyMutation.isPending
+                    ? (t.phone_btn_verifying ?? "Verifying…")
+                    // : (t.phone_btn_verify ?? "Verify")}
+                    : (t.phone_btn_verify_only ?? "Verify")}
+                </Button>
+              </div>
+              {otpError && <p className="mt-1 text-destructive text-xs">{otpError}</p>}
+            </Field>
+          )}
+
+          {phoneVerified && (
+            <p className="flex items-center gap-1.5 text-green-600 text-xs">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              {t.phone_verified_label ?? "Phone verified"}
+            </p>
+          )}
+          {/* //------------------------------------------------------------------- */}
         </div>
       )}
+      {/* Arunima s — 02 sep 2026 — buyer-only email verification, shown below phone */}
+      {isBuyerMode && (
+        <Field>
+          <FieldLabel htmlFor="buyer-email">
+            {t.email_label ?? "Email Address"} <span className="text-destructive">*</span>
+          </FieldLabel>
+          <div className="flex gap-2">
+            <Input
+              id="buyer-email"
+              type="email"
+              placeholder={t.email_placeholder ?? "you@example.com"}
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setEmailError("");
+              }}
+              disabled={emailOtpSent}
+              className="flex-1"
+            />
+            <Button
+              type="button"
+              variant={emailOtpSent ? "outline" : "default"}
+              className={emailOtpSent ? "" : "bg-green-600 hover:bg-green-700"}
+              onClick={handleSendEmail}
+              disabled={sendEmailMutation.isPending || emailVerified}
+            >
+              {sendEmailMutation.isPending
+                ? (t.email_btn_sending ?? "Sending…")
+                : emailOtpSent
+                  ? (t.email_btn_resend ?? "Resend")
+                  : (t.email_btn_send ?? "Send OTP")}
+            </Button>
+          </div>
+          {emailError && <p className="mt-1 text-destructive text-xs">{emailError}</p>}
+
+          {emailOtpSent && !emailVerified && (
+            <div className="mt-3 flex flex-col gap-3">
+              <div className="flex items-start gap-2.5 rounded-lg border border-green-200 bg-green-50 px-3 py-2.5 dark:border-green-800 dark:bg-green-950/30">
+                <p className="text-green-700 text-xs dark:text-green-300">
+                  {t.email_otp_sent ?? "OTP sent to"} <span className="font-medium font-mono">{maskedEmail}</span>
+                </p>
+              </div>
+              <div className="flex gap-2 items-start">
+                <Input
+                  placeholder={t.email_otp_placeholder ?? "6-digit OTP"}
+                  maxLength={6}
+                  value={emailOtp}
+                  onChange={(e) => {
+                    setEmailOtp(e.target.value);
+                    setEmailOtpError("");
+                  }}
+                  className="w-40 text-center font-mono text-lg tracking-widest"
+                />
+                <Button
+                  type="button"
+                  className="gap-1.5 bg-green-600 hover:bg-green-700"
+                  onClick={() => verifyEmailMutation.mutate()}
+                  disabled={verifyEmailMutation.isPending || emailOtp.length < 6}
+                >
+                  {verifyEmailMutation.isPending
+                    ? (t.email_btn_verifying ?? "Verifying…")
+                    : (t.email_btn_verify ?? "Verify")}
+                </Button>
+              </div>
+              {emailOtpError && <p className="text-destructive text-xs">{emailOtpError}</p>}
+            </div>
+          )}
+
+          {emailVerified && (
+            <p className="mt-2 flex items-center gap-1.5 text-green-600 text-xs">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              {t.email_verified_label ?? "Email verified"}
+            </p>
+          )}
+        </Field>
+      )}
+      {/* //----------------------------------------------------------------- */}
 
       <div className="flex items-center justify-between pt-1">
+        {/* //Arunima s  */}
+        {showBack && (
         <Button type="button" variant="outline" onClick={onBack}>
           {t.btn_back ?? "← Back"}
         </Button>
+        )}
+        {/* //----------- */}
         {otpSent && (
           <Button
             type="button"
-            className="gap-1.5 bg-green-600 hover:bg-green-700"
-            onClick={() => verifyMutation.mutate()}
-            disabled={verifyMutation.isPending || otp.length < 6}
+            //Arunima 3 rd sep 2026
+
+            // className="gap-1.5 bg-green-600 hover:bg-green-700"
+            // onClick={() => verifyMutation.mutate()}
+            // disabled={verifyMutation.isPending || otp.length < 6}
+
+             className="gap-1.5 bg-green-600 hover:bg-green-700 ml-auto"
+             onClick={() => onPass(phoneToken, phone)}
+             disabled={!phoneVerified || (isBuyerMode && !emailVerified)}
           >
-            {verifyMutation.isPending
+            {/* {verifyMutation.isPending
               ? (t.phone_btn_verifying ?? "Verifying…")
-              : (t.phone_btn_verify ?? "Verify & Continue")}
+              : (t.phone_btn_verify ?? "Verify & Continue")} */}
+              {t.phone_btn_continue ?? "Continue"}
+
+              {/* //------------------------------------------------------------------ */}
             <ChevronRight className="h-4 w-4" />
           </Button>
         )}
@@ -417,6 +618,11 @@ function AccountStep({
   eligibilityToken,
   phoneToken,
   verifiedPhone,
+ //arunima 03rd sep 2026-------------------------------
+  isBuyerMode = false,
+  verifiedEmail,
+  emailToken,
+  //----------------------------------------------
   t,
 }: {
   onBack: () => void;
@@ -424,6 +630,11 @@ function AccountStep({
   eligibilityToken: string;
   phoneToken: string;
   verifiedPhone: string;
+  isBuyerMode?: boolean;
+  verifiedEmail?: string;
+  //arunima s 03 sep---------
+  emailToken?: string;
+  //----------------
   t: T;
 }) {
   const router = useRouter();
@@ -440,10 +651,17 @@ function AccountStep({
         .string()
         .min(1, { message: t.account_err_last_name_required ?? "Last name is required" })
         .max(30, { message: t.account_err_last_name_max ?? "Last name must be at most 30 characters" }),
-      email: z
-        .string()
-        .email({ message: t.account_err_email ?? "Enter a valid email address" })
-        .max(35, { message: t.account_err_email_max ?? "Email must be at most 35 characters" }),
+      // email: z
+      //   .string()
+      //   .email({ message: t.account_err_email ?? "Enter a valid email address" })
+      //   .max(35, { message: t.account_err_email_max ?? "Email must be at most 35 characters" }),
+
+      email: isBuyerMode
+        ? z.any().optional()
+        : z
+            .string()
+            .email({ message: t.account_err_email ?? "Enter a valid email address" })
+            .max(35, { message: t.account_err_email_max ?? "Email must be at most 35 characters" }),
       password: z
         .string()
         .min(8, { message: t.account_err_pwd_min ?? "At least 8 characters" })
@@ -468,24 +686,49 @@ function AccountStep({
     resolver: zodResolver(schema),
     mode: "onChange",
   });
+  console.log("CURRENT FORM ERRORS:", errors);
 
   const passwordVal = watch("password") ?? "";
   const confirmVal = watch("confirm_password") ?? "";
   const passwordsMatch = passwordVal.length >= 8 && confirmVal.length > 0 && passwordVal === confirmVal;
   const passwordsMismatch = confirmVal.length > 0 && passwordVal !== confirmVal;
 
-  const submitMutation = useMutation({
-    mutationFn: (values: AccountValues) =>
-      authApi.register({
-        first_name: values.first_name,
-        last_name: values.last_name,
-        email: values.email,
-        phone: verifiedPhone,
-        password: values.password,
-        confirm_password: values.confirm_password,
-        eligibility_token: eligibilityToken,
-        phone_token: phoneToken,
-      }),
+  //Arunima 04 sep 
+  // const submitMutation = useMutation({
+  //   mutationFn: (values: AccountValues) =>
+  //     authApi.register({
+  //       first_name: values.first_name,
+  //       last_name: values.last_name,
+  //       email: values.email,
+  //       phone: verifiedPhone,
+  //       password: values.password,
+  //       confirm_password: values.confirm_password,
+  //       eligibility_token: eligibilityToken,
+  //       phone_token: phoneToken,
+  //     }),
+    
+      const submitMutation = useMutation<unknown, unknown, AccountValues>({
+        mutationFn: (values: AccountValues) =>
+          isBuyerMode
+            ? fpoRegistrationApi.registerBuyer({
+                first_name: values.first_name,
+                last_name: values.last_name,
+                password: values.password,
+                confirm_password: values.confirm_password,
+                phone_token: phoneToken,
+                email_token: emailToken ?? "",
+              })
+            : authApi.register({
+                first_name: values.first_name,
+                last_name: values.last_name,
+                email: values.email,
+                phone: verifiedPhone,
+                password: values.password,
+                confirm_password: values.confirm_password,
+                eligibility_token: eligibilityToken,
+                phone_token: phoneToken,
+              }),
+  //----------------------------------------
     onSuccess: () => {
       toast.success(t.account_success ?? "Account created! Please log in to continue.");
       router.push("/v1/login");
@@ -534,11 +777,20 @@ function AccountStep({
   });
 
   return (
-    <form onSubmit={handleSubmit((v) => submitMutation.mutate(v))} className="flex flex-col gap-5">
+    // <form onSubmit={handleSubmit((v) => submitMutation.mutate(v))} className="flex flex-col gap-5">
+    // arunima 04rd sep 2026-------------------------------
+    <form onSubmit={handleSubmit((v) => {
+      console.log("SUBMIT CALLBACK REACHED", v);
+      submitMutation.mutate(v);
+    })} className="flex flex-col gap-5">
+    
+     {/* //---------------------------------------------------- */}
       <div>
         <h2 className="font-semibold text-lg">{t.account_heading ?? "Create Your Account"}</h2>
         <p className="mt-0.5 text-muted-foreground text-sm">
-          {t.account_subheading ?? "This account will be used to manage your FPO profile."}
+          {isBuyerMode
+            ? (t.account_subheading_buyer ?? "This account will be used to manage your buyer profile and purchase products from FPOs.")
+            : (t.account_subheading ?? "This account will be used to manage your FPO profile.")}
         </p>
       </div>
 
@@ -569,14 +821,38 @@ function AccountStep({
           {errors.last_name && <FieldError errors={[errors.last_name]} />}
         </Field>
       </div>
-
-      <Field>
+{/* //arunima s 03 sep */}
+      {/* <Field>
         <FieldLabel htmlFor="email">
           {t.account_email ?? "Email Address"} <span className="text-destructive">*</span>
         </FieldLabel>
         <Input id="email" type="email" placeholder={t.account_email_ph ?? "rajan@example.com"} {...register("email")} />
         {errors.email && <FieldError errors={[errors.email]} />}
-      </Field>
+      </Field> */}
+
+      {isBuyerMode ? (
+        <Field>
+          <FieldLabel>{t.account_email ?? "Email Address"}</FieldLabel>
+          <div className="flex h-9 items-center gap-2 rounded-md border border-input bg-muted/50 px-3 text-muted-foreground text-sm">
+            <span className="font-mono">{verifiedEmail}</span>
+            <CheckCircle2 className="ml-auto h-3.5 w-3.5 text-green-600" />
+          </div>
+          <p className="text-muted-foreground text-xs">{t.account_email_verified ?? "Verified in previous step"}</p>
+        </Field>
+      ) : (
+        <Field>
+          <FieldLabel htmlFor="email">
+            {t.account_email ?? "Email Address"} <span className="text-destructive">*</span>
+          </FieldLabel>
+          <Input id="email" type="email" placeholder={t.account_email_ph ?? "rajan@example.com"} {...register("email")} />
+          {errors.email && <FieldError errors={[errors.email]} />}
+        </Field>
+      )}
+
+{/* 
+
+
+ */}
 
       <Field>
         <FieldLabel>{t.account_phone ?? "Phone Number"}</FieldLabel>
@@ -693,28 +969,52 @@ function AccountStep({
 
 const STAGE_ORDER: Stage[] = ["eligibility", "phone-otp", "account"];
 
-export default function RegisterPage() {
+// export default function RegisterPage() {
+//   const locale = useLocaleStore((s) => s.locale);
+//   const [t, setT] = useState<T>({});
+//   const effectiveLocale = locale || "en";
+//   const [stage, setStage] = useState<Stage>("eligibility");
+
+//Arunima 2 sep 2026
+// export default function RegisterPage() {
+function RegisterPageInner() {
   const locale = useLocaleStore((s) => s.locale);
+  const searchParams = useSearchParams();
+  const isBuyerMode = searchParams.get("mode") === "buyer";
   const [t, setT] = useState<T>({});
   const effectiveLocale = locale || "en";
-  const [stage, setStage] = useState<Stage>("eligibility");
+  const [stage, setStage] = useState<Stage>(isBuyerMode ? "phone-otp" : "eligibility");
+  //------------------------------------------------------------------
+
   const [eligibilityToken, setEligibilityToken] = useState("");
   const [phoneToken, setPhoneToken] = useState("");
   const [verifiedPhone, setVerifiedPhone] = useState("");
+  //Arunima 02 sep 2026
+  const [emailToken, setEmailToken] = useState("");
+  const [verifiedEmail, setVerifiedEmail] = useState("");
+  //---------------------
 
   useEffect(() => {
     translationsApi.getPublic(effectiveLocale, "register,districts").then((data) => {
       setT({ ...(data.districts ?? {}), ...(data.register ?? {}) });
     });
   }, [effectiveLocale]);
-
-  const stages: { key: Stage; label: string }[] = [
+//Arunima S  02 sep 2026 ---below line 725 const stages-------> const allStages
+  const allStages: { key: Stage; label: string }[] = [
     { key: "eligibility", label: t.stage_eligibility ?? "Eligibility" },
-    { key: "phone-otp", label: t.stage_phone ?? "Verify Phone" },
+    { key: "phone-otp", label: t.stage_phone ?? "Verification" },
     { key: "account", label: t.stage_account ?? "Account" },
   ];
 
-  const currentIndex = STAGE_ORDER.indexOf(stage);
+  //Arunima 02 sep 2026
+  
+  const stages = isBuyerMode ? allStages.filter((s) => s.key !== "eligibility") : allStages;
+
+  const stageOrderForMode = isBuyerMode ? STAGE_ORDER.filter((s) => s !== "eligibility") : STAGE_ORDER;
+  const currentIndex = stageOrderForMode.indexOf(stage);
+  //------------------------------------------------------------
+ //below one line is commented by arunima
+  // const currentIndex = STAGE_ORDER.indexOf(stage);
 
   return (
     <div className="flex flex-col items-center justify-center px-4 py-6 sm:py-12">
@@ -769,6 +1069,16 @@ export default function RegisterPage() {
               setStage("account");
             }}
             onBack={() => setStage("eligibility")}
+            //Arunima 02 sep 2026
+            showBack={!isBuyerMode}
+            //---------------------
+            //Arunima 02 sep 2026 — buyer email verification
+            isBuyerMode={isBuyerMode}
+            onEmailVerified={(token, email) => {
+              setEmailToken(token);
+              setVerifiedEmail(email);
+            }}
+            //---------------------
           />
         )}
         {stage === "account" && (
@@ -779,9 +1089,25 @@ export default function RegisterPage() {
             eligibilityToken={eligibilityToken}
             phoneToken={phoneToken}
             verifiedPhone={verifiedPhone}
+            // arunima 03rd sep 2026-------------------------------
+            isBuyerMode={isBuyerMode}
+            verifiedEmail={verifiedEmail}
+            emailToken={emailToken}
+            //----------------------------------------------
           />
         )}
       </div>
     </div>
+  );
+}
+
+
+
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={null}>
+      <RegisterPageInner />
+    </Suspense>
   );
 }

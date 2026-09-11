@@ -48,7 +48,9 @@ export function ProductList({ products, t }: { products: Product[]; t: T }) {
             </span>
           </div>
           <Badge variant="outline" className={statusClasses(product.status)}>
-            {product.status}
+            {/* //arunima */}
+            {t[`status_${product.status}`] ?? product.status}
+            {/* ------ */}
           </Badge>
         </div>
       ))}

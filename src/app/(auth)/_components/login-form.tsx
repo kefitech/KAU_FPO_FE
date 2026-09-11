@@ -1,16 +1,15 @@
 "use client";
-
+ 
 import { useEffect, useState } from "react";
-
+ 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-
+ 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { z } from "zod";
-
+import { z } from "zod"; 
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -19,36 +18,36 @@ import { resolvePostLoginPath } from "@/lib/fpo-redirect";
 import { translationsApi } from "@/lib/api/translations";
 import { useAuthStore } from "@/stores/auth-store";
 import { useLocaleStore } from "@/stores/locale-store";
-
+ 
 const formSchema = z.object({
   username: z.string().min(1, { message: "Username is required." }),
   password: z.string().min(6, { message: "Password must be at least 6 characters." }),
 });
-
+ 
 type FormValues = z.infer<typeof formSchema>;
-
+ 
 export function LoginForm({ t: tProp }: { t?: Record<string, string> }) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const setUser = useAuthStore((state) => state.setUser);
-
+ 
   const locale = useLocaleStore((s) => s.locale);
   const [tLocal, setTLocal] = useState<Record<string, string>>({});
   const t = tProp ?? tLocal;
-
+ 
   useEffect(() => {
     if (tProp) return; // parent already fetched
     translationsApi.getPublic(locale, "login").then((data) => {
       setTLocal(data.login ?? {});
     });
   }, [locale, tProp]);
-
+ 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: { username: "", password: "" },
   });
-
+ 
   const onSubmit = async (values: FormValues) => {
     setIsLoading(true);
     try {
@@ -72,8 +71,7 @@ export function LoginForm({ t: tProp }: { t?: Record<string, string> }) {
     } finally {
       setIsLoading(false);
     }
-  };
-
+  }; 
   return (
     <form noValidate onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
       <FieldGroup className="gap-4">

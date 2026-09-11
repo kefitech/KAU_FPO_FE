@@ -69,4 +69,28 @@ export const fpoRegistrationApi = {
 
   submitInfoResponse: (notes: string) =>
     api.post(`${BASE}me/info-response/`, { notes }).then((r) => r.data),
+  //Arunima s — 03 sep 2026 — buyer-only pre-registration email OTP (moved to external-buyer app)
+  sendBuyerEmailOtp: (email: string) =>
+  publicApi.post<Wrapped<{ email: string }>>(`/external-buyer/pre-register/send-email-otp/`, { email }).then(unwrap),
+
+  verifyBuyerEmailOtp: (email: string, otp: string) =>
+  publicApi.post<Wrapped<{ email_token: string }>>(`/external-buyer/pre-register/verify-email-otp/`, { email, otp }).then(unwrap),
+  //-----------------------------------------------------------------------
+
+  // arunima 04rd sep 2026-------------------------------
+  registerBuyer: (payload: {
+    first_name: string;
+    last_name: string;
+    organisation?: string;
+    password: string;
+    confirm_password: string;
+    phone_token: string;
+    email_token: string;
+  }) =>
+  publicApi.post<Wrapped<{ id: number; email: string; first_name: string; last_name: string; phone: string }>>(
+    `/external-buyer/register/`,
+    payload,
+  ).then(unwrap),
+    
+  //----------------------------------------------------
 };
