@@ -7,7 +7,6 @@ export interface GovtRegistrationPayload {
   first_name: string;
   last_name?: string;
   phone: string;
-  password: string;
   designation: string;
   department: string;
   user_category: string;
@@ -21,7 +20,6 @@ export interface CBBORegistrationPayload {
   first_name: string;
   last_name?: string;
   phone: string;
-  password: string;
   designation?: string;
   organisation: number;
   level: "district" | "state";
@@ -40,6 +38,20 @@ export const officialRegisterApi = {
     api.post<Wrapped<{ id: number; status: string }>>("/government/register/", payload).then((r) => r.data.data),
   registerCBBO: (payload: CBBORegistrationPayload) =>
     api.post<Wrapped<{ id: number; status: string }>>("/cbbo/register/", payload).then((r) => r.data.data),
-  getOrganisations: () =>
-    api.get<Wrapped<PublicOrganisation[]>>("/cbbo/organisations/").then((r) => r.data.data),
+  getOrganisations: () => api.get<Wrapped<PublicOrganisation[]>>("/cbbo/organisations/").then((r) => r.data.data),
+  sendGovtOtp: (phone: string) =>
+    api.post<Wrapped<null>>("/government/register/otp/send/", { phone }).then((r) => r.data),
+  confirmGovtOtp: (phone: string, otp: string) =>
+    api.post<Wrapped<null>>("/government/register/otp/confirm/", { phone, otp }).then((r) => r.data),
+  sendCbboOtp: (phone: string) => api.post<Wrapped<null>>("/cbbo/register/otp/send/", { phone }).then((r) => r.data),
+  sendGovtEmailOtp: (email: string) =>
+    api.post<Wrapped<null>>("/government/register/otp/email/send/", { email }).then((r) => r.data),
+  confirmGovtEmailOtp: (email: string, otp: string) =>
+    api.post<Wrapped<null>>("/government/register/otp/email/confirm/", { email, otp }).then((r) => r.data),
+  sendCbboEmailOtp: (email: string) =>
+    api.post<Wrapped<null>>("/cbbo/register/otp/email/send/", { email }).then((r) => r.data),
+  confirmCbboEmailOtp: (email: string, otp: string) =>
+    api.post<Wrapped<null>>("/cbbo/register/otp/email/confirm/", { email, otp }).then((r) => r.data),
+  confirmCbboOtp: (phone: string, otp: string) =>
+    api.post<Wrapped<null>>("/cbbo/register/otp/confirm/", { phone, otp }).then((r) => r.data),
 };

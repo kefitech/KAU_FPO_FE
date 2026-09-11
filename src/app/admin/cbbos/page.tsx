@@ -45,6 +45,14 @@ export default function CBBOsPage() {
             {tTable.page_description ?? "Manage CBBO/NGO accounts and their district assignments"}
           </p>
         </div>
+        <Button
+          size="sm"
+          variant="outline"
+          className="self-start sm:self-auto"
+          onClick={() => router.push("/admin/cbbos/pending")}
+        >
+          {tTable.pending_approvals_button ?? "Pending Approvals"}
+        </Button>
         <Button size="sm" className="self-start sm:self-auto" onClick={() => router.push("/admin/cbbos/new")}>
           <Plus className="mr-1.5 h-4 w-4" />
           {tTable.add_button ?? "Add CBBO"}

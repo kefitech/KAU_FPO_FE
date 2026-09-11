@@ -1,23 +1,27 @@
 "use client";
 import "@/app/globals.css";
 
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect, useRef, useState } from "react";
+
 import { useRouter } from "next/navigation";
+
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { CheckCircle2, Mail, Phone } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
-import { useEffect, useState } from "react";
 
-import { officialRegisterApi } from "./_api";
-import { Button } from "@/components/ui/button";
 import { LocaleSwitcher } from "@/components/layout/locale-switcher";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { DISTRICT_OPTIONS } from "@/types/fpo";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
+import { DISTRICT_OPTIONS } from "@/types/fpo";
+
+import { officialRegisterApi } from "./_api";
 
 type T = Record<string, string>;
 
@@ -54,9 +58,10 @@ function makeBaseSchema(t: T) {
     first_name: z.string().min(1, { message: t.val_first_name_required ?? "First name is required." }),
     last_name: z.string().optional(),
     email: z.string().email({ message: t.val_email_invalid ?? "Please enter a valid email address." }),
-    phone: z.string().regex(/^[6-9]\d{9}$/, { message: t.val_phone_invalid ?? "Enter a valid 10-digit Indian mobile number." }),
-    password: z.string().min(8, { message: t.val_password_min ?? "Password must be at least 8 characters." }),
-    designation: z.string().optional(),
+    phone: z
+      .string()
+      .regex(/^[6-9]\d{9}$/, { message: t.val_phone_invalid ?? "Enter a valid 10-digit Indian mobile number." }),
+    designation: z.string().min(1, { message: t.val_designation_required ?? "Designation is required." }),
     department: z.string().optional(),
     user_category: z.string().optional(),
     id_number: z.string().optional(),
@@ -72,10 +77,18 @@ function makeRegisterSchema(t: T) {
   return makeBaseSchema(t).superRefine((data, ctx) => {
     if (data.mode === "government") {
       if (!data.department) {
-        ctx.addIssue({ code: "custom", message: t.val_department_required ?? "Department is required.", path: ["department"] });
+        ctx.addIssue({
+          code: "custom",
+          message: t.val_department_required ?? "Department is required.",
+          path: ["department"],
+        });
       }
       if (!data.id_number) {
-        ctx.addIssue({ code: "custom", message: t.val_id_number_required ?? "ID number is required.", path: ["id_number"] });
+        ctx.addIssue({
+          code: "custom",
+          message: t.val_id_number_required ?? "ID number is required.",
+          path: ["id_number"],
+        });
       } else {
         const patterns = ID_PATTERNS[data.user_category ?? ""];
         const value = data.id_number.trim().toUpperCase();
@@ -89,26 +102,296 @@ function makeRegisterSchema(t: T) {
         }
       }
       if (data.jurisdiction_type === "district" && !data.assigned_district) {
-        ctx.addIssue({ code: "custom", message: t.val_district_required ?? "District is required.", path: ["assigned_district"] });
+        ctx.addIssue({
+          code: "custom",
+          message: t.val_district_required ?? "District is required.",
+          path: ["assigned_district"],
+        });
       }
     }
     if (data.mode === "cbbo") {
       if (!data.organisation) {
-        ctx.addIssue({ code: "custom", message: t.val_organisation_required ?? "Organisation is required.", path: ["organisation"] });
+        ctx.addIssue({
+          code: "custom",
+          message: t.val_organisation_required ?? "Organisation is required.",
+          path: ["organisation"],
+        });
       }
       if (data.level === "district" && !data.district_code) {
-        ctx.addIssue({ code: "custom", message: t.val_district_code_required ?? "District code is required.", path: ["district_code"] });
+        ctx.addIssue({
+          code: "custom",
+          message: t.val_district_code_required ?? "District code is required.",
+          path: ["district_code"],
+        });
       }
     }
   });
 }
 
-type RegisterValues = { mode: "government" | "cbbo"; first_name: string; last_name?: string; email: string; phone: string; password: string; designation?: string; department?: string; user_category?: string; id_number?: string; jurisdiction_type?: "district" | "state"; assigned_district?: string; organisation?: string; level?: "district" | "state"; district_code?: string };
+type RegisterValues = {
+  mode: "government" | "cbbo";
+  first_name: string;
+  last_name?: string;
+  email: string;
+  phone: string;
+  designation: string;
+  department?: string;
+  user_category?: string;
+  id_number?: string;
+  jurisdiction_type?: "district" | "state";
+  assigned_district?: string;
+  organisation?: string;
+  level?: "district" | "state";
+  district_code?: string;
+};
+
+function EmailOtpVerifyBlock({
+  email,
+  mode,
+  verified,
+  onVerified,
+  t,
+}: {
+  email: string;
+  mode: "government" | "cbbo";
+  verified: boolean;
+  onVerified: () => void;
+  t: T;
+}) {
+  const [otpSent, setOtpSent] = useState(false);
+  const [otp, setOtp] = useState("");
+
+  const sendMutation = useMutation({
+    mutationFn: () =>
+      mode === "government" ? officialRegisterApi.sendGovtEmailOtp(email) : officialRegisterApi.sendCbboEmailOtp(email),
+    onSuccess: () => {
+      setOtpSent(true);
+      const template = t.otp_sent_toast ?? "OTP sent to {contact}";
+      toast.success(template.replace("{contact}", email));
+    },
+    onError: (err: unknown) => {
+      const error = err as { message?: string; data?: { message?: string } } | undefined;
+      toast.error(
+        error?.data?.message ?? error?.message ?? t.otp_send_failed ?? "Failed to send OTP. Please try again.",
+      );
+    },
+  });
+
+  const confirmMutation = useMutation({
+    mutationFn: () =>
+      mode === "government"
+        ? officialRegisterApi.confirmGovtEmailOtp(email, otp)
+        : officialRegisterApi.confirmCbboEmailOtp(email, otp),
+    onSuccess: () => {
+      toast.success(t.otp_email_verified_toast ?? "Email verified successfully");
+      onVerified();
+    },
+    onError: (err: unknown) => {
+      const e = err as { message?: string; data?: { message?: string } };
+      toast.error(e?.data?.message ?? e?.message ?? t.otp_err_invalid ?? "Invalid OTP. Please check and try again.");
+    },
+  });
+
+  const label = t.otp_email_label ?? "Email Address";
+
+  if (verified) {
+    return (
+      <div className="flex items-center gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3 dark:border-green-800 dark:bg-green-950/30">
+        <CheckCircle2 className="h-5 w-5 shrink-0 text-green-600 dark:text-green-400" />
+        <div>
+          <p className="font-medium text-green-700 text-sm dark:text-green-300">
+            {label} {t.otp_verified_suffix ?? "Verified"}
+          </p>
+          <p className="text-green-600 text-xs dark:text-green-400">{email}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border p-4">
+      <div className="flex items-center gap-2">
+        <Mail className="h-4 w-4 text-muted-foreground" />
+        <p className="font-medium text-sm">{label}</p>
+      </div>
+      <p className="text-muted-foreground text-sm">{email || (t.otp_enter_email_hint ?? "Enter your email above")}</p>
+
+      {!otpSent ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-full sm:w-fit"
+          onClick={() => sendMutation.mutate()}
+          disabled={!/^\S+@\S+\.\S+$/.test(email) || sendMutation.isPending}
+        >
+          {sendMutation.isPending ? (t.otp_sending_btn ?? "Sending…") : (t.otp_send_email_btn ?? "Send OTP to email")}
+        </Button>
+      ) : (
+        <div className="flex flex-col gap-2">
+          <label htmlFor="otp-email" className="text-muted-foreground text-xs">
+            {t.otp_label ?? "Enter 6-digit OTP"}
+          </label>
+          <div className="flex items-center gap-2">
+            <Input
+              id="otp-email"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              placeholder="000000"
+              maxLength={6}
+              className="w-32 text-center font-mono tracking-widest"
+            />
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => confirmMutation.mutate()}
+              disabled={otp.length !== 6 || confirmMutation.isPending}
+            >
+              {confirmMutation.isPending ? (t.otp_confirming_btn ?? "Verifying…") : (t.otp_confirm_btn ?? "Verify")}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => sendMutation.mutate()}
+              disabled={sendMutation.isPending}
+            >
+              {t.otp_resend_btn ?? "Resend"}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+function PhoneOtpVerifyBlock({
+  phone,
+  mode,
+  verified,
+  onVerified,
+  t,
+}: {
+  phone: string;
+  mode: "government" | "cbbo";
+  verified: boolean;
+  onVerified: () => void;
+  t: T;
+}) {
+  const [otpSent, setOtpSent] = useState(false);
+  const [otp, setOtp] = useState("");
+
+  const sendMutation = useMutation({
+    mutationFn: () =>
+      mode === "government" ? officialRegisterApi.sendGovtOtp(phone) : officialRegisterApi.sendCbboOtp(phone),
+    onSuccess: () => {
+      setOtpSent(true);
+      const template = t.otp_sent_toast ?? "OTP sent to {contact}";
+      toast.success(template.replace("{contact}", phone));
+    },
+    onError: (err: unknown) => {
+      const error = err as { message?: string; data?: { message?: string } } | undefined;
+      toast.error(
+        error?.data?.message ?? error?.message ?? t.otp_send_failed ?? "Failed to send OTP. Please try again.",
+      );
+    },
+  });
+
+  const confirmMutation = useMutation({
+    mutationFn: () =>
+      mode === "government"
+        ? officialRegisterApi.confirmGovtOtp(phone, otp)
+        : officialRegisterApi.confirmCbboOtp(phone, otp),
+    onSuccess: () => {
+      toast.success(t.otp_phone_verified_toast ?? "Phone verified successfully");
+      onVerified();
+    },
+    onError: (err: unknown) => {
+      const e = err as { message?: string; data?: { message?: string } };
+      toast.error(e?.data?.message ?? e?.message ?? t.otp_err_invalid ?? "Invalid OTP. Please check and try again.");
+    },
+  });
+
+  const label = t.otp_phone_label ?? "Phone Number";
+
+  if (verified) {
+    return (
+      <div className="flex items-center gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3 dark:border-green-800 dark:bg-green-950/30">
+        <CheckCircle2 className="h-5 w-5 shrink-0 text-green-600 dark:text-green-400" />
+        <div>
+          <p className="font-medium text-green-700 text-sm dark:text-green-300">
+            {label} {t.otp_verified_suffix ?? "Verified"}
+          </p>
+          <p className="text-green-600 text-xs dark:text-green-400">{phone}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border p-4">
+      <div className="flex items-center gap-2">
+        <Phone className="h-4 w-4 text-muted-foreground" />
+        <p className="font-medium text-sm">{label}</p>
+      </div>
+      <p className="text-muted-foreground text-sm">
+        {phone || (t.otp_enter_phone_hint ?? "Enter your phone number above")}
+      </p>
+
+      {!otpSent ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-full sm:w-fit"
+          onClick={() => sendMutation.mutate()}
+          disabled={!/^[6-9]\d{9}$/.test(phone) || sendMutation.isPending}
+        >
+          {sendMutation.isPending ? (t.otp_sending_btn ?? "Sending…") : (t.otp_send_btn ?? "Send OTP to phone")}
+        </Button>
+      ) : (
+        <div className="flex flex-col gap-2">
+          <label htmlFor="otp-phone" className="text-muted-foreground text-xs">
+            {t.otp_label ?? "Enter 6-digit OTP"}
+          </label>
+          <div className="flex items-center gap-2">
+            <Input
+              id="otp-phone"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              placeholder="000000"
+              maxLength={6}
+              className="w-32 text-center font-mono tracking-widest"
+            />
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => confirmMutation.mutate()}
+              disabled={otp.length !== 6 || confirmMutation.isPending}
+            >
+              {confirmMutation.isPending ? (t.otp_confirming_btn ?? "Verifying…") : (t.otp_confirm_btn ?? "Verify")}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => sendMutation.mutate()}
+              disabled={sendMutation.isPending}
+            >
+              {t.otp_resend_btn ?? "Resend"}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function OfficialRegisterPage() {
   const router = useRouter();
   const locale = useLocaleStore((s) => s.locale);
   const [t, setT] = useState<T>({});
+  const [phoneVerified, setPhoneVerified] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false);
 
   useEffect(() => {
     translationsApi
@@ -119,13 +402,14 @@ export default function OfficialRegisterPage() {
 
   const form = useForm<RegisterValues>({
     resolver: zodResolver(makeRegisterSchema(t)),
+    mode: "onBlur",
+    reValidateMode: "onChange",
     defaultValues: {
       mode: "government",
       first_name: "",
       last_name: "",
       email: "",
       phone: "",
-      password: "",
       designation: "",
       department: "",
       user_category: "agri_officer",
@@ -139,6 +423,7 @@ export default function OfficialRegisterPage() {
   });
 
   const mode = form.watch("mode");
+  const phone = form.watch("phone");
   const jurisdictionType = form.watch("jurisdiction_type");
   const level = form.watch("level");
 
@@ -151,10 +436,14 @@ export default function OfficialRegisterPage() {
   const govtMutation = useMutation({
     mutationFn: (vars: RegisterValues) =>
       officialRegisterApi.registerGovernment({
-        email: vars.email, first_name: vars.first_name, last_name: vars.last_name ?? "",
-        phone: vars.phone, password: vars.password,
-        designation: vars.designation ?? "", department: vars.department ?? "",
-        user_category: vars.user_category ?? "", id_number: vars.id_number ?? "",
+        email: vars.email,
+        first_name: vars.first_name,
+        last_name: vars.last_name ?? "",
+        phone: vars.phone,
+        designation: vars.designation ?? "",
+        department: vars.department ?? "",
+        user_category: vars.user_category ?? "",
+        id_number: vars.id_number ?? "",
         jurisdiction_type: vars.jurisdiction_type ?? "district",
         assigned_district: vars.jurisdiction_type === "district" ? vars.assigned_district : null,
       }),
@@ -171,9 +460,13 @@ export default function OfficialRegisterPage() {
   const cbboMutation = useMutation({
     mutationFn: (vars: RegisterValues) =>
       officialRegisterApi.registerCBBO({
-        email: vars.email, first_name: vars.first_name, last_name: vars.last_name ?? "",
-        phone: vars.phone, password: vars.password, designation: vars.designation ?? "",
-        organisation: Number(vars.organisation), level: vars.level ?? "district",
+        email: vars.email,
+        first_name: vars.first_name,
+        last_name: vars.last_name ?? "",
+        phone: vars.phone,
+        designation: vars.designation ?? "",
+        organisation: Number(vars.organisation),
+        level: vars.level ?? "district",
         district_codes: vars.level === "district" && vars.district_code ? [vars.district_code] : [],
       }),
     onSuccess: () => {
@@ -189,18 +482,27 @@ export default function OfficialRegisterPage() {
   const mutation = mode === "government" ? govtMutation : cbboMutation;
 
   const onSubmit = (values: RegisterValues) => {
+    if (!phoneVerified) {
+      toast.error(t.otp_phone_not_verified ?? "Please verify your phone number first.");
+      return;
+    }
+    if (!emailVerified) {
+      toast.error(t.otp_email_not_verified ?? "Please verify your email address first.");
+      return;
+    }
     mutation.mutate(values);
   };
 
   const handleModeSwitch = (newMode: "government" | "cbbo") => {
     if (newMode === mode) return;
+    setPhoneVerified(false);
+    setEmailVerified(false);
     form.reset({
       mode: newMode,
       first_name: "",
       last_name: "",
       email: "",
       phone: "",
-      password: "",
       designation: "",
       department: "",
       user_category: "agri_officer",
@@ -239,10 +541,18 @@ export default function OfficialRegisterPage() {
           </div>
 
           <div className="mb-6 flex justify-center gap-2">
-            <Button type="button" variant={mode === "government" ? "default" : "outline"} onClick={() => handleModeSwitch("government")}>
+            <Button
+              type="button"
+              variant={mode === "government" ? "default" : "outline"}
+              onClick={() => handleModeSwitch("government")}
+            >
               {t.mode_government ?? "Government Official"}
             </Button>
-            <Button type="button" variant={mode === "cbbo" ? "default" : "outline"} onClick={() => handleModeSwitch("cbbo")}>
+            <Button
+              type="button"
+              variant={mode === "cbbo" ? "default" : "outline"}
+              onClick={() => handleModeSwitch("cbbo")}
+            >
               {t.mode_cbbo ?? "CBBO / NGO Officer"}
             </Button>
           </div>
@@ -287,37 +597,52 @@ export default function OfficialRegisterPage() {
                     </Field>
                   )}
                 />
-                <FieldGroup className="grid grid-cols-2 gap-4">
-                  <Controller
-                    control={form.control}
-                    name="phone"
-                    render={({ field, fieldState }) => (
-                      <Field data-invalid={fieldState.invalid}>
-                        <FieldLabel htmlFor="phone">{t.field_phone ?? "Phone"} *</FieldLabel>
-                        <Input {...field} id="phone" aria-invalid={fieldState.invalid} />
-                        {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-                      </Field>
-                    )}
-                  />
-                  <Controller
-                    control={form.control}
-                    name="password"
-                    render={({ field, fieldState }) => (
-                      <Field data-invalid={fieldState.invalid}>
-                        <FieldLabel htmlFor="password">{t.field_password ?? "Password"} *</FieldLabel>
-                        <Input {...field} id="password" type="password" aria-invalid={fieldState.invalid} />
-                        {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-                      </Field>
-                    )}
-                  />
-                </FieldGroup>
+                <EmailOtpVerifyBlock
+                  email={form.watch("email")}
+                  mode={mode}
+                  verified={emailVerified}
+                  onVerified={() => setEmailVerified(true)}
+                  t={t}
+                />
+                <Controller
+                  control={form.control}
+                  name="phone"
+                  render={({ field, fieldState }) => (
+                    <Field data-invalid={fieldState.invalid}>
+                      <FieldLabel htmlFor="phone">{t.field_phone ?? "Phone"} *</FieldLabel>
+                      <Input
+                        {...field}
+                        id="phone"
+                        type="tel"
+                        inputMode="numeric"
+                        maxLength={10}
+                        disabled={phoneVerified}
+                        onChange={(e) => {
+                          const digitsOnly = e.target.value.replace(/\D/g, "").slice(0, 10);
+                          field.onChange(digitsOnly);
+                          if (phoneVerified) setPhoneVerified(false);
+                        }}
+                        aria-invalid={fieldState.invalid}
+                      />
+                      {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                    </Field>
+                  )}
+                />
+                <PhoneOtpVerifyBlock
+                  phone={phone}
+                  mode={mode}
+                  verified={phoneVerified}
+                  onVerified={() => setPhoneVerified(true)}
+                  t={t}
+                />
                 <Controller
                   control={form.control}
                   name="designation"
-                  render={({ field }) => (
-                    <Field>
-                      <FieldLabel htmlFor="designation">{t.field_designation ?? "Designation"}</FieldLabel>
-                      <Input {...field} id="designation" />
+                  render={({ field, fieldState }) => (
+                    <Field data-invalid={fieldState.invalid}>
+                      <FieldLabel htmlFor="designation">{t.field_designation ?? "Designation"} *</FieldLabel>
+                      <Input {...field} id="designation" aria-invalid={fieldState.invalid} />
+                      {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                     </Field>
                   )}
                 />
@@ -336,7 +661,12 @@ export default function OfficialRegisterPage() {
                     render={({ field, fieldState }) => (
                       <Field data-invalid={fieldState.invalid}>
                         <FieldLabel htmlFor="department">{t.field_department ?? "Department"} *</FieldLabel>
-                        <Input {...field} id="department" placeholder={t.placeholder_department ?? "e.g. Department of Agriculture"} aria-invalid={fieldState.invalid} />
+                        <Input
+                          {...field}
+                          id="department"
+                          placeholder={t.placeholder_department ?? "e.g. Department of Agriculture"}
+                          aria-invalid={fieldState.invalid}
+                        />
                         {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                       </Field>
                     )}
@@ -353,7 +683,9 @@ export default function OfficialRegisterPage() {
                           className="h-9 w-full rounded-md border bg-background px-3 text-sm"
                         >
                           {USER_CATEGORIES.map((c) => (
-                            <option key={c.value} value={c.value}>{c.label}</option>
+                            <option key={c.value} value={c.value}>
+                              {c.label}
+                            </option>
                           ))}
                         </select>
                       </Field>
@@ -365,7 +697,12 @@ export default function OfficialRegisterPage() {
                     render={({ field, fieldState }) => (
                       <Field data-invalid={fieldState.invalid}>
                         <FieldLabel htmlFor="id-number">{t.field_id_number ?? "ID Number"} *</FieldLabel>
-                        <Input {...field} id="id-number" placeholder={t.placeholder_id_number ?? "Matching the format for your selected category"} aria-invalid={fieldState.invalid} />
+                        <Input
+                          {...field}
+                          id="id-number"
+                          placeholder={t.placeholder_id_number ?? "Matching the format for your selected category"}
+                          aria-invalid={fieldState.invalid}
+                        />
                         {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                       </Field>
                     )}
@@ -401,7 +738,9 @@ export default function OfficialRegisterPage() {
                           >
                             <option value="">{t.placeholder_select_district ?? "Select a district"}</option>
                             {DISTRICT_OPTIONS.map((d) => (
-                              <option key={d.value} value={d.value}>{d.label}</option>
+                              <option key={d.value} value={d.value}>
+                                {d.label}
+                              </option>
                             ))}
                           </select>
                           {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
@@ -431,7 +770,9 @@ export default function OfficialRegisterPage() {
                         >
                           <option value="">{t.placeholder_select_org ?? "Select an organisation"}</option>
                           {organisations.map((org) => (
-                            <option key={org.id} value={org.id}>{org.name} ({org.org_type_display})</option>
+                            <option key={org.id} value={org.id}>
+                              {org.name} ({org.org_type_display})
+                            </option>
                           ))}
                         </select>
                         {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
@@ -469,7 +810,9 @@ export default function OfficialRegisterPage() {
                           >
                             <option value="">{t.placeholder_select_district ?? "Select a district"}</option>
                             {DISTRICT_OPTIONS.map((d) => (
-                              <option key={d.value} value={d.value}>{d.label}</option>
+                              <option key={d.value} value={d.value}>
+                                {d.label}
+                              </option>
                             ))}
                           </select>
                           {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
@@ -484,7 +827,11 @@ export default function OfficialRegisterPage() {
               <a href="/v1/login" className="text-muted-foreground text-sm hover:text-foreground">
                 {t.btn_back_to_login ?? "\u2190 Back to Login"}
               </a>
-              <Button type="submit" className="flex-1" disabled={mutation.isPending}>
+              <Button
+                type="submit"
+                className="flex-1"
+                disabled={mutation.isPending || !phoneVerified || !emailVerified}
+              >
                 {mutation.isPending ? (t.btn_registering ?? "Registering...") : (t.btn_register ?? "Register")}
               </Button>
             </div>

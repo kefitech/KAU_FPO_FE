@@ -20,4 +20,7 @@ export const cbbosApi = {
   setDistricts: (id: number, action: "add" | "remove" | "replace", district_codes: string[]) =>
     api.post<Wrapped<CBBO>>(`${BASE}${id}/districts/`, { action, district_codes }).then(unwrap),
   getAvailableDistricts: () => api.get<Wrapped<AvailableDistrict[]>>(`${BASE}available-districts/`).then(unwrap),
+  getPending: () => api.get<Wrapped<CBBO[]>>(`${BASE}pending/`).then(unwrap),
+  approveRegistration: (id: number) => api.post<Wrapped<CBBO>>(`${BASE}${id}/approve-registration/`).then(unwrap),
+  rejectRegistration: (id: number) => api.post<Wrapped<CBBO>>(`${BASE}${id}/reject-registration/`).then(unwrap),
 };
