@@ -167,6 +167,15 @@ export interface MyRecommendationInputSnapshot {
   tier: string | null;
   model_version: string | null;
   financial_year: string;
+  // Not sent to the ML service — merged in only for display, so a later
+  // "stale" recommendation can still show the actual farm shape it was
+  // generated for. Absent on rows saved via the outside-Kerala rejection
+  // path (nothing to anchor a map to there).
+  location_snapshot?: {
+    lat: number | null;
+    lng: number | null;
+    area_polygon: GeoJSON.Polygon | GeoJSON.MultiPolygon | null;
+  } | null;
 }
 
 /**
