@@ -96,8 +96,14 @@ const schema = z.object({
   bank_name: z.string().min(1, { message: "Bank name is required" }),
   bank_branch: z.string().min(1, { message: "Branch is required" }),
   account_number: z.string().min(1, { message: "Account number is required" }),
+  // Zod v3 `.transform()` on a string coerces the value BEFORE `.refine()`
+  // runs, so a user who pastes "sbin0006715 " with wrong case or leading
+  // whitespace still gets a valid, RBI-shaped IFSC saved. The input has a
+  // CSS `uppercase` class for visual feedback; this transform is what
+  // actually mutates the stored value.
   ifsc_code: z
     .string()
+    .transform((v) => v.trim().toUpperCase())
     .refine((v) => /^[A-Z]{4}0[A-Z0-9]{6}$/.test(v), { message: "Enter a valid IFSC code (e.g. SBIN0001234)" }),
   description: z.string().optional(),
 });
@@ -393,7 +399,9 @@ export function Step4Business({ profile, onSave, onSuccess, onBack, t = {} }: St
               id="ifsc_code"
               placeholder="e.g. SBIN0001234"
               className="uppercase"
-              {...register("ifsc_code")}
+              {...register("ifsc_code", {
+                setValueAs: (v: string) => (v ?? "").trim().toUpperCase(),
+              })}
               onBlur={() => handleBlurValidation("ifsc_code")}
             />
             {errors.ifsc_code && <FieldError errors={[errors.ifsc_code]} />}

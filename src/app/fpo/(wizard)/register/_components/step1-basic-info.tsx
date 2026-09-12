@@ -362,9 +362,11 @@ export function Step1BasicInfo({ profile, onSave, onSuccess, t = {} }: Step1Prop
           <Input
             id="cin_number"
             placeholder="e.g. U01400KL2024PLC..."
-            {...register("cin_number")}
+            {...register("cin_number", {
+              setValueAs: (v: string) => (v ?? "").trim().toUpperCase(),
+            })}
             readOnly={isClaimedFpo}
-            className={isClaimedFpo ? "bg-muted cursor-not-allowed opacity-70" : ""}
+            className={isClaimedFpo ? "bg-muted cursor-not-allowed opacity-70" : "uppercase"}
             {...getAutofillProps("cin_number", isClaimedFpo)}
           />
           {errors.cin_number && <FieldError errors={[errors.cin_number]} />}
@@ -399,7 +401,9 @@ export function Step1BasicInfo({ profile, onSave, onSuccess, t = {} }: Step1Prop
             id="pan_number"
             placeholder="e.g. AABCK1234D"
             className="uppercase"
-            {...register("pan_number")}
+            {...register("pan_number", {
+              setValueAs: (v: string) => (v ?? "").trim().toUpperCase(),
+            })}
             {...getAutofillProps("pan_number")}
           />
           {errors.pan_number && <FieldError errors={[errors.pan_number]} />}
@@ -414,7 +418,9 @@ export function Step1BasicInfo({ profile, onSave, onSuccess, t = {} }: Step1Prop
             id="gst_number"
             placeholder="e.g. 32AABCK1234D1Z5"
             className="uppercase"
-            {...register("gst_number")}
+            {...register("gst_number", {
+              setValueAs: (v: string) => (v ?? "").trim().toUpperCase(),
+            })}
             {...getAutofillProps("gst_number")}
           />
           {fieldErrors.gst_number?.error && (

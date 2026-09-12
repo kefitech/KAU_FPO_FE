@@ -1,5 +1,6 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { useWatch } from "react-hook-form";
 import { z } from "zod";
 
@@ -8,6 +9,22 @@ import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 
 import { useDprSectionForm } from "@/hooks/use-dpr-section-form";
+import { dprApi } from "@/lib/api/dpr";
+
+// ── Auto-pulled risks (KAU 2026-09-10 gap-close) ──
+// Risks captured in Raw Material, Market, Technology, and ESS (Climate)
+// sections are auto-aggregated here so the FPO sees the full picture in
+// one place. Read-only card at the top of the Risk section.
+type AutoPulledRisk = {
+  source: string;
+  source_label: string;
+  category: string;
+  category_label: string;
+  risk_code: string;
+  risk_label: string;
+  risk_description: string;
+  mitigation_strategy: string;
+};
 
 import { CountedTextarea } from "./counted-textarea";
 import {
@@ -99,9 +116,11 @@ const RISKS_BY_CAT: Record<string, { value: string; label: string }[]> = {
 };
 
 const LEVEL = [
+  { value: "very_low", label: "Very Low" },
   { value: "low", label: "Low" },
   { value: "medium", label: "Medium" },
   { value: "high", label: "High" },
+  { value: "very_high", label: "Very High" },
 ];
 
 const ItemSchema = z.object({
@@ -159,6 +178,22 @@ export function RiskSection({ uuid }: { uuid: string }) {
   // useWatch — reactive subscription (form.watch is stale after form.reset).
   const items = useWatch({ control: form.control, name: "items" }) ?? [];
 
+  // Auto-pulled risks — separate query so we don't have to widen the
+  // section form's schema (which is scoped to writable items). Shares the
+  // same cache key the form uses; the BE response includes both `items`
+  // and `auto_pulled_risks` so this is effectively free once the section
+  // is loaded.
+  const autoPulledQuery = useQuery({
+    queryKey: ["dpr-section", uuid, "risk"],
+    queryFn: () => dprApi.getSection<Record<string, unknown>>(uuid, "risk"),
+    staleTime: 30_000,
+  });
+  const autoPulled = ((autoPulledQuery.data?.auto_pulled_risks as AutoPulledRisk[] | undefined) ?? []);
+  const autoPulledByCat = autoPulled.reduce<Record<string, AutoPulledRisk[]>>((acc, r) => {
+    (acc[r.category] ??= []).push(r);
+    return acc;
+  }, {});
+
   // Split items by category so each category-panel renders only its own list
   function itemsForCat(cat: string) {
     return items.filter((it) => it.risk_category === cat);
@@ -212,6 +247,60 @@ export function RiskSection({ uuid }: { uuid: string }) {
       }
     >
       <div className="space-y-4">
+        {/* Auto-pulled risks — read-only preview of risks captured in other
+            wizard sections (Raw Material / Market / Technology / ESS Climate).
+            KAU 2026-09-10 gap-close: previously these risks were orphaned;
+            now the FPO can see the complete risk picture in one place.
+            To score any of these (probability x impact), add a matching row
+            to the corresponding category card below. */}
+        {autoPulled.length > 0 && (
+          <Card className="border-blue-200 bg-blue-50/40 dark:border-blue-900 dark:bg-blue-950/20">
+            <CardContent className="space-y-3 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-200">
+                    Risks captured in other sections ({autoPulled.length})
+                  </h3>
+                  <p className="mt-0.5 text-xs text-blue-800/80 dark:text-blue-300/80">
+                    Auto-pulled from Raw Material, Market, Technology, and ESS (Climate) sections.
+                    Read-only here — to score any of these on the probability × impact matrix,
+                    add a matching row to the relevant category card below.
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {Object.entries(autoPulledByCat).map(([catCode, catRisks]) => {
+                  const catLabel = CATEGORIES.find((c) => c.value === catCode)?.label ?? catRisks[0].category_label;
+                  return (
+                    <div key={catCode} className="rounded-md border border-blue-200/50 bg-white/60 p-3 dark:border-blue-900/50 dark:bg-blue-950/30">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-blue-900 dark:text-blue-200">
+                        {catLabel}
+                      </p>
+                      <ul className="space-y-1.5">
+                        {catRisks.map((r, i) => (
+                          <li key={`${r.source}-${r.risk_code}-${i}`} className="flex gap-2 text-xs">
+                            <span className="inline-flex shrink-0 items-center rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-800 dark:bg-blue-900/60 dark:text-blue-300">
+                              {r.source_label}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium">{r.risk_label}</p>
+                              {r.mitigation_strategy && (
+                                <p className="mt-0.5 text-muted-foreground">
+                                  <span className="font-medium">Mitigation:</span> {r.mitigation_strategy}
+                                </p>
+                              )}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Section-level error/warning banner + deep-link anchor.
             Items are split across 6 category cards below, so we surface the
             single-source `items` message once at the top and use this element

@@ -27,6 +27,7 @@ import {
 } from "@/app/admin/_api/dpr-config";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useConfirmStore } from "@/stores/confirm-store";
 import {
   Dialog,
   DialogContent,
@@ -104,6 +105,8 @@ export default function AdminDprConfigPage() {
       toast.error(msg);
     },
   });
+
+  const openConfirm = useConfirmStore((s) => s.confirm);
 
   const resetMutation = useMutation({
     mutationFn: (id: number) => dprConfigApi.reset(id),
@@ -215,9 +218,14 @@ export default function AdminDprConfigPage() {
                           variant="ghost"
                           disabled={resetMutation.isPending}
                           onClick={() => {
-                            if (window.confirm(`Reset ${row.label} to its default (${row.default_value})?`)) {
-                              resetMutation.mutate(row.id);
-                            }
+                            openConfirm({
+                              title: `Reset ${row.label}?`,
+                              description: `This will reset ${row.label} to its default value (${row.default_value}). Any admin override will be lost.`,
+                              confirmLabel: "Reset",
+                              confirmingLabel: "Resetting...",
+                              variant: "default",
+                              onConfirm: () => resetMutation.mutateAsync(row.id),
+                            });
                           }}
                         >
                           <RotateCcw className="mr-1 h-3 w-3" /> Reset
