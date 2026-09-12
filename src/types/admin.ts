@@ -255,6 +255,54 @@ export interface AvailablePermission {
   codename: string;
   description: string;
 }
+//cbbo
+
+export type CBBOLevel = "district" | "state";
+
+export interface CBBOAssignmentRow {
+  id: number;
+  level: CBBOLevel;
+  district: string | null;
+  district_display: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface CBBO {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  phone: string;
+  is_active: boolean;
+  date_joined: string;
+  scope: "STATE" | string[];
+  assignments: CBBOAssignmentRow[];
+  organisation_id: number | null;
+  organisation_name: string | null;
+}
+
+export interface CBBOPayload {
+  email: string;
+  first_name: string;
+  last_name: string;
+  phone: string;
+  notification_channel: NotificationChannelType;
+  level: CBBOLevel;
+  district_codes: string[];
+  organisation: number;
+}
+
+export interface CBBOUpdatePayload {
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+}
+
+export interface AvailableDistrict {
+  code: string;
+  name: string;
+}
 
 // ─── FPO Users ───────────────────────────────────────────────────────────────
 
@@ -580,7 +628,7 @@ export interface AdminDocument {
 
 export interface AdminGalleryAlbum {
   id: number;
-  title: Record<string, string> | string;
+  title: string;
   order: number;
   is_active: boolean;
   cover_photo_url: string | null;
@@ -700,4 +748,71 @@ export interface AdminDashboardStats {
     unverified_documents: number;
     info_required_fpos: number;
   };
+}
+
+// ─── Government Officials ─────────────────────────────────────────────────────
+export type GovtJurisdictionType = "district" | "block" | "state";
+export interface GovernmentOfficial {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  phone: string;
+  is_active: boolean;
+  date_joined: string;
+  designation: string;
+  department: string;
+  jurisdiction_type: GovtJurisdictionType;
+  assigned_district: string | null;
+  assigned_district_display: string | null;
+  assigned_block: string | null;
+  assigned_block_display: string | null;
+  registration_status: "approved" | "pending" | "rejected";
+  user_category: string | null;
+  id_number: string | null;
+}
+export interface GovernmentPayload {
+  email: string;
+  first_name: string;
+  last_name: string;
+  phone: string;
+  notification_channel: NotificationChannelType;
+  designation: string;
+  department: string;
+  jurisdiction_type: GovtJurisdictionType;
+  assigned_district?: string | null;
+  assigned_block?: string | null;
+}
+export interface GovernmentUpdatePayload {
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+  designation?: string;
+  department?: string;
+}
+
+export interface Organisation {
+  id: number;
+  name: string;
+  org_type: "cbbo" | "ngo";
+  org_type_display: string;
+  contact_person: string;
+  contact_designation: string;
+  contact_email: string;
+  contact_phone: string;
+  districts_covered: string[];
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OrganisationPayload {
+  name: string;
+  org_type: "cbbo" | "ngo";
+  contact_person: string;
+  contact_designation?: string;
+  contact_email: string;
+  contact_phone: string;
+  districts_covered: string[];
+  is_active?: boolean;
 }

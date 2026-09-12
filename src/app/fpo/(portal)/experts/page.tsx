@@ -13,6 +13,7 @@ import { useLocaleStore } from "@/stores/locale-store";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ExpertEnquiryDialog } from "@/components/ui/expert-enquiry-dialog";
+import { ExpertBookingDialog } from "@/components/ui/expert-booking-dialog";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -61,12 +62,15 @@ function ExpertCard({
   expert,
   isApprovedFpo,
   onContact,
+  onBook,
   t,
   locale,
-}: {
+}: 
+{
   expert: FpoExpert;
   isApprovedFpo: boolean;
   onContact: (expert: FpoExpert) => void;
+  onBook: (expert: FpoExpert) => void;
   t: T;
   locale: string;
 }) {
@@ -105,12 +109,16 @@ function ExpertCard({
           <p className="text-xs text-muted-foreground line-clamp-2">{expert.primary_expertise}</p>
         </div>
       )}
-
-      <div className="mt-auto pt-2">
+      <div className="mt-auto pt-2 flex gap-2">
         {isApprovedFpo ? (
+          <>
           <Button size="sm" variant="default" onClick={() => onContact(expert)}>
             {t.btn_contact ?? "Contact Expert"}
           </Button>
+         <Button size="sm" variant="outline" className="h-8.5 px-2 text-xs" onClick={() => onBook(expert)}>
+          Book Appointment
+        </Button>
+          </>
         ) : (
           <Button
             size="sm"
@@ -157,6 +165,10 @@ export default function FpoExpertsPage() {
     open: false,
     expert: null,
   });
+  const [bookingDialog, setBookingDialog] = useState<{ open: boolean; expert: FpoExpert | null }>({
+    open: false,
+    expert: null,
+  });
 
   const { data: dashboard } = useQuery({
     queryKey: ["fpo-dashboard"],
@@ -193,6 +205,13 @@ export default function FpoExpertsPage() {
     }
     setEnquiryDialog({ open: true, expert });
   }
+  function handleBook(expert: FpoExpert) {
+  if (!isApprovedFpo) {
+    toast.error("Your FPO must be approved to book experts.");
+    return;
+  }
+  setBookingDialog({ open: true, expert });
+}
   if (translationsLoading) {
     return (
       <div className="flex flex-col gap-6 px-3 sm:px-6 py-4 sm:py-6 animate-pulse">
@@ -322,6 +341,7 @@ export default function FpoExpertsPage() {
               expert={expert}
               isApprovedFpo={!!isApprovedFpo}
               onContact={handleContact}
+              onBook={handleBook}
               t={t}
               locale={locale}
             />
@@ -338,6 +358,14 @@ export default function FpoExpertsPage() {
           expertName={enquiryDialog.expert.name}
         />
       )}
+      {bookingDialog.expert && (
+  <ExpertBookingDialog
+    open={bookingDialog.open}
+    onOpenChange={(open) => setBookingDialog((s) => ({ ...s, open }))}
+    expertId={bookingDialog.expert.id}
+    expertName={bookingDialog.expert.name}
+  />
+)}
     </div>
   );
 }

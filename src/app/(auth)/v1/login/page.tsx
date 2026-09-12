@@ -55,7 +55,7 @@ export default function LoginV1() {
       {/* Login card */}
       <div className="relative z-10 w-full max-w-md rounded-2xl bg-white/80 dark:bg-neutral-900/90 p-5 sm:p-8 shadow-xl backdrop-blur-md flex flex-col gap-5 sm:gap-6">
         <a href="/" className="flex items-center gap-2 font-medium">
-          <img src="/assets/img/logo.webp" alt="KAU" className="h-12 w-auto" />
+          <img src="/assets/img/logo.png" alt="KAU" className="h-12 w-auto" />
           KAU-FPO Platform
         </a>
 
@@ -65,14 +65,19 @@ export default function LoginV1() {
         </div>
 
         <LoginForm t={t} />
-
+      <div>
         <p className="text-center text-muted-foreground text-sm">
           {t.no_account ?? "Don't have an account?"}{" "}
           <a href="/register" className="underline underline-offset-4 hover:text-foreground">
             {t.sign_up ?? "Sign up"}
+          </a></p>
+            <p className="text-center text-muted-foreground text-sm">
+          Government or CBBO/NGO official?{" "}
+          <a href="/official-register" className="underline underline-offset-4 hover:text-foreground">
+            Register here
           </a>
         </p>
-
+      </div>
         <a href="/" className="flex items-center justify-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
           {t.back_to_home ?? "← Back to Home"}
         </a>

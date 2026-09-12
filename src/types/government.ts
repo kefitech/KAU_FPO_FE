@@ -3,6 +3,13 @@
  * Based on SRS Section 3.2.2
  */
 
+export interface GovtDashboardStats {
+  total: number;
+  by_status: Record<string, number>;
+  by_district: Record<string, number>;
+  jurisdiction_type: "state" | "district";
+}
+
 // Government Official Types
 export type GovernmentRole =
   | "district_officer"
@@ -198,4 +205,140 @@ export interface CbboDashboardData {
     averageVerificationTime: number; // in days
     approvalRate: number; // percentage
   };
+}
+// Added for Government Portal API integration
+export interface GovtDashboardStats {
+  total: number;
+  by_status: Record<string, number>;
+  by_district: Record<string, number>;
+  jurisdiction_type: "state" | "district";
+}
+
+// Added for enriched FPO Directory detail view
+export interface GovtFPODetail {
+  id: number;
+  application_id: string;
+  name: string;
+  name_ml: string;
+  district: string;
+  district_display: string | null;
+  status: string;
+  status_display: string;
+  tier: string | null;
+  registration_number: string;
+  date_of_registration: string | null;
+  legal_structure: string;
+  legal_structure_display: string;
+  promoting_agency_display: string;
+  legal_structure_detail: string;
+  promoting_agency: string | null;
+  facilitating_agency_name: string | null;
+  block_taluk: string;
+  village_town: string;
+  address_line1: string;
+  address_line2: string;
+  pincode: string;
+  office_phone: string;
+  office_email: string;
+  website: string;
+  total_members: number | null;
+  male_members: number | null;
+  female_members: number | null;
+  sc_st_members: number | null;
+  ceo_available: boolean;
+  accountant_available: boolean;
+  total_directors: number | null;
+  women_directors: number | null;
+  directors_under_35: number | null;
+  primary_commodities: string[];
+  primary_commodities_display: string[];
+  secondary_commodities: string[];
+  secondary_commodities_display: string[];
+  annual_turnover: string | null;
+  signatory_name: string;
+  signatory_designation: string;
+  signatory_designation_display: string;
+  signatory_phone: string;
+  signatory_email: string;
+  signatory_aadhaar_last4: string;
+  bank_name: string;
+  bank_name_display: string;
+  bank_branch: string;
+  account_number: string;
+  ifsc_code: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Added for Training Sessions and Schemes write access
+export interface GovtTrainingSession {
+  id: number;
+  fpo: number;
+  fpo_name: string;
+  district: string;
+  topic: string;
+  date: string;
+  duration_hours: string;
+  participants_count: number;
+  venue: string;
+  attendance_count: number;
+}
+
+export interface GovtTrainingSessionDetail {
+  id: number;
+  fpo: number;
+  fpo_name: string;
+  topic: string;
+  date: string;
+  duration_hours: string;
+  participants_count: number;
+  venue: string;
+  attendance: { id: number; member_name: string; attended: boolean }[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GovtTrainingSessionPayload {
+  fpo_id: number;
+  topic: string;
+  date: string;
+  duration_hours: number;
+  participants_count?: number;
+  venue?: string;
+}
+
+export interface GovtScheme {
+  id: number;
+  name_en: string;
+  name_ml: string;
+  administering_body: string;
+  category: string;
+  category_display: string;
+  objective: string;
+  eligibility: string;
+  benefit_details: string;
+  application_process: string;
+  official_link: string;
+  last_updated: string | null;
+  is_active: boolean;
+  order: number;
+  created_by: number | null;
+  created_by_name: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GovtSchemePayload {
+  name_en: string;
+  name_ml?: string;
+  administering_body: string;
+  category: string;
+  objective?: string;
+  eligibility: string;
+  benefit_details: string;
+  application_process: string;
+  official_link?: string;
+  last_updated?: string | null;
+  is_active?: boolean;
+  order?: number;
 }
