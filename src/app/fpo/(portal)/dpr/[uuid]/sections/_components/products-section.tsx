@@ -1,15 +1,18 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { AlertCircle, CheckCircle2, Pencil } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { AlertCircle, CheckCircle2, ImagePlus, Pencil, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { useWatch } from "react-hook-form";
+import { toast } from "sonner";
 import { z } from "zod";
 
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ViewSheet } from "@/components/ui/view-sheet";
 import { useDprSectionForm } from "@/hooks/use-dpr-section-form";
+import { dprApi } from "@/lib/api/dpr";
 import { dprMasterApi } from "@/lib/api/dpr-master";
 
 import {
@@ -42,6 +45,9 @@ const ProductItemSchema = z.object({
   // (`serializePayload` maps null → false to match backend BooleanField).
   is_value_added: z.boolean().nullable(),
   description: z.string(),
+  // Read-only URL of the uploaded product photo (or null). Upload/delete
+  // go through the dedicated multipart endpoint, not the section save.
+  image: z.string().nullable().optional(),
 });
 type ProductItem = z.infer<typeof ProductItemSchema>;
 
@@ -172,6 +178,135 @@ function serializePayload(v: Data): Record<string, unknown> {
       is_value_added: it.is_value_added === true,
     })),
   };
+}
+
+// ── Product image upload widget ───────────────────────────────────────────
+
+/**
+ * Photo upload for one product row.
+ *
+ * - Available only after the row has been saved once (needs backend `id`).
+ * - Direct multipart POST to the dedicated image endpoint — does NOT
+ *   go through the section save (that path is JSON and would clobber
+ *   uploaded images on re-save).
+ * - Client-side type/size checks mirror the server's (jpg/png/webp ≤5 MB);
+ *   server is authoritative but pre-check avoids the round-trip.
+ * - Success updates the row's `image` field locally so the thumbnail
+ *   swaps immediately. Also invalidates the section query so a fresh GET
+ *   returns the same URL on next mount.
+ */
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
+function ProductImageField({
+  uuid,
+  rowId,
+  currentImageUrl,
+  onChange,
+}: {
+  uuid: string;
+  rowId: number | undefined;
+  currentImageUrl: string | null | undefined;
+  onChange: (newUrl: string | null) => void;
+}) {
+  const qc = useQueryClient();
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const uploadMut = useMutation({
+    mutationFn: (file: File) => dprApi.uploadProductImage(uuid, rowId!, file),
+    onSuccess: (data) => {
+      onChange(data.image_url);
+      qc.invalidateQueries({ queryKey: ["dpr-section", uuid, "products"] });
+      toast.success("Product photo uploaded.");
+    },
+    onError: () => toast.error("Failed to upload photo. Try again."),
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: () => dprApi.deleteProductImage(uuid, rowId!),
+    onSuccess: () => {
+      onChange(null);
+      qc.invalidateQueries({ queryKey: ["dpr-section", uuid, "products"] });
+      toast.success("Product photo removed.");
+    },
+    onError: () => toast.error("Failed to remove photo."),
+  });
+
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f) return;
+    if (!ALLOWED_IMAGE_TYPES.includes(f.type)) {
+      toast.error("Only JPEG, PNG, or WebP images allowed.");
+      return;
+    }
+    if (f.size > MAX_IMAGE_BYTES) {
+      toast.error("Image is larger than 5 MB.");
+      return;
+    }
+    uploadMut.mutate(f);
+  }
+
+  // Row hasn't been saved yet — no id to attach the image to.
+  if (!rowId) {
+    return (
+      <p className="text-xs italic text-muted-foreground">
+        Save this product first, then reopen it to upload a photo.
+      </p>
+    );
+  }
+
+  return (
+    <div className="flex items-start gap-4">
+      {currentImageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={currentImageUrl}
+          alt="Product"
+          className="h-24 w-32 rounded border object-cover"
+        />
+      ) : (
+        <div className="flex h-24 w-32 items-center justify-center rounded border border-dashed bg-muted text-xs text-muted-foreground">
+          No photo
+        </div>
+      )}
+      <div className="flex flex-col gap-2">
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={handleFile}
+        />
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={uploadMut.isPending || deleteMut.isPending}
+          onClick={() => fileRef.current?.click()}
+        >
+          <ImagePlus className="mr-1.5 h-3.5 w-3.5" />
+          {uploadMut.isPending ? "Uploading…" : currentImageUrl ? "Replace" : "Upload"}
+        </Button>
+        {currentImageUrl && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="text-destructive hover:text-destructive"
+            disabled={uploadMut.isPending || deleteMut.isPending}
+            onClick={() => deleteMut.mutate()}
+          >
+            <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+            Remove
+          </Button>
+        )}
+        <p className="text-xs text-muted-foreground">
+          JPEG, PNG, or WebP · Max 5 MB · Appears on the DPR PDF cover &amp; products page.
+        </p>
+      </div>
+    </div>
+  );
 }
 
 // ── Section component ─────────────────────────────────────────────────────
@@ -537,6 +672,14 @@ export function ProductsSection({ uuid }: { uuid: string }) {
                   );
                 })()}
               </div>
+            </ModalField>
+            <ModalField label="Product photo (optional)">
+              <ProductImageField
+                uuid={uuid}
+                rowId={row.id}
+                currentImageUrl={row.image ?? null}
+                onChange={(newUrl) => set("image", newUrl)}
+              />
             </ModalField>
           </>
           );

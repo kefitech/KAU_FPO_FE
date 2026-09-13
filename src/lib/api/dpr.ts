@@ -225,6 +225,33 @@ export const dprApi = {
       .get<Wrapped<DprReadiness>>(`/fpo/dpr/projects/${uuid}/sections/${key}/readiness/`)
       .then((r) => r.data.data),
 
+  // ── §2.3.5 Product photo upload (dedicated multipart endpoint) ──
+  // Kept separate from saveSection() because that path is JSON and would
+  // clobber existing images on re-save. See apps/fpo/api/dpr/products.py
+  // → DPRProductItemImageView. Server accepts jpg/png/webp ≤5 MB.
+  uploadProductImage: (
+    uuid: string,
+    itemId: number,
+    file: File,
+  ): Promise<{ id: number; image_url: string | null }> => {
+    const fd = new FormData();
+    fd.append("image", file);
+    return api
+      .post<Wrapped<{ id: number; image_url: string | null }>>(
+        `/fpo/dpr/projects/${uuid}/sections/products/items/${itemId}/image/`,
+        fd,
+        { headers: { "Content-Type": "multipart/form-data" } },
+      )
+      .then((r) => r.data.data);
+  },
+
+  deleteProductImage: (uuid: string, itemId: number): Promise<{ id: number }> =>
+    api
+      .delete<Wrapped<{ id: number }>>(
+        `/fpo/dpr/projects/${uuid}/sections/products/items/${itemId}/image/`,
+      )
+      .then((r) => r.data.data),
+
   // ── Phase 3 — 10-year financial calculation + PDF download ──
   // Backend: apps/fpo/api/dpr/calculation.py. Returns the full CalculationResult
   // tree — Decimals are strings (parse to Number on FE), booleans are booleans.
