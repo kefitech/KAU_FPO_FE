@@ -5,19 +5,19 @@ import { useEffect, useState } from "react";
 
 import { usePathname, useRouter } from "next/navigation";
 
-import { DynamicSidebar } from "@/components/layout/dynamic-sidebar";
+import { useQuery } from "@tanstack/react-query";
+
 import { LocaleSwitcher } from "@/components/layout/locale-switcher";
 import { NotificationBell } from "@/components/layout/notification-bell";
+import { RoleMenuSidebar } from "@/components/layout/role-menu-sidebar";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { fpoNavigationConfig } from "@/config/navigation-defaults";
 import { authApi } from "@/lib/api/auth";
 import { resolvePostLoginPath } from "@/lib/fpo-redirect";
 import { useAuthStore } from "@/stores/auth-store";
 import { useLocaleStore } from "@/stores/locale-store";
-import { check } from "zod";
 
 export default function FpoPortalLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -29,19 +29,21 @@ export default function FpoPortalLayout({ children }: { children: React.ReactNod
   const [mounted, setMounted] = useState(false);
   const [checkedFresh, setCheckedFresh] = useState(false);
 
+  const { data, isFetched } = useQuery({
+    queryKey: ["auth-me", locale],
+    queryFn: authApi.me,
+    staleTime: 5 * 60 * 1000,
+    enabled: mounted && isAuthenticated,
+  });
 
   useEffect(() => {
     setMounted(true);
   }, []);
   useEffect(() => {
-    if (!mounted || !isAuthenticated) return;
-    authApi
-      .me()
-      .then((res) => {
-        setFpoRedirect(res.redirect);
-      })
-      .finally(() => setCheckedFresh(true));
-  }, [mounted, isAuthenticated]);
+    if (!isFetched) return;
+    setFpoRedirect(data?.redirect ?? null);
+    setCheckedFresh(true);
+  }, [isFetched, data, setFpoRedirect]);
   useEffect(() => {
     if (!mounted || !checkedFresh) return;
     if (!isAuthenticated) {
@@ -63,7 +65,7 @@ export default function FpoPortalLayout({ children }: { children: React.ReactNod
 
   return (
     <SidebarProvider>
-      <DynamicSidebar config={fpoNavigationConfig} locale={locale} />
+      <RoleMenuSidebar title="KAU-FPO" subtitle="FPO Portal" />
       <SidebarInset>
         <header className="flex h-12 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1 cursor-pointer" />

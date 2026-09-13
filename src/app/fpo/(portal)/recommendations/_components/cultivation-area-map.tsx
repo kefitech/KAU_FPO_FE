@@ -6,6 +6,7 @@ import L from "leaflet";
 import { GeoJSON, MapContainer, Marker, Polygon, ScaleControl, TileLayer, useMap, useMapEvents, ZoomControl } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import "@/lib/gis/leaflet-overrides.css";
+import { ZONE_COLORS, DEFAULT_ZONE_COLOR } from "@/lib/gis/zone-colors";
 
 import {
   CheckCircle2,
@@ -67,14 +68,6 @@ const searchPinIcon = L.divIcon({
   iconAnchor: [14, 36],
 });
 
-const ZONE_COLORS: Record<string, string> = {
-  coastal_zone: "#1D9E75",
-  high_ranges: "#7F77DD",
-  southern_zone: "#D85A30",
-  central_zone: "#BA7517",
-  northern_zone: "#888780",
-};
-const DEFAULT_ZONE_COLOR = "#888780";
 
 function verticesToRequest(vertices: LatLng[]): SaveCultivationAreaRequest {
   const ring = vertices.map((v) => [v.lng, v.lat] as [number, number]);
@@ -217,6 +210,7 @@ export function CultivationAreaMap() {
   const [zonesLoading, setZonesLoading] = useState(false);
   const [zonesError, setZonesError] = useState<string | null>(null);
   const [showZones, setShowZones] = useState(false);
+  const [zoneOpacity, setZoneOpacity] = useState(0.38);
 
   const mapRef = useRef<L.Map | null>(null);
   const mapWrapperRef = useRef<HTMLDivElement | null>(null);
@@ -333,7 +327,7 @@ export function CultivationAreaMap() {
   function zoneStyle(feature?: GeoJSON.Feature) {
     const code = (feature?.properties as { code?: string } | undefined)?.code;
     const color = (code && ZONE_COLORS[code]) || DEFAULT_ZONE_COLOR;
-    return { color, weight: 2, fillColor: color, fillOpacity: 0.38 };
+    return { color, weight: 2, fillColor: color, fillOpacity: zoneOpacity };
   }
 
   function onEachZoneFeature(feature: GeoJSON.Feature, layer: L.Layer) {
@@ -506,7 +500,7 @@ export function CultivationAreaMap() {
 
           {showZones && zones && (
             <GeoJSON
-              key={showZones ? "zones-on" : "zones-off"}
+              key={`zones-on-${zoneOpacity}`}
               data={zones as unknown as GeoJSON.GeoJsonObject}
               style={zoneStyle}
               onEachFeature={onEachZoneFeature}
@@ -544,6 +538,20 @@ export function CultivationAreaMap() {
             {zonesLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Layers className="h-3.5 w-3.5" />}
             {showZones ? (t.map_hide_zones ?? "Hide zones") : (t.map_show_zones ?? "Show zones")}
           </button>
+          {showZones && (
+            <div className="flex items-center gap-1.5 rounded-md border bg-background/90 px-2 py-1.5 shadow-md backdrop-blur-sm">
+              <span className="text-[10px] text-muted-foreground">{t.map_opacity ?? "Opacity"}</span>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.05}
+                value={zoneOpacity}
+                onChange={(e) => setZoneOpacity(Number.parseFloat(e.target.value))}
+                className="h-1 w-20 accent-primary"
+              />
+            </div>
+          )}
           {!isDrawing && (
             <button
               type="button"

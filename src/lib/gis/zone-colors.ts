@@ -7,7 +7,7 @@ export const ZONE_COLORS: Record<string, string> = {
   coastal_zone: "#1D9E75",
   high_ranges: "#7F77DD",
   southern_zone: "#D85A30",
-  central_zone: "#BA7517",
+  central_zone: "#C2348C",
   northern_zone: "#888780",
 };
 

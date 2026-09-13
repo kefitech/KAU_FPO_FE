@@ -80,6 +80,10 @@ export default function NewMlModelPage() {
       setFileError(t.model_file_required ?? "A model file is required.");
       return;
     }
+    if (!file.name.toLowerCase().endsWith(".joblib")) {
+      setFileError(t.model_file_invalid ?? "Expected a .joblib file.");
+      return;
+    }
     setFileError(null);
     mutation.mutate(values);
   }
@@ -157,6 +161,7 @@ export default function NewMlModelPage() {
                   <input
                     id="model_file"
                     type="file"
+                    accept=".joblib"
                     onChange={(e) => {
                       setFile(e.target.files?.[0] ?? null);
                       setFileError(null);

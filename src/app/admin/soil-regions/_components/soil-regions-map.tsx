@@ -9,8 +9,8 @@ import "@/lib/gis/leaflet-overrides.css";
 
 import { Crosshair, Layers, Loader2, Maximize2, Minimize2, Satellite, Search, X } from "lucide-react";
 
-import type { ZoneFeatureCollection } from "@/app/admin/_api/gis-zones";
-import { ZONE_COLORS, bindZoneTooltip, makeZoneStyle } from "@/lib/gis/zone-colors";
+import type { SoilRegionFeatureCollection } from "@/app/admin/_api/soil-regions";
+import { bindSoilRegionTooltip, getSoilRegionColor, makeSoilRegionStyle } from "@/lib/gis/soil-region-colors";
 
 type T = Record<string, string>;
 
@@ -41,17 +41,22 @@ function MapInstanceCapture({ onReady }: { onReady: (map: L.Map) => void }) {
 }
 
 interface Props {
-  zones: ZoneFeatureCollection;
+  regions: SoilRegionFeatureCollection;
   mapKey: string;
   t: T;
 }
 
-export function ZonesMap({ zones, mapKey, t }: Props) {
-  const [showZones, setShowZones] = useState(true);
-  const [zoneOpacity, setZoneOpacity] = useState(0.38);
+export function SoilRegionsMap({ regions, mapKey, t }: Props) {
+  const [showRegions, setShowRegions] = useState(true);
+  const [regionOpacity, setRegionOpacity] = useState(0.38);
   const [baseLayer, setBaseLayer] = useState<"street" | "satellite">("street");
 
-  const zoneStyle = makeZoneStyle(zoneOpacity);
+  const regionStyle = makeSoilRegionStyle(regionOpacity);
+
+  const legendEntries = (regions.features ?? []).map((f) => ({
+    code: f.properties.code,
+    color: getSoilRegionColor(f.properties.code),
+  }));
 
   const mapRef = useRef<L.Map | null>(null);
   const mapWrapperRef = useRef<HTMLDivElement | null>(null);
@@ -78,8 +83,8 @@ export function ZonesMap({ zones, mapKey, t }: Props) {
   function handleRecenter() {
     const map = mapRef.current;
     if (!map) return;
-    if (zones.features.length > 0) {
-      const bounds = L.geoJSON(zones as unknown as GeoJSON.GeoJsonObject).getBounds();
+    if (regions.features.length > 0) {
+      const bounds = L.geoJSON(regions as unknown as GeoJSON.GeoJsonObject).getBounds();
       if (bounds.isValid()) {
         map.fitBounds(bounds, { padding: [40, 40] });
         return;
@@ -176,12 +181,12 @@ export function ZonesMap({ zones, mapKey, t }: Props) {
 
           {searchPin && <Marker position={[searchPin.lat, searchPin.lng]} icon={searchPinIcon} />}
 
-          {showZones && (
+          {showRegions && (
             <GeoJSON
-              key={`${zoneOpacity}-${mapKey}`}
-              data={zones as unknown as GeoJSON.GeoJsonObject}
-              style={zoneStyle}
-              onEachFeature={bindZoneTooltip}
+              key={`${regionOpacity}-${mapKey}`}
+              data={regions as unknown as GeoJSON.GeoJsonObject}
+              style={regionStyle}
+              onEachFeature={bindSoilRegionTooltip}
             />
           )}
         </MapContainer>
@@ -189,13 +194,13 @@ export function ZonesMap({ zones, mapKey, t }: Props) {
         <div className="absolute top-2 left-2 z-[400] flex flex-col gap-1.5 rounded-md border bg-background/90 p-2 shadow-md backdrop-blur-sm">
           <button
             type="button"
-            onClick={() => setShowZones((prev) => !prev)}
+            onClick={() => setShowRegions((prev) => !prev)}
             className="flex items-center gap-1.5 font-medium text-xs hover:text-primary"
           >
             <Layers className="h-3.5 w-3.5" />
-            {showZones ? (t.map_hide_zones ?? "Hide zones") : (t.map_show_zones ?? "Show zones")}
+            {showRegions ? (t.map_hide_regions ?? "Hide soil regions") : (t.map_show_regions ?? "Show soil regions")}
           </button>
-          {showZones && (
+          {showRegions && (
             <div className="flex items-center gap-1.5">
               <span className="text-[10px] text-muted-foreground">{t.map_opacity ?? "Opacity"}</span>
               <input
@@ -203,8 +208,8 @@ export function ZonesMap({ zones, mapKey, t }: Props) {
                 min={0}
                 max={1}
                 step={0.05}
-                value={zoneOpacity}
-                onChange={(e) => setZoneOpacity(Number.parseFloat(e.target.value))}
+                value={regionOpacity}
+                onChange={(e) => setRegionOpacity(Number.parseFloat(e.target.value))}
                 className="h-1 w-20 accent-primary"
               />
             </div>
@@ -260,7 +265,7 @@ export function ZonesMap({ zones, mapKey, t }: Props) {
         <button
           type="button"
           onClick={handleRecenter}
-          title={t.map_recenter_tooltip ?? "Recenter on all zones"}
+          title={t.map_recenter_tooltip ?? "Recenter on all soil regions"}
           className="absolute top-2 right-2 z-[400] flex h-8 w-8 items-center justify-center rounded-md border bg-background/90 text-foreground shadow-md backdrop-blur-sm hover:bg-background"
         >
           <Crosshair className="h-4 w-4" />
@@ -284,9 +289,9 @@ export function ZonesMap({ zones, mapKey, t }: Props) {
           <Satellite className="h-4 w-4" />
         </button>
 
-        {showZones && (
-          <div className="pointer-events-none absolute bottom-8 left-2 z-[400] flex flex-col gap-1 rounded-md border bg-background/90 px-2 py-1.5 text-[10px] shadow-sm backdrop-blur-sm">
-            {Object.entries(ZONE_COLORS).map(([code, color]) => (
+        {showRegions && legendEntries.length > 0 && (
+          <div className="pointer-events-none absolute bottom-8 left-2 z-[400] flex max-h-40 flex-col gap-1 overflow-y-auto rounded-md border bg-background/90 px-2 py-1.5 text-[10px] shadow-sm backdrop-blur-sm">
+            {legendEntries.map(({ code, color }) => (
               <div key={code} className="flex items-center gap-1.5">
                 <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ backgroundColor: color }} />
                 <span className="capitalize text-muted-foreground">{code.replace(/_/g, " ")}</span>
