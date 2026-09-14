@@ -1,6 +1,7 @@
 import type { ApiResponse } from "@/types/api";
 import type {
   BusinessPlanGuidance,
+  CropPackageOfPractices,
   DprGenerationRequest,
   GeneratedDpr,
   MyRecommendation,
@@ -32,6 +33,27 @@ export async function getMyRecommendation(): Promise<MyRecommendation | null> {
   }
 }
 
+const CROP_POP_PATH = "/recommendations/pop/";
+
+/**
+ * Fetch the Package of Practices detail for one recommended crop.
+ * Returns null if no published entry exists yet (backend returns 404 —
+ * expected at launch, since content is transcribed crop by crop and each
+ * entry is reviewed against the source PDF before being published).
+ */
+export async function getCropPackageOfPractices(cropName: string): Promise<CropPackageOfPractices | null> {
+  try {
+    const response = await apiClient.get<ApiResponse<CropPackageOfPractices>>(CROP_POP_PATH, {
+      params: { crop_name: cropName },
+    });
+    return response.data.data;
+  } catch (error) {
+    const status = (error as { status?: number })?.status;
+    if (status === 404) return null;
+    throw error;
+  }
+}
+
 /**
  * Request a fresh recommendation — triggers the backend to call the
  * ML service (FastAPI) with the FPO's current district/zone/soil/
@@ -42,12 +64,16 @@ export async function getMyRecommendation(): Promise<MyRecommendation | null> {
  * "northeast_monsoon" | "dry_season") — omit it to let the backend
  * auto-detect the season from today's date, same as before this param
  * existed.
+ *
+ * `soilPh` is an optional manual override — the FPO's actual measured
+ * soil pH (3.0–10.0) — omit it to let the backend estimate pH from the
+ * resolved soil type instead, same as before this param existed.
  */
-export async function requestFreshRecommendation(season?: string): Promise<MyRecommendation> {
-  const response = await apiClient.post<ApiResponse<MyRecommendation>>(
-    RECOMMENDATION_REQUEST_PATH,
-    season ? { season } : {},
-  );
+export async function requestFreshRecommendation(season?: string, soilPh?: number): Promise<MyRecommendation> {
+  const response = await apiClient.post<ApiResponse<MyRecommendation>>(RECOMMENDATION_REQUEST_PATH, {
+    ...(season ? { season } : {}),
+    ...(soilPh !== undefined ? { soil_ph: soilPh } : {}),
+  });
   return response.data.data;
 }
 
