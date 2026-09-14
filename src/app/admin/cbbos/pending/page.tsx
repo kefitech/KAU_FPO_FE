@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 import { useRouter } from "next/navigation";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -10,10 +12,23 @@ import { cbbosApi } from "@/app/admin/_api/cbbos";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { translationsApi } from "@/lib/api/translations";
+import { useLocaleStore } from "@/stores/locale-store";
+
+type T = Record<string, string>;
 
 export default function PendingCBBOApprovalsPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const locale = useLocaleStore((s) => s.locale);
+  const [t, setT] = useState<T>({});
+
+  useEffect(() => {
+    translationsApi
+      .getPublic(locale, "cbbo_pending")
+      .then((data) => setT(data.cbbo_pending ?? {}))
+      .catch(() => undefined);
+  }, [locale]);
 
   const {
     data: pending,
@@ -27,20 +42,20 @@ export default function PendingCBBOApprovalsPage() {
   const approveMutation = useMutation({
     mutationFn: (id: number) => cbbosApi.approveRegistration(id),
     onSuccess: () => {
-      toast.success("Registration approved");
+      toast.success(t.toast_approved ?? "Registration approved");
       queryClient.invalidateQueries({ queryKey: ["cbbos", "pending"] });
       queryClient.invalidateQueries({ queryKey: ["cbbos"] });
     },
-    onError: () => toast.error("Failed to approve"),
+    onError: () => toast.error(t.toast_approve_failed ?? "Failed to approve"),
   });
 
   const rejectMutation = useMutation({
     mutationFn: (id: number) => cbbosApi.rejectRegistration(id),
     onSuccess: () => {
-      toast.success("Registration rejected");
+      toast.success(t.toast_rejected ?? "Registration rejected");
       queryClient.invalidateQueries({ queryKey: ["cbbos", "pending"] });
     },
-    onError: () => toast.error("Failed to reject"),
+    onError: () => toast.error(t.toast_reject_failed ?? "Failed to reject"),
   });
 
   return (
@@ -50,20 +65,24 @@ export default function PendingCBBOApprovalsPage() {
         onClick={() => router.push("/admin/cbbos")}
         className="flex w-fit items-center gap-1 text-muted-foreground text-sm hover:text-foreground"
       >
-        <ChevronLeft className="h-4 w-4" /> Back to CBBO / NGO Officers
+        <ChevronLeft className="h-4 w-4" /> {t.back_button ?? "Back to CBBO / NGO Officers"}
       </button>
 
       <div>
-        <h1 className="font-bold text-2xl">Pending Approvals</h1>
-        <p className="mt-0.5 text-muted-foreground text-sm">Self-registered CBBO / NGO officers awaiting review</p>
+        <h1 className="font-bold text-2xl">{t.page_title ?? "Pending Approvals"}</h1>
+        <p className="mt-0.5 text-muted-foreground text-sm">
+          {t.page_description ?? "Self-registered CBBO / NGO officers awaiting review"}
+        </p>
       </div>
 
       {isLoading && (
-        <div className="flex h-40 items-center justify-center text-muted-foreground text-sm">Loading...</div>
+        <div className="flex h-40 items-center justify-center text-muted-foreground text-sm">
+          {t.loading ?? "Loading..."}
+        </div>
       )}
       {isError && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700 text-sm">
-          Couldn&apos;t load pending registrations.
+          {t.error_load ?? "Couldn't load pending registrations."}
         </div>
       )}
 
@@ -71,7 +90,9 @@ export default function PendingCBBOApprovalsPage() {
         <Card>
           <CardContent className="p-0">
             {(pending?.length ?? 0) === 0 && (
-              <p className="p-6 text-center text-muted-foreground text-sm">No pending registrations.</p>
+              <p className="p-6 text-center text-muted-foreground text-sm">
+                {t.empty_state ?? "No pending registrations."}
+              </p>
             )}
             {pending?.map((officer, i) => (
               <div
@@ -93,7 +114,7 @@ export default function PendingCBBOApprovalsPage() {
                     )}
                     <Badge variant="outline" className="text-[10px]">
                       {officer.scope === "STATE"
-                        ? "State-wide"
+                        ? (t.state_wide_label ?? "State-wide")
                         : Array.isArray(officer.scope)
                           ? officer.scope.join(", ")
                           : officer.scope}
@@ -107,14 +128,14 @@ export default function PendingCBBOApprovalsPage() {
                     onClick={() => rejectMutation.mutate(officer.id)}
                     disabled={approveMutation.isPending || rejectMutation.isPending}
                   >
-                    Reject
+                    {t.reject_button ?? "Reject"}
                   </Button>
                   <Button
                     size="sm"
                     onClick={() => approveMutation.mutate(officer.id)}
                     disabled={approveMutation.isPending || rejectMutation.isPending}
                   >
-                    Approve
+                    {t.approve_button ?? "Approve"}
                   </Button>
                 </div>
               </div>
