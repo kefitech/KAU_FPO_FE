@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Pencil, Plus } from "lucide-react";
 
 import { cbbosApi } from "@/app/admin/_api/cbbos";
+import { AddOrganisationDialog } from "@/app/admin/cbbos/_components/add-organisation-dialog";
 import { getCBBOColumns } from "@/app/admin/cbbos/_components/columns";
 import { DataTable } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ export default function CBBOsPage() {
   const [tConfirm, setTConfirm] = useState<T>({});
   const [tCommon, setTCommon] = useState<T>({});
   const [cbboView, setCbboView] = useState<{ open: boolean; row: CBBO | null }>({ open: false, row: null });
+  const [showOrgDialog, setShowOrgDialog] = useState(false);
 
   useEffect(() => {
     translationsApi
@@ -45,18 +47,18 @@ export default function CBBOsPage() {
             {tTable.page_description ?? "Manage CBBO/NGO accounts and their district assignments"}
           </p>
         </div>
-        <Button
-          size="sm"
-          variant="outline"
-          className="self-start sm:self-auto"
-          onClick={() => router.push("/admin/cbbos/pending")}
-        >
-          {tTable.pending_approvals_button ?? "Pending Approvals"}
-        </Button>
-        <Button size="sm" className="self-start sm:self-auto" onClick={() => router.push("/admin/cbbos/new")}>
-          <Plus className="mr-1.5 h-4 w-4" />
-          {tTable.add_button ?? "Add CBBO"}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          <Button size="sm" variant="outline" onClick={() => router.push("/admin/cbbos/pending")}>
+            {tTable.pending_approvals_button ?? "Pending Approvals"}
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setShowOrgDialog(true)}>
+            {tTable.add_organisation_button ?? "Add Organisation"}
+          </Button>
+          <Button size="sm" onClick={() => router.push("/admin/cbbos/new")}>
+            <Plus className="mr-1.5 h-4 w-4" />
+            {tTable.add_button ?? "Add CBBO"}
+          </Button>
+        </div>
       </div>
 
       <Suspense>
@@ -114,6 +116,8 @@ export default function CBBOsPage() {
             : []
         }
       />
+
+      <AddOrganisationDialog open={showOrgDialog} onOpenChange={setShowOrgDialog} />
     </div>
   );
 }
