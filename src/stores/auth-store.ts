@@ -2,16 +2,18 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 import type { User } from "@/types";
-import type { FpoRedirect } from "@/types/auth";
+import type { BuyerRedirect, FpoRedirect } from "@/types/auth";
 
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   fpoRedirect: FpoRedirect | null;
+  buyerRedirect: BuyerRedirect | null;
   setUser: (user: User | null, redirect?: FpoRedirect | null) => void;
   logout: () => void;
   updateUser: (data: Partial<User>) => void;
   setFpoRedirect: (redirect: FpoRedirect | null) => void;
+  setBuyerRedirect: (redirect: BuyerRedirect | null) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -20,10 +22,11 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isAuthenticated: false,
       fpoRedirect: null,
+      buyerRedirect: null,
 
       setUser: (user, redirect = null) => set({ user, isAuthenticated: !!user, fpoRedirect: redirect }),
 
-      logout: () => set({ user: null, isAuthenticated: false, fpoRedirect: null }),
+      logout: () => set({ user: null, isAuthenticated: false, fpoRedirect: null, buyerRedirect: null }),
 
       updateUser: (data) =>
         set((state) => ({
@@ -31,6 +34,7 @@ export const useAuthStore = create<AuthState>()(
         })),
 
       setFpoRedirect: (redirect) => set({ fpoRedirect: redirect }),
+      setBuyerRedirect: (redirect) => set({ buyerRedirect: redirect }),
     }),
     {
       name: "auth",
@@ -38,6 +42,7 @@ export const useAuthStore = create<AuthState>()(
         user: state.user,
         isAuthenticated: state.isAuthenticated,
         fpoRedirect: state.fpoRedirect,
+        buyerRedirect: state.buyerRedirect,
       }),
     },
   ),

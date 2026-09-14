@@ -35,16 +35,31 @@ export interface FpoRedirect {
   step: number | null;
 }
 
+// Buyer verification status → landing page router (Arunima — P2-11)
+export type BuyerStatus = "pending" | "verified" | "rejected";
+
+export interface BuyerRedirect {
+  status: BuyerStatus;
+}
+
 export interface MeResponse {
   user: User;
   menu: SidebarMenuItem[] | null;
   redirect: FpoRedirect | null;
+  buyer_redirect: BuyerRedirect | null;
 }
 
 export type LoginResponse =
   | { two_factor_required: true; partial_token: string }
   | { must_change_password: true; partial_token: string }
-  | { two_factor_required?: false; must_change_password?: false; user: User; menu: SidebarMenuItem[] | null; redirect: FpoRedirect | null };
+  | {
+      two_factor_required?: false;
+      must_change_password?: false;
+      user: User;
+      menu: SidebarMenuItem[] | null;
+      redirect: FpoRedirect | null;
+      buyer_redirect: BuyerRedirect | null;
+    };
 
 export interface TwoFactorStatus {
   is_enabled: boolean;

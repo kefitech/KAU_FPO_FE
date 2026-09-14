@@ -60,6 +60,12 @@ const MainMenu = ({ openIndex, toggleSubMenu, navbarPlacement }: Props) => {
           <li>
             <Link href="/contact-us">{t.contact_us ?? "Contact Us"}</Link>
           </li>
+          <li>
+            <a href="/register?mode=buyer">{t.register_as_buyer ?? "Buyer Registration"}</a>
+          </li>
+          <li>
+            <Link href="/market-hub">{t.market_hub ?? "Market Hub"}</Link>
+          </li>
           <li className="more-info-dropdown-item">
             <Link href="/more-info">{t.more_info ?? "More Info"}</Link>
           </li>
