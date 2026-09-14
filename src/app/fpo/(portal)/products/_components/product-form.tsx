@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { useLocaleStore } from "@/stores/locale-store";
 import type { Product, ProductUnit } from "@/types/fpo";
 import { UNIT_OPTIONS } from "@/types/fpo";
 
@@ -26,20 +27,42 @@ type T = Record<string, string>;
 
 // commodity now uses a real dropdown of MasterLookup(category='commodity')
 // entries, fetched via /api/public/master-data/?category=commodity.
-const schema = z.object({
-  name_en: z.string().min(1, { message: "Product name is required" }),
-  name_ml: z.string().optional(),
-  commodity: z.string().min(1, { message: "Commodity is required" }),
-  description_en: z.string().min(1, { message: "Description is required" }),
-  description_ml: z.string().optional(),
-  quantity: z.string().min(1, { message: "Quantity is required" }),
-  unit: z.enum(["kg", "quintal", "mt", "litre", "piece"]),
-  price_per_unit: z.string().min(1, { message: "Price per unit is required" }),
-  quality_certification: z.string().optional(),
-  available_from: z.string().min(1, { message: "Available from date is required" }),
-  available_until: z.string().optional(),
-  is_public: z.boolean(),
-});
+const NAME_PATTERN = /^[A-Za-z][A-Za-z\s'-]*$/;
+
+const schema = z
+  .object({
+    name_en: z.string().min(1, { message: "Product name is required" }).regex(NAME_PATTERN, {
+      message: "Name must start with a letter and contain only letters, spaces, apostrophes, or hyphens",
+    }),
+    name_ml: z.string().optional(),
+    commodity: z.string().min(1, { message: "Commodity is required" }),
+    description_en: z.string().min(1, { message: "Description is required" }).regex(NAME_PATTERN, {
+      message: "Description must start with a letter and contain only letters, spaces, apostrophes, or hyphens",
+    }),
+    description_ml: z.string().optional(),
+    quantity: z
+      .string()
+      .min(1, { message: "Quantity is required" })
+      .refine((val) => !Number.isNaN(Number(val)) && Number(val) > 0, {
+        message: "Quantity must be greater than 0",
+      }),
+    unit: z.enum(["kg", "quintal", "mt", "litre", "piece"]),
+    price_per_unit: z.string().min(1, { message: "Price per unit is required" }),
+    quality_certification: z.string().optional(),
+    available_from: z.string().min(1, { message: "Available from date is required" }),
+    available_until: z.string().optional(),
+    is_public: z.boolean(),
+  })
+  .refine(
+    (data) => {
+      if (!data.available_until) return true; // optional field — only check if provided
+      return new Date(data.available_until) >= new Date(data.available_from);
+    },
+    {
+      message: "Available until date must be the same as or after the Available from date",
+      path: ["available_until"],
+    },
+  );
 
 type FormValues = z.infer<typeof schema>;
 
@@ -87,9 +110,11 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
   const queryClient = useQueryClient();
   const isEdit = mode === "edit";
 
+  const locale = useLocaleStore((s) => s.locale);
+
   const { data: commodities = [], isLoading: commoditiesLoading } = useQuery({
-    queryKey: ["master-data", "commodity"],
-    queryFn: masterDataApi.getCommodities,
+    queryKey: ["master-data", "commodity", locale],
+    queryFn: () => masterDataApi.getCommodities(locale),
     staleTime: 10 * 60_000, // rarely changes — cache for 10 minutes
   });
 
@@ -125,7 +150,10 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
         available_until: values.available_until || null,
         is_public: values.is_public,
       };
-      return isEdit ? productsApi.update(product!.id, payload) : productsApi.create(payload);
+      if (isEdit && product) {
+        return productsApi.update(product.id, payload);
+      }
+      return productsApi.create(payload);
     },
     onSuccess: () => {
       toast.success(
@@ -134,7 +162,7 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
           : (t.toast_created ?? "Product added successfully"),
       );
       queryClient.invalidateQueries({ queryKey: ["products"] });
-      if (!isEdit) router.push("/fpo/products");
+      router.push("/fpo/products");
     },
     onError: (err: unknown) => {
       const apiErr = err as
@@ -164,7 +192,7 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
         <CardContent>
           <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="flex flex-col gap-6">
             <FieldGroup>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Controller
                   control={control}
                   name="name_en"
@@ -229,7 +257,7 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
                 )}
               />
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Controller
                   control={control}
                   name="description_en"
@@ -257,7 +285,7 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <Controller
                   control={control}
                   name="quantity"
@@ -284,7 +312,7 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
                         <SelectContent>
                           {UNIT_OPTIONS.map((u) => (
                             <SelectItem key={u.value} value={u.value}>
-                              {u.label}
+                              {t[`unit_${u.value}`] ?? u.label}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -322,7 +350,7 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
                 )}
               />
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Controller
                   control={control}
                   name="available_from"
@@ -343,6 +371,7 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
                     <Field>
                       <FieldLabel htmlFor="product-until">{t.available_until_label ?? "Available until"}</FieldLabel>
                       <Input id="product-until" type="date" {...field} />
+                      {errors.available_until && <FieldError errors={[errors.available_until]} />}
                     </Field>
                   )}
                 />
