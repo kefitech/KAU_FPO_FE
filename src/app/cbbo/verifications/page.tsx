@@ -9,7 +9,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { cbboFposApi } from "@/app/cbbo/_api/fpos";
 import { DataTable } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
-import { ViewSheet } from "@/components/ui/view-sheet";
+import { Button } from "@/components/ui/button";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 import type { AssignedFPO } from "@/types/cbbo";
@@ -23,11 +23,11 @@ const STATUS_BADGE_STYLES: Record<string, string> = {
   info_required: "border-orange-500/40 bg-orange-500/10 text-orange-700 dark:text-orange-400",
   suspended: "border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-400",
 };
+
 export default function CBBOVerificationsPage() {
   const router = useRouter();
   const locale = useLocaleStore((s) => s.locale);
   const [t, setT] = useState<T>({});
-  const [view, setView] = useState<{ open: boolean; row: AssignedFPO | null }>({ open: false, row: null });
 
   useEffect(() => {
     translationsApi
@@ -88,6 +88,23 @@ export default function CBBOVerificationsPage() {
         <span className="text-muted-foreground text-sm">{new Date(row.original.updated_at).toLocaleDateString()}</span>
       ),
     },
+    {
+      id: "view",
+      header: "",
+      cell: ({ row }) => (
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 text-xs"
+          onClick={(e) => {
+            e.stopPropagation();
+            router.push(`/cbbo/verifications/${row.original.id}`);
+          }}
+        >
+          {t.action_view ?? "View"}
+        </Button>
+      ),
+    },
   ];
 
   return (
@@ -102,35 +119,12 @@ export default function CBBOVerificationsPage() {
           queryKey="cbbo-fpos"
           queryFn={cbboFposApi.getAll}
           columns={columns}
-          onRowClick={(row) => setView({ open: true, row })}
+          onRowClick={(row) => router.push(`/cbbo/verifications/${row.id}`)}
           columnsLabel={t.col_header ?? "Columns"}
           toggleColumnsLabel={t.col_toggle_columns ?? "Toggle columns"}
           searchPlaceholder={t.search_placeholder ?? "Search..."}
         />
       </Suspense>
-
-      <ViewSheet
-        open={view.open}
-        onOpenChange={(open) => setView((s) => ({ ...s, open }))}
-        title={view.row?.name ?? (t.view_default_title ?? "FPO Details")}
-        actions={
-          view.row
-            ? [{ label: t.action_submit_report ?? "Submit Report", onClick: () => router.push(`/cbbo/reports/new?fpo_id=${view.row?.id}`) }]
-            : []
-        }
-        fields={
-          view.row
-            ? [
-                { label: t.field_application_id ?? "Application ID", value: view.row.application_id },
-                { label: t.field_district ?? "District", value: view.row.district_display ?? view.row.district },
-                { label: t.field_status ?? "Status", value: getStatusLabel(view.row.status, view.row.status_display) },
-                { label: t.field_total_members ?? "Total Members", value: String(view.row.total_members) },
-                { label: t.field_tier ?? "Tier", value: view.row.tier ?? "—" },
-                { label: t.field_last_updated ?? "Last Updated", type: "date", value: view.row.updated_at },
-              ]
-            : []
-        }
-      />
     </div>
   );
 }
