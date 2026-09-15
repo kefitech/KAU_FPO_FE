@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
@@ -25,8 +25,6 @@ import { UNIT_OPTIONS } from "@/types/fpo";
 
 type T = Record<string, string>;
 
-// commodity now uses a real dropdown of MasterLookup(category='commodity')
-// entries, fetched via /api/public/master-data/?category=commodity.
 const NAME_PATTERN = /^[A-Za-z][A-Za-z\s'-]*$/;
 
 const schema = z
@@ -52,10 +50,20 @@ const schema = z
     available_from: z.string().min(1, { message: "Available from date is required" }),
     available_until: z.string().optional(),
     is_public: z.boolean(),
+    image: z
+      .instanceof(File)
+      .optional()
+      .nullable()
+      .refine((file) => !file || file.size <= 5 * 1024 * 1024, {
+        message: "Image must be smaller than 5MB",
+      })
+      .refine((file) => !file || file.type.startsWith("image/"), {
+        message: "File must be an image",
+      }),
   })
   .refine(
     (data) => {
-      if (!data.available_until) return true; // optional field — only check if provided
+      if (!data.available_until) return true;
       return new Date(data.available_until) >= new Date(data.available_from);
     },
     {
@@ -86,6 +94,7 @@ const defaultValues: FormValues = {
   available_from: "",
   available_until: "",
   is_public: false,
+  image: null,
 };
 
 function toFormValues(p: Product): FormValues {
@@ -102,6 +111,7 @@ function toFormValues(p: Product): FormValues {
     available_from: p.available_from ?? "",
     available_until: p.available_until ?? "",
     is_public: p.is_public ?? false,
+    image: null,
   };
 }
 
@@ -109,13 +119,14 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
   const router = useRouter();
   const queryClient = useQueryClient();
   const isEdit = mode === "edit";
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
 
   const locale = useLocaleStore((s) => s.locale);
 
   const { data: commodities = [], isLoading: commoditiesLoading } = useQuery({
     queryKey: ["master-data", "commodity", locale],
     queryFn: () => masterDataApi.getCommodities(locale),
-    staleTime: 10 * 60_000, // rarely changes — cache for 10 minutes
+    staleTime: 10 * 60_000,
   });
 
   const {
@@ -149,6 +160,7 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
         available_from: values.available_from,
         available_until: values.available_until || null,
         is_public: values.is_public,
+        image: values.image ?? undefined,
       };
       if (isEdit && product) {
         return productsApi.update(product.id, payload);
@@ -226,36 +238,79 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
                 />
               </div>
 
-              <Controller
-                control={control}
-                name="commodity"
-                render={({ field }) => (
-                  <Field className="max-w-xs">
-                    <FieldLabel htmlFor="product-commodity">
-                      {t.commodity_label ?? "Commodity"} <span className="text-destructive">*</span>
-                    </FieldLabel>
-                    <Select value={field.value} onValueChange={field.onChange} disabled={commoditiesLoading}>
-                      <SelectTrigger id="product-commodity">
-                        <SelectValue
-                          placeholder={
-                            commoditiesLoading
-                              ? (t.commodity_loading ?? "Loading...")
-                              : (t.commodity_placeholder ?? "Select a commodity")
-                          }
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Controller
+                  control={control}
+                  name="commodity"
+                  render={({ field }) => (
+                    <Field>
+                      <FieldLabel htmlFor="product-commodity">
+                        {t.commodity_label ?? "Commodity"} <span className="text-destructive">*</span>
+                      </FieldLabel>
+                      <Select value={field.value} onValueChange={field.onChange} disabled={commoditiesLoading}>
+                        <SelectTrigger id="product-commodity">
+                          <SelectValue
+                            placeholder={
+                              commoditiesLoading
+                                ? (t.commodity_loading ?? "Loading...")
+                                : (t.commodity_placeholder ?? "Select a commodity")
+                            }
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {commodities.map((c) => (
+                            <SelectItem key={c.id} value={String(c.id)}>
+                              {c.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {errors.commodity && <FieldError errors={[errors.commodity]} />}
+                    </Field>
+                  )}
+                />
+
+                <Controller
+                  control={control}
+                  name="image"
+                  render={({ field: { onChange, value: _value, ...field } }) => (
+                    <Field>
+                      <FieldLabel htmlFor="product-image">{t.image_label ?? "Product Image"}</FieldLabel>
+                      <div className="flex gap-2">
+                        <Input
+                          readOnly
+                          tabIndex={-1}
+                          placeholder={t.image_placeholder ?? "No file chosen"}
+                          value={selectedFileName ?? ""}
+                          onClick={() => document.getElementById("product-image")?.click()}
+                          onFocus={(e) => e.target.blur()}
+                          className="cursor-pointer select-none caret-transparent"
                         />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {commodities.map((c) => (
-                          <SelectItem key={c.id} value={String(c.id)}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {errors.commodity && <FieldError errors={[errors.commodity]} />}
-                  </Field>
-                )}
-              />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => document.getElementById("product-image")?.click()}
+                        >
+                          {t.image_choose_btn ?? "Choose File"}
+                        </Button>
+                      </div>
+                      <input
+                        id="product-image"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] ?? null;
+                          onChange(file);
+                          setSelectedFileName(file?.name ?? null);
+                        }}
+                        {...field}
+                      />
+                      {errors.image && <FieldError errors={[errors.image]} />}
+                    </Field>
+                  )}
+                />
+              </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Controller

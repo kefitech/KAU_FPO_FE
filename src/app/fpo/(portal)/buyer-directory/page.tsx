@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { translationsApi } from "@/lib/api/translations";
+import { toMediaUrl } from "@/lib/utils/media-url";
 import { useLocaleStore } from "@/stores/locale-store";
 
 type T = Record<string, string>;
@@ -23,7 +24,11 @@ function ProductCard({ product, locale }: { product: BuyerProduct; locale: strin
   const description = locale === "ml" ? product.description.ml || product.description.en : product.description.en;
 
   return (
-    <Card>
+    <Card className="overflow-hidden">
+      {toMediaUrl(product.image) && (
+        // biome-ignore lint/performance/noImgElement: product photo URL is dynamic, not a static asset
+        <img src={toMediaUrl(product.image) ?? undefined} alt={name} className="h-40 w-full object-cover" />
+      )}
       <CardHeader>
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-base">{name}</CardTitle>
@@ -85,7 +90,7 @@ function ProductCatalogSection({ locale, t }: { locale: string; t: T }) {
   return (
     <div className="flex w-full flex-col gap-4">
       <div className="relative">
-        <Search className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-muted-foreground" />
+        <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder={t.search_placeholder ?? "Search products…"}
           value={search}
@@ -155,8 +160,8 @@ export default function BuyerDirectoryPage() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center gap-6 px-3 sm:px-6 py-4 sm:py-6 animate-pulse">
-        <div className="w-full max-w-xl h-40 rounded-xl bg-muted" />
+      <div className="flex animate-pulse flex-col items-center gap-6 px-3 py-4 sm:px-6 sm:py-6">
+        <div className="h-40 w-full max-w-xl rounded-xl bg-muted" />
       </div>
     );
   }
@@ -165,7 +170,7 @@ export default function BuyerDirectoryPage() {
   // narrow centered card used for the not-registered/pending states.
   if (buyerStatus?.registered && buyerStatus.status === "verified") {
     return (
-      <div className="flex flex-col gap-6 px-3 sm:px-6 py-4 sm:py-6">
+      <div className="flex flex-col gap-6 px-3 py-4 sm:px-6 sm:py-6">
         <div className="flex items-center gap-3 rounded-xl border bg-card p-4">
           <CheckCircle2 className="h-6 w-6 shrink-0 text-green-600" />
           <div>
@@ -181,10 +186,10 @@ export default function BuyerDirectoryPage() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center gap-6 px-3 sm:px-6 py-4 sm:py-6 min-h-[80vh]">
+    <div className="flex min-h-[80vh] flex-col items-center justify-center gap-6 px-3 py-4 sm:px-6 sm:py-6">
       <div className="w-full max-w-xl rounded-xl border bg-card p-6 shadow-sm">
         {!buyerStatus?.registered && (
-          <div className="flex flex-col items-center text-center gap-4 py-8">
+          <div className="flex flex-col items-center gap-4 py-8 text-center">
             <ShoppingCart className="h-10 w-10 text-muted-foreground" />
             <div>
               <h2 className="font-semibold text-lg">{t.not_registered_title ?? "Register as a Buyer"}</h2>
@@ -206,7 +211,7 @@ export default function BuyerDirectoryPage() {
         )}
 
         {buyerStatus?.registered && buyerStatus.status === "pending" && (
-          <div className="flex flex-col items-center text-center gap-4 py-8">
+          <div className="flex flex-col items-center gap-4 py-8 text-center">
             <Clock className="h-10 w-10 text-amber-500" />
             <div>
               <h2 className="font-semibold text-lg">{t.pending_title ?? "Request Pending"}</h2>
