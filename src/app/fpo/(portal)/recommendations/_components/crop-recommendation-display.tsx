@@ -410,7 +410,7 @@ export function CropRecommendationDisplay({ hasCultivationArea }: CropRecommenda
               className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 font-medium text-primary-foreground text-xs disabled:cursor-not-allowed disabled:opacity-50"
             >
               {requesting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-              {recommendation ? (t.btn_refresh ?? "Refresh recommendations") : (t.btn_get ?? "Get recommendations")}
+              {recommendation ? (t.btn_refresh ?? "Generate recommendations") : (t.btn_get ?? "Get recommendations")}
             </button>
           </div>
           {phError && <p className="text-destructive text-xs">{phError}</p>}
