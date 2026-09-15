@@ -26,6 +26,11 @@ type TabKey = "crop" | "business-plan" | "dpr";
 export default function FpoRecommendationsPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("crop");
   const locale = useLocaleStore((s) => s.locale);
+  // null = not yet known (initial load in flight, or it failed) -- treated
+  // as "don't block" by CropRecommendationDisplay, since we'd rather risk
+  // an unblocked request than wrongly tell someone with a real boundary to
+  // go draw one because of a transient fetch error.
+  const [hasCultivationArea, setHasCultivationArea] = useState<boolean | null>(null);
 
   const [t, setT] = useState<T>({});
   const [translationsLoading, setTranslationsLoading] = useState(true);
@@ -89,13 +94,13 @@ export default function FpoRecommendationsPage() {
                 "Mark your cultivation area on the map — this helps us tailor crop recommendations to your farm."}
             </p>
           </div>
-          <CultivationAreaMap />
+          <CultivationAreaMap onAreaChange={setHasCultivationArea} />
         </div>
       )}
 
       {activeTab === "crop" && (
         <div className="rounded-lg border p-4">
-          <CropRecommendationDisplay />
+          <CropRecommendationDisplay hasCultivationArea={hasCultivationArea} />
         </div>
       )}
 

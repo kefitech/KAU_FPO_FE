@@ -24,7 +24,6 @@ function buildSchema(t: Record<string, string>) {
       .min(1, { message: t.version_code_required ?? "Version code is required" })
       .max(20),
     description: z.string().min(1, { message: t.description_required ?? "Description is required" }),
-    deployed_at: z.string().min(1, { message: t.deployment_date_required ?? "Deployment date is required" }),
   });
 }
 
@@ -44,7 +43,7 @@ export default function NewMlModelPage() {
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { version_code: "", description: "", deployed_at: "" },
+    defaultValues: { version_code: "", description: "" },
   });
 
   const mutation = useMutation({
@@ -52,7 +51,6 @@ export default function NewMlModelPage() {
       const formData = new FormData();
       formData.append("version_code", values.version_code);
       formData.append("description", values.description);
-      formData.append("deployed_at", new Date(values.deployed_at).toISOString());
       if (file) formData.append("model_file", file);
       return adminMlModelsApi.create(formData);
     },
@@ -140,18 +138,6 @@ export default function NewMlModelPage() {
                     )}
                   />
                   {errors.description && <FieldError errors={[errors.description]} />}
-                </Field>
-
-                <Field>
-                  <FieldLabel htmlFor="deployed_at">
-                    {t.deployment_date_label ?? "Deployment Date"} <span className="text-destructive">*</span>
-                  </FieldLabel>
-                  <Controller
-                    control={control}
-                    name="deployed_at"
-                    render={({ field }) => <Input id="deployed_at" type="date" {...field} />}
-                  />
-                  {errors.deployed_at && <FieldError errors={[errors.deployed_at]} />}
                 </Field>
 
                 <Field>

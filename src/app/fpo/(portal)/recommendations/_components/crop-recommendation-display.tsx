@@ -116,7 +116,16 @@ function buildCropPopFields(pop: CropPackageOfPractices, t: T): SheetField[] {
   return fields;
 }
 
-export function CropRecommendationDisplay() {
+interface CropRecommendationDisplayProps {
+  /** Whether the FPO currently has a saved cultivation-area boundary --
+   * null while unknown (initial load, or it failed to load), in which case
+   * we don't block. Lifted from the sibling CultivationAreaMap via the
+   * parent page, since a recommendation without a real boundary to anchor
+   * it to isn't something we want to generate anymore. */
+  hasCultivationArea: boolean | null;
+}
+
+export function CropRecommendationDisplay({ hasCultivationArea }: CropRecommendationDisplayProps) {
   const locale = useLocaleStore((s) => s.locale);
   const [t, setT] = useState<T>({});
 
@@ -259,6 +268,15 @@ export function CropRecommendationDisplay() {
   }
 
   async function handleRequest() {
+    // No cultivation area (never drawn, or removed since a prior
+    // recommendation) -- refuse client-side rather than falling back to
+    // the FPO's registered lat/lng, since a recommendation with nothing
+    // real to anchor it to isn't useful anymore. No request is sent, so
+    // this doesn't touch the existing (possibly still-valid) recommendation.
+    if (hasCultivationArea === false) {
+      setError(t.error_no_boundary ?? "Draw your farm boundary above before requesting a recommendation.");
+      return;
+    }
     const soilPh = parseSoilPh();
     if (soilPh !== undefined && Number.isNaN(soilPh)) return;
     setRequesting(true);

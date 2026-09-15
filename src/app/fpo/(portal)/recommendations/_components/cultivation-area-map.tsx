@@ -183,7 +183,16 @@ function WeatherCard({ weather, loading, refreshing, error, onRefresh, t }: Weat
   );
 }
 
-export function CultivationAreaMap() {
+interface CultivationAreaMapProps {
+  /** Reports whether a saved boundary exists, so the recommendation panel
+   * (a sibling component) can require one before requesting a
+   * recommendation. Called once the initial load resolves, and again on
+   * every save/delete -- left uncalled if the initial load fails, so the
+   * caller treats "unknown" as "don't block" rather than assuming absence. */
+  onAreaChange?: (hasArea: boolean) => void;
+}
+
+export function CultivationAreaMap({ onAreaChange }: CultivationAreaMapProps = {}) {
   const locale = useLocaleStore((s) => s.locale);
   const [t, setT] = useState<T>({});
 
@@ -347,6 +356,7 @@ export function CultivationAreaMap() {
           setSavedArea(area);
           setVertices(featureToVertices(area));
         }
+        onAreaChange?.(!!area);
       } catch {
         if (!cancelled) setError(t.error_load_area ?? "Could not load your saved cultivation area.");
       } finally {
@@ -379,6 +389,34 @@ export function CultivationAreaMap() {
     setVertices((prev) => prev.map((v, i) => (i === index ? newPos : v)));
   }
 
+  function handleRemoveVertex(index: number) {
+    setVertices((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  // Per-vertex "hover 2s -> show hint tooltip" timers, keyed by vertex
+  // index. A marker click cancels any pending timer for that index so a
+  // just-removed vertex never fires a tooltip on a detached marker later.
+  const vertexHoverTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
+
+  function handleVertexHoverStart(index: number, marker: L.Marker) {
+    vertexHoverTimers.current[index] = setTimeout(() => {
+      marker
+        .bindTooltip(t.vertex_hint ?? "Drag to move · Click to remove", {
+          direction: "top",
+          offset: [0, -10],
+        })
+        .openTooltip();
+    }, 1000);
+  }
+
+  function handleVertexHoverEnd(index: number, marker: L.Marker) {
+    if (vertexHoverTimers.current[index]) {
+      clearTimeout(vertexHoverTimers.current[index]);
+      delete vertexHoverTimers.current[index];
+    }
+    marker.closeTooltip();
+  }
+
   function handleRecenter() {
     const map = mapRef.current;
     if (!map || vertices.length === 0) return;
@@ -400,6 +438,7 @@ export function CultivationAreaMap() {
       setSavedArea(saved);
       setVertices(featureToVertices(saved));
       setIsDrawing(false);
+      onAreaChange?.(true);
       handleWeatherRefresh();
     } catch {
       setError(t.error_save_area ?? "Could not save your cultivation area. Please try again.");
@@ -416,6 +455,7 @@ export function CultivationAreaMap() {
       setSavedArea(null);
       setVertices([]);
       setIsDrawing(false);
+      onAreaChange?.(false);
       handleWeatherRefresh();
     } catch {
       setError(t.error_delete_area ?? "Could not delete your cultivation area. Please try again.");
@@ -523,6 +563,19 @@ export function CultivationAreaMap() {
                     const pos = (e.target as L.Marker).getLatLng();
                     handleVertexDrag(i, { lat: Number(pos.lat.toFixed(6)), lng: Number(pos.lng.toFixed(6)) });
                   },
+                  click(e) {
+                    // Interactive Leaflet layers don't bubble click to the
+                    // map by default, so this doesn't also add a new point
+                    // at the same spot via DrawClickHandler.
+                    handleVertexHoverEnd(i, e.target as L.Marker);
+                    handleRemoveVertex(i);
+                  },
+                  mouseover(e) {
+                    handleVertexHoverStart(i, e.target as L.Marker);
+                  },
+                  mouseout(e) {
+                    handleVertexHoverEnd(i, e.target as L.Marker);
+                  },
                 }}
               />
             ))}
@@ -560,6 +613,17 @@ export function CultivationAreaMap() {
             >
               <MapPin className="h-3.5 w-3.5" />
               {savedArea ? (t.btn_redraw_boundary ?? "Redraw boundary") : (t.btn_draw_boundary ?? "Draw boundary")}
+            </button>
+          )}
+          {isDrawing && (
+            <button
+              type="button"
+              onClick={handleUndoLastPoint}
+              disabled={vertices.length === 0 || saving}
+              className="flex items-center gap-1.5 rounded-md border bg-background/90 px-2 py-1.5 font-medium text-xs shadow-md backdrop-blur-sm hover:bg-background disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Undo2 className="h-3.5 w-3.5" />
+              {t.btn_undo_point ?? "Undo point"}
             </button>
           )}
         </div>
@@ -669,15 +733,6 @@ export function CultivationAreaMap() {
       {isDrawing && (
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={handleUndoLastPoint}
-              disabled={vertices.length === 0 || saving}
-              className="flex items-center gap-1 text-muted-foreground text-xs hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Undo2 className="h-3.5 w-3.5" />
-              {t.btn_undo_point ?? "Undo point"}
-            </button>
             <button
               type="button"
               onClick={handleClearDrawing}
