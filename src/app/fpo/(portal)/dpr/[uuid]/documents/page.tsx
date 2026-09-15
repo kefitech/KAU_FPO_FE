@@ -19,10 +19,20 @@
 import { use, useState } from "react";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Download, FileSpreadsheet, FileText, Loader2, Plus } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Download, FileSpreadsheet, FileText, Loader2, Plus, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -34,6 +44,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { dprApi, type DprDocument, type DprDocumentStatus } from "@/lib/api/dpr";
+import { CHAPTER_ORDER, dprAiContentApi } from "@/lib/api/dpr-ai-content";
 
 function fmtBytes(n: number): string {
   if (!n || n < 1024) return `${n} B`;
@@ -98,12 +109,26 @@ export default function FpoDprDocumentsPage({
 
   const [downloadingVersion, setDownloadingVersion] = useState<number | null>(null);
   const [downloadingExcel, setDownloadingExcel] = useState(false);
+  // Guard state for the "generate without AI narrative" confirm dialog
+  // (Layer 2 of the AI-discoverability defense). Users can still proceed
+  // — we only warn, never block.
+  const [confirmGenerateOpen, setConfirmGenerateOpen] = useState(false);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["dpr-documents", uuid],
     queryFn: () => dprApi.listDocuments(uuid),
     enabled: !!uuid,
   });
+
+  // Chapter progress — used to decide if we surface the confirm dialog.
+  const { data: aiRows } = useQuery({
+    queryKey: ["dpr-ai-content", uuid],
+    queryFn: () => dprAiContentApi.list(uuid),
+    enabled: !!uuid,
+    staleTime: 30_000,
+  });
+  const aiDone = (aiRows ?? []).filter((r) => r.has_active).length;
+  const aiTotal = CHAPTER_ORDER.length;
 
   const generateMutation = useMutation({
     mutationFn: () => dprApi.generateDocument(uuid),
@@ -204,7 +229,17 @@ export default function FpoDprDocumentsPage({
             {downloadingExcel ? "Preparing…" : "Financials (Excel)"}
           </Button>
           <Button
-            onClick={() => generateMutation.mutate()}
+            onClick={() => {
+              // Layer 2 of AI-discoverability defense: if the user has
+              // generated 0 AI chapters, ask them to confirm before
+              // producing a PDF that will silently skip 11 narrative
+              // sections. They can still proceed — we never block.
+              if (aiDone === 0) {
+                setConfirmGenerateOpen(true);
+              } else {
+                generateMutation.mutate();
+              }
+            }}
             disabled={generating}
           >
             {generating ? (
@@ -308,6 +343,50 @@ export default function FpoDprDocumentsPage({
           </CardContent>
         </Card>
       )}
+
+      {/* Layer 2 — soft warning when Generate is clicked with 0 AI narratives.
+          Never blocks; informed choice only. Layer 1's chapter counter on
+          the wizard header should have caught most users first; this catches
+          those who reached this page without noticing. */}
+      <AlertDialog open={confirmGenerateOpen} onOpenChange={setConfirmGenerateOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              No AI narratives generated
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 pt-2">
+                <p>
+                  Your DPR will download successfully but will skip {aiTotal} narrative chapters —
+                  Executive Summary, Market Analysis, Technical Feasibility, Financial Analysis,
+                  SWOT, Risk Assessment, and others.
+                </p>
+                <p>
+                  Bankers and scheme reviewers typically expect these sections. You can generate
+                  them now (recommended) or proceed without them.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col-reverse gap-2 sm:flex-row">
+            <AlertDialogCancel
+              onClick={() => {
+                setConfirmGenerateOpen(false);
+                generateMutation.mutate();
+              }}
+            >
+              Generate anyway
+            </AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <Link href={`/fpo/dpr/${uuid}/ai-content`}>
+                <Sparkles className="mr-1 h-4 w-4" />
+                Generate narratives first
+              </Link>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

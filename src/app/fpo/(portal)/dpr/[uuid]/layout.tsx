@@ -20,6 +20,7 @@ import {
   type DprSectionKey,
   dprApi,
 } from "@/lib/api/dpr";
+import { CHAPTER_ORDER, dprAiContentApi } from "@/lib/api/dpr-ai-content";
 import { selectHasAnySaving, useDprWizardStore } from "@/stores/dpr-store";
 
 const STATUS_TOGGLE_STORAGE_KEY = "dpr-wizard-status-dots";
@@ -281,6 +282,22 @@ export default function DprWizardLayout({ children }: { children: React.ReactNod
     staleTime: 30_000,
   });
 
+  // AI narrative progress — powers the "X/N chapters" badge on the AI
+  // Narrative button so users who never click into /ai-content still see
+  // a visible signal that AI content exists and is only partially filled.
+  // See layered defense in DPR AI discoverability (chapters wrap PDF text).
+  const { data: aiRows } = useQuery({
+    queryKey: ["dpr-ai-content", uuid],
+    queryFn: () => dprAiContentApi.list(uuid),
+    enabled: !!uuid,
+    staleTime: 30_000,
+  });
+  const aiChapters = useMemo(() => {
+    const total = CHAPTER_ORDER.length;
+    const done = (aiRows ?? []).filter((r) => r.has_active).length;
+    return { done, total };
+  }, [aiRows]);
+
   // Applicability — Phase 6d (KAU RCD A.1). Rule engine tells us which
   // sections to show / hide based on the project's selected components.
   // When the backend feature flag is off, `engine_enabled=false` and every
@@ -412,11 +429,32 @@ export default function DprWizardLayout({ children }: { children: React.ReactNod
         </div>
         <div className="flex items-center gap-2">
           {/* AI narrative shortcut — KAU RCD B.5 Phase 5. Placed next to the
-              PDF button so users see it right when they're about to export. */}
-          <Button asChild variant="outline" size="sm">
+              PDF button so users see it right when they're about to export.
+              The X/N counter is Layer 1 of the AI-discoverability defense:
+              users who skip /ai-content still see a visible signal here
+              telling them how many chapters they've generated.
+                - 0/N   -> red   (nothing generated)
+                - part  -> amber (some generated, gaps remain)
+                - N/N   -> green (complete) */}
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className={cn(
+              aiChapters.done === 0
+                && "border-red-300 text-red-700 hover:bg-red-50 hover:text-red-800 dark:border-red-800 dark:text-red-400",
+              aiChapters.done > 0 && aiChapters.done < aiChapters.total
+                && "border-amber-300 text-amber-700 hover:bg-amber-50 hover:text-amber-800 dark:border-amber-800 dark:text-amber-400",
+              aiChapters.done === aiChapters.total
+                && "border-green-300 text-green-700 hover:bg-green-50 hover:text-green-800 dark:border-green-800 dark:text-green-400",
+            )}
+          >
             <Link href={`/fpo/dpr/${uuid}/ai-content`}>
               <Sparkles className="mr-1 h-4 w-4" />
               AI Narrative
+              <span className="ml-1.5 tabular-nums">
+                {aiChapters.done}/{aiChapters.total}
+              </span>
             </Link>
           </Button>
           {/* Versioned DPR PDF workflow (KAU §7.1/§7.2). "Manage DPRs" opens
