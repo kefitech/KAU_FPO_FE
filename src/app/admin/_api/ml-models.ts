@@ -36,21 +36,31 @@ export interface RecommendationFeedbackItem {
 // can judge a retrained model's quality before deciding to activate it --
 // there is currently no automatic accuracy threshold that blocks
 // registration (see django_patch/README_wiring.md).
+//
+// v4 (current) trains a multiclass crop-name classifier and reports
+// `top_5_hit_rate` instead of precision/recall/roc_auc/confusion_matrix --
+// those don't mean much here since many (zone, season, soil) rows have
+// several genuinely valid crop labels (see retrain_pipeline.py's _train()
+// docstring). The v2/v3-only fields stay optional so a version registered
+// before this change still renders correctly.
 export interface ZoneCrossValidation {
   held_out_zone: string;
-  accuracy: number;
-  f1: number;
+  top_5_hit_rate?: number; // v4+
+  accuracy?: number; // v2/v3 only (binary is_suitable classifier)
+  f1?: number; // v2/v3 only
   n_test: number;
 }
 
 export interface TrainingMetrics {
   random_80_20_split: {
     accuracy: number;
-    precision: number;
-    recall: number;
-    f1: number;
-    roc_auc: number;
-    confusion_matrix: number[][];
+    top_5_hit_rate?: number; // v4+
+    n_classes?: number; // v4+
+    precision?: number; // v2/v3 only
+    recall?: number; // v2/v3 only
+    f1?: number; // v2/v3 only
+    roc_auc?: number; // v2/v3 only
+    confusion_matrix?: number[][]; // v2/v3 only
     n_train: number;
     n_test: number;
   };
@@ -59,7 +69,7 @@ export interface TrainingMetrics {
   n_rows_total: number;
   n_crops: number;
   crops_with_no_positive_label: number;
-  class_balance: Record<string, number>;
+  class_balance?: Record<string, number>; // v2/v3 only
   caveat: string;
   validation_warnings: string[];
 }

@@ -5,11 +5,18 @@ import dynamic from "next/dynamic";
 
 import { Loader2, RefreshCw, Sparkles, Star, ThumbsUp, TrendingUp } from "lucide-react";
 
-import { getMyRecommendation, requestFreshRecommendation, submitRecommendationFeedback } from "@/lib/api/recommendation";
+import {
+  getCropPackageOfPractices,
+  getMyRecommendation,
+  requestFreshRecommendation,
+  submitRecommendationFeedback,
+} from "@/lib/api/recommendation";
+import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { ViewSheet, type SheetField } from "@/components/ui/view-sheet";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
-import type { MyRecommendation } from "@/types/recommendation";
+import type { CropPackageOfPractices, MyCropSuggestion, MyRecommendation } from "@/types/recommendation";
 
 type T = Record<string, string>;
 
@@ -38,6 +45,75 @@ function StarRating({ value, onChange, t }: { value: number; onChange: (v: numbe
       ))}
     </div>
   );
+}
+
+// ViewSheet renders `title` via dangerouslySetInnerHTML, so escape the crop
+// name rather than trusting it (it originates from the ML service response).
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// Multi-line PoP text (fertilizer schedules, numbered steps) must keep its
+// line breaks; ViewSheet's plain text rows don't, so wrap in a pre-wrap node.
+function preWrap(text: string) {
+  return <div className="whitespace-pre-wrap text-sm">{text}</div>;
+}
+
+function buildCropPopFields(pop: CropPackageOfPractices, t: T): SheetField[] {
+  const fields: SheetField[] = [];
+
+  if (pop.crop_group) fields.push({ label: t.pop_crop_group ?? "Crop group", type: "text", value: pop.crop_group });
+  if (pop.season) fields.push({ label: t.pop_season ?? "Season", type: "node", node: preWrap(pop.season) });
+  if (pop.spacing) fields.push({ label: t.pop_spacing ?? "Spacing", type: "text", value: pop.spacing });
+  if (pop.expected_yield) {
+    fields.push({ label: t.pop_yield ?? "Expected yield", type: "text", value: pop.expected_yield });
+  }
+
+  if (pop.varieties.length) {
+    fields.push({
+      label: t.pop_varieties ?? "Varieties",
+      type: "node",
+      node: (
+        <ul className="list-disc space-y-1 pl-4 text-sm">
+          {pop.varieties.map((v, i) => (
+            <li key={i}>
+              <span className="font-medium">{v.name}</span>
+              {v.description ? ` — ${v.description}` : ""}
+            </li>
+          ))}
+        </ul>
+      ),
+    });
+  }
+
+  const textBlocks: [string, string, string][] = [
+    [pop.manuring_fertilizer, "pop_manuring", "Manuring / fertilizer"],
+    [pop.plant_protection, "pop_plant_protection", "Plant protection"],
+    [pop.harvesting, "pop_harvesting", "Harvesting"],
+  ];
+  for (const [value, key, fallback] of textBlocks) {
+    if (value) fields.push({ label: t[key] ?? fallback, type: "node", node: preWrap(value) });
+  }
+
+  if (pop.sections.length) {
+    fields.push({ label: t.pop_detail ?? "Package of Practices detail", type: "section" });
+    for (const s of pop.sections) {
+      fields.push({ label: s.heading, type: "node", node: preWrap(s.body) });
+    }
+  }
+
+  fields.push({
+    label: t.pop_source ?? "Source",
+    type: "text",
+    value: pop.source_page_range ? `${pop.source_reference} (p. ${pop.source_page_range})` : pop.source_reference,
+  });
+
+  return fields;
 }
 
 export function CropRecommendationDisplay() {
@@ -73,6 +149,42 @@ export function CropRecommendationDisplay() {
   const [submittingFeedback, setSubmittingFeedback] = useState(false);
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
   const [selectedSeason, setSelectedSeason] = useState("");
+  const [soilPhInput, setSoilPhInput] = useState("");
+  const [phError, setPhError] = useState("");
+  const [visibleCount, setVisibleCount] = useState(10);
+
+  useEffect(() => {
+    setVisibleCount(10);
+  }, [recommendation?.id]);
+
+  // Tapping a crop opens its Package of Practices. The item itself carries no
+  // PoP content, so each selection triggers a fresh fetch; the cancelled flag
+  // stops a slow earlier response from overwriting a newer selection.
+  const [selectedCrop, setSelectedCrop] = useState<MyCropSuggestion | null>(null);
+  const [popData, setPopData] = useState<CropPackageOfPractices | null>(null);
+  const [popLoading, setPopLoading] = useState(false);
+
+  useEffect(() => {
+    if (!selectedCrop) {
+      setPopData(null);
+      return;
+    }
+    let cancelled = false;
+    setPopLoading(true);
+    getCropPackageOfPractices(selectedCrop.crop)
+      .then((data) => {
+        if (!cancelled) setPopData(data);
+      })
+      .catch(() => {
+        if (!cancelled) setPopData(null);
+      })
+      .finally(() => {
+        if (!cancelled) setPopLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedCrop]);
 
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -135,11 +247,24 @@ export function CropRecommendationDisplay() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  function parseSoilPh(): number | undefined {
+    if (!soilPhInput.trim()) return undefined;
+    const n = Number(soilPhInput);
+    if (Number.isNaN(n) || n < 3 || n > 10) {
+      setPhError(t.ph_validation ?? "Enter a pH value between 3 and 10, or leave blank.");
+      return NaN; // sentinel: caller checks Number.isNaN to abort the request
+    }
+    setPhError("");
+    return n;
+  }
+
   async function handleRequest() {
+    const soilPh = parseSoilPh();
+    if (soilPh !== undefined && Number.isNaN(soilPh)) return;
     setRequesting(true);
     setError(null);
     try {
-      const result = await requestFreshRecommendation(selectedSeason || undefined);
+      const result = await requestFreshRecommendation(selectedSeason || undefined, soilPh);
       setRecommendation(result);
       setFeedbackRating(result.feedback_rating ?? 0);
       setFeedbackSubmitted(!!result.feedback_rating);
@@ -220,32 +345,57 @@ export function CropRecommendationDisplay() {
                   )}
                 </>
               )}
+              {recommendation.input_snapshot?.soil_ph != null && (
+                <>
+                  {" "}
+                  {(t.generated_for_ph ?? "— pH {ph}").replace("{ph}", String(recommendation.input_snapshot.soil_ph))}
+                </>
+              )}
             </p>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          <NativeSelect
-            size="sm"
-            value={selectedSeason}
-            onChange={(e) => setSelectedSeason(e.target.value)}
-            disabled={requesting || isWorking}
-            aria-label={t.season_aria_label ?? "Season"}
-          >
-            {SEASON_OPTIONS.map((opt) => (
-              <NativeSelectOption key={opt.value} value={opt.value}>
-                {opt.label}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
-          <button
-            type="button"
-            onClick={handleRequest}
-            disabled={requesting || isWorking}
-            className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 font-medium text-primary-foreground text-xs disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {requesting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-            {recommendation ? (t.btn_refresh ?? "Refresh recommendations") : (t.btn_get ?? "Get recommendations")}
-          </button>
+        <div className="flex flex-col items-end gap-1">
+          <div className="flex items-center gap-2">
+            <NativeSelect
+              size="sm"
+              value={selectedSeason}
+              onChange={(e) => setSelectedSeason(e.target.value)}
+              disabled={requesting || isWorking}
+              aria-label={t.season_aria_label ?? "Season"}
+            >
+              {SEASON_OPTIONS.map((opt) => (
+                <NativeSelectOption key={opt.value} value={opt.value}>
+                  {opt.label}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+            <Input
+              type="number"
+              inputMode="decimal"
+              step="0.1"
+              min={3}
+              max={10}
+              value={soilPhInput}
+              onChange={(e) => {
+                setSoilPhInput(e.target.value);
+                if (phError) setPhError("");
+              }}
+              disabled={requesting || isWorking}
+              placeholder={t.ph_placeholder ?? "Soil pH"}
+              aria-label={t.ph_aria_label ?? "Soil pH"}
+              className="h-8 w-24 text-sm"
+            />
+            <button
+              type="button"
+              onClick={handleRequest}
+              disabled={requesting || isWorking}
+              className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 font-medium text-primary-foreground text-xs disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {requesting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+              {recommendation ? (t.btn_refresh ?? "Refresh recommendations") : (t.btn_get ?? "Get recommendations")}
+            </button>
+          </div>
+          {phError && <p className="text-destructive text-xs">{phError}</p>}
         </div>
       </div>
 
@@ -321,28 +471,53 @@ export function CropRecommendationDisplay() {
 
       {isReady && (
         <div className="flex flex-col gap-3">
-          {recommendation.recommendations.map((item, i) => (
-            <div key={i} className="flex flex-col gap-2 rounded-lg border p-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-medium capitalize">{item.crop}</h3>
-                <span className="rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary text-xs">
-                  {(t.confidence_match ?? "{pct}% match").replace("{pct}", String(Math.round(item.confidence * 100)))}
-                </span>
+          <div className="flex flex-col gap-3">
+            {recommendation.recommendations.slice(0, visibleCount).map((item, i) => (
+              <div
+                key={i}
+                role="button"
+                tabIndex={0}
+                onClick={() => setSelectedCrop(item)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setSelectedCrop(item);
+                  }
+                }}
+                className="flex cursor-pointer flex-col gap-2 rounded-lg border p-4 transition-colors hover:border-primary/40 focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="font-medium capitalize">{item.crop}</h3>
+                  <span className="rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary text-xs">
+                    {(t.confidence_match ?? "{pct}% match").replace("{pct}", String(Math.round(item.confidence * 100)))}
+                  </span>
+                </div>
+                <p className="text-muted-foreground text-sm">{item.reasoning}</p>
+                <div className="flex items-center gap-1.5 text-xs">
+                  <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span>
+                    {t.estimated_yield_label ?? "Estimated yield:"}{" "}
+                    <span className="font-medium text-foreground">{item.estimated_yield}</span>
+                  </span>
+                </div>
+                <div className="flex items-start gap-1.5 border-t pt-2 text-xs">
+                  <ThumbsUp className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <span className="text-muted-foreground">{item.business_guidance}</span>
+                </div>
               </div>
-              <p className="text-muted-foreground text-sm">{item.reasoning}</p>
-              <div className="flex items-center gap-1.5 text-xs">
-                <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
-                <span>
-                  {t.estimated_yield_label ?? "Estimated yield:"}{" "}
-                  <span className="font-medium text-foreground">{item.estimated_yield}</span>
-                </span>
-              </div>
-              <div className="flex items-start gap-1.5 border-t pt-2 text-xs">
-                <ThumbsUp className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                <span className="text-muted-foreground">{item.business_guidance}</span>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
+          {visibleCount < recommendation.recommendations.length && (
+            <button
+              type="button"
+              onClick={() => setVisibleCount((c) => c + 10)}
+              className="self-center rounded-md border px-4 py-1.5 font-medium text-sm hover:bg-muted"
+            >
+              {(t.view_more ?? "View more ({remaining} of {total})")
+                .replace("{remaining}", String(recommendation.recommendations.length - visibleCount))
+                .replace("{total}", String(recommendation.recommendations.length))}
+            </button>
+          )}
           <div className="flex flex-col gap-2 rounded-lg border p-3">
             <h3 className="font-medium text-sm">
               {feedbackSubmitted ? (t.feedback_title_submitted ?? "Your feedback") : (t.feedback_title_new ?? "Was this helpful?")}
@@ -378,6 +553,31 @@ export function CropRecommendationDisplay() {
           </div>
         </div>
       )}
+
+      <ViewSheet
+        open={!!selectedCrop}
+        onOpenChange={(v) => {
+          if (!v) setSelectedCrop(null);
+        }}
+        title={escapeHtml(selectedCrop?.crop ?? "")}
+        fields={
+          popLoading
+            ? [{ label: "", type: "text", value: t.pop_loading ?? "Loading…" }]
+            : popData
+              ? buildCropPopFields(popData, t)
+              : [
+                  {
+                    label: "",
+                    type: "text",
+                    // Expected, not an error: content is transcribed crop by crop.
+                    value: (t.pop_empty ?? "Detailed practices for {crop} haven't been added yet.").replace(
+                      "{crop}",
+                      selectedCrop?.crop ?? "",
+                    ),
+                  },
+                ]
+        }
+      />
     </div>
   );
 }

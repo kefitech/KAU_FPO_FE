@@ -28,6 +28,14 @@ interface Props {
 function FitToData({ lat, lng, areaPolygon }: Props) {
   const map = useMap();
   useEffect(() => {
+    // This map mounts inside a next/dynamic(ssr:false) component nested in a
+    // conditionally-rendered wrapper, so Leaflet can end up reading the
+    // container's size before layout has settled -- invalidateSize() forces
+    // it to re-measure before we fit/pan, otherwise fitBounds/setView can
+    // compute pixel coordinates against a stale (often zero) size and the
+    // polygon/marker ends up positioned off-screen even though tiles (which
+    // get corrected on their own tile-load cycle) still look fine.
+    map.invalidateSize();
     if (areaPolygon) {
       const bounds = L.geoJSON(areaPolygon as unknown as GeoJSON.GeoJsonObject).getBounds();
       if (bounds.isValid()) {
@@ -75,7 +83,14 @@ export function RecommendationLocationMap({ lat, lng, areaPolygon }: Props) {
         />
         <FitToData lat={lat} lng={lng} areaPolygon={areaPolygon} />
         {areaPolygon ? (
+          // react-leaflet's GeoJSON only reacts to `style` changes on an
+          // already-mounted layer (it builds the actual L.geoJSON once from
+          // the initial `data` and never calls addData() again) -- keying on
+          // the polygon's own content forces a clean remount with the new
+          // shape whenever the underlying recommendation changes, instead of
+          // silently keeping (or losing) whatever was drawn on first mount.
           <GeoJSON
+            key={JSON.stringify(areaPolygon)}
             data={areaPolygon as unknown as GeoJSON.GeoJsonObject}
             style={{ color: "#16a34a", weight: 2, fillColor: "#16a34a", fillOpacity: 0.25 }}
           />

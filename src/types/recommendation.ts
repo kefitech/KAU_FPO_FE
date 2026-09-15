@@ -163,6 +163,10 @@ export interface MyRecommendationInputSnapshot {
   agro_zone: string | null;
   soil_type: string | null;
   season: string;
+  // Optional manual override — the FPO's actual measured soil pH. Null
+  // when not provided, in which case the ML service estimates it from
+  // the resolved soil type's book-documented pH range instead.
+  soil_ph: number | null;
   commodities: string[];
   tier: string | null;
   model_version: string | null;
@@ -199,4 +203,38 @@ export interface MyRecommendation {
   // Present only when the AI service was unreachable and this is a
   // cached/fallback result rather than a fresh prediction.
   warning?: string;
+}
+
+// ── Crop Package of Practices — GET /api/recommendations/pop/?crop_name=…
+// Real cultivation guidance transcribed from KAU's "Package of Practices
+// Recommendations: Crops 2024". Only published (is_active) entries are
+// returned; a 404 means the crop hasn't been transcribed yet. ──
+
+export interface CropPopVariety {
+  name: string;
+  description?: string;
+}
+
+export interface CropPopSection {
+  heading: string;
+  body: string;
+}
+
+export interface CropPackageOfPractices {
+  id: number;
+  crop_name: string;
+  crop_group: string;
+  season: string;
+  varieties: CropPopVariety[];
+  spacing: string;
+  manuring_fertilizer: string;
+  plant_protection: string;
+  harvesting: string;
+  expected_yield: string;
+  // Ordered; preserves the book's own per-crop sub-headings for content
+  // that doesn't fit the fixed fields above.
+  sections: CropPopSection[];
+  source_reference: string;
+  source_page_range: string;
+  is_active: boolean;
 }

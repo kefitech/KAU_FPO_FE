@@ -25,10 +25,15 @@ function pct(n: number) {
  */
 export function TrainingMetricsView({ metrics, warnings = [] }: { metrics: TrainingMetrics; warnings?: string[] }) {
   const split = metrics.random_80_20_split;
+  const isMulticlass = split.top_5_hit_rate != null; // v4+ (crop_name is the target, not a feature)
   const topFeatures = Object.entries(metrics.feature_importance_by_field)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5);
-  const weakZones = metrics.leave_one_zone_out_cv.filter((z) => z.accuracy < WEAK_ZONE_THRESHOLD);
+  // Same metric either version reports, whichever is present, so the
+  // weak-zone threshold and badges work for both shapes.
+  const zoneScore = (z: TrainingMetrics["leave_one_zone_out_cv"][number]) => z.top_5_hit_rate ?? z.accuracy ?? 0;
+  const zoneScoreLabel = isMulticlass ? "top-5 hit rate" : "accuracy";
+  const weakZones = metrics.leave_one_zone_out_cv.filter((z) => zoneScore(z) < WEAK_ZONE_THRESHOLD);
   // The /train/ response carries validation_warnings both at the top level and
   // nested inside metrics (same list) -- de-duplicate so each shows once.
   const allWarnings = Array.from(new Set([...warnings, ...(metrics.validation_warnings ?? [])]));
@@ -48,28 +53,53 @@ export function TrainingMetricsView({ metrics, warnings = [] }: { metrics: Train
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
-        <div>
-          <p className="text-muted-foreground text-xs">Accuracy</p>
-          <p className="font-semibold text-lg">{pct(split.accuracy)}</p>
+      {isMulticlass ? (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+          <div>
+            <p className="text-muted-foreground text-xs">Accuracy (exact crop match)</p>
+            <p className="font-semibold text-lg">{pct(split.accuracy)}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground text-xs">Top-5 hit rate</p>
+            <p className="font-semibold text-lg">{pct(split.top_5_hit_rate ?? 0)}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground text-xs">Crop classes</p>
+            <p className="font-semibold text-lg">{split.n_classes ?? metrics.n_crops}</p>
+          </div>
         </div>
-        <div>
-          <p className="text-muted-foreground text-xs">Precision</p>
-          <p className="font-semibold text-lg">{pct(split.precision)}</p>
+      ) : (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
+          <div>
+            <p className="text-muted-foreground text-xs">Accuracy</p>
+            <p className="font-semibold text-lg">{pct(split.accuracy)}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground text-xs">Precision</p>
+            <p className="font-semibold text-lg">{pct(split.precision ?? 0)}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground text-xs">Recall</p>
+            <p className="font-semibold text-lg">{pct(split.recall ?? 0)}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground text-xs">F1</p>
+            <p className="font-semibold text-lg">{pct(split.f1 ?? 0)}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground text-xs">ROC-AUC</p>
+            <p className="font-semibold text-lg">{(split.roc_auc ?? 0).toFixed(3)}</p>
+          </div>
         </div>
-        <div>
-          <p className="text-muted-foreground text-xs">Recall</p>
-          <p className="font-semibold text-lg">{pct(split.recall)}</p>
-        </div>
-        <div>
-          <p className="text-muted-foreground text-xs">F1</p>
-          <p className="font-semibold text-lg">{pct(split.f1)}</p>
-        </div>
-        <div>
-          <p className="text-muted-foreground text-xs">ROC-AUC</p>
-          <p className="font-semibold text-lg">{split.roc_auc.toFixed(3)}</p>
-        </div>
-      </div>
+      )}
+      {isMulticlass && (
+        <p className="text-muted-foreground text-xs">
+          Plain accuracy under-states quality here: many (zone, season, soil) conditions have several
+          genuinely valid crops documented, but a test row keeps only one label — predicting a different,
+          equally valid crop still counts as "wrong". Top-5 hit rate (was the true crop in the model's own
+          top 5 ranked guesses) is the more honest number.
+        </p>
+      )}
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <div>
@@ -84,10 +114,12 @@ export function TrainingMetricsView({ metrics, warnings = [] }: { metrics: Train
           <p className="text-muted-foreground text-xs">Crops with no positive label</p>
           <p className="font-medium">{metrics.crops_with_no_positive_label}</p>
         </div>
-        <div>
-          <p className="text-muted-foreground text-xs">Class balance (suitable)</p>
-          <p className="font-medium">{pct(metrics.class_balance["1"] ?? 0)}</p>
-        </div>
+        {metrics.class_balance && (
+          <div>
+            <p className="text-muted-foreground text-xs">Class balance (suitable)</p>
+            <p className="font-medium">{pct(metrics.class_balance["1"] ?? 0)}</p>
+          </div>
+        )}
       </div>
 
       <div>
@@ -107,7 +139,8 @@ export function TrainingMetricsView({ metrics, warnings = [] }: { metrics: Train
 
       <div>
         <p className="mb-1.5 text-muted-foreground text-xs">
-          Leave-one-zone-out cross-validation (generalization to a zone the model never trained on)
+          Leave-one-zone-out cross-validation ({zoneScoreLabel} — generalization to a zone the model never
+          trained on)
         </p>
         <div className="flex flex-wrap gap-2">
           {metrics.leave_one_zone_out_cv.map((z) => (
@@ -115,12 +148,12 @@ export function TrainingMetricsView({ metrics, warnings = [] }: { metrics: Train
               key={z.held_out_zone}
               variant="secondary"
               className={
-                z.accuracy < WEAK_ZONE_THRESHOLD
+                zoneScore(z) < WEAK_ZONE_THRESHOLD
                   ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
                   : "bg-muted text-muted-foreground"
               }
             >
-              {z.held_out_zone}: {pct(z.accuracy)}
+              {z.held_out_zone}: {pct(zoneScore(z))}
             </Badge>
           ))}
         </div>

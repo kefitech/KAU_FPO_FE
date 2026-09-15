@@ -10,7 +10,7 @@ import "@/lib/gis/leaflet-overrides.css";
 import { Crosshair, Layers, Loader2, Maximize2, Minimize2, Satellite, Search, X } from "lucide-react";
 
 import type { SoilRegionFeatureCollection } from "@/app/admin/_api/soil-regions";
-import { bindSoilRegionTooltip, getSoilRegionColor, makeSoilRegionStyle } from "@/lib/gis/soil-region-colors";
+import { bindSoilRegionTooltip, getSoilTypeColor, makeSoilRegionStyle } from "@/lib/gis/soil-region-colors";
 
 type T = Record<string, string>;
 
@@ -53,10 +53,18 @@ export function SoilRegionsMap({ regions, mapKey, t }: Props) {
 
   const regionStyle = makeSoilRegionStyle(regionOpacity);
 
-  const legendEntries = (regions.features ?? []).map((f) => ({
-    code: f.properties.code,
-    color: getSoilRegionColor(f.properties.code),
-  }));
+  // Deduped by soil_type (KAU's fixed palette maps one color per soil
+  // type, not per region) -- a region whose soil_type is unrecognized
+  // falls back to its own per-code color, keyed by code so it still gets
+  // its own legend row rather than colliding with another unknown type.
+  const legendEntries = Array.from(
+    new Map(
+      (regions.features ?? []).map((f) => {
+        const label = f.properties.soil_type || f.properties.code;
+        return [label, { label, color: getSoilTypeColor(f.properties.soil_type, f.properties.code) }];
+      }),
+    ).values(),
+  );
 
   const mapRef = useRef<L.Map | null>(null);
   const mapWrapperRef = useRef<HTMLDivElement | null>(null);
@@ -291,10 +299,10 @@ export function SoilRegionsMap({ regions, mapKey, t }: Props) {
 
         {showRegions && legendEntries.length > 0 && (
           <div className="pointer-events-none absolute bottom-8 left-2 z-[400] flex max-h-40 flex-col gap-1 overflow-y-auto rounded-md border bg-background/90 px-2 py-1.5 text-[10px] shadow-sm backdrop-blur-sm">
-            {legendEntries.map(({ code, color }) => (
-              <div key={code} className="flex items-center gap-1.5">
+            {legendEntries.map(({ label, color }) => (
+              <div key={label} className="flex items-center gap-1.5">
                 <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ backgroundColor: color }} />
-                <span className="capitalize text-muted-foreground">{code.replace(/_/g, " ")}</span>
+                <span className="capitalize text-muted-foreground">{label.replace(/_/g, " ")}</span>
               </div>
             ))}
           </div>
