@@ -286,6 +286,13 @@ export function CropRecommendationDisplay({ hasCultivationArea }: CropRecommenda
       setRecommendation(result);
       setFeedbackRating(result.feedback_rating ?? 0);
       setFeedbackSubmitted(!!result.feedback_rating);
+      // feedbackComment is local-only state (never populated from the
+      // fetched/created recommendation, see the initial-load effect above) --
+      // without clearing it here, a comment typed for the PREVIOUS
+      // recommendation just sits in memory and reappears prefilled on the
+      // new one, same bug class as the star rating had before it was reset
+      // on the backend.
+      setFeedbackComment("");
       if (result.status === "pending" || result.status === "processing") {
         startPolling();
       }

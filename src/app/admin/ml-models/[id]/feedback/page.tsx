@@ -1,20 +1,25 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 
-import { adminMlModelsApi } from "@/app/admin/_api/ml-models";
+import { adminMlModelsApi, type RecommendationFeedbackItem } from "@/app/admin/_api/ml-models";
 import { DataTable } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
-import { getFeedbackColumns } from "./_components/columns";
+import { ViewSheet } from "@/components/ui/view-sheet";
+import { getFeedbackColumns, StarDisplay } from "./_components/columns";
 
 export default function ModelFeedbackPage() {
   const router = useRouter();
   const params = useParams();
   const modelId = Number(params.id);
+  const [feedbackView, setFeedbackView] = useState<{ open: boolean; row: RecommendationFeedbackItem | null }>({
+    open: false,
+    row: null,
+  });
 
   const { data: models } = useQuery({
     queryKey: ["ml-models-all"],
@@ -40,12 +45,31 @@ export default function ModelFeedbackPage() {
           queryKey={`ml-model-feedback-${modelId}`}
           queryFn={(dtParams) => adminMlModelsApi.getFeedback(modelId, dtParams)}
           columns={getFeedbackColumns()}
+          onRowClick={(row) => setFeedbackView({ open: true, row })}
           columnsLabel="Columns"
           toggleColumnsLabel="Toggle columns"
           searchPlaceholder="Search..."
           clearLabel="Clear"
         />
       </Suspense>
+
+      <ViewSheet
+        open={feedbackView.open}
+        onOpenChange={(open) => setFeedbackView((s) => ({ ...s, open }))}
+        title="Feedback Details"
+        fields={
+          feedbackView.row
+            ? [
+                { label: "FPO", value: feedbackView.row.fpo_name },
+                { label: "Financial Year", value: feedbackView.row.financial_year },
+                { label: "Rating", type: "node", node: <StarDisplay rating={feedbackView.row.feedback_rating} /> },
+                { label: "Comment", value: feedbackView.row.feedback_comment || "No comment" },
+                { label: "Crops Recommended", type: "tags", tags: feedbackView.row.crops.slice(0, 10) },
+                { label: "Date", type: "date", value: feedbackView.row.created_at },
+              ]
+            : []
+        }
+      />
     </div>
   );
 }

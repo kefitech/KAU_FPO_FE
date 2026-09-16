@@ -88,6 +88,14 @@ export default function SoilRegionsPage() {
   }
 
   function handleRowClick(version: SoilRegionVersion) {
+    // The active version's data IS the live data -- previewing it would
+    // otherwise show the amber "not live" banner while looking at exactly
+    // what farmers already see, which reads as a bug. Clicking it just
+    // shows the live view instead of fetching a redundant preview.
+    if (version.is_active) {
+      handleClearPreview();
+      return;
+    }
     setPreviewVersionId(version.id);
     setPreviewLabel(version.label);
   }
