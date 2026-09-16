@@ -20,14 +20,15 @@ type T = Record<string, string>;
 interface TimeSlot {
   start: string;
   end: string;
+  max_bookings: number;
 }
 
 const DEFAULT_SLOTS: TimeSlot[] = [
-  { start: "09:00", end: "10:00" },
-  { start: "10:00", end: "11:00" },
-  { start: "11:00", end: "12:00" },
-  { start: "14:00", end: "15:00" },
-  { start: "15:00", end: "16:00" },
+  { start: "09:00", end: "10:00", max_bookings: 1 },
+  { start: "10:00", end: "11:00", max_bookings: 1 },
+  { start: "11:00", end: "12:00", max_bookings: 1 },
+  { start: "14:00", end: "15:00", max_bookings: 1 },
+  { start: "15:00", end: "16:00", max_bookings: 1 },
 ];
 
 function toLocalISODate(date: Date) {
@@ -35,6 +36,11 @@ function toLocalISODate(date: Date) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function getWeekdayFromDateStr(dateStr: string): number {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  return new Date(year, month - 1, day).getDay();
 }
 
 export default function ExpertAvailabilityPage() {
@@ -61,13 +67,25 @@ export default function ExpertAvailabilityPage() {
     { value: 6, label: t.weekday_sat ?? "Sat" },
   ];
 
-  const [mode, setMode] = useState<"range" | "single" | "absent">("range");
+  const [mode, setMode] = useState<"range" | "absent">("range");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [singleDates, setSingleDates] = useState<Date[]>([]);
   const [selectedWeekdays, setSelectedWeekdays] = useState<Set<number>>(
     new Set([0, 1, 2, 3, 4, 5, 6])
   );
-  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>(DEFAULT_SLOTS);
+  const [excludedDateStrings, setExcludedDateStrings] = useState<Set<string>>(new Set());
+  const [weekdaySlots, setWeekdaySlots] = useState<Record<number, TimeSlot[]>>({
+    0: DEFAULT_SLOTS.map((s) => ({ ...s })),
+    1: DEFAULT_SLOTS.map((s) => ({ ...s })),
+    2: DEFAULT_SLOTS.map((s) => ({ ...s })),
+    3: DEFAULT_SLOTS.map((s) => ({ ...s })),
+    4: DEFAULT_SLOTS.map((s) => ({ ...s })),
+    5: DEFAULT_SLOTS.map((s) => ({ ...s })),
+    6: DEFAULT_SLOTS.map((s) => ({ ...s })),
+  });
+  const [perDateOverrides, setPerDateOverrides] = useState<Record<string, TimeSlot[]>>({});
+  const [expandedDate, setExpandedDate] = useState<string | null>(null);
+  const [activeWeekdayTab, setActiveWeekdayTab] = useState<number>(1);
 
   const { data: myProfile } = useQuery({
     queryKey: ["my-expert-profile"],
@@ -80,6 +98,42 @@ export default function ExpertAvailabilityPage() {
     enabled: !!myProfile,
   });
 
+  const { data: weeklyDefaultsData } = useQuery({
+    queryKey: ["my-weekly-defaults", myProfile?.id],
+    queryFn: () => expertDashboardApi.getWeeklyDefaults(myProfile!.id),
+    enabled: !!myProfile,
+  });
+
+  const [weeklyDefaultsLoaded, setWeeklyDefaultsLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!weeklyDefaultsData || weeklyDefaultsLoaded) return;
+    if (weeklyDefaultsData.length > 0) {
+      const grouped: Record<number, TimeSlot[]> = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
+      for (const d of weeklyDefaultsData) {
+        grouped[d.weekday] = grouped[d.weekday] ?? [];
+        grouped[d.weekday].push({ start: d.start, end: d.end, max_bookings: d.max_bookings });
+      }
+      setWeekdaySlots(grouped);
+    }
+    setWeeklyDefaultsLoaded(true);
+  }, [weeklyDefaultsData, weeklyDefaultsLoaded]);
+
+  const weeklyScheduleMutation = useMutation({
+    mutationFn: () =>
+      expertDashboardApi.setWeeklyDefaults(
+        myProfile!.id,
+        Object.entries(weekdaySlots).flatMap(([weekday, slots]) =>
+          slots.map((s) => ({ weekday: Number(weekday), start: s.start, end: s.end, max_bookings: s.max_bookings }))
+        )
+      ),
+    onSuccess: () => {
+      toast.success(t.toast_weekly_saved ?? "Weekly schedule saved.");
+      queryClient.invalidateQueries({ queryKey: ["my-weekly-defaults", myProfile?.id] });
+    },
+    onError: () => toast.error(t.toast_weekly_failed ?? "Failed to save weekly schedule."),
+  });
+
   const availableDateStrings = new Set(
     existingAvailability.filter((d) => d.time_slots.length > 0).map((d) => d.date)
   );
@@ -87,8 +141,8 @@ export default function ExpertAvailabilityPage() {
     existingAvailability.filter((d) => d.time_slots.length === 0).map((d) => d.date)
   );
 
-  const matchingDates = useMemo(() => {
-    if (mode === "single" || mode === "absent") {
+  const candidateDates = useMemo(() => {
+    if (mode === "absent") {
       return singleDates;
     }
     if (!dateRange?.from || !dateRange.to) return [];
@@ -103,6 +157,11 @@ export default function ExpertAvailabilityPage() {
     return dates;
   }, [mode, dateRange, singleDates, selectedWeekdays]);
 
+  const matchingDates = useMemo(() => {
+    if (mode !== "range") return candidateDates;
+    return candidateDates.filter((d) => !excludedDateStrings.has(toLocalISODate(d)));
+  }, [mode, candidateDates, excludedDateStrings]);
+
   function toggleWeekday(day: number) {
     setSelectedWeekdays((prev) => {
       const next = new Set(prev);
@@ -115,33 +174,100 @@ export default function ExpertAvailabilityPage() {
     });
   }
 
-  function updateSlot(index: number, field: "start" | "end", value: string) {
-    setTimeSlots((prev) => {
-      const updated = prev.map((slot, i) => (i === index ? { ...slot, [field]: value } : slot));
+  function updateSlot(weekday: number, index: number, field: "start" | "end", value: string) {
+    setWeekdaySlots((prev) => {
+      const current = prev[weekday] ?? [];
+      const updated = current.map((slot, i) => (i === index ? { ...slot, [field]: value } : slot));
       const edited = updated[index];
       const isDuplicate = updated.some((s, i) => i !== index && s.start === edited.start && s.end === edited.end);
       if (isDuplicate) {
         toast.error(t.error_duplicate_slot ?? "This time slot duplicates another one. Please use a different time.");
         return prev;
       }
-      return updated;
+      return { ...prev, [weekday]: updated };
     });
   }
 
-  function addSlot() {
-    setTimeSlots((prev) => {
-      const newSlot = { start: "09:00", end: "10:00" };
-      const isDuplicate = prev.some((s) => s.start === newSlot.start && s.end === newSlot.end);
+  function updateSlotCapacity(weekday: number, index: number, value: number) {
+    setWeekdaySlots((prev) => {
+      const current = prev[weekday] ?? [];
+      return { ...prev, [weekday]: current.map((slot, i) => (i === index ? { ...slot, max_bookings: Math.max(1, value) } : slot)) };
+    });
+  }
+
+  function addSlot(weekday: number) {
+    setWeekdaySlots((prev) => {
+      const current = prev[weekday] ?? [];
+      const newSlot = { start: "09:00", end: "10:00", max_bookings: 1 };
+      const isDuplicate = current.some((s) => s.start === newSlot.start && s.end === newSlot.end);
       if (isDuplicate) {
         toast.error(t.error_duplicate_slot_add ?? "That time slot already exists. Adjust it before adding another.");
         return prev;
       }
-      return [...prev, newSlot];
+      return { ...prev, [weekday]: [...current, newSlot] };
     });
   }
 
-  function removeSlot(index: number) {
-    setTimeSlots((prev) => prev.filter((_, i) => i !== index));
+  function removeSlot(weekday: number, index: number) {
+    setWeekdaySlots((prev) => ({ ...prev, [weekday]: (prev[weekday] ?? []).filter((_, i) => i !== index) }));
+  }
+
+  function getSlotsForDate(dateStr: string): TimeSlot[] {
+    return perDateOverrides[dateStr] ?? weekdaySlots[getWeekdayFromDateStr(dateStr)] ?? [];
+  }
+
+  function defaultForDate(dateStr: string): TimeSlot[] {
+    return (weekdaySlots[getWeekdayFromDateStr(dateStr)] ?? []).map((s) => ({ ...s }));
+  }
+
+  function updateOverrideSlot(dateStr: string, index: number, field: "start" | "end", value: string) {
+    setPerDateOverrides((prev) => {
+      const current = prev[dateStr] ?? defaultForDate(dateStr);
+      const updated = current.map((slot, i) => (i === index ? { ...slot, [field]: value } : slot));
+      return { ...prev, [dateStr]: updated };
+    });
+  }
+
+  function updateOverrideCapacity(dateStr: string, index: number, value: number) {
+    setPerDateOverrides((prev) => {
+      const current = prev[dateStr] ?? defaultForDate(dateStr);
+      const updated = current.map((slot, i) => (i === index ? { ...slot, max_bookings: Math.max(1, value) } : slot));
+      return { ...prev, [dateStr]: updated };
+    });
+  }
+
+  function addOverrideSlot(dateStr: string) {
+    setPerDateOverrides((prev) => {
+      const current = prev[dateStr] ?? defaultForDate(dateStr);
+      return { ...prev, [dateStr]: [...current, { start: "09:00", end: "10:00", max_bookings: 1 }] };
+    });
+  }
+
+  function removeOverrideSlot(dateStr: string, index: number) {
+    setPerDateOverrides((prev) => {
+      const current = prev[dateStr] ?? defaultForDate(dateStr);
+      return { ...prev, [dateStr]: current.filter((_, i) => i !== index) };
+    });
+  }
+
+  function resetDateToDefault(dateStr: string) {
+    setPerDateOverrides((prev) => {
+      const next = { ...prev };
+      delete next[dateStr];
+      return next;
+    });
+  }
+
+  function toggleDateExclusion(dateStr: string) {
+    setExcludedDateStrings((prev) => {
+      const next = new Set(prev);
+      if (next.has(dateStr)) {
+        next.delete(dateStr);
+      } else {
+        next.add(dateStr);
+      }
+      return next;
+    });
   }
 
   const skippedInRange = useMemo(() => {
@@ -157,6 +283,11 @@ export default function ExpertAvailabilityPage() {
     return dates;
   }, [mode, dateRange, selectedWeekdays]);
 
+  const excludedInRange = useMemo(() => {
+    if (mode !== "range") return [];
+    return candidateDates.filter((d) => excludedDateStrings.has(toLocalISODate(d)));
+  }, [mode, candidateDates, excludedDateStrings]);
+
   const mutation = useMutation({
     mutationFn: () =>
       expertDashboardApi.setAvailability(
@@ -164,9 +295,13 @@ export default function ExpertAvailabilityPage() {
         [
           ...matchingDates.map((d) => ({
             date: toLocalISODate(d),
-            time_slots: mode === "absent" ? [] : timeSlots,
+            time_slots: mode === "absent" ? [] : getSlotsForDate(toLocalISODate(d)),
           })),
           ...skippedInRange.map((d) => ({
+            date: toLocalISODate(d),
+            time_slots: [],
+          })),
+          ...excludedInRange.map((d) => ({
             date: toLocalISODate(d),
             time_slots: [],
           })),
@@ -211,14 +346,6 @@ export default function ExpertAvailabilityPage() {
               onClick={() => setMode("range")}
             >
               {t.btn_date_range ?? "Date Range"}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={mode === "single" ? "default" : "outline"}
-              onClick={() => setMode("single")}
-            >
-              {t.btn_single_date ?? "Single Date"}
             </Button>
             <Button
               type="button"
@@ -305,58 +432,172 @@ export default function ExpertAvailabilityPage() {
       {mode !== "absent" && (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{t.step3_title ?? "3. Time slots for each date"}</CardTitle>
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <CardTitle className="text-base">{t.step3_title ?? "3. Time slots for each day of the week"}</CardTitle>
+              <p className="text-muted-foreground text-sm">
+                {t.step3_desc ?? "Click a weekday to edit its time slots. This is your standing weekly schedule, independent of any date range."}
+              </p>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => weeklyScheduleMutation.mutate()}
+              disabled={weeklyScheduleMutation.isPending || !myProfile}
+              className="shrink-0"
+            >
+              {weeklyScheduleMutation.isPending
+                ? (t.btn_saving ?? "Saving...")
+                : (t.btn_save_weekly ?? "Save Weekly Schedule")}
+            </Button>
+          </div>
         </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          {timeSlots.map((slot, index) => (
-            <div key={index} className="flex items-center gap-2">
-              <Input
-                type="time"
-                value={slot.start}
-                onChange={(e) => updateSlot(index, "start", e.target.value)}
-                className="w-32"
-              />
-              <span className="text-muted-foreground text-sm">{t.label_to ?? "to"}</span>
-              <Input
-                type="time"
-                value={slot.end}
-                onChange={(e) => updateSlot(index, "end", e.target.value)}
-                className="w-32"
-              />
-              <Button type="button" size="icon" variant="ghost" onClick={() => removeSlot(index)}>
-                <Trash2 className="h-4 w-4" />
+        <CardContent className="flex flex-col gap-4">
+          <div className="flex flex-wrap gap-2">
+            {WEEKDAYS.filter((day) => selectedWeekdays.has(day.value)).map((day) => (
+              <Button
+                key={day.value}
+                type="button"
+                size="sm"
+                variant={activeWeekdayTab === day.value ? "default" : "outline"}
+                onClick={() => setActiveWeekdayTab(day.value)}
+              >
+                {day.label}
+              </Button>
+            ))}
+          </div>
+
+          {selectedWeekdays.has(activeWeekdayTab) ? (
+            <div className="flex flex-col gap-2 rounded-md border p-3">
+              <p className="font-medium text-sm">
+                {WEEKDAYS.find((d) => d.value === activeWeekdayTab)?.label}
+              </p>
+              {(weekdaySlots[activeWeekdayTab] ?? []).map((slot, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <Input
+                    type="time"
+                    value={slot.start}
+                    onChange={(e) => updateSlot(activeWeekdayTab, index, "start", e.target.value)}
+                    className="w-32"
+                  />
+                  <span className="text-muted-foreground text-sm">{t.label_to ?? "to"}</span>
+                  <Input
+                    type="time"
+                    value={slot.end}
+                    onChange={(e) => updateSlot(activeWeekdayTab, index, "end", e.target.value)}
+                    className="w-32"
+                  />
+                  <span className="text-muted-foreground text-sm">{t.label_max_bookings ?? "max bookings"}</span>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={slot.max_bookings}
+                    onChange={(e) => updateSlotCapacity(activeWeekdayTab, index, Number(e.target.value) || 1)}
+                    className="w-20"
+                  />
+                  <Button type="button" size="icon" variant="ghost" onClick={() => removeSlot(activeWeekdayTab, index)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              <Button type="button" size="sm" variant="outline" onClick={() => addSlot(activeWeekdayTab)} className="w-fit">
+                <Plus className="h-4 w-4 mr-1" />
+                {t.btn_add_slot ?? "Add time slot"}
               </Button>
             </div>
-          ))}
-          <Button type="button" size="sm" variant="outline" onClick={addSlot} className="w-fit">
-            <Plus className="h-4 w-4 mr-1" />
-            {t.btn_add_slot ?? "Add time slot"}
-          </Button>
+          ) : (
+            <p className="text-muted-foreground text-sm">
+              {t.select_weekday_hint ?? "Select a checked weekday above to edit its time slots."}
+            </p>
+          )}
         </CardContent>
       </Card>
       )}
 
-      {mode === "range" && matchingDates.length > 0 && (
+      {mode === "range" && candidateDates.length > 0 && (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{t.preview_title ?? "Preview: dates that will be saved"}</CardTitle>
+          <CardTitle className="text-base">{t.dates_list_title ?? "Adjust individual dates"}</CardTitle>
+          <p className="text-muted-foreground text-sm">
+            {t.dates_list_desc ?? "Click a date below to edit its time slots or mark it unavailable."}
+          </p>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-col gap-4">
           <Calendar
             mode="multiple"
             selected={matchingDates}
-            disabled={() => true}
-            className="rounded-md border w-fit opacity-90"
+            onSelect={() => {}}
+            onDayClick={(day) => setExpandedDate(toLocalISODate(day))}
+            disabled={(date) => !candidateDates.some((d) => toLocalISODate(d) === toLocalISODate(date))}
+            modifiers={{
+              excluded: (date) =>
+                candidateDates.some((d) => toLocalISODate(d) === toLocalISODate(date)) &&
+                excludedDateStrings.has(toLocalISODate(date)),
+              editing: (date) => expandedDate === toLocalISODate(date),
+            }}
+            modifiersClassNames={{
+              excluded: "bg-red-100 text-red-900 line-through opacity-70",
+              editing: "ring-2 ring-primary",
+            }}
+            className="rounded-md border w-fit"
           />
+
+          {expandedDate && (
+            <div className="flex flex-col gap-3 rounded-md border p-3">
+              <div className="flex items-center justify-between">
+                <p className="font-medium text-sm">
+                  {(t.editing_date_title ?? "Editing {date}").replace("{date}", new Date(expandedDate).toLocaleDateString())}
+                </p>
+                <Button type="button" size="sm" variant="ghost" onClick={() => setExpandedDate(null)}>
+                  {t.btn_close ?? "Close"}
+                </Button>
+              </div>
+
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={excludedDateStrings.has(expandedDate)}
+                  onCheckedChange={() => toggleDateExclusion(expandedDate)}
+                />
+                {t.label_mark_unavailable ?? "Mark this date unavailable"}
+              </label>
+
+              {!excludedDateStrings.has(expandedDate) && (
+                <div className="flex flex-col gap-2">
+                  {getSlotsForDate(expandedDate).map((slot, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <Input type="time" value={slot.start} onChange={(e) => updateOverrideSlot(expandedDate, index, "start", e.target.value)} className="w-28" />
+                      <span className="text-muted-foreground text-xs">{t.label_to ?? "to"}</span>
+                      <Input type="time" value={slot.end} onChange={(e) => updateOverrideSlot(expandedDate, index, "end", e.target.value)} className="w-28" />
+                      <Input type="number" min={1} value={slot.max_bookings} onChange={(e) => updateOverrideCapacity(expandedDate, index, Number(e.target.value) || 1)} className="w-16" />
+                      <Button type="button" size="icon" variant="ghost" onClick={() => removeOverrideSlot(expandedDate, index)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <div className="flex gap-2">
+                    <Button type="button" size="sm" variant="outline" onClick={() => addOverrideSlot(expandedDate)}>
+                      <Plus className="h-4 w-4 mr-1" />
+                      {t.btn_add_slot ?? "Add time slot"}
+                    </Button>
+                    {perDateOverrides[expandedDate] && (
+                      <Button type="button" size="sm" variant="ghost" onClick={() => resetDateToDefault(expandedDate)}>
+                        {t.btn_reset_default ?? "Reset to default"}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
       )}
 
       {matchingDates.length > 0 && mode !== "absent" && (
         <p className="text-muted-foreground text-sm">
-          {(t.summary_availability ?? "This will set availability for {count} date(s), each with {slots} time slot(s).")
-            .replace("{count}", String(matchingDates.length))
-            .replace("{slots}", String(timeSlots.length))}
+          {(t.summary_availability ?? "This will set availability for {count} date(s).")
+            .replace("{count}", String(matchingDates.length))}
         </p>
       )}
 
@@ -368,7 +609,7 @@ export default function ExpertAvailabilityPage() {
 
       <Button
         onClick={() => mutation.mutate()}
-        disabled={matchingDates.length === 0 || (mode !== "absent" && timeSlots.length === 0) || mutation.isPending}
+        disabled={candidateDates.length === 0 || (mode !== "absent" && Object.values(weekdaySlots).every((slots) => slots.length === 0)) || mutation.isPending}
         variant={mode === "absent" ? "destructive" : "default"}
         className="w-fit"
       >

@@ -4,6 +4,7 @@ import type { FpoExpert } from "@/types/fpo";
 type ListResponse = { status: string; data: FpoExpert[] };
 
 export interface AvailabilitySlot {
+  id: number;
   start: string;
   end: string;
   is_booked?: boolean;
@@ -47,7 +48,7 @@ export const expertsApi = {
     api
       .get<{ status: string; data: ExpertAvailabilityDay[] }>(`/experts/${id}/availability/`)
       .then((r) => r.data.data),
-  bookSlot: (id: number, payload: { requested_date: string; requested_time: string; topic?: string; notes?: string }): Promise<ExpertBooking> =>
+  bookSlot: (id: number, payload: { requested_date: string; requested_time: string; time_slot_id?: number; topic?: string; notes?: string }): Promise<ExpertBooking> =>
     api
       .post<{ status: string; data: ExpertBooking }>(`/experts/${id}/book/`, payload)
       .then((r) => r.data.data),

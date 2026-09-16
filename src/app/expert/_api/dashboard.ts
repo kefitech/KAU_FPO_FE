@@ -54,4 +54,10 @@ export const expertDashboardApi = {
 
   setAvailability: (expertId: number, slots: { date: string; time_slots: { start: string; end: string }[] }[]): Promise<AvailabilityDay[]> =>
     api.post<Wrapped<AvailabilityDay[]>>(`/experts/admin/${expertId}/availability/`, { slots }).then((r) => r.data.data),
+
+  getWeeklyDefaults: (expertId: number): Promise<{ weekday: number; start: string; end: string; max_bookings: number }[]> =>
+    api.get<Wrapped<{ weekday: number; start: string; end: string; max_bookings: number }[]>>(`/experts/admin/${expertId}/weekly-defaults/`).then((r) => r.data.data),
+
+  setWeeklyDefaults: (expertId: number, slots: { weekday: number; start: string; end: string; max_bookings: number }[]): Promise<void> =>
+    api.post<Wrapped<null>>(`/experts/admin/${expertId}/weekly-defaults/`, { slots }).then(() => undefined),
 };

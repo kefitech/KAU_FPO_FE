@@ -178,7 +178,7 @@ export default function CbboDashboardPage() {
             {fpos.length === 0 && (
               <p className="text-muted-foreground text-sm">{t.empty_no_fpos ?? "No FPOs assigned yet."}</p>
             )}
-            {fpos.slice(0, 5).map((f) => {
+            {fpos.map((f) => {
               const label = getStatusLabel(f.status, f.status_display);
               const badgeStyle = STATUS_BADGE_STYLES[f.status ?? ""] ?? "border-muted text-muted-foreground";
               return (

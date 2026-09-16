@@ -195,6 +195,9 @@ export const governmentNavigationConfig: NavigationConfig = {
           url: "/government/training",
           icon: "GraduationCap",
         },
+        { id: "fpos", title: "FPO Directory", translations: { ml: "FPO ഡയറക്ടറി" }, url: "/government/fpos", icon: "Building2" },
+        { id: "schemes", title: "Scheme Linkage", translations: { ml: "സ്കീം ലിങ്കേജ്" }, url: "/government/schemes", icon: "FileText" },
+        { id: "training", title: "Training Sessions", translations: { ml: "Training Sessions" }, url: "/government/training", icon: "GraduationCap" },
       ],
     },
   ],
@@ -223,25 +226,15 @@ export const cbboNavigationConfig: NavigationConfig = {
       label: "Tasks",
       translations: { ml: "ടാസ്കുകൾ" },
       items: [
-        {
-          id: "verifications",
-          title: "FPO Verifications",
-          translations: { ml: "FPO വെരിഫിക്കേഷനുകൾ" },
-          url: "/cbbo/verifications",
-          icon: "CheckCircle",
-        },
-        {
-          id: "reports",
-          title: "Reports",
-          translations: { ml: "റിപ്പോർട്ടുകൾ" },
-          url: "/cbbo/reports",
-          icon: "ClipboardList",
-        },
-        { id: "my-profile", title: "Profile", translations: { ml: "പ്രൊഫൈൽ" }, url: "/cbbo/profile", icon: "User" },
+        { id: "verifications", title: "FPO Verifications", translations: { ml: "FPO വെരിഫിക്കേഷനുകൾ" }, url: "/cbbo/verifications", icon: "CheckCircle" },
+        { id: "reports", title: "Reports", translations: { ml: "റിപ്പോർട്ടുകൾ" }, url: "/cbbo/reports", icon: "ClipboardList" },
       ],
     },
   ],
-  footerItems: [{ id: "logout", title: "Logout", translations: { ml: "ലോഗൗട്ട്" }, url: "/logout", icon: "LogOut" }],
+  footerItems: [
+    { id: "settings", title: "Settings", translations: { ml: "ക്രമീകരണങ്ങൾ" }, url: "/cbbo/settings", icon: "Settings" },
+    { id: "logout", title: "Logout", translations: { ml: "ലോഗൗട്ട്" }, url: "/logout", icon: "LogOut" },
+  ],
 };
 
 export const expertNavigationConfig: NavigationConfig = {
@@ -252,23 +245,13 @@ export const expertNavigationConfig: NavigationConfig = {
       label: "Dashboard",
       translations: { ml: "ഡാഷ്‌ബോർഡ്" },
       items: [
-        {
-          id: "dashboard",
-          title: "My Bookings",
-          translations: { ml: "എന്റെ ബുക്കിംഗുകൾ" },
-          url: "/expert/dashboard",
-          icon: "LayoutDashboard",
-        },
-        {
-          id: "availability",
-          title: "Availability",
-          translations: { ml: "ലഭ്യത" },
-          url: "/expert/availability",
-          icon: "CalendarDays",
-        },
-        { id: "my-profile", title: "Profile", translations: { ml: "പ്രൊഫൈൽ" }, url: "/expert/profile", icon: "User" },
+        { id: "dashboard", title: "My Bookings", translations: { ml: "എന്റെ ബുക്കിംഗുകൾ" }, url: "/expert/dashboard", icon: "LayoutDashboard" },
+        { id: "availability", title: "Availability", translations: { ml: "ലഭ്യത" }, url: "/expert/availability", icon: "CalendarDays" },
       ],
     },
   ],
-  footerItems: [{ id: "logout", title: "Logout", translations: { ml: "ലോഗൗട്ട്" }, url: "/logout", icon: "LogOut" }],
+  footerItems: [
+    { id: "my-profile", title: "Profile", translations: { ml: "പ്രൊഫൈൽ" }, url: "/expert/profile", icon: "User" },
+    { id: "logout", title: "Logout", translations: { ml: "ലോഗൗട്ട്" }, url: "/logout", icon: "LogOut" },
+  ],
 };
