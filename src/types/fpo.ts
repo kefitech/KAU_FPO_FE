@@ -543,6 +543,7 @@ export interface CreateProductPayload {
   available_from: string;
   available_until?: string | null;
   is_public?: boolean;
+  image?: File | null;
 }
 
 // PATCH — all fields optional, send only what changed

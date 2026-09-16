@@ -11,6 +11,7 @@ export interface MarketHubProduct {
   quality_certification: string;
   available_from: string;
   available_until: string | null;
+  image: string | null;
 }
 
 export interface MarketHubCommodity {

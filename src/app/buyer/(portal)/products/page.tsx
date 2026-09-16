@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { translationsApi } from "@/lib/api/translations";
+import { toMediaUrl } from "@/lib/utils/media-url";
 import { useLocaleStore } from "@/stores/locale-store";
 
 type T = Record<string, string>;
@@ -21,7 +22,11 @@ function ProductCard({ product, locale }: { product: BuyerProduct; locale: strin
   const description = locale === "ml" ? product.description.ml || product.description.en : product.description.en;
 
   return (
-    <Card>
+    <Card className="overflow-hidden">
+      {toMediaUrl(product.image) && (
+        // biome-ignore lint/performance/noImgElement: product photo URL is dynamic, not a static asset
+        <img src={toMediaUrl(product.image) ?? undefined} alt={name} className="h-40 w-full object-cover" />
+      )}
       <CardHeader>
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-base">{name}</CardTitle>
@@ -109,7 +114,7 @@ export default function BuyerProductsPage() {
       {/* ── Search + Filter bar ── */}
       <div className="flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1">
-          <Search className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder={t.search_placeholder ?? "Search products…"}
             value={search}

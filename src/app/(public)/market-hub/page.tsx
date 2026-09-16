@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { type MarketHubProduct, marketHubApi } from "@/lib/api/market-hub";
 import { translationsApi } from "@/lib/api/translations";
+import { toMediaUrl } from "@/lib/utils/media-url";
 import { useLocaleStore } from "@/stores/locale-store";
 
 import AgrulLayout from "../_components/agrul-layout";
@@ -156,48 +157,61 @@ export default function MarketHubPage() {
             <div className="row">
               {products.map((product) => (
                 <div className="col-lg-4 col-md-6 mb-30" key={product.id}>
-                  <div className="single-item" style={{ border: "1px solid #eee", borderRadius: 8, padding: 20 }}>
-                    <div className="d-flex justify-content-between mb-10 align-items-start">
-                      <h5 className="mb-0">{productName(product)}</h5>
-                      <span
-                        className="badge"
-                        style={{ background: "var(--color-primary)", color: "#fff", padding: "4px 10px" }}
-                      >
-                        {product.commodity_code}
-                      </span>
-                    </div>
-                    {productDesc(product) && <p style={{ color: "#666", fontSize: 14 }}>{productDesc(product)}</p>}
-                    <div className="row mb-10">
-                      <div className="col-6">
-                        <small style={{ color: "#888" }}>{t.label_quantity ?? "Quantity"}</small>
-                        <p className="mb-0">
-                          {product.quantity} {product.unit}
-                        </p>
-                      </div>
-                      <div className="col-6">
-                        <small style={{ color: "#888" }}>{t.label_price ?? "Price"}</small>
-                        <p className="mb-0">₹{product.price_per_unit}</p>
-                      </div>
-                    </div>
-                    {product.quality_certification && (
-                      <span
-                        className="badge"
-                        style={{ background: "#f0f0f0", color: "#333", padding: "4px 10px", marginBottom: 10 }}
-                      >
-                        {product.quality_certification}
-                      </span>
+                  <div
+                    className="single-item"
+                    style={{ border: "1px solid #eee", borderRadius: 8, overflow: "hidden" }}
+                  >
+                    {toMediaUrl(product.image) && (
+                      // biome-ignore lint/performance/noImgElement: product photo URL is dynamic, not a static asset
+                      <img
+                        src={toMediaUrl(product.image) ?? undefined}
+                        alt={productName(product)}
+                        style={{ width: "100%", height: 160, objectFit: "cover" }}
+                      />
                     )}
-                    <div style={{ fontSize: 13, color: "#888", marginTop: 10 }}>
-                      {t.label_available ?? "Available"}: {product.available_from}
-                      {product.available_until ? ` – ${product.available_until}` : ""}
+                    <div style={{ padding: 20 }}>
+                      <div className="d-flex justify-content-between mb-10 align-items-start">
+                        <h5 className="mb-0">{productName(product)}</h5>
+                        <span
+                          className="badge"
+                          style={{ background: "var(--color-primary)", color: "#fff", padding: "4px 10px" }}
+                        >
+                          {product.commodity_code}
+                        </span>
+                      </div>
+                      {productDesc(product) && <p style={{ color: "#666", fontSize: 14 }}>{productDesc(product)}</p>}
+                      <div className="row mb-10">
+                        <div className="col-6">
+                          <small style={{ color: "#888" }}>{t.label_quantity ?? "Quantity"}</small>
+                          <p className="mb-0">
+                            {product.quantity} {product.unit}
+                          </p>
+                        </div>
+                        <div className="col-6">
+                          <small style={{ color: "#888" }}>{t.label_price ?? "Price"}</small>
+                          <p className="mb-0">₹{product.price_per_unit}</p>
+                        </div>
+                      </div>
+                      {product.quality_certification && (
+                        <span
+                          className="badge"
+                          style={{ background: "#f0f0f0", color: "#333", padding: "4px 10px", marginBottom: 10 }}
+                        >
+                          {product.quality_certification}
+                        </span>
+                      )}
+                      <div style={{ fontSize: 13, color: "#888", marginTop: 10 }}>
+                        {t.label_available ?? "Available"}: {product.available_from}
+                        {product.available_until ? ` – ${product.available_until}` : ""}
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-theme secondary btn-sm radius animation mt-15"
+                        onClick={() => openInquiry(product)}
+                      >
+                        {t.btn_inquire ?? "Inquire"}
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      className="btn btn-theme secondary btn-sm radius animation mt-15"
-                      onClick={() => openInquiry(product)}
-                    >
-                      {t.btn_inquire ?? "Inquire"}
-                    </button>
                   </div>
                 </div>
               ))}
