@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
@@ -40,8 +40,24 @@ export default function FpoProductsPage() {
     row: null,
   });
 
+  const STATUS_FILTERS = useMemo(
+    () => [
+      {
+        key: "status",
+        label: tTable.col_status ?? "Status",
+        options: [
+          { label: tTable.status_draft ?? "Draft", value: "draft" },
+          { label: tTable.status_active ?? "Active", value: "active" },
+          { label: tTable.status_sold ?? "Sold", value: "sold" },
+          { label: tTable.status_expired ?? "Expired", value: "expired" },
+        ],
+      },
+    ],
+    [tTable],
+  );
+
   return (
-    <div className="flex flex-col gap-6 px-3 sm:px-6 py-4 sm:py-6">
+    <div className="flex flex-col gap-6 px-3 py-4 sm:px-6 sm:py-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-bold text-2xl">{tPage.page_title ?? "My Products"}</h1>
@@ -60,6 +76,7 @@ export default function FpoProductsPage() {
           queryKey="products"
           queryFn={productsApi.getAll}
           columns={getProductColumns(tTable, tCommon)}
+          filters={STATUS_FILTERS}
           onRowClick={(row) => setProductView({ open: true, row })}
           columnsLabel={tCommon.columns_header}
           toggleColumnsLabel={tCommon.columns_toggle_columns}

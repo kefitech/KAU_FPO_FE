@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
@@ -19,27 +19,58 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { useLocaleStore } from "@/stores/locale-store";
 import type { Product, ProductUnit } from "@/types/fpo";
 import { UNIT_OPTIONS } from "@/types/fpo";
 
 type T = Record<string, string>;
 
-// commodity now uses a real dropdown of MasterLookup(category='commodity')
-// entries, fetched via /api/public/master-data/?category=commodity.
-const schema = z.object({
-  name_en: z.string().min(1, { message: "Product name is required" }),
-  name_ml: z.string().optional(),
-  commodity: z.string().min(1, { message: "Commodity is required" }),
-  description_en: z.string().min(1, { message: "Description is required" }),
-  description_ml: z.string().optional(),
-  quantity: z.string().min(1, { message: "Quantity is required" }),
-  unit: z.enum(["kg", "quintal", "mt", "litre", "piece"]),
-  price_per_unit: z.string().min(1, { message: "Price per unit is required" }),
-  quality_certification: z.string().optional(),
-  available_from: z.string().min(1, { message: "Available from date is required" }),
-  available_until: z.string().optional(),
-  is_public: z.boolean(),
-});
+const NAME_PATTERN = /^[A-Za-z][A-Za-z\s'-]*$/;
+
+const schema = z
+  .object({
+    name_en: z.string().min(1, { message: "Product name is required" }).regex(NAME_PATTERN, {
+      message: "Name must start with a letter and contain only letters, spaces, apostrophes, or hyphens",
+    }),
+    name_ml: z.string().optional(),
+    commodity: z.string().min(1, { message: "Commodity is required" }),
+    description_en: z.string().min(1, { message: "Description is required" }).regex(NAME_PATTERN, {
+      message: "Description must start with a letter and contain only letters, spaces, apostrophes, or hyphens",
+    }),
+    description_ml: z.string().optional(),
+    quantity: z
+      .string()
+      .min(1, { message: "Quantity is required" })
+      .refine((val) => !Number.isNaN(Number(val)) && Number(val) > 0, {
+        message: "Quantity must be greater than 0",
+      }),
+    unit: z.enum(["kg", "quintal", "mt", "litre", "piece"]),
+    price_per_unit: z.string().min(1, { message: "Price per unit is required" }),
+    quality_certification: z.string().optional(),
+    available_from: z.string().min(1, { message: "Available from date is required" }),
+    available_until: z.string().optional(),
+    is_public: z.boolean(),
+    image: z
+      .instanceof(File)
+      .optional()
+      .nullable()
+      .refine((file) => !file || file.size <= 5 * 1024 * 1024, {
+        message: "Image must be smaller than 5MB",
+      })
+      .refine((file) => !file || file.type.startsWith("image/"), {
+        message: "File must be an image",
+      }),
+  })
+  .refine(
+    (data) => {
+      if (!data.available_until) return true;
+      return new Date(data.available_until) >= new Date(data.available_from);
+    },
+    {
+      message: "Available until date must be the same as or after the Available from date",
+      path: ["available_until"],
+    },
+  );
 
 type FormValues = z.infer<typeof schema>;
 
@@ -63,6 +94,7 @@ const defaultValues: FormValues = {
   available_from: "",
   available_until: "",
   is_public: false,
+  image: null,
 };
 
 function toFormValues(p: Product): FormValues {
@@ -79,6 +111,7 @@ function toFormValues(p: Product): FormValues {
     available_from: p.available_from ?? "",
     available_until: p.available_until ?? "",
     is_public: p.is_public ?? false,
+    image: null,
   };
 }
 
@@ -86,11 +119,14 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
   const router = useRouter();
   const queryClient = useQueryClient();
   const isEdit = mode === "edit";
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+
+  const locale = useLocaleStore((s) => s.locale);
 
   const { data: commodities = [], isLoading: commoditiesLoading } = useQuery({
-    queryKey: ["master-data", "commodity"],
-    queryFn: masterDataApi.getCommodities,
-    staleTime: 10 * 60_000, // rarely changes — cache for 10 minutes
+    queryKey: ["master-data", "commodity", locale],
+    queryFn: () => masterDataApi.getCommodities(locale),
+    staleTime: 10 * 60_000,
   });
 
   const {
@@ -124,8 +160,12 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
         available_from: values.available_from,
         available_until: values.available_until || null,
         is_public: values.is_public,
+        image: values.image ?? undefined,
       };
-      return isEdit ? productsApi.update(product!.id, payload) : productsApi.create(payload);
+      if (isEdit && product) {
+        return productsApi.update(product.id, payload);
+      }
+      return productsApi.create(payload);
     },
     onSuccess: () => {
       toast.success(
@@ -134,7 +174,7 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
           : (t.toast_created ?? "Product added successfully"),
       );
       queryClient.invalidateQueries({ queryKey: ["products"] });
-      if (!isEdit) router.push("/fpo/products");
+      router.push("/fpo/products");
     },
     onError: (err: unknown) => {
       const apiErr = err as
@@ -164,7 +204,7 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
         <CardContent>
           <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="flex flex-col gap-6">
             <FieldGroup>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Controller
                   control={control}
                   name="name_en"
@@ -198,38 +238,81 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
                 />
               </div>
 
-              <Controller
-                control={control}
-                name="commodity"
-                render={({ field }) => (
-                  <Field className="max-w-xs">
-                    <FieldLabel htmlFor="product-commodity">
-                      {t.commodity_label ?? "Commodity"} <span className="text-destructive">*</span>
-                    </FieldLabel>
-                    <Select value={field.value} onValueChange={field.onChange} disabled={commoditiesLoading}>
-                      <SelectTrigger id="product-commodity">
-                        <SelectValue
-                          placeholder={
-                            commoditiesLoading
-                              ? (t.commodity_loading ?? "Loading...")
-                              : (t.commodity_placeholder ?? "Select a commodity")
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {commodities.map((c) => (
-                          <SelectItem key={c.id} value={String(c.id)}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {errors.commodity && <FieldError errors={[errors.commodity]} />}
-                  </Field>
-                )}
-              />
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Controller
+                  control={control}
+                  name="commodity"
+                  render={({ field }) => (
+                    <Field>
+                      <FieldLabel htmlFor="product-commodity">
+                        {t.commodity_label ?? "Commodity"} <span className="text-destructive">*</span>
+                      </FieldLabel>
+                      <Select value={field.value} onValueChange={field.onChange} disabled={commoditiesLoading}>
+                        <SelectTrigger id="product-commodity">
+                          <SelectValue
+                            placeholder={
+                              commoditiesLoading
+                                ? (t.commodity_loading ?? "Loading...")
+                                : (t.commodity_placeholder ?? "Select a commodity")
+                            }
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {commodities.map((c) => (
+                            <SelectItem key={c.id} value={String(c.id)}>
+                              {c.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {errors.commodity && <FieldError errors={[errors.commodity]} />}
+                    </Field>
+                  )}
+                />
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Controller
+                  control={control}
+                  name="image"
+                  render={({ field: { onChange, value: _value, ...field } }) => (
+                    <Field>
+                      <FieldLabel htmlFor="product-image">{t.image_label ?? "Product Image"}</FieldLabel>
+                      <div className="flex gap-2">
+                        <Input
+                          readOnly
+                          tabIndex={-1}
+                          placeholder={t.image_placeholder ?? "No file chosen"}
+                          value={selectedFileName ?? ""}
+                          onClick={() => document.getElementById("product-image")?.click()}
+                          onFocus={(e) => e.target.blur()}
+                          className="cursor-pointer select-none caret-transparent"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => document.getElementById("product-image")?.click()}
+                        >
+                          {t.image_choose_btn ?? "Choose File"}
+                        </Button>
+                      </div>
+                      <input
+                        id="product-image"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] ?? null;
+                          onChange(file);
+                          setSelectedFileName(file?.name ?? null);
+                        }}
+                        {...field}
+                      />
+                      {errors.image && <FieldError errors={[errors.image]} />}
+                    </Field>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Controller
                   control={control}
                   name="description_en"
@@ -257,7 +340,7 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <Controller
                   control={control}
                   name="quantity"
@@ -284,7 +367,7 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
                         <SelectContent>
                           {UNIT_OPTIONS.map((u) => (
                             <SelectItem key={u.value} value={u.value}>
-                              {u.label}
+                              {t[`unit_${u.value}`] ?? u.label}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -322,7 +405,7 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
                 )}
               />
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Controller
                   control={control}
                   name="available_from"
@@ -343,6 +426,7 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
                     <Field>
                       <FieldLabel htmlFor="product-until">{t.available_until_label ?? "Available until"}</FieldLabel>
                       <Input id="product-until" type="date" {...field} />
+                      {errors.available_until && <FieldError errors={[errors.available_until]} />}
                     </Field>
                   )}
                 />

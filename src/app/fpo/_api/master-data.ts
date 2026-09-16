@@ -27,5 +27,6 @@ export const masterDataApi = {
       return d.results ?? [];
     }),
 
-  getCommodities: (): Promise<MasterDataItem[]> => masterDataApi.getByCategory("commodity"),
+  getCommodities: (lang?: string): Promise<MasterDataItem[]> =>
+    masterDataApi.getByCategory("commodity", lang ? { lang } : undefined),
 };

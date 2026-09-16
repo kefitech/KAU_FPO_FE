@@ -13,6 +13,7 @@ export interface BuyerProduct {
   available_from: string;
   available_until: string | null;
   fpo_name: string;
+  image: string | null;
 }
 
 export interface BuyerProductParams extends DataTableParams {
