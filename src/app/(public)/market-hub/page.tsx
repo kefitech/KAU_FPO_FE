@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { toMediaUrl } from "@/lib/utils/media-url";
 
 import { type MarketHubProduct, marketHubApi } from "@/lib/api/market-hub";
 import { translationsApi } from "@/lib/api/translations";
-import { toMediaUrl } from "@/lib/utils/media-url";
 import { useLocaleStore } from "@/stores/locale-store";
 
 import AgrulLayout from "../_components/agrul-layout";

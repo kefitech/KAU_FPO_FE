@@ -12,6 +12,7 @@ export interface BuyerProduct {
   quality_certification: string;
   available_from: string;
   available_until: string | null;
+  fpo: number;
   fpo_name: string;
   image: string | null;
 }
@@ -20,6 +21,8 @@ export interface BuyerProductParams extends DataTableParams {
   commodity?: string;
   price_min?: string;
   price_max?: string;
+  date_from?: string;
+  date_until?: string;
 }
 
 const BASE = "/marketplace/buyer/products/";
