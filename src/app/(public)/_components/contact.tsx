@@ -281,7 +281,7 @@ const Contact = ({ t }: ContactProps) => {
                   </div>
                   <div className="content">
                     <h5 className="title">{t.hotline ?? "Hotline"}</h5>
-                    <a href="tel:+914872370150">+91-487-2370150</a> <br/> <a href="tel:+914872370086">+91-487-2370086</a> <br/> <a href="tel:+918547070773">+91-8547070773</a>
+                    <a href="tel:+918547070773">+91-8547070773</a>
                   </div>
                 </li>
                 <li data-aos="fade-up" data-aos-delay="300">
