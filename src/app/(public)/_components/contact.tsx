@@ -291,11 +291,7 @@ const Contact = ({ t }: ContactProps) => {
                   <div className="info">
                     <h5 className="title">{t.our_location ?? "Our Location"}</h5>
                     <a href="https://maps.app.goo.gl/PKDCW49BW1qGABDS6">
-                      {t.kau_address ?? "Directorate of Extension, Mannuthy P.O, \n Thrissur - 680651"}
-                    </a>
-                    <br />
-                    <a href="https://maps.app.goo.gl/PKDCW49BW1qGABDS6">
-                      {t.kau_address_cc ?? "Communication Centre, Kerala Agricultural University, Mannuthy P.O, Thrissur - 680651"}
+                      {t.kau_address ?? "Communication Centre, Kerala Agricultural University, Mannuthy P.O, Thrissur - 680651"}
                     </a>
                   </div>
                 </li>
