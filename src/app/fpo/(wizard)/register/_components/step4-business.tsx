@@ -382,7 +382,12 @@ export function Step4Business({ profile, onSave, onSuccess, onBack, t = {} }: St
             <Input
               id="account_number"
               placeholder="e.g. 123456789012"
-              {...register("account_number")}
+              inputMode="numeric"
+              {...register("account_number", {
+                // Strip anything non-digit — bank account numbers are all
+                // digits. Paste like "1234 5678 9012" saves as "123456789012".
+                setValueAs: (v: string) => (v ?? "").replace(/\D+/g, ""),
+              })}
               onBlur={() => handleBlurValidation("account_number")}
             />
             {errors.account_number && <FieldError errors={[errors.account_number]} />}

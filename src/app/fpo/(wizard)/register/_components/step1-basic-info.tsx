@@ -29,6 +29,11 @@ const schema = z
     name_ml: z.string().optional(),
     legal_structure: z.string().min(1, { message: "Please select registration type" }),
     legal_structure_detail: z.string().optional(),
+    // Kept optional at the schema level — normalisation happens on the
+    // `register()` call below via `setValueAs`, which trims whitespace
+    // and forces uppercase so what RHF stores matches the CSS `uppercase`
+    // display class. Zod-level `.transform()` would flip the type from
+    // `string | undefined` → `string` and break FormValues shape.
     registration_number: z.string().optional(),
     cin_number: z.string().optional(),
     date_of_registration: z
@@ -339,9 +344,14 @@ export function Step1BasicInfo({ profile, onSave, onSuccess, t = {} }: Step1Prop
           <Input
             id="registration_number"
             placeholder="e.g. REG/2024/001"
-            {...register("registration_number")}
+            {...register("registration_number", {
+              // Strip ALL whitespace (leading, trailing, and internal) —
+              // registration numbers should be a single token. Prevents
+              // duplicate-detection misses like "REG/2024/001" vs "REG /2024/001".
+              setValueAs: (v: string) => (v ?? "").replace(/\s+/g, "").toUpperCase(),
+            })}
             readOnly={isClaimedFpo}
-            className={isClaimedFpo ? "bg-muted cursor-not-allowed opacity-70" : ""}
+            className={`uppercase ${isClaimedFpo ? "bg-muted cursor-not-allowed opacity-70" : ""}`}
             {...getAutofillProps("registration_number", isClaimedFpo)}
           />
           {errors.registration_number && <FieldError errors={[errors.registration_number]} />}
@@ -362,9 +372,11 @@ export function Step1BasicInfo({ profile, onSave, onSuccess, t = {} }: Step1Prop
           <Input
             id="cin_number"
             placeholder="e.g. U01400KL2024PLC..."
-            {...register("cin_number")}
+            {...register("cin_number", {
+              setValueAs: (v: string) => (v ?? "").replace(/\s+/g, "").toUpperCase(),
+            })}
             readOnly={isClaimedFpo}
-            className={isClaimedFpo ? "bg-muted cursor-not-allowed opacity-70" : ""}
+            className={`uppercase ${isClaimedFpo ? "bg-muted cursor-not-allowed opacity-70" : ""}`}
             {...getAutofillProps("cin_number", isClaimedFpo)}
           />
           {errors.cin_number && <FieldError errors={[errors.cin_number]} />}
@@ -399,7 +411,9 @@ export function Step1BasicInfo({ profile, onSave, onSuccess, t = {} }: Step1Prop
             id="pan_number"
             placeholder="e.g. AABCK1234D"
             className="uppercase"
-            {...register("pan_number")}
+            {...register("pan_number", {
+              setValueAs: (v: string) => (v ?? "").replace(/\s+/g, "").toUpperCase(),
+            })}
             {...getAutofillProps("pan_number")}
           />
           {errors.pan_number && <FieldError errors={[errors.pan_number]} />}
@@ -414,7 +428,9 @@ export function Step1BasicInfo({ profile, onSave, onSuccess, t = {} }: Step1Prop
             id="gst_number"
             placeholder="e.g. 32AABCK1234D1Z5"
             className="uppercase"
-            {...register("gst_number")}
+            {...register("gst_number", {
+              setValueAs: (v: string) => (v ?? "").replace(/\s+/g, "").toUpperCase(),
+            })}
             {...getAutofillProps("gst_number")}
           />
           {fieldErrors.gst_number?.error && (

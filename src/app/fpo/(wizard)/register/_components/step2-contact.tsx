@@ -395,7 +395,11 @@ export function Step2Contact({ profile, onSave, onSuccess, onBack, t }: Step2Pro
               id="pincode"
               placeholder="e.g. 680121"
               maxLength={6}
-              {...register("pincode")}
+              inputMode="numeric"
+              {...register("pincode", {
+                // Strip anything non-digit so paste like "680 121" saves as "680121".
+                setValueAs: (v: string) => (v ?? "").replace(/\D+/g, ""),
+              })}
               onBlur={(e) => {
                 handleBlurValidation("pincode");
                 handlePincodeLookup(e.target.value);
