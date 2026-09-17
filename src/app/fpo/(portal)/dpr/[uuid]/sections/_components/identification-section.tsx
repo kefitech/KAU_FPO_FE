@@ -32,6 +32,8 @@ import { SectionHelp } from "./section-help";
 import { SectionShell } from "./section-shell";
 
 const AUTOSAVE_DEBOUNCE_MS = 5000;
+// Matches DPRProject.title max_length on the backend.
+const TITLE_MAX_CHARS = 255;
 
 // Public master-data commodity endpoint (not DPR-specific, from Section §2.2 field 4/5).
 type CommodityRow = { id: number; code: string; name: string };
@@ -245,10 +247,22 @@ export function IdentificationSection({ uuid }: { uuid: string }) {
               </Label>
               <Input
                 value={form.title}
-                onChange={(e) => update("title", e.target.value)}
+                maxLength={TITLE_MAX_CHARS}
+                onChange={(e) => update("title", e.target.value.slice(0, TITLE_MAX_CHARS))}
                 placeholder="e.g. Kerala Spices Value Addition Cluster"
               />
-              <FieldError name="title" errors={fieldErrors} warnings={fieldWarnings} />
+              <div className="flex items-center justify-between">
+                <FieldError name="title" errors={fieldErrors} warnings={fieldWarnings} />
+                <span
+                  className={`text-[10px] ${
+                    (form.title?.length ?? 0) >= TITLE_MAX_CHARS
+                      ? "text-destructive"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  {form.title?.length ?? 0}/{TITLE_MAX_CHARS}
+                </span>
+              </div>
             </div>
           </CardContent></Card>
 
@@ -352,7 +366,14 @@ export function IdentificationSection({ uuid }: { uuid: string }) {
                     <label key={o.id} className="flex cursor-pointer items-center gap-2 text-sm">
                       <Checkbox
                         checked={form.project_objectives.includes(o.id)}
-                        onCheckedChange={() => update("project_objectives", toggleId(form.project_objectives, o.id))}
+                        onCheckedChange={() => {
+                          const next = toggleId(form.project_objectives, o.id);
+                          update("project_objectives", next);
+                          // Clear the "Other" text when unchecking the "Other" option
+                          if (o.id === otherObjectiveId && !next.includes(o.id)) {
+                            update("project_objectives_other", "");
+                          }
+                        }}
                       />
                       <span>{o.label}</span>
                     </label>
@@ -392,7 +413,13 @@ export function IdentificationSection({ uuid }: { uuid: string }) {
                     <label key={o.id} className="flex cursor-pointer items-center gap-2 text-sm">
                       <Checkbox
                         checked={form.expected_outcomes.includes(o.id)}
-                        onCheckedChange={() => update("expected_outcomes", toggleId(form.expected_outcomes, o.id))}
+                        onCheckedChange={() => {
+                          const next = toggleId(form.expected_outcomes, o.id);
+                          update("expected_outcomes", next);
+                          if (o.id === otherOutcomeId && !next.includes(o.id)) {
+                            update("expected_outcomes_other", "");
+                          }
+                        }}
                       />
                       <span>{o.label}</span>
                     </label>

@@ -61,9 +61,21 @@ export function ReadinessPanel({
 
   if (!data) return null;
 
-  const { errors, warnings } = data;
+  const { errors, warnings, has_data } = data;
 
   if (errors.length === 0 && warnings.length === 0) {
+    // Optional sections send has_data=false when nothing has been entered —
+    // showing "Section complete" there is misleading.
+    if (has_data === false) {
+      return (
+        <div className="rounded-md border border-muted bg-muted/40 px-4 py-3 text-sm">
+          <div className="flex items-center gap-2 font-medium text-muted-foreground">
+            <AlertCircle className="h-4 w-4" />
+            Optional — no data entered
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm dark:border-emerald-900/40 dark:bg-emerald-950/30">
         <div className="flex items-center gap-2 font-medium text-emerald-900 dark:text-emerald-200">

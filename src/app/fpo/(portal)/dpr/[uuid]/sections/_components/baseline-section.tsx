@@ -168,8 +168,17 @@ export function BaselineSection({ uuid }: { uuid: string }) {
         "Reason for proposing the activity is required when not currently engaged.";
     }
   }
+  // Fields we live-check. For these, the live check is authoritative — its
+  // absence means the field currently passes, so any stale readiness error
+  // is suppressed. Fields NOT tracked fall back to the readiness error.
+  const LIVE_TRACKED = new Set<string>([
+    "currently_engaged",
+    "existing_products",
+    "existing_installed_capacity",
+    "reason_for_proposing",
+  ]);
   const err = (name: string): string | undefined =>
-    fieldErrors.get(name) ?? liveErrors[name];
+    LIVE_TRACKED.has(name) ? liveErrors[name] : fieldErrors.get(name);
 
   return (
     <SectionShell

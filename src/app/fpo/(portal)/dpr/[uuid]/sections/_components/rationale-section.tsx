@@ -178,8 +178,16 @@ export function RationaleSection({ uuid }: { uuid: string }) {
         `Justification exceeds ${MAX_WORDS} words (${wc} words).`;
     }
   });
+  // For fields we live-check, the live check is authoritative — its absence
+  // means the field currently passes, so any stale readiness error is
+  // suppressed. Fields NOT tracked here fall back to the readiness error.
+  const isLiveTracked = (name: string): boolean => {
+    if (name === "selections" || name === "rationale_other") return true;
+    // Nested justifications: selections[i].justification
+    return /^selections\[\d+\]\.justification$/.test(name);
+  };
   const err = (name: string): string | undefined =>
-    fieldErrors.get(name) ?? liveErrors[name];
+    isLiveTracked(name) ? liveErrors[name] : fieldErrors.get(name);
 
   const loading = isLoading || masterQuery.isLoading;
 

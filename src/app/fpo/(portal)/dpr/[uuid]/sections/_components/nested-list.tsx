@@ -4,6 +4,16 @@ import { forwardRef, useImperativeHandle, useState } from "react";
 
 import { Pencil, Plus, Trash2 } from "lucide-react";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -126,6 +136,10 @@ function NestedListCardInner<T extends { id?: number }>(
     onChange(items.filter((_, i) => i !== idx));
   }
 
+  // Confirm-then-delete: bad UX to remove rows without asking. Also protects
+  // against slip-clicks (the delete icon sits right next to the edit pencil).
+  const [confirmDeleteIdx, setConfirmDeleteIdx] = useState<number | null>(null);
+
   return (
     <>
       {/* No outer Card — the table has its own border/shadow. Card would
@@ -245,7 +259,7 @@ function NestedListCardInner<T extends { id?: number }>(
                           className="h-7 w-7 text-destructive hover:text-destructive"
                           onClick={(e) => {
                             e.stopPropagation();
-                            deleteAt(idx);
+                            setConfirmDeleteIdx(idx);
                           }}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -270,6 +284,33 @@ function NestedListCardInner<T extends { id?: number }>(
           onSave={commit}
         />
       )}
+
+      <AlertDialog
+        open={confirmDeleteIdx !== null}
+        onOpenChange={(o) => !o && setConfirmDeleteIdx(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this row?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove the entry from the list. You can add it back manually
+              if needed, but any data in it will be lost.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (confirmDeleteIdx !== null) deleteAt(confirmDeleteIdx);
+                setConfirmDeleteIdx(null);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
@@ -315,7 +356,10 @@ function RowModal<T>({
         share this width — change once, apply everywhere.
       */}
       <DialogContent
-        className="!max-w-5xl w-[92vw] max-h-[90vh] overflow-y-auto"
+        // Keep header + footer pinned; only the middle scrolls so Cancel/Save
+        // are always reachable regardless of form length. `!flex !flex-col`
+        // overrides DialogContent's default `grid` so flex layout wins.
+        className="!max-w-5xl w-[92vw] max-h-[90vh] !flex !flex-col overflow-hidden"
         // Prevent accidental data loss: clicking the dark backdrop no longer
         // closes the modal. Escape key prompts for confirmation (only closes
         // if user confirms). Cancel button remains the deliberate exit path.
@@ -329,11 +373,13 @@ function RowModal<T>({
           if (ok) onCancel();
         }}
       >
-        <DialogHeader>
+        <DialogHeader className="shrink-0">
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 py-2">{renderFields(row, set)}</div>
-        <DialogFooter className="mt-2 gap-2">
+        <div className="flex-1 space-y-4 overflow-y-auto py-2 pr-1">
+          {renderFields(row, set)}
+        </div>
+        <DialogFooter className="mt-2 shrink-0 gap-2 border-t pt-4">
           <Button variant="outline" onClick={onCancel}>Cancel</Button>
           <Button disabled={!isValid(row)} onClick={() => onSave(row)}>Save</Button>
         </DialogFooter>

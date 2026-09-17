@@ -1,17 +1,26 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, CheckCircle2, ImagePlus, Pencil, Trash2 } from "lucide-react";
-import { useRef, useState } from "react";
+import { AlertCircle, CheckCircle2, ImagePlus, PackagePlus, Pencil, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ViewSheet } from "@/components/ui/view-sheet";
 import { useDprSectionForm } from "@/hooks/use-dpr-section-form";
+import { api } from "@/lib/api/client";
 import { dprApi } from "@/lib/api/dpr";
 import { dprMasterApi } from "@/lib/api/dpr-master";
 
@@ -309,9 +318,207 @@ function ProductImageField({
   );
 }
 
+// ── Import from marketplace picker ───────────────────────────────────────
+
+interface MarketplaceProductRow {
+  id: number;
+  name: Record<string, string> | string;
+  unit: string;
+  price_per_unit: string | number;
+  image?: string | null;
+}
+
+interface MarketplaceListPage {
+  data: MarketplaceProductRow[];
+  meta?: {
+    pagination?: {
+      page: number;
+      total_pages: number;
+      total_count: number;
+      has_next: boolean;
+      has_previous: boolean;
+    };
+  };
+}
+
+const PICKER_PAGE_SIZE = 10;
+
+function ImportFromMarketplaceButton({
+  uuid,
+  onImported,
+}: {
+  uuid: string;
+  onImported: (newItem: Record<string, unknown>) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+
+  // Debounce the search term so we don't hit the API on every keystroke.
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  // Reset to page 1 whenever the search term changes so results start from top.
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch]);
+
+  const listQuery = useQuery({
+    queryKey: ["marketplace-products", "import-picker", debouncedSearch, page],
+    queryFn: () =>
+      api
+        .get<MarketplaceListPage>("/marketplace/products/", {
+          params: {
+            page,
+            page_size: PICKER_PAGE_SIZE,
+            status: "active",
+            ...(debouncedSearch ? { search: debouncedSearch } : {}),
+          },
+        })
+        .then((r) => r.data),
+    enabled: open,
+    staleTime: 60_000,
+  });
+  const rows = listQuery.data?.data ?? [];
+  const pagination = listQuery.data?.meta?.pagination;
+
+  const importMut = useMutation({
+    mutationFn: (id: number) => dprApi.importProductFromMarketplace(uuid, id),
+    onSuccess: (data) => {
+      toast.success("Product imported. Complete the DPR-specific fields.");
+      setOpen(false);
+      onImported(data);
+    },
+    onError: () => toast.error("Failed to import product. Try again."),
+  });
+
+  const pickName = (n: MarketplaceProductRow["name"]) =>
+    typeof n === "string" ? n : n?.en || n?.ml || "(unnamed)";
+
+  return (
+    <>
+      <div className="mb-3 flex justify-end">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setOpen(true)}
+        >
+          <PackagePlus className="mr-1.5 h-3.5 w-3.5" />
+          Import from my products
+        </Button>
+      </div>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Import from my products</DialogTitle>
+            <DialogDescription>
+              Pick a product from your marketplace listings. Name, unit, price
+              and photo get pre-filled — you can adjust and complete the
+              DPR-specific fields (Primary/Secondary, Product Type, projections)
+              in the next step.
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            placeholder="Search my products…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            autoFocus
+          />
+          <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
+            {listQuery.isLoading && (
+              <p className="text-sm text-muted-foreground">Loading…</p>
+            )}
+            {!listQuery.isLoading && rows.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                {debouncedSearch
+                  ? "No products match that search."
+                  : (
+                    <>
+                      No products in your marketplace yet. Add products from{" "}
+                      <a href="/fpo/products" className="underline">
+                        My Products
+                      </a>{" "}
+                      first, or use "Add product" below to enter one manually.
+                    </>
+                  )}
+              </p>
+            )}
+            {rows.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                disabled={importMut.isPending}
+                onClick={() => importMut.mutate(p.id)}
+                className="flex w-full items-center gap-3 rounded border p-2 text-left hover:bg-muted disabled:opacity-50"
+              >
+                {p.image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={p.image}
+                    alt=""
+                    className="h-12 w-12 rounded object-cover"
+                  />
+                ) : (
+                  <div className="flex h-12 w-12 items-center justify-center rounded bg-muted text-[10px] text-muted-foreground">
+                    No photo
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{pickName(p.name)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    ₹{p.price_per_unit} / {p.unit}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
+          {pagination && pagination.total_pages > 1 && (
+            <div className="flex items-center justify-between border-t pt-2 text-xs text-muted-foreground">
+              <span>
+                Page {pagination.page} of {pagination.total_pages}
+                {pagination.total_count > 0 && ` · ${pagination.total_count} total`}
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={!pagination.has_previous || listQuery.isFetching}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                >
+                  Prev
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={!pagination.has_next || listQuery.isFetching}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 // ── Section component ─────────────────────────────────────────────────────
 
 export function ProductsSection({ uuid }: { uuid: string }) {
+  const queryClient = useQueryClient();
   const {
     form,
     isLoading,
@@ -424,6 +631,35 @@ export function ProductsSection({ uuid }: { uuid: string }) {
           readiness panel deep-links here. Placed on the outer wrapper so
           the scroll lands above the NestedListCard. */}
       <div id="dpr-field-items">
+      <ImportFromMarketplaceButton
+        uuid={uuid}
+        onImported={(newItem) => {
+          // Append the fresh row straight into the form's items array. The
+          // useDprSectionForm hook only seeds from the server fetch ONCE
+          // (hasSeededRef guard), so invalidating the query wouldn't reach
+          // the form. Also keep the section-query cache in sync so a page
+          // refresh shows the same row without a re-fetch flash.
+          const current = form.getValues("items") ?? [];
+          const shaped = ProductItemSchema.parse({
+            ...EMPTY_ITEM,
+            ...(newItem as object),
+            order: current.length,
+          });
+          const next = [...current, shaped];
+          form.setValue("items", next, { shouldDirty: true });
+          queryClient.setQueryData(
+            ["dpr-section", uuid, "products"],
+            (prev: unknown) => {
+              const p = (prev ?? {}) as { items?: unknown[] };
+              return { ...p, items: [...(p.items ?? []), newItem] };
+            },
+          );
+          // Auto-open the edit modal on the newly appended row so the user
+          // lands on the DPR-only mandatory fields (Primary/Secondary, Product
+          // Type, Category, Annual Quantity) without hunting.
+          setTimeout(() => nestedRef.current?.openEdit(next.length - 1), 50);
+        }}
+      />
       <NestedListCard<ProductItem>
         ref={nestedRef}
         onRowClick={(row, idx) => setRowView({ open: true, row, index: idx })}
@@ -715,6 +951,22 @@ export function ProductsSection({ uuid }: { uuid: string }) {
         fields={
           rowView.row
             ? [
+                ...(rowView.row.image
+                  ? [
+                      {
+                        label: "Product photo",
+                        type: "node" as const,
+                        node: (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={rowView.row.image}
+                            alt="Product"
+                            className="h-40 w-56 rounded border object-cover"
+                          />
+                        ),
+                      },
+                    ]
+                  : []),
                 { label: "Name", value: rowView.row.name || "—" },
                 {
                   label: "Category",

@@ -311,8 +311,9 @@ export function CivilSection({ uuid }: { uuid: string }) {
   if (basisOfEstimate === "other" && !String(basisOfEstimateOther).trim()) {
     liveErrors.basis_of_estimate_other = 'Please specify — "Others" was selected for cost estimation basis.';
   }
+  const LIVE_TRACKED = new Set<string>(["basis_of_estimate_other"]);
   const err = (name: string): string | undefined =>
-    fieldErrors.get(name) ?? liveErrors[name];
+    LIVE_TRACKED.has(name) ? liveErrors[name] : fieldErrors.get(name);
 
   const loading = isLoading || buildingTypeQuery.isLoading || civilCategoryQuery.isLoading;
 

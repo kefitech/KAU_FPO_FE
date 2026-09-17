@@ -403,8 +403,13 @@ export function RawMaterialSection({ uuid }: { uuid: string }) {
       "No supply risks specified. Consider identifying at least one for a complete DPR.";
   }
 
+  const LIVE_TRACKED = new Set<string>([
+    "materials",
+    "procurement_frequency",
+    "procurement_model",
+  ]);
   const err = (name: string): string | undefined =>
-    fieldErrors.get(name) ?? liveErrors[name];
+    LIVE_TRACKED.has(name) ? liveErrors[name] : fieldErrors.get(name);
   const warn = (name: string): string | undefined =>
     fieldWarnings.get(name) ?? liveWarnings[name];
 
@@ -492,10 +497,7 @@ export function RawMaterialSection({ uuid }: { uuid: string }) {
             // problem shows inline red the moment the user leaves it invalid,
             // no wait for save.
             const rErr = validateMaterial(row);
-            const monthsError =
-              !row.available_throughout_year && row.available_months.length === 0
-                ? rErr.available_months
-                : undefined;
+            const monthsError = rErr.available_months;
             return (
             <>
               <div className="space-y-3">
@@ -615,7 +617,22 @@ export function RawMaterialSection({ uuid }: { uuid: string }) {
                         <button
                           key={code}
                           type="button"
-                          onClick={() => set("available_months", (active ? row.available_months.filter((c) => c !== code) : [...row.available_months, code]) as Material["available_months"])}
+                          onClick={() => {
+                            const next = (
+                              active
+                                ? row.available_months.filter((c) => c !== code)
+                                : [...row.available_months, code]
+                            ) as Material["available_months"];
+                            set("available_months", next);
+                            // If the user is manually adjusting the pills,
+                            // the "throughout the year" shorthand no longer
+                            // accurately describes their selection unless
+                            // all 12 months are still ticked.
+                            const allTicked = next.length === MONTHS.length;
+                            if (row.available_throughout_year !== allTicked) {
+                              set("available_throughout_year", allTicked);
+                            }
+                          }}
                           className={`rounded-md border px-1.5 py-1 text-[10px] font-medium transition-colors ${active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-muted-foreground"}`}
                         >
                           {label}
@@ -628,7 +645,21 @@ export function RawMaterialSection({ uuid }: { uuid: string }) {
                   )}
                 </div>
                 <label className="flex cursor-pointer items-center gap-2 text-sm">
-                  <Checkbox checked={row.available_throughout_year} onCheckedChange={(c) => set("available_throughout_year", !!c)} />
+                  <Checkbox
+                    checked={row.available_throughout_year}
+                    onCheckedChange={(c) => {
+                      const on = !!c;
+                      // Ticking selects all 12 months so the visual state,
+                      // FE row validator, and BE readiness all agree that
+                      // the material is available every month. Unticking
+                      // clears the array so the user starts fresh.
+                      set("available_throughout_year", on);
+                      set(
+                        "available_months",
+                        (on ? MONTHS.map(([code]) => code) : []) as Material["available_months"],
+                      );
+                    }}
+                  />
                   Available throughout the year
                 </label>
                 {!row.available_throughout_year && (

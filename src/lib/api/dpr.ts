@@ -39,6 +39,8 @@ export interface DprReadiness {
   errors: DprReadinessIssue[];
   warnings: DprReadinessIssue[];
   is_complete: boolean;
+  /** Only sent for optional sections — true when the user has entered any data. */
+  has_data?: boolean;
 }
 
 /** Rule engine applicability payload — Phase 6d (KAU RCD A.1). */
@@ -249,6 +251,20 @@ export const dprApi = {
     api
       .delete<Wrapped<{ id: number }>>(
         `/fpo/dpr/projects/${uuid}/sections/products/items/${itemId}/image/`,
+      )
+      .then((r) => r.data.data),
+
+  // Import a DPR product row from an existing marketplace product. Copies
+  // the image file server-side so the DPR is independent of the marketplace
+  // listing's lifecycle.
+  importProductFromMarketplace: (
+    uuid: string,
+    marketplaceProductId: number,
+  ): Promise<Record<string, unknown>> =>
+    api
+      .post<Wrapped<Record<string, unknown>>>(
+        `/fpo/dpr/projects/${uuid}/sections/products/import-from-marketplace/`,
+        { marketplace_product_id: marketplaceProductId },
       )
       .then((r) => r.data.data),
 

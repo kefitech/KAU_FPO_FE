@@ -14,9 +14,17 @@ import { dprMasterApi } from "@/lib/api/dpr-master";
 import { SectionHelp } from "./section-help";
 import { SectionShell } from "./section-shell";
 
+const NATURE_OTHER_MAX_CHARS = 200;
+
 const Schema = z.object({
   natures: z.array(z.number()),
-  nature_other: z.string(),
+  nature_other: z
+    .string()
+    .max(NATURE_OTHER_MAX_CHARS, `Description must be at most ${NATURE_OTHER_MAX_CHARS} characters.`)
+    .refine(
+      (v) => v === "" || (v.match(/[\p{L}\p{N}_]/gu) ?? []).length >= 3,
+      { message: "Please enter a valid business description (at least 3 letters or digits)." },
+    ),
 });
 type Data = z.infer<typeof Schema>;
 
@@ -118,20 +126,47 @@ export function NatureOfBusinessSection({ uuid }: { uuid: string }) {
             </div>
           </div>
 
-          {showOther && (
-            // id="dpr-field-nature_other" — separate anchor for the
-            // "Please specify the other nature of business" readiness error
-            // when Others is ticked but the text is left blank.
-            <div id="dpr-field-nature_other" className="space-y-1.5 border-l-2 border-primary/30 pl-4">
-              <Label htmlFor="nature_other">Please specify (Others) *</Label>
-              <Input
-                id="nature_other"
-                placeholder="Describe the other business model…"
-                autoFocus
-                {...form.register("nature_other")}
-              />
-            </div>
-          )}
+          {showOther && (() => {
+            const natureOtherError = form.formState.errors.nature_other?.message;
+            const natureOtherValue = form.watch("nature_other") ?? "";
+            const requiredError = !natureOtherValue.trim() ? "This field is required." : "";
+            const displayError = natureOtherError || requiredError;
+            const hasError = Boolean(displayError);
+            return (
+              // id="dpr-field-nature_other" — separate anchor for the
+              // "Please specify the other nature of business" readiness error
+              // when Others is ticked but the text is left blank.
+              <div id="dpr-field-nature_other" className="space-y-1.5 border-l-2 border-primary/30 pl-4">
+                <Label
+                  htmlFor="nature_other"
+                  className={hasError ? "text-destructive" : undefined}
+                >
+                  Please specify (Others) <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="nature_other"
+                  placeholder="Describe the other business model…"
+                  autoFocus
+                  maxLength={NATURE_OTHER_MAX_CHARS}
+                  aria-invalid={hasError}
+                  className={hasError ? "border-destructive" : undefined}
+                  {...form.register("nature_other")}
+                />
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-destructive">{displayError}</span>
+                  <span
+                    className={`text-[10px] ${
+                      natureOtherValue.length >= NATURE_OTHER_MAX_CHARS
+                        ? "text-destructive"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    {natureOtherValue.length}/{NATURE_OTHER_MAX_CHARS}
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
         </CardContent>
       </Card>
     </SectionShell>

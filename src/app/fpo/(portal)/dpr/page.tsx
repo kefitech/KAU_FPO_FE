@@ -23,6 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { type DprProject, type DprStatus, dprApi } from "@/lib/api/dpr";
+import { getErrorMessage } from "@/lib/get-error-message";
 
 // ── Status badge ────────────────────────────────────────────────────────────
 
@@ -70,8 +71,13 @@ function NewDprDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v:
   const queryClient = useQueryClient();
   const [title, setTitle] = useState("");
 
+  const trimmed = title.trim();
+  // Must have at least 3 word-characters (letters/digits/underscore). Rejects
+  // "@#$%^&*", "AB", "A@B" etc. — mirrors the backend serializer validator.
+  const isTitleValid = (trimmed.match(/[\p{L}\p{N}_]/gu) ?? []).length >= 3;
+
   const createMutation = useMutation({
-    mutationFn: () => dprApi.createProject({ title: title.trim() }),
+    mutationFn: () => dprApi.createProject({ title: trimmed }),
     onSuccess: (project) => {
       queryClient.invalidateQueries({ queryKey: ["dpr-projects"] });
       toast.success("DPR project created");
@@ -79,8 +85,8 @@ function NewDprDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v:
       onOpenChange(false);
       router.push(`/fpo/dpr/${project.uuid}`);
     },
-    onError: (err: { message?: string }) => {
-      toast.error(err.message ?? "Failed to create DPR project");
+    onError: (err) => {
+      toast.error(getErrorMessage(err, "Failed to create DPR project"));
     },
   });
 
@@ -103,12 +109,20 @@ function NewDprDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v:
             disabled={createMutation.isPending}
             autoFocus
           />
+          {trimmed.length > 0 && !isTitleValid && (
+            <p className="text-xs text-destructive">
+              Please enter a valid project title (at least 3 letters or digits).
+            </p>
+          )}
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={createMutation.isPending}>
             Cancel
           </Button>
-          <Button onClick={() => createMutation.mutate()} disabled={createMutation.isPending}>
+          <Button
+            onClick={() => createMutation.mutate()}
+            disabled={createMutation.isPending || !isTitleValid}
+          >
             {createMutation.isPending ? "Creating…" : "Create DPR"}
           </Button>
         </DialogFooter>

@@ -344,6 +344,11 @@ export function HRSection({ uuid }: { uuid: string }) {
     "operational_management_other",
     "welfare_other",
     "statutory_compliance_other",
+    "existing_employees_total",
+    "existing_technical_staff",
+    "existing_administrative_staff",
+    "existing_marketing_staff",
+    "existing_skilled_operators",
   ]);
   const liveErrors: Record<string, string | undefined> = {};
   if (!operationalMgmt) {
@@ -358,6 +363,37 @@ export function HRSection({ uuid }: { uuid: string }) {
   if (statutory.includes("other") && !String(statutoryComplianceOther).trim()) {
     liveErrors.statutory_compliance_other = 'Please specify — "Others" in statutory compliance.';
   }
+
+  // D. Existing HR — each subcategory (technical / admin / marketing / skilled
+  // operators) must be ≤ the reported total, AND the sum of all four must be
+  // ≤ total. Subgroups can't exceed the whole individually or in aggregate.
+  if (hasExisting) {
+    const toN = (v: unknown): number | null => {
+      if (v === null || v === undefined || v === "") return null;
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
+    };
+    const total = toN(existingEmployeesTotal);
+    const subs: Array<[unknown, string, string]> = [
+      [existingTechnicalStaff, "existing_technical_staff", "Technical Staff"],
+      [existingAdminStaff, "existing_administrative_staff", "Admin Staff"],
+      [existingMarketingStaff, "existing_marketing_staff", "Marketing Staff"],
+      [existingSkilledOps, "existing_skilled_operators", "Skilled Operators"],
+    ];
+    for (const [val, key, label] of subs) {
+      const n = toN(val);
+      if (total !== null && n !== null && n > total) {
+        liveErrors[key] = `${label} cannot be greater than Existing Employees (${total}).`;
+      }
+    }
+    // Sum-of-subgroups vs total. Any subgroup left blank counts as 0.
+    if (total !== null) {
+      const sum = subs.reduce((acc, [val]) => acc + (toN(val) ?? 0), 0);
+      if (sum > total) {
+        liveErrors.existing_employees_total = `The total number of employees in all sub-categories (${sum.toLocaleString()}) cannot exceed Existing Employees (${total.toLocaleString()}).`;
+      }
+    }
+  }
   const err = (name: string): string | undefined =>
     LIVE_CHECKED.has(name) ? liveErrors[name] : fieldErrors.get(name);
 
@@ -369,24 +405,35 @@ export function HRSection({ uuid }: { uuid: string }) {
     key: keyof Data,
     label: string,
     placeholder = "e.g. 1",
-  ) => (
-    <div className="space-y-1.5">
-      <LabelWithBadge uuid={uuid} section="hr" field={String(key)} className="text-xs">
-        {label}
-      </LabelWithBadge>
-      <Input
-        type="text"
-        inputMode="numeric"
-        maxLength={6}
-        placeholder={placeholder}
-        value={watchedValue !== null && watchedValue !== undefined ? String(watchedValue) : ""}
-        onChange={(e) => {
-          const cleaned = normaliseIntegerInput(e.target.value, { max: MAX_HEADCOUNT, min: 0 });
-          setField(key, (cleaned === "" ? null : cleaned) as Data[keyof Data]);
-        }}
-      />
-    </div>
-  );
+  ) => {
+    const fieldErr = err(String(key));
+    return (
+      <div id={`dpr-field-${String(key)}`} className="space-y-1.5">
+        <LabelWithBadge
+          uuid={uuid}
+          section="hr"
+          field={String(key)}
+          className={`text-xs ${fieldErr ? "text-destructive" : ""}`}
+        >
+          {label}
+        </LabelWithBadge>
+        <Input
+          type="text"
+          inputMode="numeric"
+          maxLength={6}
+          placeholder={placeholder}
+          value={watchedValue !== null && watchedValue !== undefined ? String(watchedValue) : ""}
+          aria-invalid={Boolean(fieldErr)}
+          className={fieldErr ? "border-destructive" : undefined}
+          onChange={(e) => {
+            const cleaned = normaliseIntegerInput(e.target.value, { max: MAX_HEADCOUNT, min: 0 });
+            setField(key, (cleaned === "" ? null : cleaned) as Data[keyof Data]);
+          }}
+        />
+        {fieldErr && <p className="text-xs text-destructive">{fieldErr}</p>}
+      </div>
+    );
+  };
 
   return (
     <SectionShell

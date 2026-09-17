@@ -177,7 +177,13 @@ export function SectionShell({
   // uselessly on all 22 sections.
   const engineEnabled = applicability?.engine_enabled === true;
   const thisApplicability = applicability?.applicability?.[sectionKey];
-  const showOptionalBanner = engineEnabled && thisApplicability === "O";
+  // Sections that are optional by KAU spec regardless of the rule engine
+  // being turned on. These always show the "optional" banner so the user
+  // isn't confused by a "Section complete" state on an empty form.
+  const ALWAYS_OPTIONAL_SECTIONS: DprSectionKey[] = ["investment"];
+  const isSpecOptional = ALWAYS_OPTIONAL_SECTIONS.includes(sectionKey);
+  const showOptionalBanner =
+    isSpecOptional || (engineEnabled && thisApplicability === "O");
   const showRequiredBanner = engineEnabled && thisApplicability === "M";
 
   // Dismiss state — remembered PER SESSION per (uuid, sectionKey). Uses

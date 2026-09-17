@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 
 import { useQuery } from "@tanstack/react-query";
-import { useWatch } from "react-hook-form";
+import { type Control, useController, useWatch } from "react-hook-form";
 import { z } from "zod";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,12 +18,12 @@ import { SectionShell } from "./section-shell";
 
 const ComponentsSchema = z.object({
   components: z.array(z.number()),
-  other_primary_production: z.string(),
-  other_processing: z.string(),
-  other_storage: z.string(),
-  other_marketing: z.string(),
-  other_service: z.string(),
-  other_supporting: z.string(),
+  other_primary_production: z.string().max(200, "Description must be at most 200 characters."),
+  other_processing: z.string().max(200, "Description must be at most 200 characters."),
+  other_storage: z.string().max(200, "Description must be at most 200 characters."),
+  other_marketing: z.string().max(200, "Description must be at most 200 characters."),
+  other_service: z.string().max(200, "Description must be at most 200 characters."),
+  other_supporting: z.string().max(200, "Description must be at most 200 characters."),
 });
 type ComponentsData = z.infer<typeof ComponentsSchema>;
 
@@ -56,6 +56,65 @@ const GROUP_TO_OTHER_FIELD: Record<
   service_enterprises: "other_service",
   supporting_infrastructure: "other_supporting",
 };
+
+const OTHER_MAX_CHARS = 200;
+
+type OtherFieldName = Extract<
+  keyof ComponentsData,
+  | "other_primary_production"
+  | "other_processing"
+  | "other_storage"
+  | "other_marketing"
+  | "other_service"
+  | "other_supporting"
+>;
+
+// Extracted so we can subscribe to just the one field via useController —
+// avoids re-rendering the whole section on every keystroke.
+function OtherSpecifyInput({
+  control,
+  name,
+  required,
+}: {
+  control: Control<ComponentsData>;
+  name: OtherFieldName;
+  required: boolean;
+}) {
+  const { field, fieldState } = useController({ control, name });
+  const value = (field.value as string) ?? "";
+  const requiredError = required && !value.trim() ? "This field is required." : "";
+  const message = fieldState.error?.message || requiredError;
+  const hasError = Boolean(message);
+  return (
+    // id="dpr-field-{name}" is the scroll target used by ReadinessPanel when
+    // the user clicks a "Please specify — Others (…)" error.
+    <div id={`dpr-field-${name}`} className="mt-3 space-y-1.5">
+      <Label htmlFor={name} className={hasError ? "text-destructive" : undefined}>
+        Please specify (Others) {required && <span className="text-destructive">*</span>}
+      </Label>
+      <Input
+        id={name}
+        placeholder="Describe the other component…"
+        maxLength={OTHER_MAX_CHARS}
+        value={value}
+        onChange={(e) => field.onChange(e.target.value.slice(0, OTHER_MAX_CHARS))}
+        onBlur={field.onBlur}
+        aria-invalid={hasError}
+        className={hasError ? "border-destructive" : undefined}
+      />
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] text-destructive">{message}</span>
+        <span
+          className={`text-[10px] ${
+            value.length >= OTHER_MAX_CHARS ? "text-destructive" : "text-muted-foreground"
+          }`}
+        >
+          {value.length}/{OTHER_MAX_CHARS}
+        </span>
+      </div>
+    </div>
+  );
+}
 
 export function ComponentsSection({ uuid }: { uuid: string }) {
   const masterQuery = useQuery({
@@ -189,14 +248,11 @@ export function ComponentsSection({ uuid }: { uuid: string }) {
                   ))}
                 </div>
                 {hasOtherSelected(group) && otherField && (
-                  <div className="mt-3 space-y-1.5">
-                    <Label htmlFor={otherField}>Please specify (Others)</Label>
-                    <Input
-                      id={otherField}
-                      placeholder="Describe the other component…"
-                      {...form.register(otherField)}
-                    />
-                  </div>
+                  <OtherSpecifyInput
+                    control={form.control}
+                    name={otherField}
+                    required
+                  />
                 )}
               </div>
             );

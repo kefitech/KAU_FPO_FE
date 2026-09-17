@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { keepPreviousData, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, ArrowLeft, CheckCircle2, Circle, Download, FileStack, Loader2, PanelLeft, PanelLeftOpen, RefreshCw, Sparkles, XCircle } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle2, Circle, CircleDashed, Download, FileStack, Loader2, PanelLeft, PanelLeftOpen, RefreshCw, Sparkles, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import { toast } from "sonner";
@@ -26,7 +26,7 @@ import { selectHasAnySaving, useDprWizardStore } from "@/stores/dpr-store";
 const STATUS_TOGGLE_STORAGE_KEY = "dpr-wizard-status-dots";
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "dpr-wizard-sidebar-collapsed";
 
-type ReadinessState = "complete" | "warning" | "error" | "empty" | "unknown";
+type ReadinessState = "complete" | "warning" | "error" | "empty" | "unknown" | "optional";
 
 // ── Sidebar section entry ───────────────────────────────────────────────────
 
@@ -106,6 +106,7 @@ function StatusDot({ state, active }: { state: ReadinessState; active: boolean }
     warning:  { Icon: AlertTriangle, className: "text-amber-500",   title: "Has warnings" },
     error:    { Icon: XCircle,       className: "text-destructive", title: "Has errors" },
     empty:    { Icon: Circle,        className: "text-muted-foreground/40", title: "Not started" },
+    optional: { Icon: CircleDashed,  className: "text-blue-500/70", title: "Optional — skip if not applicable" },
     unknown:  { Icon: Loader2,       className: "text-muted-foreground/60 animate-spin", title: "Loading…" },
   }[state];
   const { Icon, className, title } = cfg;
@@ -154,9 +155,13 @@ function useAllSectionsReadiness(uuid: string, enabled: boolean): Record<DprSect
       result[s.key] = "empty";
       return;
     }
-    const { errors, warnings, is_complete } = q.data;
+    const { errors, warnings, is_complete, has_data } = q.data;
     if (errors && errors.length > 0) result[s.key] = "error";
     else if (warnings && warnings.length > 0) result[s.key] = "warning";
+    // Optional-and-empty: backend sends has_data=false for optional sections
+    // that have nothing entered. Show a distinct "optional" state so the user
+    // can tell it apart from a completed section.
+    else if (is_complete && has_data === false) result[s.key] = "optional";
     else if (is_complete) result[s.key] = "complete";
     else result[s.key] = "empty";
   });

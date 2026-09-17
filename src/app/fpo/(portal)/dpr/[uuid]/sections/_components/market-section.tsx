@@ -497,8 +497,18 @@ export function MarketSection({ uuid }: { uuid: string }) {
       "No marketing risks specified. Consider identifying at least one for a complete DPR.";
   }
 
+  const LIVE_TRACKED = new Set<string>([
+    "products",
+    "buyers",
+    "channel_selections",
+    "competitors",
+    "demand_basis",
+    "demand_basis_other",
+    "pricing_basis",
+    "pricing_basis_other",
+  ]);
   const err = (name: string): string | undefined =>
-    fieldErrors.get(name) ?? liveErrors[name];
+    LIVE_TRACKED.has(name) ? liveErrors[name] : fieldErrors.get(name);
   const warn = (name: string): string | undefined =>
     fieldWarnings.get(name) ?? liveWarnings[name];
 

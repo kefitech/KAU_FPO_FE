@@ -74,20 +74,31 @@ const MapPinPicker = dynamic(
   },
 );
 
+// Letters (Latin + Malayalam) + spaces + . ' ( ) - only. Rejects digits and
+// special chars like @#$%^&*. Empty string allowed so partial saves work.
+const PLACE_NAME_RE = /^[A-Za-zഀ-ൿ\s.'()\-]*$/;
+const placeName = (label: string, max: number) =>
+  z
+    .string()
+    .max(max, `${label} must be at most ${max} characters.`)
+    .refine((v) => PLACE_NAME_RE.test(v), {
+      message: `${label} may only contain letters, spaces, and . ' ( ) -`,
+    });
+
 const Schema = z.object({
   // Cat A
   state: z.string(),
-  district: z.string(),
-  taluk: z.string(),
-  block_panchayat: z.string(),
+  district: placeName("District", 100),
+  taluk: placeName("Taluk", 100),
+  block_panchayat: placeName("Block Panchayat", 100),
   local_body_type: z.string(),
-  local_body_name: z.string(),
-  village: z.string(),
+  local_body_name: placeName("Local Body Name", 200),
+  village: placeName("Village", 100),
   ward_number: z.string(),
   survey_number: z.string(),
   // Cat B
   project_address: z.string(),
-  landmark: z.string(),
+  landmark: placeName("Landmark", 200),
   pin_code: z.string(),
   latitude: z.union([z.string(), z.number()]).nullable(),
   longitude: z.union([z.string(), z.number()]).nullable(),
@@ -141,7 +152,6 @@ const DECIMAL_KEYS = [
 // All match `apps/database/models/dpr/location.py`. Prevents pastes beyond
 // the column limit from silently 400-ing at save time.
 const MAX_STATE_CHARS = 100;
-const MAX_DISTRICT_CHARS = 100;      // "Other" text input reuses this
 const MAX_TALUK_CHARS = 100;
 const MAX_BLOCK_CHARS = 100;         // "Other" text input reuses this
 const MAX_LOCAL_BODY_NAME_CHARS = 200;
@@ -279,25 +289,15 @@ export function LocationSection({ uuid }: { uuid: string }) {
   });
   const blockOptions = blocksQuery.data ?? [];
 
-  // Explicit "user picked Other" state — we can't rely on the stored value
-  // alone because "" (empty) is ambiguous (could be pre-fill or Other-with-blank).
-  // Also sync from server data: when reloading a saved DPR whose district is
-  // NOT one of the 14, mark Other picked so the text input appears pre-filled.
-  const [districtOtherPicked, setDistrictOtherPicked] = useState(false);
+  // Block "Other" state — value is "" ambiguously means unset OR Other-with-blank.
+  // On reload, if a saved value isn't in the fetched list, mark Other picked.
   const [blockOtherPicked, setBlockOtherPicked] = useState(false);
-
-  const districtIsKnownName = KERALA_DISTRICTS.some((d) => d.name === districtValue);
   const blockIsKnownName = blockOptions.some((b) => b.name === blockValue);
 
-  useEffect(() => {
-    // Reload case: value present but not in the known list → Other
-    if (districtValue && !districtIsKnownName) setDistrictOtherPicked(true);
-  }, [districtValue, districtIsKnownName]);
   useEffect(() => {
     if (blockValue && !blockIsKnownName && blockOptions.length > 0) setBlockOtherPicked(true);
   }, [blockValue, blockIsKnownName, blockOptions.length]);
 
-  const showDistrictOther = districtOtherPicked;
   const showBlockOther = blockOtherPicked;
   const hasFibre = useWatch({ control: form.control, name: "has_fibre" });
   const hasBroadband = useWatch({ control: form.control, name: "has_broadband" });
@@ -368,9 +368,12 @@ export function LocationSection({ uuid }: { uuid: string }) {
   const liveErrors: Record<string, string | undefined> = {};
   if (!String(stateVal).trim()) liveErrors.state = "State is required.";
   if (!String(districtValue).trim()) liveErrors.district = "District is required.";
-  if (!String(localBodyType).trim() || !String(localBodyName).trim()) {
-    liveErrors.local_body_name =
-      "Local Body (Grama Panchayat / Municipality / Corporation) is required.";
+  if (!String(localBodyType).trim()) {
+    liveErrors.local_body_type =
+      "Local Body type (Grama Panchayat / Municipality / Corporation) is required.";
+  }
+  if (!String(localBodyName).trim()) {
+    liveErrors.local_body_name = "Local Body name is required.";
   }
   const hasAddress = String(projectAddress).trim().length > 0;
   const hasCoords = latitude !== null && latitude !== undefined && latitude !== ""
@@ -399,8 +402,19 @@ export function LocationSection({ uuid }: { uuid: string }) {
    * Backend wins when it has a message (covers server-only rules); otherwise
    * fall back to the live rule so the user sees red immediately.
    */
+  const LIVE_TRACKED = new Set<string>([
+    "state",
+    "district",
+    "local_body_type",
+    "local_body_name",
+    "project_address",
+    "land_ownership_types",
+    "land_ownership_other",
+    "site_statuses",
+    "site_status_other",
+  ]);
   const err = (name: string): string | undefined =>
-    fieldErrors.get(name) ?? liveErrors[name];
+    LIVE_TRACKED.has(name) ? liveErrors[name] : fieldErrors.get(name);
 
   const loading = isLoading || ownershipQuery.isLoading || siteStatusQuery.isLoading;
 
@@ -455,41 +469,15 @@ export function LocationSection({ uuid }: { uuid: string }) {
               />
             </F>
             <F label="District *" fieldId="district" error={err("district")}>
-              {/* SearchableSelect — 14 Kerala districts + "Other (specify)"
-                  sentinel option. Type-to-filter is the fastest way to pick
-                  from a long list; the same OTHER sentinel value drives the
-                  reveal of the inline text input below. */}
               <SearchableSelect
-                value={showDistrictOther ? OTHER : districtValue}
+                value={districtValue}
                 onChange={(v) => {
-                  if (v === OTHER) {
-                    setDistrictOtherPicked(true);
-                    form.setValue("district", "", { shouldDirty: true });
-                  } else {
-                    setDistrictOtherPicked(false);
-                    form.setValue("district", v, { shouldDirty: true });
-                  }
-                  // Clear block + reset its Other state when district changes.
-                  setBlockOtherPicked(false);
+                  form.setValue("district", v, { shouldDirty: true });
                   form.setValue("block_panchayat", "", { shouldDirty: true });
                 }}
-                options={[
-                  ...KERALA_DISTRICTS.map((d) => ({ value: d.name, label: d.name })),
-                  { value: OTHER, label: "Other (specify)" },
-                ]}
+                options={KERALA_DISTRICTS.map((d) => ({ value: d.name, label: d.name }))}
                 placeholder="Type to search district…"
               />
-              {showDistrictOther && (
-                <Input
-                  className="mt-2"
-                  placeholder="Enter district name"
-                  value={districtValue}
-                  maxLength={MAX_DISTRICT_CHARS}
-                  onChange={(e) =>
-                    setField("district", e.target.value.slice(0, MAX_DISTRICT_CHARS))
-                  }
-                />
-              )}
             </F>
           </FieldRow>
           <FieldRow>
@@ -500,7 +488,11 @@ export function LocationSection({ uuid }: { uuid: string }) {
                 onChange={(e) => setField("taluk", e.target.value.slice(0, MAX_TALUK_CHARS))}
               />
             </F>
-            <F label="Block Panchayat">
+            <F
+              label="Block Panchayat"
+              fieldId="block_panchayat"
+              error={err("block_panchayat")}
+            >
               {/* Cascaded from district — SearchableSelect with the fetched
                   block list + Other sentinel. Disabled until a district is
                   chosen (blocks are meaningless without district context). */}
@@ -536,7 +528,11 @@ export function LocationSection({ uuid }: { uuid: string }) {
             </F>
           </FieldRow>
           <FieldRow>
-            <F label="Local body type *">
+            <F
+              label="Local body type *"
+              fieldId="local_body_type"
+              error={err("local_body_type")}
+            >
               <Select
                 value={localBodyType}
                 onValueChange={(v) => form.setValue("local_body_type", v, { shouldDirty: true })}
@@ -549,9 +545,6 @@ export function LocationSection({ uuid }: { uuid: string }) {
                 </SelectContent>
               </Select>
             </F>
-            {/* Hide the "required" error the moment the user has typed
-                something — backend readiness would still say required until
-                the next save/refetch cycle, and that stale error is confusing. */}
             <F
               label="Local body name *"
               fieldId="local_body_name"

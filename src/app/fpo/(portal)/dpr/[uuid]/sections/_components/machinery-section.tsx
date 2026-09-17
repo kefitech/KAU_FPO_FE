@@ -315,8 +315,9 @@ export function MachinerySection({ uuid }: { uuid: string }) {
   if (approvals.includes("other") && !String(statutoryOther).trim()) {
     liveErrors.statutory_approvals_other = 'Please specify — "Others" was selected in statutory approvals.';
   }
+  const LIVE_TRACKED = new Set<string>(["statutory_approvals_other"]);
   const err = (name: string): string | undefined =>
-    fieldErrors.get(name) ?? liveErrors[name];
+    LIVE_TRACKED.has(name) ? liveErrors[name] : fieldErrors.get(name);
 
   const loading = isLoading || componentQuery.isLoading || machineryCatQuery.isLoading || unitQuery.isLoading || supportingQuery.isLoading;
 

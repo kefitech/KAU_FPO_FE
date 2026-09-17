@@ -456,8 +456,54 @@ export function SiteSection({ uuid }: { uuid: string }) {
   if (terrain === "other" && !String(terrainOtherWatch).trim()) {
     liveErrors.terrain_other = 'Please specify — "Others" was selected for terrain.';
   }
+  if (waterSources.includes("other") && !String(waterSourceOther).trim()) {
+    liveErrors.water_source_other =
+      'Please specify — "Others" was selected under water sources.';
+  }
+  if (approvals.includes("other") && !String(approvalsOther).trim()) {
+    liveErrors.approvals_other =
+      'Please specify — "Others" was selected under statutory approvals.';
+  }
+  // Free-text expansion fields — reject when the user typed something but
+  // it's only special characters. Blank is fine (all four are optional).
+  // Same rule as the backend `_validate_specify_text` (≥3 letters/digits).
+  const meaningful = (v: string): boolean =>
+    (v.match(/[\p{L}\p{N}_]/gu) ?? []).length >= 3;
+  if (hasExpansion) {
+    const ala = String(additionalLandAvailable).trim();
+    if (ala && !meaningful(ala)) {
+      liveErrors.additional_land_available =
+        "Please enter a valid value (at least 3 letters or digits).";
+    }
+    const are = String(areaReservedForExpansion).trim();
+    if (are && !meaningful(are)) {
+      liveErrors.area_reserved_for_expansion =
+        "Please enter a valid value (at least 3 letters or digits).";
+    }
+    const fbp = String(futureBuildingsPlanned).trim();
+    if (fbp && !meaningful(fbp)) {
+      liveErrors.future_buildings_planned =
+        "Please enter a valid description (at least 3 letters or digits).";
+    }
+    const uef = String(utilityExpansionFeasibility).trim();
+    if (uef && !meaningful(uef)) {
+      liveErrors.utility_expansion_feasibility =
+        "Please enter a valid description (at least 3 letters or digits).";
+    }
+  }
+  const LIVE_TRACKED = new Set<string>([
+    "parcels",
+    "terrain",
+    "terrain_other",
+    "water_source_other",
+    "approvals_other",
+    "additional_land_available",
+    "area_reserved_for_expansion",
+    "future_buildings_planned",
+    "utility_expansion_feasibility",
+  ]);
   const err = (name: string): string | undefined =>
-    fieldErrors.get(name) ?? liveErrors[name];
+    LIVE_TRACKED.has(name) ? liveErrors[name] : fieldErrors.get(name);
 
   const loading = isLoading || unitQuery.isLoading || ownershipQuery.isLoading;
 
@@ -794,7 +840,10 @@ export function SiteSection({ uuid }: { uuid: string }) {
                 <SearchableSelect value={row.infrastructure_type} options={INFRA_TYPES} onChange={(v: string) => set("infrastructure_type", v)} placeholder="Type to search…" />
               </ModalField>
               {row.infrastructure_type === "other" && (
-                <ModalField label="Please specify (Others)">
+                <ModalField
+                  label="Please specify (Others) *"
+                  error={validateInfra(row).infrastructure_type_other}
+                >
                   <Input
                     value={row.infrastructure_type_other}
                     maxLength={MAX_OTHER_TEXT_CHARS}
@@ -923,16 +972,24 @@ export function SiteSection({ uuid }: { uuid: string }) {
                 </label>
               ))}
             </div>
-            {waterSources.includes("other") && (
-              <div className="mt-2 space-y-1.5">
-                <Label className="text-xs">Please specify (Others)</Label>
-                <Input
-                  value={waterSourceOther as string}
-                  maxLength={MAX_OTHER_TEXT_CHARS}
-                  onChange={(e) => setField("water_source_other", e.target.value.slice(0, MAX_OTHER_TEXT_CHARS))}
-                />
-              </div>
-            )}
+            {waterSources.includes("other") && (() => {
+              const wsErr = err("water_source_other");
+              return (
+                <div id="dpr-field-water_source_other" className="mt-2 space-y-1.5">
+                  <Label className={`text-xs ${wsErr ? "text-destructive" : ""}`}>
+                    Please specify (Others) <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    value={waterSourceOther as string}
+                    maxLength={MAX_OTHER_TEXT_CHARS}
+                    aria-invalid={Boolean(wsErr)}
+                    className={wsErr ? "border-destructive" : undefined}
+                    onChange={(e) => setField("water_source_other", e.target.value.slice(0, MAX_OTHER_TEXT_CHARS))}
+                  />
+                  {wsErr && <p className="text-xs text-destructive">{wsErr}</p>}
+                </div>
+              );
+            })()}
           </div>
           <div>
             <Label>Internet (check all applicable)</Label>
@@ -966,16 +1023,24 @@ export function SiteSection({ uuid }: { uuid: string }) {
               </label>
             ))}
           </div>
-          {approvals.includes("other") && (
-            <div className="space-y-1.5">
-              <Label className="text-xs">Please specify (Others)</Label>
-              <Input
-                value={approvalsOther as string}
-                maxLength={MAX_APPROVALS_OTHER_CHARS}
-                onChange={(e) => setField("approvals_other", e.target.value.slice(0, MAX_APPROVALS_OTHER_CHARS))}
-              />
-            </div>
-          )}
+          {approvals.includes("other") && (() => {
+            const aoErr = err("approvals_other");
+            return (
+              <div id="dpr-field-approvals_other" className="space-y-1.5">
+                <Label className={`text-xs ${aoErr ? "text-destructive" : ""}`}>
+                  Please specify (Others) <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  value={approvalsOther as string}
+                  maxLength={MAX_APPROVALS_OTHER_CHARS}
+                  aria-invalid={Boolean(aoErr)}
+                  className={aoErr ? "border-destructive" : undefined}
+                  onChange={(e) => setField("approvals_other", e.target.value.slice(0, MAX_APPROVALS_OTHER_CHARS))}
+                />
+                {aoErr && <p className="text-xs text-destructive">{aoErr}</p>}
+              </div>
+            );
+          })()}
           <div className="space-y-1.5">
             <Label className="text-xs">Remarks regarding pending approvals</Label>
             <CountedTextarea
@@ -997,43 +1062,73 @@ export function SiteSection({ uuid }: { uuid: string }) {
           {hasExpansion && (
             <div className="space-y-3 border-l-2 border-primary/30 pl-4">
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Additional land available</Label>
-                  <Input
-                    value={additionalLandAvailable as string}
-                    maxLength={MAX_TEXT_CHARS}
-                    placeholder="e.g. ~0.25 acre adjacent"
-                    onChange={(e) => setField("additional_land_available", e.target.value.slice(0, MAX_TEXT_CHARS))}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Area reserved for expansion</Label>
-                  <Input
-                    value={areaReservedForExpansion as string}
-                    maxLength={MAX_TEXT_CHARS}
-                    placeholder="e.g. 0.15 acre within existing plot"
-                    onChange={(e) => setField("area_reserved_for_expansion", e.target.value.slice(0, MAX_TEXT_CHARS))}
-                  />
-                </div>
+                {(() => {
+                  const alaErr = err("additional_land_available");
+                  return (
+                    <div id="dpr-field-additional_land_available" className="space-y-1.5">
+                      <Label className={`text-xs ${alaErr ? "text-destructive" : ""}`}>Additional land available</Label>
+                      <Input
+                        value={additionalLandAvailable as string}
+                        maxLength={MAX_TEXT_CHARS}
+                        placeholder="e.g. ~0.25 acre adjacent"
+                        aria-invalid={Boolean(alaErr)}
+                        className={alaErr ? "border-destructive" : undefined}
+                        onChange={(e) => setField("additional_land_available", e.target.value.slice(0, MAX_TEXT_CHARS))}
+                      />
+                      {alaErr && <p className="text-xs text-destructive">{alaErr}</p>}
+                    </div>
+                  );
+                })()}
+                {(() => {
+                  const areErr = err("area_reserved_for_expansion");
+                  return (
+                    <div id="dpr-field-area_reserved_for_expansion" className="space-y-1.5">
+                      <Label className={`text-xs ${areErr ? "text-destructive" : ""}`}>Area reserved for expansion</Label>
+                      <Input
+                        value={areaReservedForExpansion as string}
+                        maxLength={MAX_TEXT_CHARS}
+                        placeholder="e.g. 0.15 acre within existing plot"
+                        aria-invalid={Boolean(areErr)}
+                        className={areErr ? "border-destructive" : undefined}
+                        onChange={(e) => setField("area_reserved_for_expansion", e.target.value.slice(0, MAX_TEXT_CHARS))}
+                      />
+                      {areErr && <p className="text-xs text-destructive">{areErr}</p>}
+                    </div>
+                  );
+                })()}
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Future buildings planned</Label>
-                <CountedTextarea
-                  rows={2}
-                  maxChars={MAX_LONG_TEXT_CHARS}
-                  value={futureBuildingsPlanned as string}
-                  onChange={(v) => setField("future_buildings_planned", v)}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Utility expansion feasibility</Label>
-                <CountedTextarea
-                  rows={2}
-                  maxChars={MAX_LONG_TEXT_CHARS}
-                  value={utilityExpansionFeasibility as string}
-                  onChange={(v) => setField("utility_expansion_feasibility", v)}
-                />
-              </div>
+              {(() => {
+                const fbpErr = err("future_buildings_planned");
+                return (
+                  <div id="dpr-field-future_buildings_planned" className="space-y-1.5">
+                    <Label className={`text-xs ${fbpErr ? "text-destructive" : ""}`}>Future buildings planned</Label>
+                    <CountedTextarea
+                      rows={2}
+                      maxChars={MAX_LONG_TEXT_CHARS}
+                      value={futureBuildingsPlanned as string}
+                      onChange={(v) => setField("future_buildings_planned", v)}
+                      error={Boolean(fbpErr)}
+                    />
+                    {fbpErr && <p className="text-xs text-destructive">{fbpErr}</p>}
+                  </div>
+                );
+              })()}
+              {(() => {
+                const uefErr = err("utility_expansion_feasibility");
+                return (
+                  <div id="dpr-field-utility_expansion_feasibility" className="space-y-1.5">
+                    <Label className={`text-xs ${uefErr ? "text-destructive" : ""}`}>Utility expansion feasibility</Label>
+                    <CountedTextarea
+                      rows={2}
+                      maxChars={MAX_LONG_TEXT_CHARS}
+                      value={utilityExpansionFeasibility as string}
+                      onChange={(v) => setField("utility_expansion_feasibility", v)}
+                      error={Boolean(uefErr)}
+                    />
+                    {uefErr && <p className="text-xs text-destructive">{uefErr}</p>}
+                  </div>
+                );
+              })()}
             </div>
           )}
         </CardContent></Card>

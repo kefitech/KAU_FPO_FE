@@ -367,8 +367,25 @@ export function CapacitySection({ uuid }: { uuid: string }) {
     }
   }
 
+  // Fields we run a live-check on. For these, the live check is authoritative
+  // — its absence means the field passes RIGHT NOW, so we suppress any stale
+  // readiness error that predates the user's edit. Fields NOT tracked here
+  // fall back to the readiness error as usual.
+  const LIVE_TRACKED = new Set<string>([
+    "installed_capacity",
+    "capacity_unit",
+    "capacity_basis",
+    "process_description",
+    "process_type",
+    "automation_level",
+    "production_loss_pct",
+    "loss_source_other",
+    "expected_year_of_expansion",
+    "expansion_nature",
+    "expansion_nature_other",
+  ]);
   const err = (name: string): string | undefined =>
-    fieldErrors.get(name) ?? liveErrors[name];
+    LIVE_TRACKED.has(name) ? liveErrors[name] : fieldErrors.get(name);
 
   const pdCharCount = String(processDescription).length;
 
@@ -418,7 +435,7 @@ export function CapacitySection({ uuid }: { uuid: string }) {
         {/* A. Production Capacity */}
         <SubCard title="A. Production Capacity">
           <FieldRow>
-            <F label="Installed capacity *" name="installed_capacity" fieldId="installed_capacity" errors={fieldErrors} warnings={fieldWarnings} liveError={liveErrors.installed_capacity}>
+            <F label="Installed capacity *" name="installed_capacity" fieldId="installed_capacity" errors={fieldErrors} warnings={fieldWarnings} liveError={liveErrors.installed_capacity} liveTracked>
               {/* Decimal(18, 3) — normaliser strips non-numeric, enforces
                   3 decimals, clips at MAX_INSTALLED_CAPACITY. Backend
                   requires > 0; empty is allowed here (live check catches
@@ -456,7 +473,7 @@ export function CapacitySection({ uuid }: { uuid: string }) {
             </F>
           </FieldRow>
           <FieldRow>
-            <F label="Capacity unit *" name="capacity_unit" fieldId="capacity_unit" errors={fieldErrors} warnings={fieldWarnings}>
+            <F label="Capacity unit *" name="capacity_unit" fieldId="capacity_unit" errors={fieldErrors} warnings={fieldWarnings} liveError={liveErrors.capacity_unit} liveTracked>
               <MasterSearchableSelect
                 value={capacityUnit}
                 options={unitQuery.data ?? []}
@@ -464,7 +481,7 @@ export function CapacitySection({ uuid }: { uuid: string }) {
                 placeholder="Type to search unit…"
               />
             </F>
-            <F label="Capacity basis *" name="capacity_basis" fieldId="capacity_basis" errors={fieldErrors} warnings={fieldWarnings}>
+            <F label="Capacity basis *" name="capacity_basis" fieldId="capacity_basis" errors={fieldErrors} warnings={fieldWarnings} liveError={liveErrors.capacity_basis} liveTracked>
               <MasterSearchableSelect
                 value={capacityBasis}
                 options={basisQuery.data ?? []}
@@ -622,14 +639,14 @@ export function CapacitySection({ uuid }: { uuid: string }) {
             )}
           </div>
           <FieldRow>
-            <F label="Process type *" name="process_type" fieldId="process_type" errors={fieldErrors} warnings={fieldWarnings} liveError={liveErrors.process_type}>
+            <F label="Process type *" name="process_type" fieldId="process_type" errors={fieldErrors} warnings={fieldWarnings} liveError={liveErrors.process_type} liveTracked>
               <ChoiceSelect
                 value={processType}
                 options={PROCESS_TYPES}
                 onChange={(v) => setField("process_type", v)}
               />
             </F>
-            <F label="Automation level *" name="automation_level" fieldId="automation_level" errors={fieldErrors} warnings={fieldWarnings} liveError={liveErrors.automation_level}>
+            <F label="Automation level *" name="automation_level" fieldId="automation_level" errors={fieldErrors} warnings={fieldWarnings} liveError={liveErrors.automation_level} liveTracked>
               <ChoiceSelect
                 value={automationLevel}
                 options={AUTOMATION_LEVELS}
@@ -670,7 +687,7 @@ export function CapacitySection({ uuid }: { uuid: string }) {
           {hasLoss && (
             <div className="space-y-4 border-l-2 border-primary/30 pl-4">
               <FieldRow>
-                <F label="Estimated overall production loss (%) *" name="production_loss_pct" fieldId="production_loss_pct" errors={fieldErrors} warnings={fieldWarnings} liveError={liveErrors.production_loss_pct}>
+                <F label="Estimated overall production loss (%) *" name="production_loss_pct" fieldId="production_loss_pct" errors={fieldErrors} warnings={fieldWarnings} liveError={liveErrors.production_loss_pct} liveTracked>
                   <Input
                     type="text"
                     inputMode="decimal"
@@ -751,7 +768,7 @@ export function CapacitySection({ uuid }: { uuid: string }) {
                 </div>
               </div>
               {lossSources.includes("other") && (
-                <F label="Please specify (Others) *" name="loss_source_other" fieldId="loss_source_other" errors={fieldErrors} warnings={fieldWarnings} liveError={liveErrors.loss_source_other}>
+                <F label="Please specify (Others) *" name="loss_source_other" fieldId="loss_source_other" errors={fieldErrors} warnings={fieldWarnings} liveError={liveErrors.loss_source_other} liveTracked>
                   <Input
                     value={lossSourceOther as string}
                     maxLength={MAX_OTHER_TEXT_CHARS}
@@ -769,7 +786,7 @@ export function CapacitySection({ uuid }: { uuid: string }) {
         {hasExpansion && (
           <SubCard title="E. Future Expansion">
             <FieldRow>
-              <F label="Expected year of expansion *" name="expected_year_of_expansion" fieldId="expected_year_of_expansion" errors={fieldErrors} warnings={fieldWarnings}>
+              <F label="Expected year of expansion *" name="expected_year_of_expansion" fieldId="expected_year_of_expansion" errors={fieldErrors} warnings={fieldWarnings} liveError={liveErrors.expected_year_of_expansion} liveTracked>
                 {/* Searchable dropdown of current year + 1 through +15 — same
                     type-to-search + selection-chip pattern as the master
                     dropdowns elsewhere in the wizard. */}
@@ -780,7 +797,7 @@ export function CapacitySection({ uuid }: { uuid: string }) {
                   placeholder="Type or pick a year…"
                 />
               </F>
-              <F label="Nature of expansion" name="expansion_nature" fieldId="expansion_nature" errors={fieldErrors} warnings={fieldWarnings}>
+              <F label="Nature of expansion" name="expansion_nature" fieldId="expansion_nature" errors={fieldErrors} warnings={fieldWarnings} liveError={liveErrors.expansion_nature} liveTracked>
                 <ChoiceSelect
                   value={expansionNature}
                   options={EXPANSION_NATURES}
@@ -789,7 +806,7 @@ export function CapacitySection({ uuid }: { uuid: string }) {
               </F>
             </FieldRow>
             {expansionNature === "other" && (
-              <F label="Please specify (Others) *" name="expansion_nature_other" fieldId="expansion_nature_other" errors={fieldErrors} warnings={fieldWarnings} liveError={liveErrors.expansion_nature_other}>
+              <F label="Please specify (Others) *" name="expansion_nature_other" fieldId="expansion_nature_other" errors={fieldErrors} warnings={fieldWarnings} liveError={liveErrors.expansion_nature_other} liveTracked>
                 <Input
                   value={expansionNatureOther as string}
                   maxLength={MAX_OTHER_TEXT_CHARS}
@@ -884,6 +901,7 @@ function F({
   children,
   fieldId,
   liveError,
+  liveTracked = false,
 }: {
   label: string;
   name?: string;
@@ -897,14 +915,20 @@ function F({
    */
   fieldId?: string;
   /**
-   * Client-side live rule message. Backend `FieldError` takes priority
-   * when present (server-only rules); otherwise this string fires so the
-   * user sees red immediately without waiting for autosave + readiness.
+   * Client-side live rule message. When `liveTracked` (default: true), the
+   * live check is authoritative — its absence means the field passes RIGHT
+   * NOW, so any stale readiness error is suppressed. Pass `liveTracked={false}`
+   * for fields that have no live rule so the backend readiness error still
+   * shows through as a fallback.
    */
   liveError?: string;
+  liveTracked?: boolean;
 }) {
   const backendErr = name ? errors?.get(name) : undefined;
-  const hasAnyErr = Boolean(backendErr || liveError);
+  // If the field IS live-tracked, live wins entirely. Otherwise, fall back
+  // to the backend/readiness error as before.
+  const effectiveErr = liveTracked ? liveError : (backendErr ?? liveError);
+  const hasAnyErr = Boolean(effectiveErr);
   return (
     <div
       id={fieldId ? `dpr-field-${fieldId}` : undefined}
@@ -912,12 +936,12 @@ function F({
     >
       <Label className={hasAnyErr ? "text-destructive" : undefined}>{label}</Label>
       {children}
-      {backendErr ? (
-        name && errors && <FieldError name={name} errors={errors} warnings={warnings} />
-      ) : liveError ? (
-        <p className="mt-1 text-xs text-destructive">{liveError}</p>
+      {effectiveErr ? (
+        <p className="mt-1 text-xs text-destructive">{effectiveErr}</p>
       ) : (
-        name && errors && <FieldError name={name} errors={errors} warnings={warnings} />
+        !liveTracked && name && errors && (
+          <FieldError name={name} errors={errors} warnings={warnings} />
+        )
       )}
     </div>
   );

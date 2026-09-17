@@ -100,6 +100,13 @@ export function useDprSectionForm<T extends FieldValues>({
   const [isDirty, setIsDirty] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [saveError, setSaveError] = useState<Error | null>(null);
+  // Field-level errors from the LAST failed save (400 payload). Merged into
+  // the readiness fieldErrors below so inline messages appear next to the
+  // offending input, not just in the toast. Cleared on any successful save
+  // or before a fresh mutate attempt.
+  const [saveFieldErrors, setSaveFieldErrors] = useState<Map<string, string>>(
+    new Map(),
+  );
 
   const query = useQuery({
     queryKey: ["dpr-section", uuid, sectionKey],
@@ -153,6 +160,7 @@ export function useDprSectionForm<T extends FieldValues>({
     onMutate: () => {
       markSaving(sectionKey);
       setSaveError(null);
+      setSaveFieldErrors(new Map());
     },
     onSuccess: (data) => {
       markSaved(sectionKey);
@@ -175,6 +183,7 @@ export function useDprSectionForm<T extends FieldValues>({
       setIsDirty(false);
       setLastSavedAt(new Date());
       setSaveError(null);
+      setSaveFieldErrors(new Map());
       // Only toast on explicit Save clicks — autosaves are silent by design
       // so the tester doesn't get spammed every 5s while typing.
       if (isExplicitSaveRef.current) {
@@ -196,10 +205,40 @@ export function useDprSectionForm<T extends FieldValues>({
       // toast.error() which renders "[object Object]" or silently drops it.
       // Flatten to a readable multi-line string so the user actually sees
       // WHY the save failed.
-      const axiosErr = err as { response?: { data?: { message?: string | Record<string, unknown>; errors?: unknown } } };
-      const rawMsg = axiosErr?.response?.data?.message;
-      const displayMsg = flattenBackendMessage(rawMsg) || "Failed to save. Please try again.";
+      // The axios interceptor rewrites rejected requests to
+      // `{ message, status, data }` — `data` holds the full DRF body
+      // ({ status, message, code, errors }). We also handle the raw
+      // AxiosError shape (`response.data`) as a fallback in case the
+      // interceptor is bypassed for some future request.
+      const errObj = err as {
+        message?: string | Record<string, unknown>;
+        data?: { message?: string | Record<string, unknown>; errors?: unknown };
+        response?: { data?: { message?: string | Record<string, unknown>; errors?: unknown } };
+      };
+      const rawMsg =
+        errObj?.data?.message ??
+        errObj?.response?.data?.message ??
+        errObj?.message;
+      const errorsObj =
+        errObj?.data?.errors ??
+        errObj?.response?.data?.errors;
+      const displayMsg =
+        flattenBackendMessage(errorsObj ?? rawMsg) ||
+        "Failed to save. Please try again.";
       toast.error(displayMsg);
+      // Extract per-field messages for inline display. Handles both shapes:
+      //   { block_panchayat: ["msg"] }               (DRF field-errors dict)
+      //   { block_panchayat: "msg" }                 (already flattened)
+      const fieldMap = new Map<string, string>();
+      const source = (errorsObj ?? rawMsg) as unknown;
+      if (source && typeof source === "object" && !Array.isArray(source)) {
+        for (const [field, value] of Object.entries(source as Record<string, unknown>)) {
+          if (field === "non_field_errors" || field === "detail") continue;
+          const text = Array.isArray(value) ? value.join(" · ") : String(value);
+          if (text) fieldMap.set(field, text);
+        }
+      }
+      setSaveFieldErrors(fieldMap);
       isExplicitSaveRef.current = false;
     },
   });
@@ -287,8 +326,15 @@ export function useDprSectionForm<T extends FieldValues>({
   // Field-level backend validation errors — sections can display these inline
   // via <FieldError name="X" errors={fieldErrors} warnings={fieldWarnings} />.
   // Uses the same query key as ReadinessPanel — React Query dedupes the fetch.
-  const { errors: fieldErrors, warnings: fieldWarnings } =
+  const { errors: readinessErrors, warnings: fieldWarnings } =
     useReadinessErrorsByField(uuid, sectionKey);
+
+  // Merge the last save's field errors on top of the readiness errors so a
+  // failed save's inline messages appear immediately, even before the
+  // readiness endpoint refetches. Save errors win on conflict — they reflect
+  // what the user just tried to send.
+  const fieldErrors = new Map<string, string>(readinessErrors);
+  for (const [k, v] of saveFieldErrors.entries()) fieldErrors.set(k, v);
 
   return {
     form,

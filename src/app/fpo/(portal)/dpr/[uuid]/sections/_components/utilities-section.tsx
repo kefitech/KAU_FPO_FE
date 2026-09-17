@@ -200,11 +200,38 @@ function toInt(v: string | number | null): number | null {
 }
 
 // ── Per-row validators (mirror utilities_validators.py) ──────────────────
+// Reject text that's only special characters — non-empty inputs must contain
+// ≥3 letters/digits. Same rule as backend `_validate_specify_text`.
+const _meaningful = (v: string): boolean =>
+  (v.match(/[\p{L}\p{N}_]/gu) ?? []).length >= 3;
 
-type FuelErrors = Partial<Record<"fuel", string>>;
+type FuelErrors = Partial<
+  Record<
+    "fuel" | "fuel_other" | "purpose" | "daily_consumption" | "annual_consumption",
+    string
+  >
+>;
 function validateFuel(row: Fuel): FuelErrors {
   const e: FuelErrors = {};
   if (!row.fuel) e.fuel = "Fuel type is required.";
+  const fo = (row.fuel_other ?? "").trim();
+  if (fo && !_meaningful(fo)) {
+    e.fuel_other = "Please enter a valid fuel name (at least 3 letters or digits).";
+  }
+  const p = (row.purpose ?? "").trim();
+  if (p && !_meaningful(p)) {
+    e.purpose = "Please enter a valid purpose (at least 3 letters or digits).";
+  }
+  const dc = (row.daily_consumption ?? "").trim();
+  if (dc && !_meaningful(dc)) {
+    e.daily_consumption =
+      "Please enter a valid daily consumption (e.g. '20 L/day').";
+  }
+  const ac = (row.annual_consumption ?? "").trim();
+  if (ac && !_meaningful(ac)) {
+    e.annual_consumption =
+      "Please enter a valid annual consumption (e.g. '7300 L/yr').";
+  }
   return e;
 }
 
@@ -218,17 +245,44 @@ function validateWaste(row: Waste): WasteErrors {
   return e;
 }
 
-type RenewableErrors = Partial<Record<"initiative", string>>;
+type RenewableErrors = Partial<
+  Record<"initiative" | "initiative_other" | "capacity", string>
+>;
 function validateRenewable(row: Renewable): RenewableErrors {
   const e: RenewableErrors = {};
   if (!row.initiative) e.initiative = "Initiative is required.";
+  const io = (row.initiative_other ?? "").trim();
+  if (io && !_meaningful(io)) {
+    e.initiative_other =
+      "Please enter a valid description (at least 3 letters or digits).";
+  }
+  const cap = (row.capacity ?? "").trim();
+  if (cap && !_meaningful(cap)) {
+    e.capacity =
+      "Please enter a valid capacity (at least 3 letters or digits, e.g. '5 kW').";
+  }
   return e;
 }
 
-type ProcessErrors = Partial<Record<"utility_type", string>>;
+type ProcessErrors = Partial<
+  Record<"utility_type" | "purpose" | "capacity" | "source", string>
+>;
 function validateProcess(row: Process): ProcessErrors {
   const e: ProcessErrors = {};
   if (!row.utility_type) e.utility_type = "Utility type is required.";
+  const p = (row.purpose ?? "").trim();
+  if (p && !_meaningful(p)) {
+    e.purpose = "Please enter a valid purpose (at least 3 letters or digits).";
+  }
+  const c = (row.capacity ?? "").trim();
+  if (c && !_meaningful(c)) {
+    e.capacity = "Please enter a valid capacity (at least 3 letters or digits).";
+  }
+  const s = (row.source ?? "").trim();
+  if (s && !_meaningful(s)) {
+    e.source =
+      "Please enter a valid source (at least 3 letters or digits, e.g. 'LPG bottled').";
+  }
   return e;
 }
 
@@ -367,8 +421,15 @@ export function UtilitiesSection({ uuid }: { uuid: string }) {
   if (fireSafety.includes("other") && !String(fireSafetyOther).trim()) {
     liveErrors.fire_safety_other = 'Please specify — "Others" in fire & safety.';
   }
+  const LIVE_TRACKED = new Set<string>([
+    "electricity_supply_type",
+    "water_source",
+    "water_source_other",
+    "communication_other",
+    "fire_safety_other",
+  ]);
   const err = (name: string): string | undefined =>
-    fieldErrors.get(name) ?? liveErrors[name];
+    LIVE_TRACKED.has(name) ? liveErrors[name] : fieldErrors.get(name);
 
   const loading = isLoading || fuelQuery.isLoading || wasteQuery.isLoading || renewableQuery.isLoading;
 
@@ -622,7 +683,7 @@ export function UtilitiesSection({ uuid }: { uuid: string }) {
                   />
                 </ModalField>
                 {isOtherFuel && (
-                  <ModalField label="Please specify (Others)">
+                  <ModalField label="Please specify (Others) *" error={fErr.fuel_other}>
                     <Input
                       value={row.fuel_other}
                       maxLength={MAX_OTHER_TEXT_CHARS}
@@ -630,7 +691,7 @@ export function UtilitiesSection({ uuid }: { uuid: string }) {
                     />
                   </ModalField>
                 )}
-                <ModalField label="Purpose">
+                <ModalField label="Purpose" error={fErr.purpose}>
                   <Input
                     value={row.purpose}
                     maxLength={MAX_PURPOSE_CHARS}
@@ -638,17 +699,19 @@ export function UtilitiesSection({ uuid }: { uuid: string }) {
                   />
                 </ModalField>
                 <ModalRow>
-                  <ModalField label="Daily consumption">
+                  <ModalField label="Daily consumption" error={fErr.daily_consumption}>
                     <Input
                       value={row.daily_consumption}
                       maxLength={MAX_TEXT_CHARS}
+                      placeholder="e.g. 20 L/day"
                       onChange={(e) => set("daily_consumption", e.target.value.slice(0, MAX_TEXT_CHARS))}
                     />
                   </ModalField>
-                  <ModalField label="Annual consumption">
+                  <ModalField label="Annual consumption" error={fErr.annual_consumption}>
                     <Input
                       value={row.annual_consumption}
                       maxLength={MAX_TEXT_CHARS}
+                      placeholder="e.g. 7300 L/yr"
                       onChange={(e) => set("annual_consumption", e.target.value.slice(0, MAX_TEXT_CHARS))}
                     />
                   </ModalField>
@@ -729,7 +792,7 @@ export function UtilitiesSection({ uuid }: { uuid: string }) {
                     placeholder="Type to search…"
                   />
                 </ModalField>
-                <ModalField label="Purpose">
+                <ModalField label="Purpose" error={pErr.purpose}>
                   <Input
                     value={row.purpose}
                     maxLength={MAX_PURPOSE_CHARS}
@@ -737,17 +800,18 @@ export function UtilitiesSection({ uuid }: { uuid: string }) {
                   />
                 </ModalField>
                 <ModalRow>
-                  <ModalField label="Capacity">
+                  <ModalField label="Capacity" error={pErr.capacity}>
                     <Input
                       value={row.capacity}
                       maxLength={MAX_TEXT_CHARS}
                       onChange={(e) => set("capacity", e.target.value.slice(0, MAX_TEXT_CHARS))}
                     />
                   </ModalField>
-                  <ModalField label="Source">
+                  <ModalField label="Source" error={pErr.source}>
                     <Input
                       value={row.source}
                       maxLength={MAX_TEXT_CHARS}
+                      placeholder="e.g. LPG bottled"
                       onChange={(e) => set("source", e.target.value.slice(0, MAX_TEXT_CHARS))}
                     />
                   </ModalField>
@@ -959,7 +1023,10 @@ export function UtilitiesSection({ uuid }: { uuid: string }) {
                   />
                 </ModalField>
                 {isOtherInit && (
-                  <ModalField label="Please specify (Others)">
+                  <ModalField
+                    label="Please specify (Others) *"
+                    error={rErr.initiative_other}
+                  >
                     <Input
                       value={row.initiative_other}
                       maxLength={MAX_OTHER_TEXT_CHARS}
@@ -967,10 +1034,11 @@ export function UtilitiesSection({ uuid }: { uuid: string }) {
                     />
                   </ModalField>
                 )}
-                <ModalField label="Capacity">
+                <ModalField label="Capacity" error={rErr.capacity}>
                   <Input
                     value={row.capacity}
                     maxLength={MAX_TEXT_CHARS}
+                    placeholder="e.g. 5 kW"
                     onChange={(e) => set("capacity", e.target.value.slice(0, MAX_TEXT_CHARS))}
                   />
                 </ModalField>

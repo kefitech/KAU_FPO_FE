@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Copy, Info, Loader2 } from "lucide-react";
+import { ArrowRight, Copy, Info, Loader2, PackagePlus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useWatch } from "react-hook-form";
@@ -12,20 +12,31 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useDprSectionForm } from "@/hooks/use-dpr-section-form";
 import { dprApi } from "@/lib/api/dpr";
+import { dprMasterApi } from "@/lib/api/dpr-master";
 import { dprTranchesApi } from "@/lib/api/dpr-tranches";
 
 import { CountedTextarea } from "./counted-textarea";
 import { normaliseDecimalInput, normaliseIntegerInput } from "./dpr-input-normalisers";
 import { LabelWithBadge } from "./label-with-badge";
 import {
+  MasterSearchableSelect,
   ModalField,
   ModalRow,
   NestedListCard,
+  type NestedListHandle,
 } from "./nested-list";
 import { SectionHelp } from "./section-help";
 import { SectionShell } from "./section-shell";
@@ -356,6 +367,7 @@ const RevenueSchema = z.object({
   order: z.number(),
   product_name: z.string(),
   year1_sales_quantity: decimalNullable,
+  year1_sales_unit: z.number().nullable(),
   expected_selling_price: decimalNullable,
   expected_annual_growth_rate_pct: decimalNullable,
   annual_sales_revenue: decimalNullable,
@@ -590,6 +602,132 @@ function buildDefaults(): Data {
   };
 }
 
+// ── Import-from-products picker ─────────────────────────────────────────
+// Reads §2.3.5 Products & Services from the SAME project and lets the user
+// build a Revenue Assumption row without retyping product name / unit / price.
+
+interface DprProductRow {
+  id?: number;
+  name?: string;
+  unit_of_measurement?: number | null;
+  selling_price_per_unit?: string | number | null;
+  annual_quantity?: string | number | null;
+  image?: string | null;
+}
+interface DprProductsSection {
+  items?: DprProductRow[];
+  [key: string]: unknown;
+}
+
+function ImportRevenueFromProductsButton({
+  uuid,
+  onImported,
+}: {
+  uuid: string;
+  onImported: (row: DprProductRow) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const productsQ = useQuery({
+    queryKey: ["dpr-section", uuid, "products", "revenue-picker"],
+    queryFn: () => dprApi.getSection<DprProductsSection>(uuid, "products"),
+    enabled: open,
+    staleTime: 30_000,
+  });
+  const items = productsQ.data?.items ?? [];
+  const q = search.trim().toLowerCase();
+  const filtered = q
+    ? items.filter((p) => (p.name ?? "").toLowerCase().includes(q))
+    : items;
+
+  return (
+    <>
+      <div className="mb-3 flex justify-end">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setOpen(true)}
+        >
+          <PackagePlus className="mr-1.5 h-3.5 w-3.5" />
+          Import from products
+        </Button>
+      </div>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Import from Products & Services</DialogTitle>
+            <DialogDescription>
+              Pick a product from this project's §2.3.5 Products & Services list.
+              Name, unit, quantity and selling price are pre-filled — you can
+              adjust and add growth rate next.
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            placeholder="Search products…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            autoFocus
+          />
+          <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
+            {productsQ.isLoading && (
+              <p className="text-sm text-muted-foreground">Loading…</p>
+            )}
+            {!productsQ.isLoading && filtered.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                {q
+                  ? "No products match that search."
+                  : "No products added yet. Fill in §2.3.5 Products & Services first."}
+              </p>
+            )}
+            {filtered.map((p, i) => (
+              <button
+                key={p.id ?? i}
+                type="button"
+                onClick={() => {
+                  onImported(p);
+                  setOpen(false);
+                }}
+                className="flex w-full items-center gap-3 rounded border p-2 text-left hover:bg-muted"
+              >
+                {p.image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={p.image}
+                    alt=""
+                    className="h-12 w-12 rounded object-cover"
+                  />
+                ) : (
+                  <div className="flex h-12 w-12 items-center justify-center rounded bg-muted text-[10px] text-muted-foreground">
+                    No photo
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{p.name || "(unnamed)"}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {p.selling_price_per_unit != null
+                      ? `₹${p.selling_price_per_unit}`
+                      : "—"}
+                    {p.annual_quantity != null
+                      ? ` · qty ${p.annual_quantity}`
+                      : ""}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 // ── Section component ─────────────────────────────────────────────────────
 
 export function FinanceSection({ uuid }: { uuid: string }) {
@@ -604,6 +742,19 @@ export function FinanceSection({ uuid }: { uuid: string }) {
   // Source hints — reads Civil/Machinery/HR to compute per-line source sums,
   // and Investment for the top-line comparison panel.
   const { sources: sourceHints, investmentEstimate, investmentBasis } = useFinanceSourceHints(uuid);
+
+  // Capacity-unit master — reused for the Year-1 sales quantity unit picker
+  // on the Revenue Assumption modal. Cached 24h; same list Products, Machinery
+  // etc. pull from.
+  const unitQuery = useQuery({
+    queryKey: ["dpr-master", "capacity-units"],
+    queryFn: () => dprMasterApi.list("capacity-units"),
+    staleTime: 24 * 60 * 60 * 1000,
+  });
+
+  // Ref exposed by the Revenue Assumptions NestedListCard — used to pop open
+  // the edit modal on the row we just appended via Import-from-products.
+  const revenueNestedRef = useRef<NestedListHandle>(null);
 
   // useWatch — reactive subscriptions (form.watch is stale after form.reset).
   const revenue = useWatch({ control: form.control, name: "revenue_assumptions" }) ?? [];
@@ -1053,14 +1204,51 @@ export function FinanceSection({ uuid }: { uuid: string }) {
 
         {/* E. Revenue Assumptions — id enables readiness-panel deep-link scroll */}
         <div id="dpr-field-revenue_assumptions" />
+        <ImportRevenueFromProductsButton
+          uuid={uuid}
+          onImported={(p) => {
+            const current = form.getValues("revenue_assumptions") ?? [];
+            const toStr = (v: unknown): string | null => {
+              if (v === null || v === undefined || v === "") return null;
+              const n = Number(v);
+              return Number.isFinite(n) ? String(n) : null;
+            };
+            const newRow: Revenue = {
+              order: current.length,
+              product_name: (p.name ?? "").slice(0, 200),
+              year1_sales_quantity: toStr(p.annual_quantity),
+              year1_sales_unit: p.unit_of_measurement ?? null,
+              expected_selling_price: toStr(p.selling_price_per_unit),
+              expected_annual_growth_rate_pct: null,
+              annual_sales_revenue: null,
+            };
+            const next = [...current, newRow];
+            form.setValue("revenue_assumptions", next, { shouldDirty: true });
+            // Auto-open the edit modal so the user lands directly on the row
+            // to tweak numbers + add growth rate.
+            setTimeout(
+              () => revenueNestedRef.current?.openEdit(next.length - 1),
+              50,
+            );
+          }}
+        />
         <NestedListCard<Revenue>
+          ref={revenueNestedRef}
           title="E. Revenue Assumptions (per product)"
           items={revenue}
           onChange={(next) => form.setValue("revenue_assumptions", next, { shouldDirty: true })}
-          emptyRow={{ order: 0, product_name: "", year1_sales_quantity: null, expected_selling_price: null, expected_annual_growth_rate_pct: null, annual_sales_revenue: null }}
+          emptyRow={{ order: 0, product_name: "", year1_sales_quantity: null, year1_sales_unit: null, expected_selling_price: null, expected_annual_growth_rate_pct: null, annual_sales_revenue: null }}
           columns={[
             { key: "product_name", label: "Product" },
-            { key: "year1_sales_quantity", label: "Yr1 qty" },
+            {
+              key: "year1_sales_quantity",
+              label: "Yr1 qty",
+              render: (v, row) => {
+                if (v === null || v === undefined || v === "") return "—";
+                const u = unitQuery.data?.find((r) => r.id === row.year1_sales_unit)?.label;
+                return u ? `${v} ${u}` : String(v);
+              },
+            },
             { key: "expected_selling_price", label: "Price (₹)" },
             { key: "annual_sales_revenue", label: "Annual revenue" },
           ]}
@@ -1094,20 +1282,28 @@ export function FinanceSection({ uuid }: { uuid: string }) {
                       }}
                     />
                   </ModalField>
-                  <ModalField label="Expected selling price / unit (₹) *" error={rErr.expected_selling_price}>
-                    <Input
-                      type="text"
-                      inputMode="decimal"
-                      maxLength={16}
-                      placeholder="e.g. 280"
-                      value={row.expected_selling_price !== null && row.expected_selling_price !== undefined ? String(row.expected_selling_price) : ""}
-                      onChange={(e) => {
-                        const cleaned = normaliseDecimalInput(e.target.value, { max: MAX_COST_INR, maxDecimals: 2 });
-                        set("expected_selling_price", cleaned === "" ? null : cleaned);
-                      }}
+                  <ModalField label="Unit">
+                    <MasterSearchableSelect
+                      value={row.year1_sales_unit}
+                      options={unitQuery.data ?? []}
+                      onChange={(v) => set("year1_sales_unit", v)}
+                      placeholder="Type to search unit…"
                     />
                   </ModalField>
                 </ModalRow>
+                <ModalField label="Expected selling price / unit (₹) *" error={rErr.expected_selling_price}>
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    maxLength={16}
+                    placeholder="e.g. 280"
+                    value={row.expected_selling_price !== null && row.expected_selling_price !== undefined ? String(row.expected_selling_price) : ""}
+                    onChange={(e) => {
+                      const cleaned = normaliseDecimalInput(e.target.value, { max: MAX_COST_INR, maxDecimals: 2 });
+                      set("expected_selling_price", cleaned === "" ? null : cleaned);
+                    }}
+                  />
+                </ModalField>
                 <ModalRow>
                   <ModalField label="Annual growth rate (%)">
                     <Input
