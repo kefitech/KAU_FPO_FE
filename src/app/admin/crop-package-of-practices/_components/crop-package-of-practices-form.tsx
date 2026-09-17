@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { getErrorMessage } from "@/lib/get-error-message";
 
 type T = Record<string, string>;
 
@@ -121,16 +122,19 @@ export function CropPackageOfPracticesForm({ mode, id, t = {}, tCommon = {} }: P
   const mutation = useMutation({
     mutationFn: (values: FormValues) => {
       const payload: CropPackageOfPracticesPayload = { ...values };
-      return mode === "create" ? adminCropPackageOfPracticesApi.create(payload) : adminCropPackageOfPracticesApi.update(id!, payload);
+      return mode === "create"
+        ? adminCropPackageOfPracticesApi.create(payload)
+        : adminCropPackageOfPracticesApi.update(id!, payload);
     },
     onSuccess: () => {
-      toast.success(mode === "create" ? (t.toast_created ?? "Crop entry created") : (t.toast_updated ?? "Crop entry updated"));
+      toast.success(
+        mode === "create" ? (t.toast_created ?? "Crop entry created") : (t.toast_updated ?? "Crop entry updated"),
+      );
       queryClient.invalidateQueries({ queryKey: ["crop-package-of-practices"] });
       router.push("/admin/crop-package-of-practices");
     },
     onError: (err: unknown) => {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      toast.error(msg || (t.toast_save_failed ?? "Failed to save crop entry"));
+      toast.error(getErrorMessage(err, t.toast_save_failed ?? "Failed to save crop entry"));
     },
   });
 
@@ -160,7 +164,8 @@ export function CropPackageOfPracticesForm({ mode, id, t = {}, tCommon = {} }: P
               render={({ field }) => <Input id="crop_name" placeholder="e.g. Coffee" {...field} />}
             />
             <p className="mt-1 text-muted-foreground text-xs">
-              {t.field_crop_name_help ?? "Must match the crop name used in Crop Zone Profiles exactly (case-insensitive)."}
+              {t.field_crop_name_help ??
+                "Must match the crop name used in Crop Zone Profiles exactly (case-insensitive)."}
             </p>
             {errors.crop_name && <FieldError errors={[errors.crop_name]} />}
           </Field>
@@ -270,7 +275,11 @@ export function CropPackageOfPracticesForm({ mode, id, t = {}, tCommon = {} }: P
         <div className="grid gap-4 sm:grid-cols-2">
           <Field>
             <FieldLabel htmlFor="spacing">{t.field_spacing ?? "Spacing"}</FieldLabel>
-            <Controller control={control} name="spacing" render={({ field }) => <Textarea id="spacing" rows={2} {...field} />} />
+            <Controller
+              control={control}
+              name="spacing"
+              render={({ field }) => <Textarea id="spacing" rows={2} {...field} />}
+            />
           </Field>
           <Field>
             <FieldLabel htmlFor="expected_yield">{t.field_expected_yield ?? "Expected Yield"}</FieldLabel>
@@ -282,7 +291,9 @@ export function CropPackageOfPracticesForm({ mode, id, t = {}, tCommon = {} }: P
           </Field>
         </div>
         <Field>
-          <FieldLabel htmlFor="manuring_fertilizer">{t.field_manuring_fertilizer ?? "Manuring & Fertilizer"}</FieldLabel>
+          <FieldLabel htmlFor="manuring_fertilizer">
+            {t.field_manuring_fertilizer ?? "Manuring & Fertilizer"}
+          </FieldLabel>
           <Controller
             control={control}
             name="manuring_fertilizer"
@@ -324,7 +335,8 @@ export function CropPackageOfPracticesForm({ mode, id, t = {}, tCommon = {} }: P
           </Button>
         </div>
         <p className="text-muted-foreground text-xs">
-          {t.sections_help ?? "For content that doesn't fit the fixed fields above, e.g. named propagation methods, intercropping, or organic production notes."}
+          {t.sections_help ??
+            "For content that doesn't fit the fixed fields above, e.g. named propagation methods, intercropping, or organic production notes."}
         </p>
         {sectionsArray.fields.length === 0 && (
           <p className="text-muted-foreground text-sm">{t.sections_empty ?? "No additional sections added yet."}</p>
@@ -379,7 +391,8 @@ export function CropPackageOfPracticesForm({ mode, id, t = {}, tCommon = {} }: P
           <div>
             <FieldLabel>{t.field_is_active ?? "Active"}</FieldLabel>
             <p className="text-muted-foreground text-xs">
-              {t.field_is_active_help ?? "Only active entries are visible to FPOs — saved as a draft until switched on."}
+              {t.field_is_active_help ??
+                "Only active entries are visible to FPOs — saved as a draft until switched on."}
             </p>
           </div>
         </div>
