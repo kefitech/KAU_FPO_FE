@@ -8,12 +8,13 @@ import type { DateRange } from "react-day-picker";
 
 import { type BuyerProduct, buyerProductsApi } from "@/app/buyer/_api/products";
 import { masterDataApi } from "@/app/fpo/_api/master-data";
+import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { Input } from "@/components/ui/input";
+import { InquiryDialog } from "@/components/ui/inquiry-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,55 +27,69 @@ type T = Record<string, string>;
 function ProductCard({ product, locale }: { product: BuyerProduct; locale: string }) {
   const name = locale === "ml" ? product.name.ml || product.name.en : product.name.en;
   const description = locale === "ml" ? product.description.ml || product.description.en : product.description.en;
+  const [inquiryOpen, setInquiryOpen] = useState(false);
 
   return (
-    <Card className="overflow-hidden">
-      {toMediaUrl(product.image) && (
-        // biome-ignore lint/performance/noImgElement: product photo URL is dynamic, not a static asset
-        <img src={toMediaUrl(product.image) ?? undefined} alt={name} className="h-40 w-full object-cover" />
-      )}
-      <CardHeader>
-        <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-base">{name}</CardTitle>
-          <Badge variant="outline" className="shrink-0 font-normal">
-            {product.commodity_code}
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3">
-        {description && <p className="text-muted-foreground text-sm">{description}</p>}
-
-        <div className="grid grid-cols-2 gap-2 text-sm">
-          <div className="flex flex-col gap-0.5">
-            <span className="text-muted-foreground text-xs">Quantity</span>
-            <span className="font-medium">
-              {product.quantity} {product.unit}
-            </span>
-          </div>
-          <div className="flex flex-col gap-0.5">
-            <span className="text-muted-foreground text-xs">Price</span>
-            <span className="font-medium">₹{product.price_per_unit}</span>
-          </div>
-        </div>
-
-        {product.quality_certification && (
-          <Badge variant="secondary" className="w-fit font-normal">
-            {product.quality_certification}
-          </Badge>
+    <>
+      <Card className="overflow-hidden">
+        {toMediaUrl(product.image) && (
+          // biome-ignore lint/performance/noImgElement: product photo URL is dynamic, not a static asset
+          <img src={toMediaUrl(product.image) ?? undefined} alt={name} className="h-40 w-full object-cover" />
         )}
+        <CardHeader>
+          <div className="flex items-start justify-between gap-2">
+            <CardTitle className="text-base">{name}</CardTitle>
+            <Badge variant="outline" className="shrink-0 font-normal">
+              {product.commodity_code}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          {description && <p className="text-muted-foreground text-sm">{description}</p>}
 
-        <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
-          <Building2 className="h-3.5 w-3.5" />
-          {product.fpo_name}
-        </div>
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="flex flex-col gap-0.5">
+              <span className="text-muted-foreground text-xs">Quantity</span>
+              <span className="font-medium">
+                {product.quantity} {product.unit}
+              </span>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-muted-foreground text-xs">Price</span>
+              <span className="font-medium">₹{product.price_per_unit}</span>
+            </div>
+          </div>
 
-        <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
-          <CalendarIcon className="h-3.5 w-3.5" />
-          {product.available_from}
-          {product.available_until ? ` – ${product.available_until}` : ""}
-        </div>
-      </CardContent>
-    </Card>
+          {product.quality_certification && (
+            <Badge variant="secondary" className="w-fit font-normal">
+              {product.quality_certification}
+            </Badge>
+          )}
+
+          <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
+            <Building2 className="h-3.5 w-3.5" />
+            {product.fpo_name}
+          </div>
+
+          <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
+            <CalendarIcon className="h-3.5 w-3.5" />
+            {product.available_from}
+            {product.available_until ? ` – ${product.available_until}` : ""}
+          </div>
+
+          <Button size="sm" className="mt-1" onClick={() => setInquiryOpen(true)}>
+            Inquire
+          </Button>
+        </CardContent>
+      </Card>
+      <InquiryDialog
+        open={inquiryOpen}
+        onOpenChange={setInquiryOpen}
+        productId={product.id}
+        productName={name}
+        unit={product.unit}
+      />
+    </>
   );
 }
 

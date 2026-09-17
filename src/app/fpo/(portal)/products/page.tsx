@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { Pencil, Plus } from "lucide-react";
 
+import { inquiriesApi } from "@/app/fpo/_api/inquiries";
 import { productsApi } from "@/app/fpo/_api/products";
 import { DataTable } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ import type { Product } from "@/types/fpo";
 import { PRODUCT_STATUS_LABEL } from "@/types/fpo";
 
 import { getProductColumns } from "./_components/columns";
+import { getInquiryColumns } from "./_components/inquiry-columns";
 
 type T = Record<string, string>;
 
@@ -40,6 +42,8 @@ export default function FpoProductsPage() {
     row: null,
   });
 
+  const [showInquiries, setShowInquiries] = useState(false);
+
   const STATUS_FILTERS = useMemo(
     () => [
       {
@@ -56,34 +60,75 @@ export default function FpoProductsPage() {
     [tTable],
   );
 
+  const INQUIRY_STATUS_FILTERS = useMemo(
+    () => [
+      {
+        key: "status",
+        label: "Status",
+        options: [
+          { label: "Pending", value: "pending" },
+          { label: "Contacted", value: "contacted" },
+          { label: "Resolved", value: "resolved" },
+        ],
+      },
+    ],
+    [],
+  );
+
   return (
     <div className="flex flex-col gap-6 px-3 py-4 sm:px-6 sm:py-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-bold text-2xl">{tPage.page_title ?? "My Products"}</h1>
+          <h1 className="font-bold text-2xl">
+            {showInquiries ? "My Product Inquiries" : (tPage.page_title ?? "My Products")}
+          </h1>
           <p className="mt-0.5 text-muted-foreground text-sm">
-            {tPage.page_description ?? "List and manage your FPO's agricultural products for market linkage."}
+            {showInquiries
+              ? "View and manage inquiries received on your products."
+              : (tPage.page_description ?? "List and manage your FPO's agricultural products for market linkage.")}
           </p>
         </div>
-        <Button size="sm" onClick={() => router.push("/fpo/products/new")}>
-          <Plus className="mr-1.5 h-4 w-4" />
-          {tPage.add_btn ?? "Add Product"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setShowInquiries((v) => !v)}>
+            {showInquiries ? "My Products" : "View Inquiries"}
+          </Button>
+          {!showInquiries && (
+            <Button size="sm" onClick={() => router.push("/fpo/products/new")}>
+              <Plus className="mr-1.5 h-4 w-4" />
+              {tPage.add_btn ?? "Add Product"}
+            </Button>
+          )}
+        </div>
       </div>
 
-      <Suspense>
-        <DataTable
-          queryKey="products"
-          queryFn={productsApi.getAll}
-          columns={getProductColumns(tTable, tCommon)}
-          filters={STATUS_FILTERS}
-          onRowClick={(row) => setProductView({ open: true, row })}
-          columnsLabel={tCommon.columns_header}
-          toggleColumnsLabel={tCommon.columns_toggle_columns}
-          searchPlaceholder={tCommon.search_placeholder}
-          clearLabel={tCommon.clear_filters}
-        />
-      </Suspense>
+      {showInquiries ? (
+        <Suspense>
+          <DataTable
+            queryKey="inquiries"
+            queryFn={inquiriesApi.getAll}
+            columns={getInquiryColumns()}
+            filters={INQUIRY_STATUS_FILTERS}
+            columnsLabel={tCommon.columns_header}
+            toggleColumnsLabel={tCommon.columns_toggle_columns}
+            searchPlaceholder={tCommon.search_placeholder}
+            clearLabel={tCommon.clear_filters}
+          />
+        </Suspense>
+      ) : (
+        <Suspense>
+          <DataTable
+            queryKey="products"
+            queryFn={productsApi.getAll}
+            columns={getProductColumns(tTable, tCommon)}
+            filters={STATUS_FILTERS}
+            onRowClick={(row) => setProductView({ open: true, row })}
+            columnsLabel={tCommon.columns_header}
+            toggleColumnsLabel={tCommon.columns_toggle_columns}
+            searchPlaceholder={tCommon.search_placeholder}
+            clearLabel={tCommon.clear_filters}
+          />
+        </Suspense>
+      )}
 
       <ViewSheet
         open={productView.open}
