@@ -117,14 +117,29 @@ nav.navbar.validnavs .navbar-brand > img {
   }
 }
 
+/* ---- Narrow desktop gap: logos + full menu barely don't fit, wrapping
+   "Pages" onto a second line and shifting the logo out of place ---- */
+@media (min-width: 1024px) and (max-width: 1150px) {
+  .navbar-container-fix {
+    gap: 1rem !important;
+  }
+
+  nav.navbar.validnavs .navbar-nav > li > a {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .navbar-logos .logo {
+    max-height: 60px;
+  }
+}
+
 
 /* ---- Small mobile: hide second logo, center the first ---- */
 @media (max-width: 480px) {
   .navbar-logos {
-    width: 100%;
-    justify-content: left;
+    margin-right: 0;
   }
-
 }
 
 
@@ -152,19 +167,25 @@ nav.navbar.validnavs .navbar-brand > img {
     position: relative;
   }
  
-  nav.navbar.validnavs .navbar-toggle {
+  nav.navbar.validnavs .navbar-header > .navbar-toggle {
     position: absolute;
     left: 20px;
     top: 50%;
     transform: translateY(-50%);
+    z-index: 2;
   }
- 
+
   /* ---- Logo: center independently of hamburger ---- */
+  /* max-width keeps the logo group clear of the hamburger button (left: 20px, ~40px wide) on both sides */
   nav.navbar.validnavs .navbar-brand {
     position: absolute;
-    left: 60px;
-    transform: translateY(-50%);
+    left: 50%;
     top: 50%;
+    width: max-content;
+    max-width: calc(100vw - 120px);
+    overflow: hidden;
+    transform: translate(-50%, -50%);
+    z-index: 1;
   }
   .banner-area {
     margin-top: 65px;
@@ -328,5 +349,32 @@ nav.navbar.validnavs .navbar-brand > img {
   .banner-area h4 {
     font-size: 16px;
     margin-bottom: 10px;
+  }
+}
+
+/* ---- More-info service grid: fluid column count instead of fixed
+   Bootstrap breakpoints, so it reflows continuously with available width ---- */
+.service-grid {
+  display: grid;
+  /* fluid columns, min 130px each, but never more than 6 per row:
+     each column's minimum is also forced to >= 1/6 of the row width */
+  grid-template-columns: repeat(auto-fit, minmax(max(130px, (100% - 5 * 1.5rem) / 6), 1fr));
+  gap: 1.5rem;
+  justify-items: stretch;
+}
+
+.service-grid .service-card {
+  height: auto;
+  min-height: 220px;
+}
+
+@media (max-width: 576px) {
+  .service-grid {
+    grid-template-columns: repeat(auto-fit, minmax(max(110px, (100% - 5 * 1rem) / 6), 1fr));
+    gap: 1rem;
+  }
+
+  .service-grid .service-card {
+    min-height: 170px;
   }
 }
