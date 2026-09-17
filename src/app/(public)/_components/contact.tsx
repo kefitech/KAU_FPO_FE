@@ -281,7 +281,7 @@ const Contact = ({ t }: ContactProps) => {
                   </div>
                   <div className="content">
                     <h5 className="title">{t.hotline ?? "Hotline"}</h5>
-                    <a href="tel:+914872370150">+91-487-2370150</a> <br/> <a href="tel:+914872370086">+91-487-2370086</a>
+                    <a href="tel:+914872370150">+91-487-2370150</a> <br/> <a href="tel:+914872370086">+91-487-2370086</a> <br/> <a href="tel:+918547070773">+91-8547070773</a>
                   </div>
                 </li>
                 <li data-aos="fade-up" data-aos-delay="300">
@@ -293,6 +293,10 @@ const Contact = ({ t }: ContactProps) => {
                     <a href="https://maps.app.goo.gl/PKDCW49BW1qGABDS6">
                       {t.kau_address ?? "Directorate of Extension, Mannuthy P.O, \n Thrissur - 680651"}
                     </a>
+                    <br />
+                    <a href="https://maps.app.goo.gl/PKDCW49BW1qGABDS6">
+                      {t.kau_address_cc ?? "Communication Centre, Kerala Agricultural University, Mannuthy P.O, Thrissur - 680651"}
+                    </a>
                   </div>
                 </li>
                 <li data-aos="fade-up" data-aos-delay="500">
@@ -301,7 +305,8 @@ const Contact = ({ t }: ContactProps) => {
                   </div>
                   <div className="info">
                     <h5 className="title">{t.official_email ?? "Official Email"}</h5>
-                    <a href="mailto:de@kau.in">de@kau.in</a>
+                    <a href="mailto:de@kau.in">de@kau.in</a> <br />
+                    <a href="mailto:ccmannuthy@kau.in">ccmannuthy@kau.in</a>
                   </div>
                 </li>
               </ul>

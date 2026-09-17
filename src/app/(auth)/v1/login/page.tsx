@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 
-import Link from "next/link";
 import { ArrowRight, ChevronLeft, Sprout, UserPlus } from "lucide-react";
 
 import { VantaBirds } from "@/components/common/vanta-birds";
@@ -102,13 +101,16 @@ export default function LoginV1() {
                 </Button>
               </div>
 
-              <Link
+              {/* Plain <a> — forces a full page reload so the public
+                  home page's providers hydrate fresh instead of client-nav
+                  from the auth route group. */}
+              <a
                 href="/"
                 className="flex items-center justify-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
               >
                 <ChevronLeft className="h-4 w-4" />
                 {t.back_to_home ?? "Back to Home"}
-              </Link>
+              </a>
             </div>
 
             {/* ── RIGHT: sign-up call to action (desktop only) ─────────── */}

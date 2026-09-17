@@ -458,7 +458,7 @@ const TABS = [
   { key: "content-blocks", label: "Content Blocks" },
   { key: "documents",      label: "Documents"      },
   { key: "gallery",        label: "Gallery"        },
-  { key: "team",           label: "Team"           },
+  { key: "team",           label: "Patrons"        },
   { key: "quick-links",   label: "Quick Links"    },
   { key: "partners",      label: "Partners"       },
   { key: "news-sources",  label: "News Sources"   },

@@ -122,7 +122,7 @@ function TeamDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{editing ? (t.dialog_edit_team ?? "Edit Member") : (t.dialog_add_team ?? "Add Team Member")}</DialogTitle>
+          <DialogTitle>{editing ? (t.dialog_edit_team ?? "Edit Patron") : (t.dialog_add_team ?? "Add Patron")}</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col gap-4 py-2">
@@ -244,7 +244,7 @@ function TeamDialog({
             {t.action_cancel ?? "Cancel"}
           </Button>
           <Button onClick={() => mutation.mutate()} disabled={!canSubmit || mutation.isPending}>
-            {mutation.isPending ? (t.action_saving ?? "Saving…") : editing ? (t.action_save_changes ?? "Save Changes") : (t.action_add_member ?? "Add Member")}
+            {mutation.isPending ? (t.action_saving ?? "Saving…") : editing ? (t.action_save_changes ?? "Save Changes") : (t.action_add_member ?? "Add Patron")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -292,7 +292,7 @@ export function TeamTab({ t = {} }: { t?: T }) {
 
   function handleDelete(member: AdminTeamMember) {
     confirm({
-      title: t.member_delete_title ?? "Delete Team Member",
+      title: t.member_delete_title ?? "Delete Patron",
       description: (
         t.member_delete_description ?? 'Are you sure you want to delete "{name}"? This cannot be undone.'
       ).replace("{name}", member.name),
@@ -304,7 +304,7 @@ export function TeamTab({ t = {} }: { t?: T }) {
     <div className="flex flex-col gap-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold">{t.team_section_title ?? "Team"}</h2>
+        <h2 className="text-base font-semibold">{t.team_section_title ?? "Patrons"}</h2>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
             <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
@@ -317,7 +317,7 @@ export function TeamTab({ t = {} }: { t?: T }) {
             }}
           >
             <Plus className="mr-1.5 h-4 w-4" />
-            {t.btn_add_member ?? "Add Member"}
+            {t.btn_add_member ?? "Add Patron"}
           </Button>
         </div>
       </div>
@@ -337,7 +337,7 @@ export function TeamTab({ t = {} }: { t?: T }) {
       ) : members.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-2 rounded-lg border py-16 text-muted-foreground">
           <UserRound className="h-8 w-8 opacity-40" />
-          <p className="text-sm">{t.empty_state_team ?? "No team members added yet."}</p>
+          <p className="text-sm">{t.empty_state_team ?? "No patrons added yet."}</p>
         </div>
       ) : (
         <div

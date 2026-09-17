@@ -283,6 +283,8 @@ const Footer = () => {
                     </div>
                     <div className="content">
                       <strong>Email:</strong> <a href="mailto:de@kau.in">de@kau.in</a>
+                      <br />
+                      <a href="mailto:ccmannuthy@kau.in">ccmannuthy@kau.in</a>
                     </div>
                   </li>
                   <li>
@@ -293,6 +295,8 @@ const Footer = () => {
                       <strong>Phone:</strong> <a href="tel:+914872370150">+91-487-2370150</a>
                       <br />
                       <a href="tel:+914872370086">+91-487-2370086</a>
+                      <br />
+                      <a href="tel:+918547070773">+91-8547070773</a>
                     </div>
                   </li>
                 </ul>

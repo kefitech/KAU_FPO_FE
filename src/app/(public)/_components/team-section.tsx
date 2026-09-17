@@ -171,7 +171,7 @@ const TeamSection = ({ showAll = false }: Props) => {
             <img src="/assets/img/shape/leaf.png" alt="leaf shape" />
           </div>
           <div className="farmer-style-one">
-            <h2 className="heading">{t.team_page_heading ?? "Our Team"}</h2>
+            <h2 className="heading">{t.team_page_heading ?? "Our Patrons"}</h2>
           </div>
           <div className="row">
             <div className="col-lg-10 offset-lg-1">
@@ -214,7 +214,7 @@ const TeamSection = ({ showAll = false }: Props) => {
           <div className="col-lg-8 offset-lg-2">
             <div className="site-heading text-center">
               <h5 className="sub-title">{t.team_subtitle ?? "KAU-FPO Linkage Programme"}</h5>
-              <h2 className="title">{t.team_title ?? "Our Team"}</h2>
+              <h2 className="title">{t.patrons_title ?? "Our Patrons"}</h2>
               <div className="devider" />
             </div>
           </div>
@@ -269,6 +269,58 @@ const TeamSection = ({ showAll = false }: Props) => {
                 />
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Small green "Our Team" call-to-action — links to the full team
+            page. Rendered only in the homepage variant of this component. */}
+        <div className="row" style={{ marginTop: 28 }}>
+          <div className="col-lg-12 text-center">
+            <a
+              href="/team"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "12px 26px",
+                borderRadius: 999,
+                background: "#2e7d32",
+                color: "#ffffff",
+                fontWeight: 600,
+                fontSize: 14,
+                textDecoration: "none",
+                boxShadow: "0 6px 18px rgba(46, 125, 50, 0.28)",
+                transition: "background 0.2s ease, transform 0.15s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "#256128";
+                e.currentTarget.style.transform = "translateY(-1px)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "#2e7d32";
+                e.currentTarget.style.transform = "translateY(0)";
+              }}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+              {t.our_team_button ?? "Our Team"}
+              <span aria-hidden="true">→</span>
+            </a>
           </div>
         </div>
       </div>
