@@ -89,13 +89,16 @@ export default function LoginV1() {
 
               <LoginForm t={t} />
 
-              {/* Mobile-only sign-up call-out — the right panel is hidden below md */}
+              {/* Mobile-only sign-up call-out — the right panel is hidden below md.
+                  Uses a plain <a> so navigating from /v1/login to /register does
+                  a full page reload — the register page needs its providers to
+                  re-initialise, so client-side Link would leave stale state. */}
               <div className="md:hidden">
                 <Button asChild variant="outline" className="w-full">
-                  <Link href="/register">
+                  <a href="/register">
                     <UserPlus className="mr-2 h-4 w-4" />
                     {t.sign_up_cta ?? "Create a new account"}
-                  </Link>
+                  </a>
                 </Button>
               </div>
 
@@ -146,11 +149,13 @@ export default function LoginV1() {
                 size="lg"
                 className="relative w-full bg-slate-900 text-white hover:bg-slate-800 dark:bg-neutral-100 dark:text-slate-900 dark:hover:bg-white"
               >
-                <Link href="/register">
+                {/* Plain <a> — forces a full page reload on the way to
+                    /register so the register wizard starts from a clean slate. */}
+                <a href="/register">
                   <UserPlus className="mr-2 h-5 w-5" />
                   {t.sign_up_cta ?? "Create a new account"}
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
+                </a>
               </Button>
             </div>
           </CardContent>
