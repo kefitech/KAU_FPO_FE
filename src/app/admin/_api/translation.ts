@@ -27,6 +27,23 @@ export const translationApi = {
 
   bulkCreate: (payload: BulkTranslationPayload) => api.post(`${BASE}bulk_create/`, payload),
 
+  // Kicks off a Celery job that machine-translates missing rows for the
+  // given language (optionally scoped to a category). Returns the task id
+  // the client polls via `autoTranslateStatus`.
+  autoTranslate: (payload: { language_code: string; category_code?: string }) =>
+    apiClient
+      .post<Wrapped<{ task_id: string }>>(`${BASE}auto-translate/`, payload)
+      .then((r) => r.data.data),
+
+  // Polls the Celery job created by `autoTranslate`. Backend returns a
+  // Celery-shaped `{state, result?, error?}` payload.
+  autoTranslateStatus: (taskId: string) =>
+    apiClient
+      .get<Wrapped<{ state: string; result?: unknown; error?: string }>>(
+        `${BASE}auto-translate/${taskId}/`,
+      )
+      .then((r) => r.data.data),
+
   importFile: (formData: FormData) =>
     apiClient.post(`${BASE}import_file/`, formData, {
       headers: { "Content-Type": "multipart/form-data" },
