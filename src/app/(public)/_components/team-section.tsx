@@ -216,7 +216,6 @@ const TeamSection = ({ showAll = false }: Props) => {
               <h5 className="sub-title">{t.team_subtitle ?? "KAU-FPO Linkage Programme"}</h5>
               <h2 className="title">{t.team_title ?? "Our Team"}</h2>
               <div className="devider" />
-              
             </div>
           </div>
         </div>
@@ -232,13 +231,13 @@ const TeamSection = ({ showAll = false }: Props) => {
                   </div>
                 ))}
               </div>
-            ) : (           
-             <div className="navigation-circle" style={{ position: "relative" }}>
+            ) : (
+              <div className="navigation-circle" style={{ position: "relative" }}>
                 <Swiper
                   modules={[Navigation, Pagination, Autoplay]}
                   spaceBetween={30}
                   slidesPerView={1}
-                  loop={members.length > 4}
+                  loop={members.length > 1}
                   autoplay={{ delay: 4000, disableOnInteraction: false }}
                   navigation={{
                     prevEl,
@@ -263,7 +262,11 @@ const TeamSection = ({ showAll = false }: Props) => {
                 </Swiper>
                 <div ref={setPrevEl} className="team-swiper-prev swiper-button-prev" />
                 <div ref={setNextEl} className="team-swiper-next swiper-button-next" />
-                <div ref={setPaginationEl} className="team-swiper-pagination swiper-pagination" style={{ marginTop: 16 }} />
+                <div
+                  ref={setPaginationEl}
+                  className="team-swiper-pagination swiper-pagination"
+                  style={{ marginTop: 16 }}
+                />
               </div>
             )}
           </div>
