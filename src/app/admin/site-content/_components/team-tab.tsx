@@ -19,9 +19,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import { useConfirmStore } from "@/stores/confirm-store";
 import type { AdminTeamMember } from "@/types/admin";
-import { Textarea } from "@/components/ui/textarea";
 
 type T = Record<string, string>;
 
@@ -122,20 +122,26 @@ function TeamDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{editing ? (t.dialog_edit_team ?? "Edit Patron") : (t.dialog_add_team ?? "Add Patron")}</DialogTitle>
+          <DialogTitle>
+            {editing ? (t.dialog_edit_team ?? "Edit Patron") : (t.dialog_add_team ?? "Add Patron")}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col gap-4 py-2">
           {/* Photo */}
           <div className="flex flex-col gap-1.5">
-            <p className="text-sm font-medium">{t.field_photo ?? "Photo"} {!editing && <span className="text-destructive">*</span>}</p>
+            <p className="text-sm font-medium">
+              {t.field_photo ?? "Photo"} {!editing && <span className="text-destructive">*</span>}
+            </p>
             {/* Existing photo (edit, no replacement yet) */}
             {editing && !photo && (
               <div className="flex items-center gap-3 rounded-md border bg-muted/40 p-2">
                 <MemberAvatar photo_url={editing.photo_url} name={editing.name} size="sm" />
                 <div className="flex flex-col gap-1 min-w-0 flex-1">
                   <span className="text-xs text-muted-foreground">
-                    {editing.photo_url ? (t.field_current_photo ?? "Current photo") : (t.field_no_photo ?? "No photo set")}
+                    {editing.photo_url
+                      ? (t.field_current_photo ?? "Current photo")
+                      : (t.field_no_photo ?? "No photo set")}
                   </span>
                   <label className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer w-fit">
                     {editing.photo_url ? (t.action_replace ?? "Replace") : (t.action_upload_photo ?? "Upload photo")}
@@ -172,7 +178,11 @@ function TeamDialog({
                     }}
                     className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
                   >
-                    {editing ? <span className="text-xs">{t.action_cancel ?? "Cancel"}</span> : <X className="h-4 w-4" />}
+                    {editing ? (
+                      <span className="text-xs">{t.action_cancel ?? "Cancel"}</span>
+                    ) : (
+                      <X className="h-4 w-4" />
+                    )}
                   </button>
                 </div>
                 {editing && (
@@ -192,7 +202,9 @@ function TeamDialog({
                 onChange={(e) => setPhoto(e.target.files?.[0] ?? null)}
               />
             )}
-            <p className="text-xs text-muted-foreground">{t.file_type_hint_square ?? "JPG, PNG or WebP — square crop recommended"}</p>
+            <p className="text-xs text-muted-foreground">
+              {t.file_type_hint_square ?? "JPG, PNG or WebP — square crop recommended"}
+            </p>
           </div>
 
           {/* Name */}
@@ -219,7 +231,7 @@ function TeamDialog({
               value={designation}
               onChange={(e) => setDesignation(e.target.value)}
               placeholder={t.field_designation_placeholder ?? "e.g. Vice Chancellor, KAU"}
-              maxLength={80}
+              maxLength={100}
             />
           </div>
 
@@ -244,7 +256,11 @@ function TeamDialog({
             {t.action_cancel ?? "Cancel"}
           </Button>
           <Button onClick={() => mutation.mutate()} disabled={!canSubmit || mutation.isPending}>
-            {mutation.isPending ? (t.action_saving ?? "Saving…") : editing ? (t.action_save_changes ?? "Save Changes") : (t.action_add_member ?? "Add Patron")}
+            {mutation.isPending
+              ? (t.action_saving ?? "Saving…")
+              : editing
+                ? (t.action_save_changes ?? "Save Changes")
+                : (t.action_add_member ?? "Add Patron")}
           </Button>
         </DialogFooter>
       </DialogContent>
