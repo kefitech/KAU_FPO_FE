@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { DateRange } from "react-day-picker";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2 } from "lucide-react";
@@ -105,9 +105,13 @@ export default function ExpertAvailabilityPage() {
   });
 
   const [weeklyDefaultsLoaded, setWeeklyDefaultsLoaded] = useState(false);
+  // Set to true the moment the user touches any weekday slot. Once true, the
+  // background fetch below is never allowed to overwrite weekdaySlots, even
+  // if it resolves after the user has already started editing.
+  const userEditedWeeklyRef = useRef(false);
 
   useEffect(() => {
-    if (!weeklyDefaultsData || weeklyDefaultsLoaded) return;
+    if (!weeklyDefaultsData || weeklyDefaultsLoaded || userEditedWeeklyRef.current) return;
     if (weeklyDefaultsData.length > 0) {
       const grouped: Record<number, TimeSlot[]> = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
       for (const d of weeklyDefaultsData) {
@@ -134,11 +138,13 @@ export default function ExpertAvailabilityPage() {
     onError: () => toast.error(t.toast_weekly_failed ?? "Failed to save weekly schedule."),
   });
 
-  const availableDateStrings = new Set(
-    existingAvailability.filter((d) => d.time_slots.length > 0).map((d) => d.date)
+  const availableDateStrings = useMemo(
+    () => new Set(existingAvailability.filter((d) => d.time_slots.length > 0).map((d) => d.date)),
+    [existingAvailability]
   );
-  const absentDateStrings = new Set(
-    existingAvailability.filter((d) => d.time_slots.length === 0).map((d) => d.date)
+  const absentDateStrings = useMemo(
+    () => new Set(existingAvailability.filter((d) => d.time_slots.length === 0).map((d) => d.date)),
+    [existingAvailability]
   );
 
   const candidateDates = useMemo(() => {
@@ -157,6 +163,13 @@ export default function ExpertAvailabilityPage() {
     return dates;
   }, [mode, dateRange, singleDates, selectedWeekdays]);
 
+  // O(1) lookup set mirroring candidateDates, so calendar cell renders don't
+  // scan the whole array for every day shown.
+  const candidateDateStrings = useMemo(
+    () => new Set(candidateDates.map((d) => toLocalISODate(d))),
+    [candidateDates]
+  );
+
   const matchingDates = useMemo(() => {
     if (mode !== "range") return candidateDates;
     return candidateDates.filter((d) => !excludedDateStrings.has(toLocalISODate(d)));
@@ -170,11 +183,19 @@ export default function ExpertAvailabilityPage() {
       } else {
         next.add(day);
       }
+      // If the day we just deselected was the active tab, fall back to
+      // another still-selected day so the tab bar doesn't hold onto a
+      // stale "primary" selection for a day that's no longer checked.
+      if (day === activeWeekdayTab && !next.has(day)) {
+        const fallback = WEEKDAYS.find((d) => next.has(d.value))?.value;
+        setActiveWeekdayTab(fallback ?? -1);
+      }
       return next;
     });
   }
 
   function updateSlot(weekday: number, index: number, field: "start" | "end", value: string) {
+    userEditedWeeklyRef.current = true;
     setWeekdaySlots((prev) => {
       const current = prev[weekday] ?? [];
       const updated = current.map((slot, i) => (i === index ? { ...slot, [field]: value } : slot));
@@ -189,6 +210,7 @@ export default function ExpertAvailabilityPage() {
   }
 
   function updateSlotCapacity(weekday: number, index: number, value: number) {
+    userEditedWeeklyRef.current = true;
     setWeekdaySlots((prev) => {
       const current = prev[weekday] ?? [];
       return { ...prev, [weekday]: current.map((slot, i) => (i === index ? { ...slot, max_bookings: Math.max(1, value) } : slot)) };
@@ -196,9 +218,16 @@ export default function ExpertAvailabilityPage() {
   }
 
   function addSlot(weekday: number) {
+    userEditedWeeklyRef.current = true;
     setWeekdaySlots((prev) => {
       const current = prev[weekday] ?? [];
-      const newSlot = { start: "09:00", end: "10:00", max_bookings: 1 };
+      const lastEnd = current.length > 0 ? current[current.length - 1].end : "09:00";
+      const [h, m] = lastEnd.split(":").map(Number);
+      const nextStart = lastEnd;
+      const nextEndDate = new Date(2000, 0, 1, h, m + 60);
+      const nextEnd = `${String(nextEndDate.getHours()).padStart(2, "0")}:${String(nextEndDate.getMinutes()).padStart(2, "0")}`;
+      const newSlot = { start: nextStart, end: nextEnd, max_bookings: 1 };
+
       const isDuplicate = current.some((s) => s.start === newSlot.start && s.end === newSlot.end);
       if (isDuplicate) {
         toast.error(t.error_duplicate_slot_add ?? "That time slot already exists. Adjust it before adding another.");
@@ -209,6 +238,7 @@ export default function ExpertAvailabilityPage() {
   }
 
   function removeSlot(weekday: number, index: number) {
+    userEditedWeeklyRef.current = true;
     setWeekdaySlots((prev) => ({ ...prev, [weekday]: (prev[weekday] ?? []).filter((_, i) => i !== index) }));
   }
 
@@ -239,7 +269,11 @@ export default function ExpertAvailabilityPage() {
   function addOverrideSlot(dateStr: string) {
     setPerDateOverrides((prev) => {
       const current = prev[dateStr] ?? defaultForDate(dateStr);
-      return { ...prev, [dateStr]: [...current, { start: "09:00", end: "10:00", max_bookings: 1 }] };
+      const lastEnd = current.length > 0 ? current[current.length - 1].end : "09:00";
+      const [h, m] = lastEnd.split(":").map(Number);
+      const nextEndDate = new Date(2000, 0, 1, h, m + 60);
+      const nextEnd = `${String(nextEndDate.getHours()).padStart(2, "0")}:${String(nextEndDate.getMinutes()).padStart(2, "0")}`;
+      return { ...prev, [dateStr]: [...current, { start: lastEnd, end: nextEnd, max_bookings: 1 }] };
     });
   }
 
@@ -307,14 +341,20 @@ export default function ExpertAvailabilityPage() {
           })),
         ]
       ),
-    onSuccess: () => {
+    onSuccess: (result: any) => {
+      const backendNote = result?.message;
       toast.success(
-        mode === "absent"
+        backendNote && backendNote.includes("confirmed bookings")
+          ? backendNote
+          : mode === "absent"
           ? (t.toast_marked_absent ?? "Marked {count} date(s) as absent").replace("{count}", String(matchingDates.length))
           : (t.toast_saved ?? "Availability saved for {count} date(s)").replace("{count}", String(matchingDates.length))
       );
       setDateRange(undefined);
       setSingleDates([]);
+      setExcludedDateStrings(new Set());
+      setPerDateOverrides({});
+      setExpandedDate(null);
       queryClient.invalidateQueries({ queryKey: ["my-availability", myProfile?.id] });
     },
     onError: () => toast.error(t.toast_failed ?? "Failed to update availability. Make sure your account is linked to an expert profile."),
@@ -529,11 +569,12 @@ export default function ExpertAvailabilityPage() {
             selected={matchingDates}
             onSelect={() => {}}
             onDayClick={(day) => setExpandedDate(toLocalISODate(day))}
-            disabled={(date) => !candidateDates.some((d) => toLocalISODate(d) === toLocalISODate(date))}
+            disabled={(date) => !candidateDateStrings.has(toLocalISODate(date))}
             modifiers={{
-              excluded: (date) =>
-                candidateDates.some((d) => toLocalISODate(d) === toLocalISODate(date)) &&
-                excludedDateStrings.has(toLocalISODate(date)),
+              excluded: (date) => {
+                const key = toLocalISODate(date);
+                return candidateDateStrings.has(key) && excludedDateStrings.has(key);
+              },
               editing: (date) => expandedDate === toLocalISODate(date),
             }}
             modifiersClassNames={{

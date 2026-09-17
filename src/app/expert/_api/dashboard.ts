@@ -13,6 +13,9 @@ export interface ExpertBooking {
   fpo_application_id: string | null;
   fpo_location: string | null;
   fpo_contact_name: string | null;
+  fpo_district: string | null;
+  fpo_registration_number: string | null;
+  fpo_total_members: number | null;
   requested_date: string;
   requested_time: string;
   topic: string;
@@ -39,7 +42,7 @@ export interface AvailabilityDay {
 export const expertDashboardApi = {
     getMyProfile: (): Promise<{ id: number; name_en: string; designation: string }> =>
     api.get<Wrapped<{ id: number; name_en: string; designation: string }>>("/experts/me/").then((r) => r.data.data),
-    
+
   getMyBookings: (params?: { status?: string }): Promise<ExpertBooking[]> =>
     api.get<Wrapped<ExpertBooking[]>>("/experts/admin/bookings/", { params }).then((r) => r.data.data),
 
@@ -52,8 +55,8 @@ export const expertDashboardApi = {
   rescheduleBooking: (bookingId: number, payload: { new_date: string; new_time: string; reason?: string }): Promise<ExpertBooking> =>
     api.post<Wrapped<ExpertBooking>>(`/experts/admin/bookings/${bookingId}/reschedule/`, payload).then((r) => r.data.data),
 
-  setAvailability: (expertId: number, slots: { date: string; time_slots: { start: string; end: string }[] }[]): Promise<AvailabilityDay[]> =>
-    api.post<Wrapped<AvailabilityDay[]>>(`/experts/admin/${expertId}/availability/`, { slots }).then((r) => r.data.data),
+  setAvailability: (expertId: number, slots: { date: string; time_slots: { start: string; end: string; max_bookings: number }[] }[]): Promise<{ data: AvailabilityDay[]; message: string }> =>
+    api.post<Wrapped<AvailabilityDay[]>>(`/experts/admin/${expertId}/availability/`, { slots }).then((r) => ({ data: r.data.data, message: r.data.message })),
 
   getWeeklyDefaults: (expertId: number): Promise<{ weekday: number; start: string; end: string; max_bookings: number }[]> =>
     api.get<Wrapped<{ weekday: number; start: string; end: string; max_bookings: number }[]>>(`/experts/admin/${expertId}/weekly-defaults/`).then((r) => r.data.data),
