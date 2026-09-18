@@ -1,16 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { Building2, Calendar as CalendarIcon, Package, Search } from "lucide-react";
-import type { DateRange } from "react-day-picker";
-
 import { type BuyerProduct, buyerProductsApi } from "@/app/buyer/_api/products";
 import { masterDataApi } from "@/app/fpo/_api/master-data";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -66,10 +65,16 @@ function ProductCard({ product, locale }: { product: BuyerProduct; locale: strin
             </Badge>
           )}
 
-          <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
-            <Building2 className="h-3.5 w-3.5" />
-            {product.fpo_name}
-          </div>
+        <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
+          <Building2 className="h-3.5 w-3.5" />
+          {product.fpo_name}
+        </div>
+        <Link
+          href={`/buyer/products/fpo/${product.fpo}`}
+          className="text-primary text-xs hover:underline"
+        >
+          View all products from this FPO
+        </Link>
 
           <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
             <CalendarIcon className="h-3.5 w-3.5" />
@@ -88,6 +93,7 @@ function ProductCard({ product, locale }: { product: BuyerProduct; locale: strin
         productId={product.id}
         productName={name}
         unit={product.unit}
+        availableQuantity={Number(product.quantity)}
       />
     </>
   );
@@ -108,9 +114,12 @@ export default function BuyerProductsPage() {
 
   const [search, setSearch] = useState("");
   const [commodity, setCommodity] = useState("all");
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [fromDate, setFromDate] = useState<Date | undefined>(undefined);
+  const [untilDate, setUntilDate] = useState<Date | undefined>(undefined);
+const [page, setPage] = useState(1);
+const [pageSize, setPageSize] = useState(20);
+
+const resetPage = () => setPage(1);
 
   useEffect(() => {
     setTranslationsLoading(true);
@@ -126,11 +135,9 @@ export default function BuyerProductsPage() {
     staleTime: 10 * 60_000,
   });
 
-  // Date range filter requires BOTH dates before it's applied — a
-  // half-picked range is treated as "no filter yet."
-  const dateFilterReady = !!dateRange?.from && !!dateRange?.to;
-
-  const resetPage = () => setPage(1);
+  // Date range filter requires BOTH dates before it's applied — picking
+  // only one is treated as "no filter yet."
+  const dateFilterReady = !!fromDate && !!untilDate;
 
   const { data, isLoading } = useQuery({
     queryKey: [
@@ -138,8 +145,8 @@ export default function BuyerProductsPage() {
       locale,
       search,
       commodity,
-      dateFilterReady ? dateRange?.from : null,
-      dateFilterReady ? dateRange?.to : null,
+      dateFilterReady ? fromDate : null,
+      dateFilterReady ? untilDate : null,
       page,
       pageSize,
     ],
@@ -149,8 +156,8 @@ export default function BuyerProductsPage() {
         page_size: pageSize,
         search: search || undefined,
         commodity: commodity !== "all" ? commodity : undefined,
-        date_from: dateFilterReady ? formatDate(dateRange?.from) : undefined,
-        date_until: dateFilterReady ? formatDate(dateRange?.to) : undefined,
+        date_from: dateFilterReady ? formatDate(fromDate) : undefined,
+        date_until: dateFilterReady ? formatDate(untilDate) : undefined,
       }),
     staleTime: 30_000,
   });
@@ -202,33 +209,54 @@ export default function BuyerProductsPage() {
 
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" className="w-full justify-start font-normal sm:w-[260px]">
+            <Button variant="outline" className="w-full justify-start font-normal sm:w-[180px]">
               <CalendarIcon className="mr-2 h-4 w-4" />
-              {dateFilterReady
-                ? `${formatDate(dateRange?.from)} – ${formatDate(dateRange?.to)}`
-                : (t.date_filter_placeholder ?? "From date – Until date")}
+              {fromDate ? formatDate(fromDate) : (t.from_date_placeholder ?? "From date")}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
             <Calendar
-              mode="range"
-              selected={dateRange}
-              onSelect={(range) => {
-                setDateRange(range);
-                if (range?.from && range?.to) resetPage();
+              mode="single"
+              selected={fromDate}
+              onSelect={(date) => {
+                setFromDate(date);
+                if (date && untilDate) resetPage();
               }}
-              numberOfMonths={2}
             />
-            {dateRange && (
+            {fromDate && (
               <div className="flex justify-end border-t p-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setDateRange(undefined);
-                    resetPage();
-                  }}
-                >
+                <Button variant="ghost" size="sm" onClick={() => { setFromDate(undefined); resetPage(); }}>
+                  {t.date_filter_clear ?? "Clear"}
+                </Button>
+              </div>
+            )}
+          </PopoverContent>
+        </Popover>
+
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="w-full justify-start font-normal sm:w-[180px]">
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {untilDate ? formatDate(untilDate) : (t.until_date_placeholder ?? "To date")}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={untilDate}
+              onSelect={(date) => {
+                if (date && fromDate && date < fromDate) {
+                  toast.error("'To date' cannot be earlier than 'From date'.");
+                  return;
+                }
+                setUntilDate(date);
+                if (fromDate && date) resetPage();
+              }}
+              disabled={fromDate ? { before: fromDate } : undefined}
+            />
+            {untilDate && (
+              <div className="flex justify-end border-t p-2">
+                <Button variant="ghost" size="sm" onClick={() => { setUntilDate(undefined); resetPage(); }}>
                   {t.date_filter_clear ?? "Clear"}
                 </Button>
               </div>

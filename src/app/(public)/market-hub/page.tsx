@@ -32,6 +32,7 @@ export default function MarketHubPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<{ name?: string; email?: string; phone?: string }>({});
 
   useEffect(() => {
     if (!locale) return;
@@ -95,20 +96,55 @@ export default function MarketHubPage() {
     setInquiryMessage("");
     setSubmitSuccess(false);
     setSubmitError("");
+    setFieldErrors({});
   };
 
   const closeInquiry = () => setInquiryProduct(null);
 
+
+  const NAME_PATTERN = /^[A-Za-z][A-Za-z\s'-]*$/;
+  const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const PHONE_PATTERN = /^\d{10}$/;
+
+  const validateInquiryForm = () => {
+    const errors: { name?: string; email?: string; phone?: string } = {};
+
+    const trimmedName = inquiryName.trim();
+    if (!trimmedName) {
+      errors.name = t.err_name_required ?? "Name is required";
+    } else if (trimmedName.length > 100) {
+      errors.name = t.err_name_too_long ?? "Name must be under 100 characters";
+    } else if (!NAME_PATTERN.test(trimmedName)) {
+      errors.name = t.err_name_invalid ?? "Name must contain only letters, spaces, apostrophes, or hyphens";
+    }
+
+    const trimmedEmail = inquiryEmail.trim();
+    if (!trimmedEmail) {
+      errors.email = t.err_email_required ?? "Email is required";
+    } else if (!EMAIL_PATTERN.test(trimmedEmail)) {
+      errors.email = t.err_email_invalid ?? "Enter a valid email address";
+    }
+
+    const trimmedPhone = inquiryPhone.trim();
+    if (trimmedPhone && !PHONE_PATTERN.test(trimmedPhone)) {
+      errors.phone = t.err_phone_invalid ?? "Enter a valid 10-digit phone number";
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleInquirySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inquiryProduct) return;
+    if (!validateInquiryForm()) return;
     setSubmitting(true);
     setSubmitError("");
     try {
       await marketHubApi.inquire(inquiryProduct.id, {
-        name: inquiryName,
-        email: inquiryEmail,
-        phone: inquiryPhone || undefined,
+        name: inquiryName.trim(),
+        email: inquiryEmail.trim(),
+        phone: inquiryPhone.trim() || undefined,
         message: inquiryMessage || undefined,
       });
       setSubmitSuccess(true);
@@ -289,6 +325,7 @@ export default function MarketHubPage() {
                       value={inquiryName}
                       onChange={(e) => setInquiryName(e.target.value)}
                     />
+                    {fieldErrors.name && <p style={{ color: "red", fontSize: 13, marginTop: 4 }}>{fieldErrors.name}</p>}
                   </div>
                   <div className="mb-15">
                     <input
@@ -299,6 +336,7 @@ export default function MarketHubPage() {
                       value={inquiryEmail}
                       onChange={(e) => setInquiryEmail(e.target.value)}
                     />
+                    {fieldErrors.email && <p style={{ color: "red", fontSize: 13, marginTop: 4 }}>{fieldErrors.email}</p>}
                   </div>
                   <div className="mb-15">
                     <input
@@ -306,8 +344,9 @@ export default function MarketHubPage() {
                       className="form-control"
                       placeholder={t.field_phone ?? "Your Phone (optional)"}
                       value={inquiryPhone}
-                      onChange={(e) => setInquiryPhone(e.target.value)}
+                      onChange={(e) => setInquiryPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
                     />
+                    {fieldErrors.phone && <p style={{ color: "red", fontSize: 13, marginTop: 4 }}>{fieldErrors.phone}</p>}
                   </div>
                   <div className="mb-15">
                     <textarea

@@ -7,19 +7,23 @@ import { useRouter } from "next/navigation";
 import { Pencil, Plus } from "lucide-react";
 
 import { inquiriesApi } from "@/app/fpo/_api/inquiries";
+import { marketHubInquiriesApi } from "@/app/fpo/_api/market-hub-inquiries";
 import { productsApi } from "@/app/fpo/_api/products";
 import { DataTable } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ViewSheet } from "@/components/ui/view-sheet";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 import type { Product } from "@/types/fpo";
 import { PRODUCT_STATUS_LABEL } from "@/types/fpo";
 
-import { getProductColumns } from "./_components/columns";
 import { getInquiryColumns } from "./_components/inquiry-columns";
+import { getMarketHubInquiryColumns } from "./_components/market-hub-inquiry-columns";
+import { getProductColumns } from "./_components/columns";
 
 type T = Record<string, string>;
+type ViewMode = "products" | "inquiries" | "market-hub-inquiries";
 
 export default function FpoProductsPage() {
   const router = useRouter();
@@ -42,7 +46,7 @@ export default function FpoProductsPage() {
     row: null,
   });
 
-  const [showInquiries, setShowInquiries] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("products");
 
   const STATUS_FILTERS = useMemo(
     () => [
@@ -74,25 +78,55 @@ export default function FpoProductsPage() {
     ],
     [],
   );
+    const MARKET_HUB_STATUS_FILTERS = useMemo(
+    () => [
+      {
+        key: "status",
+        label: "Status",
+        options: [
+          { label: "Pending", value: "suggested" },
+          { label: "Accepted", value: "accepted" },
+          { label: "Rejected", value: "rejected" },
+        ],
+      },
+    ],
+    [],
+  );
+
+  const titles: Record<ViewMode, { title: string; description: string }> = {
+    products: {
+      title: tPage.page_title ?? "My Products",
+      description: tPage.page_description ?? "List and manage your FPO's agricultural products for market linkage.",
+    },
+    inquiries: {
+      title: "My Product Inquiries",
+      description: "View and manage inquiries received on your products.",
+    },
+    "market-hub-inquiries": {
+      title: "Market Hub Inquiries",
+      description: "View inquiries received from anonymous visitors on the public Market Hub.",
+    },
+  };
 
   return (
     <div className="flex flex-col gap-6 px-3 py-4 sm:px-6 sm:py-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-bold text-2xl">
-            {showInquiries ? "My Product Inquiries" : (tPage.page_title ?? "My Products")}
-          </h1>
-          <p className="mt-0.5 text-muted-foreground text-sm">
-            {showInquiries
-              ? "View and manage inquiries received on your products."
-              : (tPage.page_description ?? "List and manage your FPO's agricultural products for market linkage.")}
-          </p>
+          <h1 className="font-bold text-2xl">{titles[viewMode].title}</h1>
+          <p className="mt-0.5 text-muted-foreground text-sm">{titles[viewMode].description}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setShowInquiries((v) => !v)}>
-            {showInquiries ? "My Products" : "View Inquiries"}
-          </Button>
-          {!showInquiries && (
+          <Select value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="products">My Products</SelectItem>
+              <SelectItem value="inquiries">Inquiries</SelectItem>
+              <SelectItem value="market-hub-inquiries">Market Hub Inquiries</SelectItem>
+            </SelectContent>
+          </Select>
+          {viewMode === "products" && (
             <Button size="sm" onClick={() => router.push("/fpo/products/new")}>
               <Plus className="mr-1.5 h-4 w-4" />
               {tPage.add_btn ?? "Add Product"}
@@ -101,7 +135,23 @@ export default function FpoProductsPage() {
         </div>
       </div>
 
-      {showInquiries ? (
+      {viewMode === "products" && (
+        <Suspense>
+          <DataTable
+            queryKey="products"
+            queryFn={productsApi.getAll}
+            columns={getProductColumns(tTable, tCommon)}
+            filters={STATUS_FILTERS}
+            onRowClick={(row) => setProductView({ open: true, row })}
+            columnsLabel={tCommon.columns_header}
+            toggleColumnsLabel={tCommon.columns_toggle_columns}
+            searchPlaceholder={tCommon.search_placeholder}
+            clearLabel={tCommon.clear_filters}
+          />
+        </Suspense>
+      )}
+
+      {viewMode === "inquiries" && (
         <Suspense>
           <DataTable
             queryKey="inquiries"
@@ -114,14 +164,15 @@ export default function FpoProductsPage() {
             clearLabel={tCommon.clear_filters}
           />
         </Suspense>
-      ) : (
+      )}
+
+      {viewMode === "market-hub-inquiries" && (
         <Suspense>
           <DataTable
-            queryKey="products"
-            queryFn={productsApi.getAll}
-            columns={getProductColumns(tTable, tCommon)}
-            filters={STATUS_FILTERS}
-            onRowClick={(row) => setProductView({ open: true, row })}
+            queryKey="market-hub-inquiries"
+            queryFn={marketHubInquiriesApi.getAll}
+            columns={getMarketHubInquiryColumns()}
+            filters={MARKET_HUB_STATUS_FILTERS}
             columnsLabel={tCommon.columns_header}
             toggleColumnsLabel={tCommon.columns_toggle_columns}
             searchPlaceholder={tCommon.search_placeholder}

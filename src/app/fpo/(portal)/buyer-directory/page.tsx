@@ -1,11 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-//--------------
+import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2, Calendar as CalendarIcon, CheckCircle2, Clock, Package, Search, ShoppingCart } from "lucide-react";
-import type { DateRange } from "react-day-picker";
 import { toast } from "sonner";
 
 import { type BuyerProduct, buyerProductsApi } from "@/app/buyer/_api/products";
@@ -67,10 +65,16 @@ function ProductCard({ product, locale }: { product: BuyerProduct; locale: strin
               {product.quality_certification}
             </Badge>
           )}
-          <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
-            <Building2 className="h-3.5 w-3.5" />
-            {product.fpo_name}
-          </div>
+        <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
+          <Building2 className="h-3.5 w-3.5" />
+          {product.fpo_name}
+        </div>
+        <Link
+          href={`/fpo/buyer-directory/fpo/${product.fpo}`}
+          className="text-primary text-xs hover:underline"
+        >
+          View all products from this FPO
+        </Link>
           <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
             <CalendarIcon className="h-3.5 w-3.5" />
             {product.available_from}
@@ -96,7 +100,8 @@ function ProductCard({ product, locale }: { product: BuyerProduct; locale: strin
 function ProductCatalogSection({ locale, t }: { locale: string; t: T }) {
   const [search, setSearch] = useState("");
   const [commodity, setCommodity] = useState("");
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [fromDate, setFromDate] = useState<Date | undefined>(undefined);
+  const [untilDate, setUntilDate] = useState<Date | undefined>(undefined);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
@@ -106,9 +111,9 @@ function ProductCatalogSection({ locale, t }: { locale: string; t: T }) {
     staleTime: 10 * 60_000,
   });
 
-  // Date range filter requires BOTH dates before it's applied — a
-  // half-picked range is treated as "no filter yet."
-  const dateFilterReady = !!dateRange?.from && !!dateRange?.to;
+  // Date range filter requires BOTH dates before it's applied — picking
+  // only one is treated as "no filter yet."
+  const dateFilterReady = !!fromDate && !!untilDate;
 
   const { data, isLoading } = useQuery({
     queryKey: [
@@ -116,8 +121,8 @@ function ProductCatalogSection({ locale, t }: { locale: string; t: T }) {
       locale,
       search,
       commodity,
-      dateFilterReady ? dateRange?.from : null,
-      dateFilterReady ? dateRange?.to : null,
+      dateFilterReady ? fromDate : null,
+      dateFilterReady ? untilDate : null,
       page,
       pageSize,
     ],
@@ -126,9 +131,9 @@ function ProductCatalogSection({ locale, t }: { locale: string; t: T }) {
         page,
         page_size: pageSize,
         search: search || undefined,
-        commodity: commodity || undefined,
-        date_from: dateFilterReady ? formatDate(dateRange?.from) : undefined,
-        date_until: dateFilterReady ? formatDate(dateRange?.to) : undefined,
+        commodity: commodity !== "all" ? commodity : undefined,
+        date_from: dateFilterReady ? formatDate(fromDate) : undefined,
+        date_until: dateFilterReady ? formatDate(untilDate) : undefined,
       }),
     staleTime: 30_000,
   });
@@ -177,36 +182,54 @@ function ProductCatalogSection({ locale, t }: { locale: string; t: T }) {
 
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" className="w-full justify-start font-normal sm:w-[260px]">
+            <Button variant="outline" className="w-full justify-start font-normal sm:w-[180px]">
               <CalendarIcon className="mr-2 h-4 w-4" />
-              {dateFilterReady
-                ? `${formatDate(dateRange?.from)} – ${formatDate(dateRange?.to)}`
-                : (t.date_filter_placeholder ?? "From date – Until date")}
+              {fromDate ? formatDate(fromDate) : (t.from_date_placeholder ?? "From date")}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
             <Calendar
-              mode="range"
-              selected={dateRange}
-              onSelect={(range) => {
-                setDateRange(range);
-                // Only reset the page once BOTH dates are picked — matches
-                // the "both required before filter applies" rule, so we
-                // don't refetch/reset on a half-picked range.
-                if (range?.from && range?.to) resetPage();
+              mode="single"
+              selected={fromDate}
+              onSelect={(date) => {
+                setFromDate(date);
+                if (date && untilDate) resetPage();
               }}
-              numberOfMonths={2}
             />
-            {dateRange && (
+            {fromDate && (
               <div className="flex justify-end border-t p-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setDateRange(undefined);
-                    resetPage();
-                  }}
-                >
+                <Button variant="ghost" size="sm" onClick={() => { setFromDate(undefined); resetPage(); }}>
+                  {t.date_filter_clear ?? "Clear"}
+                </Button>
+              </div>
+            )}
+          </PopoverContent>
+        </Popover>
+
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="w-full justify-start font-normal sm:w-[180px]">
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {untilDate ? formatDate(untilDate) : (t.until_date_placeholder ?? "To date")}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={untilDate}
+              onSelect={(date) => {
+                if (date && fromDate && date < fromDate) {
+                  toast.error("'To date' cannot be earlier than 'From date'.");
+                  return;
+                }
+                setUntilDate(date);
+                if (fromDate && date) resetPage();
+              }}
+              disabled={fromDate ? { before: fromDate } : undefined}
+            />
+            {untilDate && (
+              <div className="flex justify-end border-t p-2">
+                <Button variant="ghost" size="sm" onClick={() => { setUntilDate(undefined); resetPage(); }}>
                   {t.date_filter_clear ?? "Clear"}
                 </Button>
               </div>
