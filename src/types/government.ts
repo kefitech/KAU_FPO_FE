@@ -299,7 +299,7 @@ export interface GovtTrainingSessionDetail {
 }
 
 export interface GovtTrainingSessionPayload {
-  fpo_id: number;
+  fpo_application_id: string;
   topic: string;
   date: string;
   duration_hours: number;

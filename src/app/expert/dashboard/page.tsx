@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-
+import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -24,6 +24,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function ExpertDashboardPage() {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const locale = useLocaleStore((s) => s.locale);
   const [t, setT] = useState<T>({});
@@ -46,6 +47,11 @@ export default function ExpertDashboardPage() {
     queryKey: ["expert-my-bookings"],
     queryFn: () => expertDashboardApi.getMyBookings(),
   });
+
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterDateFrom, setFilterDateFrom] = useState<string>("");
+  const [filterDateTo, setFilterDateTo] = useState<string>("");
+  const [filterSearch, setFilterSearch] = useState<string>("");
 
   const confirmMutation = useMutation({
     mutationFn: (id: number) => expertDashboardApi.confirmBooking(id),
@@ -85,8 +91,34 @@ export default function ExpertDashboardPage() {
     return <p className="text-muted-foreground text-sm">{t.loading ?? "Loading your bookings..."}</p>;
   }
 
-  const pending = bookings.filter((b) => b.status === "pending");
-  const others = bookings.filter((b) => b.status !== "pending");
+  const filteredBookings = bookings.filter((b) => {
+    if (filterStatus !== "all" && b.status !== filterStatus) return false;
+    if (filterDateFrom && b.requested_date < filterDateFrom) return false;
+    if (filterDateTo && b.requested_date > filterDateTo) return false;
+    if (filterSearch) {
+      const q = filterSearch.toLowerCase();
+      const haystack = `${b.fpo_name ?? ""} ${b.fpo_district ?? ""}`.toLowerCase();
+      if (!haystack.includes(q)) return false;
+    }
+    return true;
+  });
+
+  const groupedByFpo = filteredBookings.reduce<Record<number, ExpertBooking[]>>((acc, b) => {
+    if (!acc[b.fpo]) acc[b.fpo] = [];
+    acc[b.fpo].push(b);
+    return acc;
+  }, {});
+
+  Object.values(groupedByFpo).forEach((group) => {
+    group.sort((a, b) => new Date(b.requested_date).getTime() - new Date(a.requested_date).getTime());
+  });
+
+  const fpoGroups = Object.values(groupedByFpo).sort((a, b) => {
+    const aHasPending = a.some((x) => x.status === "pending");
+    const bHasPending = b.some((x) => x.status === "pending");
+    if (aHasPending !== bHasPending) return aHasPending ? -1 : 1;
+    return new Date(b[0].requested_date).getTime() - new Date(a[0].requested_date).getTime();
+  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -95,92 +127,131 @@ export default function ExpertDashboardPage() {
         <p className="text-muted-foreground text-sm">{t.page_description ?? "Manage your appointment requests"}</p>
       </div>
 
+      <div className="flex flex-wrap items-end gap-3 rounded-md border p-3">
+        <div className="flex flex-col gap-1">
+          <label className="text-muted-foreground text-xs" htmlFor="filter-status">{t.filter_status ?? "Status"}</label>
+          <select
+            id="filter-status"
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="rounded-md border bg-background px-2 py-1 text-sm"
+          >
+            <option value="all">{t.filter_status_all ?? "All"}</option>
+            <option value="pending">{t.status_pending ?? "Pending"}</option>
+            <option value="confirmed">{t.status_confirmed ?? "Confirmed"}</option>
+            <option value="rejected">{t.status_rejected ?? "Rejected"}</option>
+            <option value="cancelled">{t.status_cancelled ?? "Cancelled"}</option>
+            <option value="completed">{t.status_completed ?? "Completed"}</option>
+          </select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-muted-foreground text-xs" htmlFor="filter-from">{t.filter_from ?? "From"}</label>
+          <input
+            id="filter-from"
+            type="date"
+            value={filterDateFrom}
+            onChange={(e) => setFilterDateFrom(e.target.value)}
+            className="rounded-md border bg-background px-2 py-1 text-sm"
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-muted-foreground text-xs" htmlFor="filter-to">{t.filter_to ?? "To"}</label>
+          <input
+            id="filter-to"
+            type="date"
+            value={filterDateTo}
+            onChange={(e) => setFilterDateTo(e.target.value)}
+            className="rounded-md border bg-background px-2 py-1 text-sm"
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-muted-foreground text-xs" htmlFor="filter-search">{t.filter_search ?? "FPO name or district"}</label>
+          <input
+            id="filter-search"
+            type="text"
+            value={filterSearch}
+            onChange={(e) => setFilterSearch(e.target.value)}
+            placeholder={t.filter_search_placeholder ?? "Search..."}
+            className="rounded-md border bg-background px-2 py-1 text-sm"
+          />
+        </div>
+        {(filterStatus !== "all" || filterDateFrom || filterDateTo || filterSearch) && (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              setFilterStatus("all");
+              setFilterDateFrom("");
+              setFilterDateTo("");
+              setFilterSearch("");
+            }}
+          >
+            {t.filter_clear ?? "Clear filters"}
+          </Button>
+        )}
+      </div>
+
       {bookings.length === 0 && <p className="text-muted-foreground text-sm">{t.empty_no_bookings ?? "No bookings yet."}</p>}
 
-      {pending.length > 0 && (
-        <div className="flex flex-col gap-3">
-          <h3 className="font-semibold text-sm">{t.section_pending ?? "Pending Requests"}</h3>
-          {pending.map((booking) => (
-            <Card key={booking.id}>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-base">{booking.fpo_name}</CardTitle>
-                <Badge className={STATUS_COLORS[booking.status]}>{getStatusLabel(booking.status, booking.status_display)}</Badge>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-3">
-                <p className="text-sm">
-                  <span className="font-medium">{booking.requested_date}</span> at{" "}
-                  <span className="font-medium">{booking.requested_time}</span>
-                </p>
-                {booking.fpo_application_id && (
-                  <p className="text-muted-foreground text-xs">{t.field_application_id ?? "Application ID"}: {booking.fpo_application_id}</p>
-                )}
-                {booking.fpo_contact_name && (
-                  <p className="text-muted-foreground text-xs">{t.field_contact ?? "Contact"}: {booking.fpo_contact_name}</p>
-                )}
-                {booking.fpo_email && <p className="text-muted-foreground text-xs">{t.field_email ?? "Email"}: {booking.fpo_email}</p>}
-                {booking.fpo_phone && <p className="text-muted-foreground text-xs">{t.field_phone ?? "Phone"}: {booking.fpo_phone}</p>}
-                {booking.topic && <p className="text-muted-foreground text-sm">{t.field_topic ?? "Topic"}: {booking.topic}</p>}
-                {booking.notes && <p className="text-muted-foreground text-sm">{t.field_notes ?? "Notes"}: {booking.notes}</p>}
-                {booking.fpo_location && (
-                  <p className="text-muted-foreground text-xs">{t.field_location ?? "Location"}: {booking.fpo_location}</p>
-                )}
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    onClick={() => confirmMutation.mutate(booking.id)}
-                    disabled={confirmMutation.isPending}
-                  >
-                    {t.btn_confirm ?? "Confirm"}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleReject(booking)}
-                    disabled={rejectMutation.isPending}
-                  >
-                    {t.btn_reject ?? "Reject"}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+      {fpoGroups.length === 0 && bookings.length > 0 && (
+        <p className="text-muted-foreground text-sm">{t.empty_no_matches ?? "No bookings match your filters."}</p>
       )}
 
-      {others.length > 0 && (
-        <div className="flex flex-col gap-3">
-          <h3 className="font-semibold text-sm">{t.section_past ?? "Past & Other Bookings"}</h3>
-          {others.map((booking) => (
-            <Card key={booking.id}>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-base">{booking.fpo_name}</CardTitle>
-                <Badge className={STATUS_COLORS[booking.status]}>{getStatusLabel(booking.status, booking.status_display)}</Badge>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-1">
-                <p className="text-sm">
-                  {booking.requested_date} at {booking.requested_time}
+      {fpoGroups.map((group) => {
+        const first = group[0];
+        return (
+          <Card
+            key={first.fpo}
+            role="button"
+            tabIndex={0}
+            className="cursor-pointer transition-colors hover:bg-muted/50"
+            onClick={() => router.push(`/expert/dashboard/fpo/${first.fpo}`)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                router.push(`/expert/dashboard/fpo/${first.fpo}`);
+              }
+            }}
+          >
+            <CardHeader>
+              <CardTitle className="text-base">{first.fpo_name}</CardTitle>
+              
+              <div className="flex items-center gap-2">
+        
+                <p className="text-muted-foreground text-xs">
+                  {(t.booking_count ?? "{count} booking(s)").replace("{count}", String(group.length))}
                 </p>
-                {booking.fpo_application_id && (
-                  <p className="text-muted-foreground text-xs">{t.field_application_id ?? "Application ID"}: {booking.fpo_application_id}</p>
+                <Badge className={STATUS_COLORS[first.status]}>{getStatusLabel(first.status, first.status_display)}</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1 border-b pb-3">
+                {first.fpo_application_id && (
+                  <p className="text-muted-foreground text-xs">{t.field_application_id ?? "Application ID"}: {first.fpo_application_id}</p>
                 )}
-                {booking.fpo_contact_name && (
-                  <p className="text-muted-foreground text-xs">{t.field_contact ?? "Contact"}: {booking.fpo_contact_name}</p>
+                {first.fpo_contact_name && (
+                  <p className="text-muted-foreground text-xs">{t.field_contact ?? "Contact"}: {first.fpo_contact_name}</p>
                 )}
-                {booking.fpo_email && <p className="text-muted-foreground text-xs">{t.field_email ?? "Email"}: {booking.fpo_email}</p>}
-                {booking.fpo_phone && <p className="text-muted-foreground text-xs">{t.field_phone ?? "Phone"}: {booking.fpo_phone}</p>}
-                {booking.topic && <p className="text-muted-foreground text-sm">{t.field_topic ?? "Topic"}: {booking.topic}</p>}
-                {booking.notes && <p className="text-muted-foreground text-sm">{t.field_notes ?? "Notes"}: {booking.notes}</p>}
-                {booking.fpo_location && (
-                  <p className="text-muted-foreground text-xs">{t.field_location ?? "Location"}: {booking.fpo_location}</p>
+                {first.fpo_email && <p className="text-muted-foreground text-xs">{t.field_email ?? "Email"}: {first.fpo_email}</p>}
+                {first.fpo_phone && <p className="text-muted-foreground text-xs">{t.field_phone ?? "Phone"}: {first.fpo_phone}</p>}
+                {first.fpo_location && (
+                  <p className="text-muted-foreground text-xs">{t.field_location ?? "Location"}: {first.fpo_location}</p>
                 )}
-                {booking.cancellation_reason && (
-                  <p className="text-muted-foreground text-xs">{t.field_reason ?? "Reason"}: {booking.cancellation_reason}</p>
+                {first.fpo_district && (
+                  <p className="text-muted-foreground text-xs">{t.field_district ?? "District"}: {first.fpo_district}</p>
                 )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+                {first.fpo_registration_number && (
+                  <p className="text-muted-foreground text-xs">{t.field_registration_number ?? "Registration No."}: {first.fpo_registration_number}</p>
+                )}
+                {first.fpo_total_members != null && (
+                  <p className="text-muted-foreground text-xs">{t.field_total_members ?? "Members"}: {first.fpo_total_members}</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
 
       <Dialog open={rejectDialog.open} onOpenChange={(open) => setRejectDialog((s) => ({ ...s, open }))}>
         <DialogContent className="max-w-md">

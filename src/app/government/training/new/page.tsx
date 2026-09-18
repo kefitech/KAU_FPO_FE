@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+
 import { useRouter } from "next/navigation";
+
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -27,7 +29,7 @@ export default function NewTrainingSessionPage() {
       .catch(() => undefined);
   }, [locale]);
 
-  const [fpoId, setFpoId] = useState("");
+  const [fpoApplicationId, setFpoApplicationId] = useState("");
   const [topic, setTopic] = useState("");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [durationHours, setDurationHours] = useState("2");
@@ -37,7 +39,7 @@ export default function NewTrainingSessionPage() {
   const mutation = useMutation({
     mutationFn: () =>
       govtTrainingApi.create({
-        fpo_id: Number(fpoId),
+        fpo_application_id: fpoApplicationId,
         topic,
         date,
         duration_hours: Number(durationHours),
@@ -58,14 +60,16 @@ export default function NewTrainingSessionPage() {
     <div className="flex flex-col gap-6 p-6">
       <div>
         <h1 className="font-bold text-2xl">{t.create_title ?? "New Training Session"}</h1>
-        <p className="mt-0.5 text-muted-foreground text-sm">{t.create_subtitle ?? "Log a session you conducted for an FPO"}</p>
+        <p className="mt-0.5 text-muted-foreground text-sm">
+          {t.create_subtitle ?? "Log a session you conducted for an FPO"}
+        </p>
       </div>
 
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          if (!fpoId || !topic || !date) {
-            toast.error(t.validation_required ?? "Fill in FPO ID, topic, and date");
+          if (!fpoApplicationId || !topic || !date) {
+            toast.error(t.validation_required ?? "Fill in FPO Application ID, topic, and date");
             return;
           }
           mutation.mutate();
@@ -78,12 +82,23 @@ export default function NewTrainingSessionPage() {
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
               <Field>
-                <FieldLabel htmlFor="fpo-id">{t.field_fpo_id ?? "FPO ID"} *</FieldLabel>
-                <Input id="fpo-id" type="number" value={fpoId} onChange={(e) => setFpoId(e.target.value)} placeholder={t.placeholder_fpo_id ?? "Enter FPO id"} />
+                <FieldLabel htmlFor="fpo-id">{t.field_fpo_application_id ?? "FPO Application ID"} *</FieldLabel>
+                <Input
+                  id="fpo-id"
+                  type="text"
+                  value={fpoApplicationId}
+                  onChange={(e) => setFpoApplicationId(e.target.value)}
+                  placeholder={t.placeholder_fpo_application_id ?? "e.g. KAU-FPO-KLM-2026-0001"}
+                />
               </Field>
               <Field>
                 <FieldLabel htmlFor="topic">{t.field_topic ?? "Topic"} *</FieldLabel>
-                <Input id="topic" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder={t.placeholder_topic ?? "e.g. Organic Farming Practices"} />
+                <Input
+                  id="topic"
+                  value={topic}
+                  onChange={(e) => setTopic(e.target.value)}
+                  placeholder={t.placeholder_topic ?? "e.g. Organic Farming Practices"}
+                />
               </Field>
               <FieldGroup className="grid grid-cols-2 gap-4">
                 <Field>
@@ -92,17 +107,34 @@ export default function NewTrainingSessionPage() {
                 </Field>
                 <Field>
                   <FieldLabel htmlFor="duration">{t.field_duration ?? "Duration (hours)"}</FieldLabel>
-                  <Input id="duration" type="number" step="0.5" value={durationHours} onChange={(e) => setDurationHours(e.target.value)} />
+                  <Input
+                    id="duration"
+                    type="number"
+                    step="0.5"
+                    value={durationHours}
+                    onChange={(e) => setDurationHours(e.target.value)}
+                  />
                 </Field>
               </FieldGroup>
               <FieldGroup className="grid grid-cols-2 gap-4">
                 <Field>
                   <FieldLabel htmlFor="participants">{t.field_participants ?? "Participants"}</FieldLabel>
-                  <Input id="participants" type="number" min={0} value={participantsCount} onChange={(e) => setParticipantsCount(e.target.value)} />
+                  <Input
+                    id="participants"
+                    type="number"
+                    min={0}
+                    value={participantsCount}
+                    onChange={(e) => setParticipantsCount(e.target.value)}
+                  />
                 </Field>
                 <Field>
                   <FieldLabel htmlFor="venue">{t.field_venue ?? "Venue"}</FieldLabel>
-                  <Input id="venue" value={venue} onChange={(e) => setVenue(e.target.value)} placeholder={t.placeholder_venue ?? "Optional"} />
+                  <Input
+                    id="venue"
+                    value={venue}
+                    onChange={(e) => setVenue(e.target.value)}
+                    placeholder={t.placeholder_venue ?? "Optional"}
+                  />
                 </Field>
               </FieldGroup>
             </CardContent>

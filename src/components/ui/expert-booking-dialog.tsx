@@ -27,6 +27,7 @@ interface ExpertBookingDialogProps {
 export function ExpertBookingDialog({ open, onOpenChange, expertId, expertName }: ExpertBookingDialogProps) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [selectedSlotId, setSelectedSlotId] = useState<number | null>(null);
   const [topic, setTopic] = useState("");
   const [notes, setNotes] = useState("");
 
@@ -34,6 +35,8 @@ export function ExpertBookingDialog({ open, onOpenChange, expertId, expertName }
     queryKey: ["expert-availability", expertId],
     queryFn: () => expertsApi.getAvailability(expertId),
     enabled: open,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const mutation = useMutation({
@@ -41,6 +44,7 @@ export function ExpertBookingDialog({ open, onOpenChange, expertId, expertName }
       expertsApi.bookSlot(expertId, {
         requested_date: selectedDate as string,
         requested_time: selectedTime as string,
+        time_slot_id: selectedSlotId ?? undefined,
         topic,
         notes,
       }),
@@ -48,6 +52,7 @@ export function ExpertBookingDialog({ open, onOpenChange, expertId, expertName }
       toast.success("Booking request submitted. The expert will confirm shortly.");
       setSelectedDate(null);
       setSelectedTime(null);
+      setSelectedSlotId(null);
       setTopic("");
       setNotes("");
       onOpenChange(false);
@@ -96,6 +101,7 @@ export function ExpertBookingDialog({ open, onOpenChange, expertId, expertName }
                   const iso = toLocalISODate(date);
                   setSelectedDate(iso);
                   setSelectedTime(null);
+                  setSelectedSlotId(null);
                 }}
                 disabled={(date) => {
                   const iso = toLocalISODate(date);
@@ -113,12 +119,15 @@ export function ExpertBookingDialog({ open, onOpenChange, expertId, expertName }
                       .find((d) => d.date === selectedDate)
                       ?.time_slots.map((slot) => (
                         <Button
-                          key={slot.start}
+                          key={slot.id}
                           type="button"
                           size="sm"
-                          variant={selectedTime === slot.start ? "default" : "outline"}
+                          variant={selectedSlotId === slot.id ? "default" : "outline"}
                           disabled={slot.is_booked}
-                          onClick={() => setSelectedTime(slot.start)}
+                          onClick={() => {
+                            setSelectedTime(slot.start);
+                            setSelectedSlotId(slot.id);
+                          }}
                         >
                           {slot.start} - {slot.end}
                           {slot.is_booked ? " (booked)" : ""}

@@ -9,6 +9,7 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/s
 export default function ExpertLayout({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider>
+    
       <RoleMenuSidebar title="KAU-FPO" subtitle="Expert Portal" />
       <SidebarInset>
         <div className="flex items-center justify-between border-b px-4 py-2">
