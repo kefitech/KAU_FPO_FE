@@ -43,10 +43,10 @@ function StatusAndActions({ version, t }: { version: ZoneVersion; t: T }) {
   function handleDelete() {
     confirm({
       title: t.delete_confirm_title ?? "Delete Zone Version",
-      description: (t.delete_confirm_desc ?? 'Are you sure you want to delete "{label}"? This cannot be undone.').replace(
-        "{label}",
-        version.label,
-      ),
+      description: (
+        t.delete_confirm_desc ??
+        'Are you sure you want to delete "{label}"? This cannot be undone.'
+      ).replace("{label}", version.label),
       onConfirm: () => deleteMutation.mutateAsync(),
     });
   }

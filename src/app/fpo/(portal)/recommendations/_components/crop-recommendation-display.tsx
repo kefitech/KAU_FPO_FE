@@ -116,7 +116,16 @@ function buildCropPopFields(pop: CropPackageOfPractices, t: T): SheetField[] {
   return fields;
 }
 
-export function CropRecommendationDisplay() {
+interface CropRecommendationDisplayProps {
+  /** Whether the FPO currently has a saved cultivation-area boundary --
+   * null while unknown (initial load, or it failed to load), in which case
+   * we don't block. Lifted from the sibling CultivationAreaMap via the
+   * parent page, since a recommendation without a real boundary to anchor
+   * it to isn't something we want to generate anymore. */
+  hasCultivationArea: boolean | null;
+}
+
+export function CropRecommendationDisplay({ hasCultivationArea }: CropRecommendationDisplayProps) {
   const locale = useLocaleStore((s) => s.locale);
   const [t, setT] = useState<T>({});
 
@@ -259,6 +268,15 @@ export function CropRecommendationDisplay() {
   }
 
   async function handleRequest() {
+    // No cultivation area (never drawn, or removed since a prior
+    // recommendation) -- refuse client-side rather than falling back to
+    // the FPO's registered lat/lng, since a recommendation with nothing
+    // real to anchor it to isn't useful anymore. No request is sent, so
+    // this doesn't touch the existing (possibly still-valid) recommendation.
+    if (hasCultivationArea === false) {
+      setError(t.error_no_boundary ?? "Draw your farm boundary above before requesting a recommendation.");
+      return;
+    }
     const soilPh = parseSoilPh();
     if (soilPh !== undefined && Number.isNaN(soilPh)) return;
     setRequesting(true);
@@ -268,6 +286,13 @@ export function CropRecommendationDisplay() {
       setRecommendation(result);
       setFeedbackRating(result.feedback_rating ?? 0);
       setFeedbackSubmitted(!!result.feedback_rating);
+      // feedbackComment is local-only state (never populated from the
+      // fetched/created recommendation, see the initial-load effect above) --
+      // without clearing it here, a comment typed for the PREVIOUS
+      // recommendation just sits in memory and reappears prefilled on the
+      // new one, same bug class as the star rating had before it was reset
+      // on the backend.
+      setFeedbackComment("");
       if (result.status === "pending" || result.status === "processing") {
         startPolling();
       }
@@ -392,7 +417,7 @@ export function CropRecommendationDisplay() {
               className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 font-medium text-primary-foreground text-xs disabled:cursor-not-allowed disabled:opacity-50"
             >
               {requesting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-              {recommendation ? (t.btn_refresh ?? "Refresh recommendations") : (t.btn_get ?? "Get recommendations")}
+              {recommendation ? (t.btn_refresh ?? "Generate recommendations") : (t.btn_get ?? "Get recommendations")}
             </button>
           </div>
           {phError && <p className="text-destructive text-xs">{phError}</p>}

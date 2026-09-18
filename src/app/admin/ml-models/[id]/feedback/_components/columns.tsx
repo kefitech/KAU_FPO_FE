@@ -5,7 +5,7 @@ import { Star } from "lucide-react";
 
 import type { RecommendationFeedbackItem } from "@/app/admin/_api/ml-models";
 
-function StarDisplay({ rating }: { rating: number }) {
+export function StarDisplay({ rating }: { rating: number }) {
   return (
     <div className="flex items-center gap-0.5">
       {[1, 2, 3, 4, 5].map((n) => (
@@ -36,7 +36,9 @@ export function getFeedbackColumns(): ColumnDef<RecommendationFeedbackItem>[] {
       meta: { hideOnMobile: true },
       cell: ({ row }) =>
         row.original.feedback_comment ? (
-          <span className="line-clamp-2 max-w-xs text-muted-foreground">{row.original.feedback_comment}</span>
+          <span className="block max-w-xs truncate text-muted-foreground" title={row.original.feedback_comment}>
+            {row.original.feedback_comment}
+          </span>
         ) : (
           <span className="text-muted-foreground italic">No comment</span>
         ),
@@ -45,7 +47,17 @@ export function getFeedbackColumns(): ColumnDef<RecommendationFeedbackItem>[] {
       accessorKey: "crops",
       header: "Crops recommended",
       meta: { hideOnMobile: true },
-      cell: ({ row }) => <span className="text-muted-foreground">{row.original.crops.join(", ")}</span>,
+      cell: ({ row }) => {
+        const crops = row.original.crops;
+        const shown = crops.slice(0, 3).join(", ");
+        const remaining = crops.length - 3;
+        return (
+          <span className="block max-w-xs truncate text-muted-foreground" title={crops.join(", ")}>
+            {shown}
+            {remaining > 0 ? ` +${remaining} more` : ""}
+          </span>
+        );
+      },
     },
     {
       accessorKey: "created_at",

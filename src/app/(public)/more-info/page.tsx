@@ -4,7 +4,10 @@ import MoreInformantion from "../_components/more-info";
 export default function RegistrationProcess() {
   return (
     <AgrulLayout>
-      <BreadCrumb title="More info" breadCrumb="More Informations and Technologies" />
+      <BreadCrumb
+        title="Agriculture Information Technologies & Services (AITS)"
+        breadCrumb="More Informations and Technologies"
+      />
       <MoreInformantion />
     </AgrulLayout>
   );

@@ -137,4 +137,9 @@ export const adminMlModelsApi = {
         timeout: 60_000,
       })
       .then(unwrap),
+
+  // Soft-deletes the version (MLModelVersionDetailView). The active version
+  // can't be deleted — the backend returns a 400 telling the admin to
+  // activate a different version first.
+  delete: (id: number): Promise<void> => api.delete(`${BASE}${id}/`).then(() => undefined),
 };

@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { adminMlModelsApi, type MLModelVersion } from "@/app/admin/_api/ml-models";
 import { RowActions } from "@/components/data-table/row-actions";
 import { Badge } from "@/components/ui/badge";
+import { useConfirmStore } from "@/stores/confirm-store";
 
 type T = Record<string, string>;
 
@@ -54,6 +55,7 @@ function MlModelActions({
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const confirm = useConfirmStore((s) => s.confirm);
 
   const activateMutation = useMutation({
     mutationFn: () => adminMlModelsApi.activate(model.id),
@@ -68,6 +70,19 @@ function MlModelActions({
     onError: (error: unknown) => {
       const msg = (error as { message?: string })?.message;
       toast.error(msg ?? t.toast_activate_failed ?? "Failed to activate model version");
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => adminMlModelsApi.delete(model.id),
+    onSuccess: () => {
+      toast.success(t.toast_deleted ?? "Model version deleted");
+      queryClient.invalidateQueries({ queryKey: ["ml-models"] });
+    },
+    onError: (error: unknown) => {
+      // e.g. 400 from the backend when this is the active version.
+      const msg = (error as { message?: string })?.message;
+      toast.error(msg ?? t.toast_delete_failed ?? "Failed to delete model version");
     },
   });
 
@@ -97,6 +112,23 @@ function MlModelActions({
           // backend enforces the same rule (400 otherwise).
           hidden: model.is_active || model.status !== "ready",
           separator: true,
+        },
+        {
+          label: t.action_delete ?? "Delete",
+          destructive: true,
+          disabled: deleteMutation.isPending,
+          // The active version can't be deleted — the backend enforces the
+          // same rule (400 otherwise); deactivate by activating another
+          // version first.
+          hidden: model.is_active,
+          onClick: () =>
+            confirm({
+              title: t.delete_title ?? "Delete model version",
+              description:
+                t.delete_description ??
+                `Are you sure you want to delete "${model.version_code}"? This can't be undone from the UI.`,
+              onConfirm: () => deleteMutation.mutateAsync(),
+            }),
         },
       ]}
     />
