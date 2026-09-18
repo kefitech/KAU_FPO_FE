@@ -22,7 +22,12 @@ function makeProfileSchema(t: T) {
   return z.object({
     first_name: z.string().min(1, { message: t.val_first_name_required ?? "First name is required." }),
     last_name: z.string().min(1, { message: t.val_last_name_required ?? "Last name is required." }),
-    phone: z.string().optional(),
+    phone: z
+      .string()
+      .optional()
+      .refine((v) => !v || /^[6-9]\d{9}$/.test(v), {
+        message: t.val_invalid_phone ?? "Enter a valid 10-digit mobile number.",
+      }),
     preferred_language: z.string().optional(),
   });
 }
@@ -364,8 +369,11 @@ export default function SettingsProfilePage() {
                     {...field}
                     id="phone"
                     type="tel"
-                    placeholder="+91 98765 43210"
+                    inputMode="numeric"
+                    maxLength={10}
+                    placeholder="9876543210"
                     aria-invalid={fieldState.invalid}
+                    onChange={(e) => field.onChange(e.target.value.replace(/\D/g, "").slice(0, 10))}
                   />
                   {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                 </div>

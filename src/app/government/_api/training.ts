@@ -15,4 +15,7 @@ export const govtTrainingApi = {
     api.post<Wrapped<{ id: number }>>(BASE, payload).then(unwrap),
   setAttendance: (id: number, attendance: { member_name: string; attended: boolean }[]) =>
     api.post<Wrapped<{ session_id: number; attendance_count: number }>>(`${BASE}${id}/attendance/`, { attendance }).then(unwrap),
+  update: (id: number, payload: Partial<GovtTrainingSessionPayload>) =>
+  api.patch<Wrapped<GovtTrainingSessionDetail>>(`${BASE}${id}/`, payload).then(unwrap),
+  remove: (id: number) => api.delete<Wrapped<null>>(`${BASE}${id}/`).then((r) => r.data),
 };

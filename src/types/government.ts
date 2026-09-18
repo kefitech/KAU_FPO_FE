@@ -3,10 +3,6 @@
  * Based on SRS Section 3.2.2
  */
 
-<<<<<<< Updated upstream
-=======
-
->>>>>>> Stashed changes
 export interface GovtDashboardStats {
   total: number;
   by_status: Record<string, number>;
@@ -218,10 +214,6 @@ export interface GovtDashboardStats {
   jurisdiction_type: "state" | "district";
 }
 
-<<<<<<< Updated upstream
-=======
-
->>>>>>> Stashed changes
 // Added for enriched FPO Directory detail view
 export interface GovtFPODetail {
   id: number;
@@ -278,10 +270,6 @@ export interface GovtFPODetail {
   updated_at: string;
 }
 
-<<<<<<< Updated upstream
-=======
-
->>>>>>> Stashed changes
 // Added for Training Sessions and Schemes write access
 export interface GovtTrainingSession {
   id: number;
@@ -289,11 +277,14 @@ export interface GovtTrainingSession {
   fpo_name: string;
   district: string;
   topic: string;
+  trainer_name: string;
   date: string;
   duration_hours: string;
   participants_count: number;
   venue: string;
   attendance_count: number;
+  created_by_name: string;
+  can_edit: boolean;
 }
 
 export interface GovtTrainingSessionDetail {
@@ -301,6 +292,7 @@ export interface GovtTrainingSessionDetail {
   fpo: number;
   fpo_name: string;
   topic: string;
+  trainer_name: string;
   date: string;
   duration_hours: string;
   participants_count: number;
@@ -308,14 +300,12 @@ export interface GovtTrainingSessionDetail {
   attendance: { id: number; member_name: string; attended: boolean }[];
   created_at: string;
   updated_at: string;
+  created_by_name: string;
+  can_edit: boolean;
 }
 
 export interface GovtTrainingSessionPayload {
-<<<<<<< Updated upstream
   fpo_application_id: string;
-=======
-  fpo_id: number;
->>>>>>> Stashed changes
   topic: string;
   date: string;
   duration_hours: number;
@@ -323,10 +313,6 @@ export interface GovtTrainingSessionPayload {
   venue?: string;
 }
 
-<<<<<<< Updated upstream
-=======
-
->>>>>>> Stashed changes
 export interface GovtScheme {
   id: number;
   name_en: string;
@@ -342,11 +328,8 @@ export interface GovtScheme {
   last_updated: string | null;
   is_active: boolean;
   order: number;
-<<<<<<< Updated upstream
   created_by: number | null;
   created_by_name: string | null;
-=======
->>>>>>> Stashed changes
   created_at: string;
   updated_at: string;
 }
