@@ -305,8 +305,9 @@ export interface GovtTrainingSessionDetail {
 }
 
 export interface GovtTrainingSessionPayload {
-  fpo_application_id: string;
+  fpo_application_ids: string[];
   topic: string;
+  trainer_name?: string;
   date: string;
   duration_hours: number;
   participants_count?: number;

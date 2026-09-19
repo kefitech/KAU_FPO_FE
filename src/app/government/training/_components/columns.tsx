@@ -131,16 +131,10 @@ export function getTrainingColumns(
       cell: ({ row }) => `${row.original.duration_hours}h`,
     },
     {
-      accessorKey: "attendance_count",
-      header: t.col_attendance ?? "Attendance",
+      accessorKey: "participants_count",
+      header: t.col_participants ?? "Participants",
       enableSorting: false,
-      cell: ({ row }) => (
-        <Badge variant="outline">
-          {(t.badge_attended ?? "{attended}/{total}")
-            .replace("{attended}", String(row.original.attendance_count))
-            .replace("{total}", String(row.original.participants_count))}
-        </Badge>
-      ),
+      cell: ({ row }) => <Badge variant="outline">{row.original.participants_count}</Badge>,
     },
     {
       accessorKey: "created_by_name",

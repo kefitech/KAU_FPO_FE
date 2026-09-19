@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 
 import { useRouter } from "next/navigation";
+
 import { Plus } from "lucide-react";
 
 import { govtTrainingApi } from "@/app/government/_api/training";
@@ -18,8 +19,20 @@ import { getTrainingColumns } from "./_components/columns";
 type T = Record<string, string>;
 
 const DISTRICT_CODES = [
-  "TVM", "KLM", "PTA", "ALP", "KTM", "IDK", "EKM",
-  "TSR", "PKD", "MLP", "KZD", "WYD", "KNR", "KSD",
+  "TVM",
+  "KLM",
+  "PTA",
+  "ALP",
+  "KTM",
+  "IDK",
+  "EKM",
+  "TSR",
+  "PKD",
+  "MLP",
+  "KZD",
+  "WYD",
+  "KNR",
+  "KSD",
 ];
 
 export default function GovernmentTrainingPage() {
@@ -63,7 +76,7 @@ export default function GovernmentTrainingPage() {
 
   if (translationsLoading) {
     return (
-      <div className="flex flex-col gap-6 py-6">
+      <div className="flex flex-col gap-6 p-6">
         <div className="flex flex-col gap-2">
           <div className="h-7 w-56 animate-pulse rounded bg-muted" />
           <div className="h-4 w-80 animate-pulse rounded bg-muted" />
@@ -75,7 +88,7 @@ export default function GovernmentTrainingPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 py-6">
+    <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-bold text-2xl">{t.page_title ?? "Training Sessions"}</h1>
@@ -93,11 +106,8 @@ export default function GovernmentTrainingPage() {
         <DataTable
           queryKey="government-training-sessions"
           queryFn={govtTrainingApi.getAll}
-          columns={getTrainingColumns(t, tCommon, (row) =>
-            setSheet({ open: true, session: row }),
-          )}
-         
-          onRowClick={(row) => setSheet({ open: true, session: row })}
+          columns={getTrainingColumns(t, tCommon, (row) => setSheet({ open: true, session: row }))}
+          filters={filters}
           columnsLabel={tCommon.col_header ?? "Columns"}
           toggleColumnsLabel={tCommon.col_toggle_columns ?? "Toggle columns"}
           searchPlaceholder={t.search_placeholder ?? "Search by topic or FPO..."}
@@ -128,10 +138,7 @@ export default function GovernmentTrainingPage() {
             { label: t.field_date ?? "Date", type: "date", value: s.date },
             { label: t.field_duration ?? "Duration", value: `${s.duration_hours}h` },
             { label: t.field_venue ?? "Venue", value: s.venue || "—" },
-            {
-              label: t.field_attendance ?? "Attendance",
-              value: `${s.attendance_count}/${s.participants_count}`,
-            },
+            { label: t.field_participants ?? "Participants", value: String(s.participants_count) },
             { type: "section", label: t.section_created ?? "Created By" },
             { label: t.field_created_by ?? "Official", value: s.created_by_name },
           ]}

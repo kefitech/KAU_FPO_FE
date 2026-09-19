@@ -3,8 +3,9 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+
 import type { ColumnDef } from "@tanstack/react-table";
+import { Plus } from "lucide-react";
 
 import { govtTrainingApi } from "@/app/government/_api/training";
 import { DataTable } from "@/components/data-table";
@@ -14,14 +15,52 @@ import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 import type { GovtTrainingSession } from "@/types/government";
 
-import { getGovernmentColumns } from "./_components/columns";
-
 type T = Record<string, string>;
 
 const DISTRICT_CODES = [
-  "TVM", "KLM", "PTA", "ALP", "KTM", "IDK", "EKM",
-  "TSR", "PKD", "MLP", "KZD", "WYD", "KNR", "KSD",
+  "TVM",
+  "KLM",
+  "PTA",
+  "ALP",
+  "KTM",
+  "IDK",
+  "EKM",
+  "TSR",
+  "PKD",
+  "MLP",
+  "KZD",
+  "WYD",
+  "KNR",
+  "KSD",
 ];
+
+function getTrainingColumns(
+  t: T,
+  tCommon: T,
+  onView: (session: GovtTrainingSession) => void,
+): ColumnDef<GovtTrainingSession>[] {
+  return [
+    { accessorKey: "topic", header: t.field_topic ?? "Topic" },
+    { accessorKey: "fpo_name", header: t.field_fpo ?? "FPO" },
+    {
+      accessorKey: "district",
+      header: t.field_district ?? "District",
+      cell: ({ row }) => t[`district_${row.original.district}`] ?? row.original.district,
+    },
+    { accessorKey: "date", header: t.field_date ?? "Date" },
+    { accessorKey: "trainer_name", header: t.field_trainer_name ?? "Trainer" },
+    { accessorKey: "participants_count", header: t.field_participants ?? "Participants" },
+    {
+      id: "actions",
+      header: tCommon.actions ?? "Actions",
+      cell: ({ row }) => (
+        <Button size="sm" variant="ghost" onClick={() => onView(row.original)}>
+          {tCommon.view ?? "View"}
+        </Button>
+      ),
+    },
+  ];
+}
 
 export default function GovernmentTrainingPage() {
   const router = useRouter();
@@ -64,7 +103,7 @@ export default function GovernmentTrainingPage() {
 
   if (translationsLoading) {
     return (
-      <div className="flex flex-col gap-6 py-6">
+      <div className="flex flex-col gap-6 p-6">
         <div className="flex flex-col gap-2">
           <div className="h-7 w-56 animate-pulse rounded bg-muted" />
           <div className="h-4 w-80 animate-pulse rounded bg-muted" />
@@ -76,7 +115,7 @@ export default function GovernmentTrainingPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 py-6">
+    <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-bold text-2xl">{t.page_title ?? "Training Sessions"}</h1>
@@ -94,9 +133,8 @@ export default function GovernmentTrainingPage() {
         <DataTable
           queryKey="government-training-sessions"
           queryFn={govtTrainingApi.getAll}
-          columns={getGovernmentColumns(t, tCommon) as unknown as ColumnDef<GovtTrainingSession>[]}
+          columns={getTrainingColumns(t, tCommon, (row: GovtTrainingSession) => setSheet({ open: true, session: row }))}
           filters={filters}
-          onRowClick={(row) => setSheet({ open: true, session: row })}
           columnsLabel={tCommon.col_header ?? "Columns"}
           toggleColumnsLabel={tCommon.col_toggle_columns ?? "Toggle columns"}
           searchPlaceholder={t.search_placeholder ?? "Search by topic or FPO..."}
@@ -122,14 +160,12 @@ export default function GovernmentTrainingPage() {
           fields={[
             { type: "section", label: t.section_session ?? "Session" },
             { label: t.field_fpo ?? "FPO", value: s.fpo_name },
+            { label: t.field_trainer_name ?? "Trainer", value: s.trainer_name || "—" },
             { label: t.field_district ?? "District", value: t[`district_${s.district}`] ?? s.district },
             { label: t.field_date ?? "Date", type: "date", value: s.date },
             { label: t.field_duration ?? "Duration", value: `${s.duration_hours}h` },
             { label: t.field_venue ?? "Venue", value: s.venue || "—" },
-            {
-              label: t.field_attendance ?? "Attendance",
-              value: `${s.attendance_count}/${s.participants_count}`,
-            },
+            { label: t.field_participants ?? "Participants", value: String(s.participants_count) },
             { type: "section", label: t.section_created ?? "Created By" },
             { label: t.field_created_by ?? "Official", value: s.created_by_name },
           ]}
