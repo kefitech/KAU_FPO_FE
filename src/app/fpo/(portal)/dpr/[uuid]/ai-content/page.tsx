@@ -209,6 +209,12 @@ export default function DprAiContentPage({
                         title="Candidate awaiting review"
                       />
                     )}
+                    {row.needs_review && (
+                      <span
+                        className="h-1.5 w-1.5 shrink-0 rounded-full bg-rose-500"
+                        title={`${row.placeholder_hits.reduce((n, h) => n + h.count, 0)} placeholder(s) auto-scrubbed — review required`}
+                      />
+                    )}
                     <span className="truncate">{CHAPTER_LABELS[key]}</span>
                   </span>
                   <ChevronRight
@@ -361,6 +367,44 @@ function ChapterPane({
                 <strong>Content may be stale.</strong> {row.stale_reason || "An upstream section has changed."}
                 {" "}Consider regenerating to refresh.
               </span>
+            </div>
+          )}
+
+          {/* KAU 2026-09-19 P4.4: placeholder-scrubber report. When the last
+              generation had to strip [X …] / [Name of …] / etc. tokens, the
+              row is flagged needs_review=true and the raw hits are stored
+              on placeholder_hits. Surface them here so the FPO knows exactly
+              which fields the AI couldn't fill and can go back to fill them. */}
+          {row.needs_review && (
+            <div className="rounded-md border border-rose-300 bg-rose-50 p-3 text-xs text-rose-900 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-200">
+              <div className="mb-1 flex items-start gap-2">
+                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span>
+                  <strong>Review required.</strong>{" "}
+                  {row.placeholder_hits.reduce((n, h) => n + h.count, 0)} placeholder
+                  {row.placeholder_hits.reduce((n, h) => n + h.count, 0) === 1 ? "" : "s"}{" "}
+                  {row.placeholder_hits.reduce((n, h) => n + h.count, 0) === 1 ? "was" : "were"}{" "}
+                  auto-replaced with "Not available" because the AI didn't have data for
+                  {row.placeholder_hits.length === 1 ? " it" : " them"}. Fill the missing
+                  values on the relevant wizard section and regenerate this chapter to
+                  clear the flag.
+                </span>
+              </div>
+              {row.placeholder_hits.length > 0 && (
+                <ul className="mt-2 ml-5 list-disc space-y-0.5">
+                  {row.placeholder_hits.slice(0, 8).map((h, idx) => (
+                    <li key={idx}>
+                      <code className="rounded bg-rose-100 px-1 dark:bg-rose-900/50">{h.raw}</code>
+                      {h.count > 1 && <span className="ml-1 text-rose-700/80">× {h.count}</span>}
+                    </li>
+                  ))}
+                  {row.placeholder_hits.length > 8 && (
+                    <li className="text-rose-700/80">
+                      … and {row.placeholder_hits.length - 8} more.
+                    </li>
+                  )}
+                </ul>
+              )}
             </div>
           )}
         </CardContent>
@@ -525,6 +569,13 @@ function ChapterPane({
                 className="font-mono text-xs"
                 value={editText}
                 onChange={(e) => setEditText(e.target.value)}
+                // KAU 2026-09-19 P4.3: autosave on blur so quick edits don't
+                // need the Save-button dance. No-op when text is unchanged.
+                onBlur={() => {
+                  if (editText !== row.user_edited && !editMutation.isPending) {
+                    editMutation.mutate(editText);
+                  }
+                }}
               />
             ) : (
               <div className="rounded-md border bg-muted/20 p-4 font-mono text-xs whitespace-pre-wrap">

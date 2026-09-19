@@ -60,6 +60,15 @@ export const CHAPTER_LABELS: Record<ChapterKey, string> = {
   conclusion: "Conclusion",
 };
 
+/** One entry of DPRAIContent.placeholder_hits — the placeholder-scrubber
+ *  writes these on every generation (KAU 2026-09-19).
+ *   raw   — the exact bracketed token the LLM emitted (e.g. "[Name of the CEO]")
+ *   count — how many times it appeared in that chapter's last generation */
+export interface PlaceholderHit {
+  raw: string;
+  count: number;
+}
+
 export interface AIContentRow {
   id: number;
   chapter: ChapterKey;
@@ -81,6 +90,13 @@ export interface AIContentRow {
   generated_at: string | null;
   candidate_generated_at: string | null;
   updated_at: string;
+  /** KAU 2026-09-19 placeholder-scrubber flags. needs_review flips true
+   *  whenever the last generation contained [X …] / [Name of …] tokens
+   *  that had to be replaced. Cleared on the next zero-hit regeneration.
+   *  placeholder_hits carries the actual raw tokens so the FE can list
+   *  what got blanked. */
+  needs_review: boolean;
+  placeholder_hits: PlaceholderHit[];
 }
 
 export interface KBPreviewEntry {
