@@ -39,6 +39,13 @@ export interface MeResponse {
   user: User;
   menu: SidebarMenuItem[] | null;
   redirect: FpoRedirect | null;
+  fpo_access?: FpoAccess | null;
+}
+
+/** Effective FPO action permissions and per-page edit flags (null for non-FPO users). */
+export interface FpoAccess {
+  actions: Record<string, boolean>;
+  pages: Record<string, { can_edit: boolean }>;
 }
 
 export type LoginResponse =

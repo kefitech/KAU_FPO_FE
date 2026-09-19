@@ -7,7 +7,7 @@ import { CheckCircle2, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { fpoRegistrationApi } from "@/app/fpo/_api/fpo-registration";
+import { fpoRegistrationApi, INFO_REPLY_KEY } from "@/app/fpo/_api/fpo-registration";
 import { Button } from "@/components/ui/button";
 import { useLocaleStore } from "@/stores";
 import { type MasterDataItem, masterDataApi } from "@/lib/api/master-data";
@@ -43,8 +43,16 @@ export function Step7Submit({ profile, onBack, t }: Step7Props) {
 
 
   const submitMutation = useMutation({
-    mutationFn: () => fpoRegistrationApi.submit(),
+    mutationFn: () => {
+      let notes: string | undefined;
+      try {
+        // Only relevant when replying to an info request
+        if (profile.status === "info_required") notes = sessionStorage.getItem(INFO_REPLY_KEY) ?? undefined;
+      } catch {}
+      return fpoRegistrationApi.submit(notes);
+    },
     onSuccess: () => {
+      try { sessionStorage.removeItem(INFO_REPLY_KEY); } catch {}
       toast.success(t.step7_application_submit ?? "Application submitted successfully!");
       queryClient.invalidateQueries({ queryKey: ["fpo-me"] });
       queryClient.invalidateQueries({ queryKey: ["fpo-status"] });

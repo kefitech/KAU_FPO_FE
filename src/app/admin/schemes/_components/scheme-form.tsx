@@ -30,15 +30,55 @@ const SCHEME_CATEGORIES = [
   { value: "capacity_building", label: "Capacity Building" },
 ];
 
+// Mirrors SchemeWriteSerializer in apps/accounts/api/admin/schemes.py -- keep the two in sync.
+// name_ml and the long-text fields are intentionally NOT allow-listed: Malayalam vowel signs
+// are combining marks, so a character allow-list would reject genuine Malayalam text.
+const NAME_CHARS = /^(?:[\p{L}\p{N}]|[ &(),.\-–'’/:])+$/u;
+const HAS_LETTER = /\p{L}/u;
+const HAS_LETTER_OR_DIGIT = /[\p{L}\p{N}]/u;
+
+const englishName = (requiredMsg: string) =>
+  z
+    .string()
+    .trim()
+    .min(1, { message: requiredMsg })
+    .max(255)
+    .refine((v) => !v || HAS_LETTER.test(v), { message: "Must contain at least one letter" })
+    .refine((v) => !v || NAME_CHARS.test(v), {
+      message: "Only letters, numbers, spaces and & ( ) , . - ' / : are allowed",
+    });
+
+const notOnlySymbols = { message: "Must contain letters or numbers, not only symbols" };
+
 const schema = z.object({
-  name_en: z.string().min(1, { message: "English name is required" }).max(300),
-  name_ml: z.string().optional(),
-  administering_body: z.string().min(1, { message: "Administering body is required" }),
+  name_en: englishName("English name is required"),
+  name_ml: z
+    .string()
+    .trim()
+    .optional()
+    .refine((v) => !v || HAS_LETTER.test(v), { message: "Must contain at least one letter" }),
+  administering_body: englishName("Administering body is required"),
   category: z.string().min(1, { message: "Category is required" }),
-  objective: z.string().optional(),
-  eligibility: z.string().min(1, { message: "Eligibility is required" }),
-  benefit_details: z.string().min(1, { message: "Benefit details are required" }),
-  application_process: z.string().min(1, { message: "Application process is required" }),
+  objective: z
+    .string()
+    .trim()
+    .optional()
+    .refine((v) => !v || HAS_LETTER_OR_DIGIT.test(v), notOnlySymbols),
+  eligibility: z
+    .string()
+    .trim()
+    .min(1, { message: "Eligibility is required" })
+    .refine((v) => !v || HAS_LETTER_OR_DIGIT.test(v), notOnlySymbols),
+  benefit_details: z
+    .string()
+    .trim()
+    .min(1, { message: "Benefit details are required" })
+    .refine((v) => !v || HAS_LETTER_OR_DIGIT.test(v), notOnlySymbols),
+  application_process: z
+    .string()
+    .trim()
+    .min(1, { message: "Application process is required" })
+    .refine((v) => !v || HAS_LETTER_OR_DIGIT.test(v), notOnlySymbols),
   official_link: z
     .string()
     .optional()
