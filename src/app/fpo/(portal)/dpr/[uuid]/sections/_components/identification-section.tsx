@@ -16,14 +16,21 @@ import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api/client";
-import { dprApi, type DprProjectIdentification } from "@/lib/api/dpr";
+import {
+  type BoardMeetingFrequency,
+  dprApi,
+  type DprProjectIdentification,
+  type PscMember,
+} from "@/lib/api/dpr";
 import { dprMasterApi } from "@/lib/api/dpr-master";
 import { useDprWizardStore } from "@/stores/dpr-store";
 
@@ -171,6 +178,15 @@ export function IdentificationSection({ uuid }: { uuid: string }) {
       project_objectives_other: form.project_objectives_other,
       expected_outcomes: form.expected_outcomes,
       expected_outcomes_other: form.expected_outcomes_other,
+      // Promoter Profile detail (KAU AI review 2026-09-19)
+      ceo_name: form.ceo_name,
+      ceo_qualification: form.ceo_qualification,
+      ceo_experience_years: form.ceo_experience_years,
+      total_area_acreage: form.total_area_acreage,
+      women_shareholding_pct: form.women_shareholding_pct,
+      landholding_summary: form.landholding_summary,
+      board_meeting_frequency: form.board_meeting_frequency,
+      psc_members: form.psc_members,
     };
     mutation.mutate(payload);
   }
@@ -440,6 +456,193 @@ export function IdentificationSection({ uuid }: { uuid: string }) {
               </CardContent></Card>
             );
           })()}
+
+          {/* 8. Promoter Profile detail (KAU AI review 2026-09-19)
+              Backend renders every filled value into the AI narrative's FACTS
+              block so the LLM stops emitting [Name of the CEO] / [PSC] etc.
+              All optional — blank fields degrade to "Not available" in prose. */}
+          <Card id="dpr-field-promoter_profile"><CardContent className="space-y-6 p-6">
+            <div>
+              <h3 className="text-sm font-semibold">8. Promoter Profile detail</h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Optional but strongly recommended — anything you fill here shows up in the AI-generated
+                Promoter Profile chapter with your actual values. Anything left blank shows as "Not
+                available" in the narrative.
+              </p>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs">CEO name</Label>
+                <Input
+                  value={form.ceo_name}
+                  maxLength={200}
+                  onChange={(e) => update("ceo_name", e.target.value)}
+                  placeholder="Full name of the CEO / Chief Executive"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">CEO qualification</Label>
+                <Input
+                  value={form.ceo_qualification}
+                  maxLength={200}
+                  onChange={(e) => update("ceo_qualification", e.target.value)}
+                  placeholder="e.g. B.Sc Agri, MBA Agri-business"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">CEO experience (years)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={80}
+                  value={form.ceo_experience_years ?? ""}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    update("ceo_experience_years", v === "" ? null : Number(v));
+                  }}
+                  placeholder="e.g. 12"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Board meeting frequency</Label>
+                <Select
+                  value={form.board_meeting_frequency || undefined}
+                  onValueChange={(v) => update("board_meeting_frequency", v as BoardMeetingFrequency)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Choose a frequency…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="quarterly">Quarterly</SelectItem>
+                    <SelectItem value="half_yearly">Half-yearly</SelectItem>
+                    <SelectItem value="annually">Annually</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Total farming area covered (acres)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min={0}
+                  value={form.total_area_acreage ?? ""}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    update("total_area_acreage", v === "" ? null : v);
+                  }}
+                  placeholder="e.g. 487.50"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Women shareholding (%)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min={0}
+                  max={100}
+                  value={form.women_shareholding_pct ?? ""}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    update("women_shareholding_pct", v === "" ? null : v);
+                  }}
+                  placeholder="e.g. 44.00"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">Landholding pattern (free text)</Label>
+              <Textarea
+                rows={3}
+                maxLength={1000}
+                value={form.landholding_summary}
+                onChange={(e) => update("landholding_summary", e.target.value)}
+                placeholder="e.g. 70% smallholders under 2 acres, 25% medium 2–5 acres, 5% above 5 acres"
+              />
+            </div>
+
+            {/* PSC (Project Steering Committee) — variable-length repeatable list */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-xs">Project Steering Committee members</Label>
+                  <p className="text-[11px] text-muted-foreground">
+                    Optional. Leave blank if a PSC has not been constituted yet.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const next: PscMember[] = [
+                      ...form.psc_members,
+                      { name: "", role: "", affiliation: "" },
+                    ];
+                    update("psc_members", next);
+                  }}
+                >
+                  + Add member
+                </Button>
+              </div>
+              {form.psc_members.length === 0 ? (
+                <p className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
+                  No PSC members added yet.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {form.psc_members.map((m, idx) => (
+                    <div
+                      key={`psc-${idx}`}
+                      className="grid gap-2 rounded-md border p-3 sm:grid-cols-[1fr_1fr_1fr_auto]"
+                    >
+                      <Input
+                        value={m.name}
+                        placeholder="Name"
+                        onChange={(e) => {
+                          const next = [...form.psc_members];
+                          next[idx] = { ...next[idx], name: e.target.value };
+                          update("psc_members", next);
+                        }}
+                      />
+                      <Input
+                        value={m.role}
+                        placeholder="Role (e.g. Chair, Member)"
+                        onChange={(e) => {
+                          const next = [...form.psc_members];
+                          next[idx] = { ...next[idx], role: e.target.value };
+                          update("psc_members", next);
+                        }}
+                      />
+                      <Input
+                        value={m.affiliation}
+                        placeholder="Affiliation (e.g. KAU, NABARD)"
+                        onChange={(e) => {
+                          const next = [...form.psc_members];
+                          next[idx] = { ...next[idx], affiliation: e.target.value };
+                          update("psc_members", next);
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          const next = form.psc_members.filter((_, i) => i !== idx);
+                          update("psc_members", next);
+                        }}
+                        aria-label="Remove PSC member"
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </CardContent></Card>
         </div>
       )}
     </SectionShell>

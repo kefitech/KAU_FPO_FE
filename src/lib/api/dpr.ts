@@ -144,6 +144,14 @@ export type DprSectionData = Record<string, unknown>;
  * §2.2 Project Identification — 7 fields on the DPRProject itself.
  * PATCHable via /fpo/dpr/projects/<uuid>/. Not a "section" under /sections/.
  */
+export interface PscMember {
+  name: string;
+  role: string;
+  affiliation: string;
+}
+
+export type BoardMeetingFrequency = "" | "monthly" | "quarterly" | "half_yearly" | "annually";
+
 export interface DprProjectIdentification {
   uuid: string;
   status: string;
@@ -158,6 +166,17 @@ export interface DprProjectIdentification {
   project_objectives_other: string;
   expected_outcomes: number[];
   expected_outcomes_other: string;
+  // Promoter Profile detail (KAU AI review 2026-09-19). Backend renders these
+  // into the AI narrative's FACTS block so the LLM no longer emits
+  // [Name of the CEO] / [PSC] / [area] placeholders.
+  ceo_name: string;
+  ceo_qualification: string;
+  ceo_experience_years: number | null;
+  total_area_acreage: string | null;              // DecimalField wire-encoded as string
+  women_shareholding_pct: string | null;
+  landholding_summary: string;
+  board_meeting_frequency: BoardMeetingFrequency;
+  psc_members: PscMember[];
   // KAU RCD C.6/C.7 — per-field provenance. Shape: { section_key: { field_name: source } }
   // source ∈ user_entered / ai_inferred / system_default / user_overridden.
   // Absence of a key implies user_entered (default).
