@@ -30,24 +30,29 @@ function ProductCard({ product, locale }: { product: BuyerProduct; locale: strin
   const name = locale === "ml" ? product.name.ml || product.name.en : product.name.en;
   const description = locale === "ml" ? product.description.ml || product.description.en : product.description.en;
   const [inquiryOpen, setInquiryOpen] = useState(false);
+  const imageUrl = toMediaUrl(product.image);
 
   return (
     <>
-      <Card className="overflow-hidden">
-        {toMediaUrl(product.image) && (
+      <Card className="flex h-full flex-col overflow-hidden">
+        {imageUrl ? (
           // biome-ignore lint/performance/noImgElement: product photo URL is dynamic, not a static asset
-          <img src={toMediaUrl(product.image) ?? undefined} alt={name} className="h-40 w-full object-cover" />
+          <img src={imageUrl} alt={name} className="h-40 w-full shrink-0 object-cover" />
+        ) : (
+          <div className="flex h-40 w-full shrink-0 items-center justify-center bg-muted text-muted-foreground text-xs">
+            <Package className="h-8 w-8" />
+          </div>
         )}
         <CardHeader>
           <div className="flex items-start justify-between gap-2">
-            <CardTitle className="text-base">{name}</CardTitle>
+            <CardTitle className="line-clamp-1 text-base">{name}</CardTitle>
             <Badge variant="outline" className="shrink-0 font-normal">
               {product.commodity_code}
             </Badge>
           </div>
         </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          {description && <p className="text-muted-foreground text-sm">{description}</p>}
+        <CardContent className="flex flex-1 flex-col gap-3">
+          {description && <p className="line-clamp-2 text-muted-foreground text-sm">{description}</p>}
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div className="flex flex-col gap-0.5">
               <span className="text-muted-foreground text-xs">Quantity</span>
@@ -61,7 +66,7 @@ function ProductCard({ product, locale }: { product: BuyerProduct; locale: strin
             </div>
           </div>
           {product.quality_certification && (
-            <Badge variant="secondary" className="w-fit font-normal">
+            <Badge variant="secondary" className="w-fit max-w-full truncate font-normal">
               {product.quality_certification}
             </Badge>
           )}
@@ -80,7 +85,7 @@ function ProductCard({ product, locale }: { product: BuyerProduct; locale: strin
             {product.available_from}
             {product.available_until ? ` – ${product.available_until}` : ""}
           </div>
-          <Button size="sm" className="mt-1" onClick={() => setInquiryOpen(true)}>
+          <Button size="sm" className="mt-auto" onClick={() => setInquiryOpen(true)}>
             Inquire
           </Button>
         </CardContent>

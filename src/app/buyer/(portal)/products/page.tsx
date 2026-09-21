@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { buyerDashboardApi } from "@/app/buyer/_api/dashboard";
 import { useQuery } from "@tanstack/react-query";
 import { Building2, Calendar as CalendarIcon, Package, Search } from "lucide-react";
 import { type BuyerProduct, buyerProductsApi } from "@/app/buyer/_api/products";
@@ -134,6 +135,18 @@ const resetPage = () => setPage(1);
     queryFn: () => masterDataApi.getCommodities(locale),
     staleTime: 10 * 60_000,
   });
+  const { data: buyerDashboard } = useQuery({
+    queryKey: ["buyer-dashboard", locale],
+    queryFn: buyerDashboardApi.get,
+    staleTime: 60_000,
+  });
+
+  useEffect(() => {
+    if (commodity === "all" && buyerDashboard?.commodities_interested?.length) {
+      setCommodity(buyerDashboard.commodities_interested[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [buyerDashboard]);
 
   // Date range filter requires BOTH dates before it's applied — picking
   // only one is treated as "no filter yet."
