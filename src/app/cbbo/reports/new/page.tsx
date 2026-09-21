@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -20,7 +20,7 @@ import { useLocaleStore } from "@/stores/locale-store";
 
 type T = Record<string, string>;
 
-export default function NewCBBOReportPage() {
+function NewCBBOReportForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const presetFpoId = searchParams.get("fpo_id");
@@ -171,5 +171,16 @@ export default function NewCBBOReportPage() {
         </div>
       </form>
     </div>
+  );
+}
+
+// Next.js requires useSearchParams() to sit inside a Suspense boundary at
+// prerender time (production build fails otherwise). The form itself is a
+// client component; this wrapper is the exported page.
+export default function NewCBBOReportPage() {
+  return (
+    <Suspense fallback={null}>
+      <NewCBBOReportForm />
+    </Suspense>
   );
 }
