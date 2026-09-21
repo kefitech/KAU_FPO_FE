@@ -19,12 +19,12 @@ export interface BuyerProduct {
 
 export interface BuyerProductParams extends DataTableParams {
   commodity?: string;
+  fpo?: string;
   price_min?: string;
   price_max?: string;
   date_from?: string;
   date_until?: string;
 }
-
 const BASE = "/marketplace/buyer/products/";
 
 export interface InquiryPayload {

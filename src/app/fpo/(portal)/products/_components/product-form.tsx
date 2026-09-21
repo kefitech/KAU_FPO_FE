@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
+import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -120,6 +120,7 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
   const queryClient = useQueryClient();
   const isEdit = mode === "edit";
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+  const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
 
   const locale = useLocaleStore((s) => s.locale);
 
@@ -141,7 +142,11 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
   });
 
   useEffect(() => {
-    if (product) reset(toFormValues(product));
+    if (product) {
+      reset(toFormValues(product));
+      setExistingImageUrl(product.image ?? null);
+      setSelectedFileName(null);
+    }
   }, [product?.id, reset, product]);
 
   const mutation = useMutation({
@@ -269,46 +274,69 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
                     </Field>
                   )}
                 />
-
                 <Controller
                   control={control}
                   name="image"
-                  render={({ field: { onChange, value: _value, ...field } }) => (
-                    <Field>
-                      <FieldLabel htmlFor="product-image">{t.image_label ?? "Product Image"}</FieldLabel>
-                      <div className="flex gap-2">
-                        <Input
-                          readOnly
-                          tabIndex={-1}
-                          placeholder={t.image_placeholder ?? "No file chosen"}
-                          value={selectedFileName ?? ""}
-                          onClick={() => document.getElementById("product-image")?.click()}
-                          onFocus={(e) => e.target.blur()}
-                          className="cursor-pointer select-none caret-transparent"
+                  render={({ field: { onChange, value: _value, ...field } }) => {
+                    const existingFileName = existingImageUrl
+                      ? decodeURIComponent(existingImageUrl.split("/").pop()?.split("?")[0] ?? "")
+                      : null;
+                    const displayName = selectedFileName ?? existingFileName;
+                    return (
+                      <Field>
+                        <FieldLabel htmlFor="product-image">{t.image_label ?? "Product Image"}</FieldLabel>
+                        <div className="flex gap-2">
+                          <div className="relative flex-1">
+                            <Input
+                              readOnly
+                              tabIndex={-1}
+                              placeholder={t.image_placeholder ?? "No file chosen"}
+                              value={displayName ?? ""}
+                              onClick={() => document.getElementById("product-image")?.click()}
+                              onFocus={(e) => e.target.blur()}
+                              className="cursor-pointer select-none caret-transparent pr-8"
+                            />
+                            {displayName && (
+                              <button
+                                type="button"
+                                aria-label={t.image_remove_btn ?? "Remove image"}
+                                onClick={() => {
+                                  onChange(null);
+                                  setSelectedFileName(null);
+                                  setExistingImageUrl(null);
+                                  const input = document.getElementById("product-image") as HTMLInputElement | null;
+                                  if (input) input.value = "";
+                                }}
+                                className="absolute top-1/2 right-2 -translate-y-1/2 rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => document.getElementById("product-image")?.click()}
+                          >
+                            {t.image_choose_btn ?? "Choose File"}
+                          </Button>
+                        </div>
+                        <input
+                          id="product-image"
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0] ?? null;
+                            onChange(file);
+                            setSelectedFileName(file?.name ?? null);
+                          }}
+                          {...field}
                         />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => document.getElementById("product-image")?.click()}
-                        >
-                          {t.image_choose_btn ?? "Choose File"}
-                        </Button>
-                      </div>
-                      <input
-                        id="product-image"
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0] ?? null;
-                          onChange(file);
-                          setSelectedFileName(file?.name ?? null);
-                        }}
-                        {...field}
-                      />
-                      {errors.image && <FieldError errors={[errors.image]} />}
-                    </Field>
-                  )}
+                        {errors.image && <FieldError errors={[errors.image]} />}
+                      </Field>
+                    );
+                  }}
                 />
               </div>
 
@@ -453,7 +481,13 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
               <Button
                 type="button"
                 variant="ghost"
-                onClick={() => reset(product ? toFormValues(product) : defaultValues)}
+                onClick={() => {
+                  reset(product ? toFormValues(product) : defaultValues);
+                  setSelectedFileName(null);
+                  setExistingImageUrl(product?.image ?? null);
+                  const input = document.getElementById("product-image") as HTMLInputElement | null;
+                  if (input) input.value = "";
+                }}
               >
                 {tCommon.reset_btn ?? "Reset"}
               </Button>
