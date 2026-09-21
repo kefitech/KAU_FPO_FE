@@ -48,9 +48,6 @@ export default function CBBOsPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
-          <Button size="sm" variant="outline" onClick={() => router.push("/admin/cbbos/pending")}>
-            {tTable.pending_approvals_button ?? "Pending Approvals"}
-          </Button>
           <Button size="sm" variant="outline" onClick={() => setShowOrgDialog(true)}>
             {tTable.add_organisation_button ?? "Add Organisation"}
           </Button>

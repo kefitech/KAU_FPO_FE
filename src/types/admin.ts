@@ -280,6 +280,7 @@ export interface CBBO {
   assignments: CBBOAssignmentRow[];
   organisation_id: number | null;
   organisation_name: string | null;
+  registration_status?: "pending" | "approved" | "rejected" | null;
 }
 
 export interface CBBOPayload {

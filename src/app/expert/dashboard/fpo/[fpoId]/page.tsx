@@ -1,7 +1,9 @@
 "use client";
 import { useState } from "react";
-import { useParams } from "next/navigation";
+
 import Link from "next/link";
+import { useParams } from "next/navigation";
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -52,11 +54,26 @@ export default function FpoDetailPage() {
     onError: () => toast.error("Failed to reject booking"),
   });
 
+  const cancelMutation = useMutation({
+    mutationFn: ({ id, reason }: { id: number; reason: string }) => expertDashboardApi.cancelBooking(id, reason),
+    onSuccess: () => {
+      toast.success("Booking cancelled");
+      queryClient.invalidateQueries({ queryKey: ["expert-my-bookings"] });
+    },
+    onError: () => toast.error("Failed to cancel booking"),
+  });
+
   const [rejectDialog, setRejectDialog] = useState<{ open: boolean; booking: ExpertBooking | null }>({
     open: false,
     booking: null,
   });
   const [rejectReason, setRejectReason] = useState("");
+
+  const [cancelDialog, setCancelDialog] = useState<{ open: boolean; booking: ExpertBooking | null }>({
+    open: false,
+    booking: null,
+  });
+  const [cancelReason, setCancelReason] = useState("");
 
   function handleReject(booking: ExpertBooking) {
     setRejectReason("");
@@ -68,6 +85,16 @@ export default function FpoDetailPage() {
     rejectMutation.mutate({ id: rejectDialog.booking.id, reason: rejectReason });
   }
 
+  function handleCancel(booking: ExpertBooking) {
+    setCancelReason("");
+    setCancelDialog({ open: true, booking });
+  }
+
+  function submitCancel() {
+    if (!cancelDialog.booking) return;
+    cancelMutation.mutate({ id: cancelDialog.booking.id, reason: cancelReason });
+  }
+
   if (isLoading) {
     return <p className="text-muted-foreground text-sm">Loading...</p>;
   }
@@ -75,7 +102,9 @@ export default function FpoDetailPage() {
   if (fpoBookings.length === 0) {
     return (
       <div className="flex flex-col gap-4">
-        <Link href="/expert/dashboard" className="text-sm text-primary hover:underline">← Back to Dashboard</Link>
+        <Link href="/expert/dashboard" className="text-sm text-primary hover:underline">
+          ← Back to Dashboard
+        </Link>
         <p className="text-muted-foreground text-sm">No bookings found for this FPO.</p>
       </div>
     );
@@ -85,7 +114,9 @@ export default function FpoDetailPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <Link href="/expert/dashboard" className="text-sm text-primary hover:underline">← Back to Dashboard</Link>
+      <Link href="/expert/dashboard" className="text-sm text-primary hover:underline">
+        ← Back to Dashboard
+      </Link>
 
       <Card>
         <CardHeader>
@@ -96,9 +127,7 @@ export default function FpoDetailPage() {
           {first.fpo_application_id && (
             <p className="text-muted-foreground text-sm">Application ID: {first.fpo_application_id}</p>
           )}
-          {first.fpo_contact_name && (
-            <p className="text-muted-foreground text-sm">Contact: {first.fpo_contact_name}</p>
-          )}
+          {first.fpo_contact_name && <p className="text-muted-foreground text-sm">Contact: {first.fpo_contact_name}</p>}
           {first.fpo_email && <p className="text-muted-foreground text-sm">Email: {first.fpo_email}</p>}
           {first.fpo_phone && <p className="text-muted-foreground text-sm">Phone: {first.fpo_phone}</p>}
           {first.fpo_location && <p className="text-muted-foreground text-sm">Location: {first.fpo_location}</p>}
@@ -130,11 +159,33 @@ export default function FpoDetailPage() {
               )}
               {booking.status === "pending" && (
                 <div className="flex gap-2">
-                  <Button size="sm" onClick={() => confirmMutation.mutate(booking.id)} disabled={confirmMutation.isPending}>
+                  <Button
+                    size="sm"
+                    onClick={() => confirmMutation.mutate(booking.id)}
+                    disabled={confirmMutation.isPending}
+                  >
                     Confirm
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => handleReject(booking)} disabled={rejectMutation.isPending}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleReject(booking)}
+                    disabled={rejectMutation.isPending}
+                  >
                     Reject
+                  </Button>
+                </div>
+              )}
+              {booking.status === "confirmed" && (
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => handleCancel(booking)}
+                    disabled={cancelMutation.isPending}
+                  >
+                    Cancel Booking
                   </Button>
                 </div>
               )}
@@ -160,6 +211,28 @@ export default function FpoDetailPage() {
             </Button>
             <Button type="button" variant="destructive" onClick={submitReject} disabled={rejectMutation.isPending}>
               {rejectMutation.isPending ? "Rejecting..." : "Reject Booking"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={cancelDialog.open} onOpenChange={(open) => setCancelDialog((s) => ({ ...s, open }))}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reason for cancelling this confirmed booking?</DialogTitle>
+          </DialogHeader>
+          <Textarea
+            value={cancelReason}
+            onChange={(e) => setCancelReason(e.target.value)}
+            placeholder="Let the FPO know why this confirmed appointment is being cancelled"
+            rows={4}
+          />
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setCancelDialog({ open: false, booking: null })}>
+              Back
+            </Button>
+            <Button type="button" variant="destructive" onClick={submitCancel} disabled={cancelMutation.isPending}>
+              {cancelMutation.isPending ? "Cancelling..." : "Cancel Booking"}
             </Button>
           </DialogFooter>
         </DialogContent>

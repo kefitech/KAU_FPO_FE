@@ -29,6 +29,8 @@ function GovernmentActions({
   const queryClient = useQueryClient();
   const confirm = useConfirmStore((s) => s.confirm);
 
+  const isPending = official.registration_status === "pending";
+
   const activateMutation = useMutation({
     mutationFn: () => governmentApi.activate(official.id),
     onSuccess: () => {
@@ -68,6 +70,30 @@ function GovernmentActions({
     },
   });
 
+  const approveMutation = useMutation({
+    mutationFn: () => governmentApi.approveRegistration(official.id),
+    onSuccess: () => {
+      toast.success(t.toast_approved ?? "Registration approved");
+      queryClient.invalidateQueries({ queryKey: ["government"] });
+    },
+    onError: (error: unknown) => {
+      const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(msg ?? t.toast_approve_failed ?? "Failed to approve");
+    },
+  });
+
+  const rejectRegistrationMutation = useMutation({
+    mutationFn: () => governmentApi.rejectRegistration(official.id),
+    onSuccess: () => {
+      toast.success(t.toast_rejected ?? "Registration rejected");
+      queryClient.invalidateQueries({ queryKey: ["government"] });
+    },
+    onError: (error: unknown) => {
+      const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(msg ?? t.toast_reject_failed ?? "Failed to reject");
+    },
+  });
+
   function handleResetPassword() {
     const name = `${official.first_name} ${official.last_name}`.trim() || official.email;
     confirm({
@@ -95,6 +121,56 @@ function GovernmentActions({
       variant: "destructive",
       onConfirm: () => deleteMutation.mutateAsync(),
     });
+  }
+
+  function handleApprove() {
+    const name = `${official.first_name} ${official.last_name}`.trim() || official.email;
+    confirm({
+      title: t.approve_title ?? "Approve Registration",
+      description: (
+        t.approve_description ?? 'Approve "{name}"\'s registration? They will receive login credentials by email.'
+      ).replace("{name}", name),
+      confirmLabel: t.approve_button ?? "Approve",
+      confirmingLabel: t.approving ?? "Approving...",
+      variant: "default",
+      onConfirm: () => approveMutation.mutateAsync(),
+    });
+  }
+
+  function handleRejectRegistration() {
+    const name = `${official.first_name} ${official.last_name}`.trim() || official.email;
+    confirm({
+      title: t.reject_title ?? "Reject Registration",
+      description: (t.reject_description ?? 'Are you sure you want to reject "{name}"\'s registration?').replace(
+        "{name}",
+        name,
+      ),
+      confirmLabel: t.reject_button ?? "Reject",
+      confirmingLabel: t.rejecting ?? "Rejecting...",
+      variant: "destructive",
+      onConfirm: () => rejectRegistrationMutation.mutateAsync(),
+    });
+  }
+
+  if (isPending) {
+    return (
+      <RowActions
+        actions={[
+          {
+            label: t.approve_button ?? "Approve",
+            onClick: handleApprove,
+            disabled: approveMutation.isPending || rejectRegistrationMutation.isPending,
+          },
+          {
+            label: t.reject_button ?? "Reject",
+            onClick: handleRejectRegistration,
+            disabled: approveMutation.isPending || rejectRegistrationMutation.isPending,
+            destructive: true,
+            separator: true,
+          },
+        ]}
+      />
+    );
   }
 
   return (
@@ -165,10 +241,20 @@ export function getGovernmentColumns(t: T = {}, tConfirm: T = {}, tCommon: T = {
       },
     },
     {
-      accessorKey: "is_active",
+      accessorKey: "registration_status",
       header: t.col_status ?? "Status",
-      cell: ({ row }) =>
-        row.original.is_active ? (
+      cell: ({ row }) => {
+        if (row.original.registration_status === "pending") {
+          return (
+            <Badge
+              variant="outline"
+              className="border-amber-500/40 bg-amber-500/10 text-[11px] text-amber-700 dark:text-amber-400"
+            >
+              {t.status_pending ?? "Pending Approval"}
+            </Badge>
+          );
+        }
+        return row.original.is_active ? (
           <Badge
             variant="outline"
             className="border-green-500/40 bg-green-500/10 text-[11px] text-green-700 dark:text-green-400"
@@ -179,7 +265,8 @@ export function getGovernmentColumns(t: T = {}, tConfirm: T = {}, tCommon: T = {
           <Badge variant="outline" className="border-muted text-[11px] text-muted-foreground">
             {t.status_inactive ?? "Inactive"}
           </Badge>
-        ),
+        );
+      },
     },
     {
       accessorKey: "date_joined",
