@@ -191,66 +191,126 @@ export default function MarketHubPage() {
             </p>
           ) : (
             <div className="row">
-              {products.map((product) => (
-                <div className="col-lg-4 col-md-6 mb-30" key={product.id}>
-                  <div
-                    className="single-item"
-                    style={{ border: "1px solid #eee", borderRadius: 8, overflow: "hidden" }}
-                  >
-                    {toMediaUrl(product.image) && (
-                      // biome-ignore lint/performance/noImgElement: product photo URL is dynamic, not a static asset
-                      <img
-                        src={toMediaUrl(product.image) ?? undefined}
-                        alt={productName(product)}
-                        style={{ width: "100%", height: 160, objectFit: "cover" }}
-                      />
-                    )}
-                    <div style={{ padding: 20 }}>
-                      <div className="d-flex justify-content-between mb-10 align-items-start">
-                        <h5 className="mb-0">{productName(product)}</h5>
-                        <span
-                          className="badge"
-                          style={{ background: "var(--color-primary)", color: "#fff", padding: "4px 10px" }}
+              {products.map((product) => {
+                const imageUrl = toMediaUrl(product.image);
+                return (
+                  <div className="col-lg-4 col-md-6 mb-30" key={product.id}>
+                    <div
+                      className="single-item"
+                      style={{
+                        border: "1px solid #eee",
+                        borderRadius: 8,
+                        overflow: "hidden",
+                        height: "100%",
+                        display: "flex",
+                        flexDirection: "column",
+                      }}
+                    >
+                      {imageUrl ? (
+                        // biome-ignore lint/performance/noImgElement: product photo URL is dynamic, not a static asset
+                        <img
+                          src={imageUrl}
+                          alt={productName(product)}
+                          style={{ width: "100%", height: 160, objectFit: "cover", flexShrink: 0 }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            width: "100%",
+                            height: 160,
+                            flexShrink: 0,
+                            background: "#f5f5f5",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: "#bbb",
+                            fontSize: 13,
+                          }}
                         >
-                          {product.commodity_code}
-                        </span>
-                      </div>
-                      {productDesc(product) && <p style={{ color: "#666", fontSize: 14 }}>{productDesc(product)}</p>}
-                      <div className="row mb-10">
-                        <div className="col-6">
-                          <small style={{ color: "#888" }}>{t.label_quantity ?? "Quantity"}</small>
-                          <p className="mb-0">
-                            {product.quantity} {product.unit}
-                          </p>
+                          {t.no_image ?? "No image"}
                         </div>
-                        <div className="col-6">
-                          <small style={{ color: "#888" }}>{t.label_price ?? "Price"}</small>
-                          <p className="mb-0">₹{product.price_per_unit}</p>
-                        </div>
-                      </div>
-                      {product.quality_certification && (
-                        <span
-                          className="badge"
-                          style={{ background: "#f0f0f0", color: "#333", padding: "4px 10px", marginBottom: 10 }}
-                        >
-                          {product.quality_certification}
-                        </span>
                       )}
-                      <div style={{ fontSize: 13, color: "#888", marginTop: 10 }}>
-                        {t.label_available ?? "Available"}: {product.available_from}
-                        {product.available_until ? ` – ${product.available_until}` : ""}
+                      <div style={{ padding: 20, display: "flex", flexDirection: "column", flex: 1 }}>
+                        <div className="d-flex justify-content-between mb-10 align-items-start">
+                          <h5
+                            className="mb-0"
+                            style={{
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                              maxWidth: "70%",
+                            }}
+                          >
+                            {productName(product)}
+                          </h5>
+                          <span
+                            className="badge"
+                            style={{ background: "var(--color-primary)", color: "#fff", padding: "4px 10px" }}
+                          >
+                            {product.commodity_code}
+                          </span>
+                        </div>
+                        {productDesc(product) && (
+                          <p
+                            style={{
+                              color: "#666",
+                              fontSize: 14,
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden",
+                            }}
+                          >
+                            {productDesc(product)}
+                          </p>
+                        )}
+                        <div className="row mb-10">
+                          <div className="col-6">
+                            <small style={{ color: "#888" }}>{t.label_quantity ?? "Quantity"}</small>
+                            <p className="mb-0">
+                              {product.quantity} {product.unit}
+                            </p>
+                          </div>
+                          <div className="col-6">
+                            <small style={{ color: "#888" }}>{t.label_price ?? "Price"}</small>
+                            <p className="mb-0">₹{product.price_per_unit}</p>
+                          </div>
+                        </div>
+                        {product.quality_certification && (
+                          <span
+                            className="badge"
+                            style={{
+                              background: "#f0f0f0",
+                              color: "#333",
+                              padding: "4px 10px",
+                              marginBottom: 10,
+                              maxWidth: "100%",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                              display: "inline-block",
+                            }}
+                          >
+                            {product.quality_certification}
+                          </span>
+                        )}
+                        <div style={{ fontSize: 13, color: "#888", marginTop: 10 }}>
+                          {t.label_available ?? "Available"}: {product.available_from}
+                          {product.available_until ? ` – ${product.available_until}` : ""}
+                        </div>
+                        <button
+                          type="button"
+                          className="btn btn-theme secondary btn-sm radius animation mt-15"
+                          style={{ marginTop: "auto", alignSelf: "flex-start" }}
+                          onClick={() => openInquiry(product)}
+                        >
+                          {t.btn_inquire ?? "Inquire"}
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        className="btn btn-theme secondary btn-sm radius animation mt-15"
-                        onClick={() => openInquiry(product)}
-                      >
-                        {t.btn_inquire ?? "Inquire"}
-                      </button>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
@@ -345,7 +405,7 @@ export default function MarketHubPage() {
                       placeholder={t.field_phone ?? "Your Phone (optional)"}
                       value={inquiryPhone}
                       onChange={(e) => setInquiryPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                    />
+                    /> 
                     {fieldErrors.phone && <p style={{ color: "red", fontSize: 13, marginTop: 4 }}>{fieldErrors.phone}</p>}
                   </div>
                   <div className="mb-15">

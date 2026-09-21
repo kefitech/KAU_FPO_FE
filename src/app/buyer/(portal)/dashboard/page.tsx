@@ -12,6 +12,12 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { masterDataApi } from "@/lib/api/master-data";
@@ -55,16 +61,16 @@ export default function BuyerDashboardPage() {
   // districts, and duplicating them here matches the rest of the codebase.
   const districts = KERALA_DISTRICTS;
 
+  const [locationDraft, setLocationDraft] = useState("");
+  const [commoditiesDraft, setCommoditiesDraft] = useState<string[]>([]);
+  const [editingProfile, setEditingProfile] = useState(false);
+
   const { data: commodities } = useQuery({
     queryKey: ["master-data", "commodity", locale],
     queryFn: () => masterDataApi.get("commodity", undefined, locale),
     staleTime: 60 * 60 * 1000,
-    enabled: profileIncomplete,
+    enabled: profileIncomplete || editingProfile,
   });
-
-  const [locationDraft, setLocationDraft] = useState("");
-  const [commoditiesDraft, setCommoditiesDraft] = useState<string[]>([]);
-  const [commodityPick, setCommodityPick] = useState("");
 
   useEffect(() => {
     if (data) {
@@ -82,6 +88,7 @@ export default function BuyerDashboardPage() {
     onSuccess: () => {
       toast.success(t.profile_saved ?? "Profile updated");
       queryClient.invalidateQueries({ queryKey: ["buyer-dashboard"] });
+      setEditingProfile(false);
     },
     onError: (err: unknown) => {
       const axiosErr = err as { response?: { data?: { message?: string } } } | undefined;
@@ -128,8 +135,8 @@ export default function BuyerDashboardPage() {
         </span>
       </div>
 
-      {/* ── Complete your profile ── (shows only when location or commodities are empty) */}
-      {profileIncomplete && (
+      {/* ── Complete your profile ── (shows when incomplete, OR when the buyer clicked Edit) */}
+      {(profileIncomplete || editingProfile) && (
         <Card className="border-amber-300 bg-amber-50/40 dark:bg-amber-950/20">
           <CardHeader>
             <CardTitle className="text-base">
@@ -165,35 +172,31 @@ export default function BuyerDashboardPage() {
               <label className="font-medium text-sm">
                 {t.label_commodities ?? "Commodities Interested"}
               </label>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <Select value={commodityPick} onValueChange={setCommodityPick}>
-                  <SelectTrigger className="w-full sm:w-72">
-                    <SelectValue placeholder={t.commodity_placeholder ?? "Pick a commodity"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(commodities ?? [])
-                      .filter((c) => !commoditiesDraft.includes(c.code))
-                      .map((c) => (
-                        <SelectItem key={c.code} value={c.code}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={!commodityPick}
-                  onClick={() => {
-                    if (commodityPick && !commoditiesDraft.includes(commodityPick)) {
-                      setCommoditiesDraft([...commoditiesDraft, commodityPick]);
-                      setCommodityPick("");
-                    }
-                  }}
-                >
-                  {t.add_commodity ?? "Add"}
-                </Button>
-              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button type="button" variant="outline" className="w-full justify-start sm:w-72">
+                    {commoditiesDraft.length > 0
+                      ? `${commoditiesDraft.length} selected`
+                      : (t.commodity_placeholder ?? "Select commodities")}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="max-h-72 overflow-y-auto">
+                  {(commodities ?? []).map((c) => (
+                    <DropdownMenuCheckboxItem
+                      key={c.code}
+                      checked={commoditiesDraft.includes(c.code)}
+                      onSelect={(e) => e.preventDefault()}
+                      onCheckedChange={(checked) => {
+                        setCommoditiesDraft((prev) =>
+                          checked ? [...prev, c.code] : prev.filter((v) => v !== c.code),
+                        );
+                      }}
+                    >
+                      {c.name}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
               {commoditiesDraft.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-2">
                   {commoditiesDraft.map((c) => {
@@ -218,7 +221,20 @@ export default function BuyerDashboardPage() {
               )}
             </div>
 
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-2">
+              {!profileIncomplete && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setLocationDraft(data.location || "");
+                    setCommoditiesDraft(data.commodities_interested || []);
+                    setEditingProfile(false);
+                  }}
+                >
+                  {t.cancel ?? "Cancel"}
+                </Button>
+              )}
               <Button
                 onClick={() => saveMutation.mutate()}
                 disabled={saveMutation.isPending || !locationDraft || commoditiesDraft.length === 0}
@@ -270,24 +286,29 @@ export default function BuyerDashboardPage() {
       </Card>
 
       {/* ── Commodities interested ── */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{t.label_commodities ?? "Commodities Interested"}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            {data.commodities_interested.length > 0 ? (
-              data.commodities_interested.map((c) => (
-                <Badge key={c} variant="secondary" className="font-normal">
-                  {c}
-                </Badge>
-              ))
-            ) : (
-              <p className="text-muted-foreground text-sm">{t.no_commodities ?? "None specified yet."}</p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      {!profileIncomplete && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-2">
+            <CardTitle className="text-base">{t.label_commodities ?? "Commodities Interested"}</CardTitle>
+            <Button size="sm" variant="outline" onClick={() => setEditingProfile(true)}>
+              {t.edit_btn ?? "Edit"}
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {data.commodities_interested.length > 0 ? (
+                data.commodities_interested.map((c) => (
+                  <Badge key={c} variant="secondary" className="font-normal">
+                    {c}
+                  </Badge>
+                ))
+              ) : (
+                <p className="text-muted-foreground text-sm">{t.no_commodities ?? "None specified yet."}</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

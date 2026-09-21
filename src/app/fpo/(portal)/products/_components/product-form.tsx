@@ -27,6 +27,25 @@ type T = Record<string, string>;
 
 const NAME_PATTERN = /^[A-Za-z][A-Za-z\s'-]*$/;
 
+function digitLimitRefinement(maxIntDigits: number, maxDecimalDigits: number, label: string) {
+  return (val: string, ctx: z.RefinementCtx) => {
+    if (!val) return;
+    const [intPart, decPart] = val.split(".");
+    if (intPart && intPart.replace(/^0+(?=\d)/, "").length > maxIntDigits) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `${label} can have at most ${maxIntDigits} digits before the decimal point`,
+      });
+    }
+    if (decPart !== undefined && decPart.length > maxDecimalDigits) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `${label} can have at most ${maxDecimalDigits} digits after the decimal point`,
+      });
+    }
+  };
+}
+
 const schema = z
   .object({
     name_en: z.string().min(1, { message: "Product name is required" }).regex(NAME_PATTERN, {
@@ -34,19 +53,37 @@ const schema = z
     }),
     name_ml: z.string().optional(),
     commodity: z.string().min(1, { message: "Commodity is required" }),
-    description_en: z.string().min(1, { message: "Description is required" }).regex(NAME_PATTERN, {
-      message: "Description must start with a letter and contain only letters, spaces, apostrophes, or hyphens",
-    }),
-    description_ml: z.string().optional(),
+    description_en: z
+      .string()
+      .min(1, { message: "Description is required" })
+      .max(2000, { message: "Description must be 2000 characters or fewer" })
+      .regex(NAME_PATTERN, {
+        message: "Description must start with a letter and contain only letters, spaces, apostrophes, or hyphens",
+      }),
+    description_ml: z
+      .string()
+      .optional()
+      .refine((val) => !val || val.length <= 2000, {
+        message: "Description must be 2000 characters or fewer",
+      }),
     quantity: z
       .string()
       .min(1, { message: "Quantity is required" })
       .refine((val) => !Number.isNaN(Number(val)) && Number(val) > 0, {
         message: "Quantity must be greater than 0",
-      }),
+      })
+      .superRefine(digitLimitRefinement(10, 2, "Quantity")),
     unit: z.enum(["kg", "quintal", "mt", "litre", "piece"]),
-    price_per_unit: z.string().min(1, { message: "Price per unit is required" }),
-    quality_certification: z.string().optional(),
+    price_per_unit: z
+      .string()
+      .min(1, { message: "Price per unit is required" })
+      .superRefine(digitLimitRefinement(8, 2, "Price per unit")),
+    quality_certification: z
+      .string()
+      .optional()
+      .refine((val) => !val || val.length <= 200, {
+        message: "Quality certification must be 200 characters or fewer",
+      }),
     available_from: z.string().min(1, { message: "Available from date is required" }),
     available_until: z.string().optional(),
     is_public: z.boolean(),
@@ -349,7 +386,14 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
                       <FieldLabel htmlFor="product-desc-en">
                         {t.description_en_label ?? "Description (English)"} <span className="text-destructive">*</span>
                       </FieldLabel>
-                      <Textarea id="product-desc-en" rows={2} {...field} />
+                      <Textarea
+                        id="product-desc-en"
+                        rows={4}
+                        maxLength={2000}
+                        className="max-h-40 resize-none overflow-y-auto"
+                        {...field}
+                      />
+                      <p className="text-xs text-muted-foreground">{(field.value?.length ?? 0)}/2000</p>
                       {errors.description_en && <FieldError errors={[errors.description_en]} />}
                     </Field>
                   )}
@@ -362,7 +406,15 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
                       <FieldLabel htmlFor="product-desc-ml">
                         {t.description_ml_label ?? "Description (Malayalam)"}
                       </FieldLabel>
-                      <Textarea id="product-desc-ml" rows={2} {...field} />
+                      <Textarea
+                        id="product-desc-ml"
+                        rows={4}
+                        maxLength={2000}
+                        className="max-h-40 resize-none overflow-y-auto"
+                        {...field}
+                      />
+                      <p className="text-xs text-muted-foreground">{(field.value?.length ?? 0)}/2000</p>
+                      {errors.description_ml && <FieldError errors={[errors.description_ml]} />}
                     </Field>
                   )}
                 />
@@ -426,9 +478,14 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
                     <FieldLabel htmlFor="product-quality">{t.quality_label ?? "Quality certification"}</FieldLabel>
                     <Input
                       id="product-quality"
+                      maxLength={200}
                       placeholder={t.quality_placeholder ?? "e.g. FSSAI, NPOP Organic, ISO 22000"}
                       {...field}
                     />
+                    <p className="text-xs text-muted-foreground">
+                      {(field.value?.length ?? 0)}/200
+                    </p>
+                    {errors.quality_certification && <FieldError errors={[errors.quality_certification]} />}
                   </Field>
                 )}
               />
