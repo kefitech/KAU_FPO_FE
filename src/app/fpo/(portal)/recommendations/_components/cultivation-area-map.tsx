@@ -20,7 +20,9 @@ import {
   Minimize2,
   RefreshCw,
   RotateCcw,
+  Route,
   Satellite,
+  Type,
   Search,
   Sprout,
   Thermometer,
@@ -32,6 +34,8 @@ import {
 import { deleteCultivationArea, getCultivationArea, getWeather, getZones, refreshWeather, saveCultivationArea } from "@/lib/api/gis";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
+
+import { MapToggleButton } from "./map-toggle-button";
 import type { CultivationAreaFeature, SaveCultivationAreaRequest, WeatherSnapshot, ZoneFeatureCollection } from "@/types/gis";
 
 type T = Record<string, string>;
@@ -225,6 +229,8 @@ export function CultivationAreaMap({ onAreaChange }: CultivationAreaMapProps = {
   const mapWrapperRef = useRef<HTMLDivElement | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [baseLayer, setBaseLayer] = useState<"street" | "satellite">("street");
+  const [showRoads, setShowRoads] = useState(true);
+  const [showPlaceNames, setShowPlaceNames] = useState(true);
 
   useEffect(() => {
     function handleFullscreenChange() {
@@ -524,12 +530,24 @@ export function CultivationAreaMap({ onAreaChange }: CultivationAreaMapProps = {
                 maxZoom={19}
                 maxNativeZoom={18}
               />
-              <TileLayer
-                attribution="Labels &copy; Esri"
-                url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
-                maxZoom={19}
-                maxNativeZoom={18}
-              />
+              {showRoads && (
+                <TileLayer
+                  attribution="Roads &copy; Esri"
+                  url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}"
+                  maxZoom={19}
+                  maxNativeZoom={18}
+                  zIndex={2}
+                />
+              )}
+              {showPlaceNames && (
+                <TileLayer
+                  attribution="Labels &copy; Esri"
+                  url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
+                  maxZoom={19}
+                  maxNativeZoom={18}
+                  zIndex={3}
+                />
+              )}
             </>
           )}
 
@@ -706,6 +724,29 @@ export function CultivationAreaMap({ onAreaChange }: CultivationAreaMapProps = {
         >
           <Satellite className="h-4 w-4" />
         </button>
+
+        {baseLayer === "satellite" && (
+          <>
+            <MapToggleButton
+              active={showRoads}
+              onClick={() => setShowRoads((v) => !v)}
+              title={showRoads ? (t.map_roads_hide ?? "Hide roads") : (t.map_roads_show ?? "Show roads")}
+              className={vertices.length > 0 ? "top-[8rem]" : "top-[5.5rem]"}
+            >
+              <Route className="h-4 w-4" />
+            </MapToggleButton>
+            <MapToggleButton
+              active={showPlaceNames}
+              onClick={() => setShowPlaceNames((v) => !v)}
+              title={
+                showPlaceNames ? (t.map_labels_hide ?? "Hide place names") : (t.map_labels_show ?? "Show place names")
+              }
+              className={vertices.length > 0 ? "top-[10.5rem]" : "top-[8rem]"}
+            >
+              <Type className="h-4 w-4" />
+            </MapToggleButton>
+          </>
+        )}
 
         {showZones && zones && (
           <div className="pointer-events-none absolute bottom-8 left-2 z-[400] flex flex-col gap-1 rounded-md border bg-background/90 px-2 py-1.5 text-[10px] shadow-sm backdrop-blur-sm">

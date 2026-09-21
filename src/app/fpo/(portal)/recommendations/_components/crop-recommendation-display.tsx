@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 
-import { Loader2, RefreshCw, Sparkles, Star, ThumbsUp, TrendingUp } from "lucide-react";
+import { Loader2, MapPin, RefreshCw, Sparkles, Star, ThumbsUp, TrendingUp, WifiOff } from "lucide-react";
 
 import {
   getCropPackageOfPractices,
@@ -350,6 +350,15 @@ export function CropRecommendationDisplay({ hasCultivationArea }: CropRecommenda
   // the just-failed request, so it's not confused for a fresh answer.
   const showStaleNotice = !!error && !!recommendation;
 
+  // The last refresh could not reach the recommendation service, so what's on screen is the previously
+  // saved recommendation (the backend records this in input_snapshot). Only meaningful once the request has
+  // settled -- while a new one is pending/processing the flag is from the previous attempt.
+  const showOfflineNotice = recommendation?.status === "completed" && !!recommendation.input_snapshot?.ml_service_offline;
+  const formatDate = (iso?: string) =>
+    iso ? new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : null;
+  const previousGeneratedOn = formatDate(recommendation?.input_snapshot?.generated_at);
+  const lastAttemptOn = formatDate(recommendation?.input_snapshot?.ml_service_offline_at);
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
@@ -424,6 +433,34 @@ export function CropRecommendationDisplay({ hasCultivationArea }: CropRecommenda
         </div>
       </div>
 
+      {showOfflineNotice && (
+        <div
+          role="alert"
+          className="flex items-start gap-2.5 rounded-md border border-amber-300 bg-amber-50 px-3 py-2.5 text-amber-900 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200"
+        >
+          <WifiOff className="mt-0.5 h-4 w-4 shrink-0" />
+          <div className="flex flex-col gap-0.5 text-xs">
+            <p className="font-semibold">{t.offline_title ?? "Recommendation service is offline"}</p>
+            <p>
+              {t.offline_body ??
+                "We couldn't refresh your recommendation, so you are seeing your previous one. Please try again later."}
+            </p>
+            {(previousGeneratedOn || lastAttemptOn) && (
+              <p className="text-amber-800/80 dark:text-amber-300/80">
+                {previousGeneratedOn &&
+                  (t.offline_generated_on ?? "Previous recommendation generated on {date}.").replace(
+                    "{date}",
+                    previousGeneratedOn,
+                  )}
+                {previousGeneratedOn && lastAttemptOn && " "}
+                {lastAttemptOn &&
+                  (t.offline_last_attempt ?? "Last refresh attempt: {date}.").replace("{date}", lastAttemptOn)}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
       {recommendation?.input_snapshot?.location_snapshot &&
         (recommendation.input_snapshot.location_snapshot.lat != null ||
           recommendation.input_snapshot.location_snapshot.area_polygon) && (
@@ -436,6 +473,12 @@ export function CropRecommendationDisplay({ hasCultivationArea }: CropRecommenda
               lng={recommendation.input_snapshot.location_snapshot.lng}
               areaPolygon={recommendation.input_snapshot.location_snapshot.area_polygon}
             />
+            {recommendation.input_snapshot.location_snapshot.address && (
+              <p className="flex items-start gap-1 text-xs">
+                <MapPin className="mt-0.5 h-3 w-3 shrink-0 text-muted-foreground" />
+                <span>{recommendation.input_snapshot.location_snapshot.address}</span>
+              </p>
+            )}
           </div>
         )}
 

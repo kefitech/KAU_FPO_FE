@@ -4,15 +4,16 @@ import { useEffect, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 
-import { type CropZoneProfile, adminCropZoneProfilesApi } from "@/app/admin/_api/crop-zone-profiles";
+import { KAU_ZONES, type CropZoneProfile, adminCropZoneProfilesApi } from "@/app/admin/_api/crop-zone-profiles";
 import { DataTable } from "@/components/data-table/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ViewSheet } from "@/components/ui/view-sheet";
+import { masterDataApi } from "@/lib/api/master-data";
 import { translationsApi } from "@/lib/api/translations";
 import { useConfirmStore } from "@/stores/confirm-store";
 import { useLocaleStore } from "@/stores/locale-store";
@@ -76,6 +77,27 @@ export default function CropZoneProfilesPage() {
     onToggleStatus: (item) => toggleStatusMutation.mutate(item),
   });
 
+  const { data: groupOptions } = useQuery({
+    queryKey: ["master-data-select", "crop_group"],
+    queryFn: () => masterDataApi.get("crop_group", undefined, "en"),
+    staleTime: 5 * 60_000,
+  });
+
+  const filters = [
+    {
+      key: "kau_zone",
+      label: t.field_kau_zone ?? "KAU Zone",
+      type: "select" as const,
+      options: KAU_ZONES.map((z) => ({ label: z, value: z })),
+    },
+    {
+      key: "crop_group",
+      label: t.field_crop_group ?? "Crop Group",
+      type: "select" as const,
+      options: (groupOptions ?? []).map((g) => ({ label: g.name, value: g.name })),
+    },
+  ];
+
   if (translationsLoading) {
     return (
       <div className="flex flex-col gap-6 py-6">
@@ -114,6 +136,7 @@ export default function CropZoneProfilesPage() {
         queryKey="crop-zone-profiles"
         queryFn={adminCropZoneProfilesApi.getAll}
         columns={columns}
+        filters={filters}
         onRowClick={(row) => setSheet({ open: true, item: row })}
         columnsLabel={tCommon.col_header ?? "Columns"}
         toggleColumnsLabel={tCommon.col_toggle_columns ?? "Toggle columns"}

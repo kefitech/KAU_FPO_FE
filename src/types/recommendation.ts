@@ -171,6 +171,13 @@ export interface MyRecommendationInputSnapshot {
   tier: string | null;
   model_version: string | null;
   financial_year: string;
+  // Set by the backend when the last refresh could not reach the recommendation service and this
+  // previously saved recommendation is being shown instead. The next successful generation replaces
+  // the whole snapshot, which clears these.
+  ml_service_offline?: boolean;
+  ml_service_offline_at?: string;
+  // When this recommendation was actually generated (ISO). Absent on rows saved before this was recorded.
+  generated_at?: string;
   // Not sent to the ML service — merged in only for display, so a later
   // "stale" recommendation can still show the actual farm shape it was
   // generated for. Absent on rows saved via the outside-Kerala rejection
@@ -179,6 +186,9 @@ export interface MyRecommendationInputSnapshot {
     lat: number | null;
     lng: number | null;
     area_polygon: GeoJSON.Polygon | GeoJSON.MultiPolygon | null;
+    // Best-effort place name looked up when the recommendation was generated. Absent on
+    // recommendations saved before this existed, and null if the lookup failed.
+    address?: string | null;
   } | null;
 }
 
