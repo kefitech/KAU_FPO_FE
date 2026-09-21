@@ -12,7 +12,7 @@
  */
 import { api } from "@/lib/api/client";
 
-export type RiskLevel = "low" | "medium" | "high";
+export type RiskLevel = "very_low" | "low" | "medium" | "high" | "very_high";
 export type RiskClass = "low" | "moderate" | "high";
 
 export interface DPRRiskMatrixCell {

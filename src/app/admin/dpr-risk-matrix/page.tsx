@@ -30,11 +30,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
-// Ordering + labels — kept in sync with backend LEVEL_CHOICES.
+// Ordering + labels — kept in sync with backend LEVEL_CHOICES on DPRRiskItem
+// (apps/database/models/dpr/risk.py). Full 5×5 grid = 25 cells, matches the
+// FPO wizard's probability/impact dropdowns exactly.
 const LEVELS: Array<{ value: RiskLevel; label: string }> = [
+  { value: "very_low", label: "Very Low" },
   { value: "low", label: "Low" },
   { value: "medium", label: "Medium" },
   { value: "high", label: "High" },
+  { value: "very_high", label: "Very High" },
 ];
 
 const CLASS_OPTIONS: Array<{ value: RiskClass; label: string; tone: string }> = [
