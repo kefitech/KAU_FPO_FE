@@ -1,8 +1,6 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
-import { Suspense, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -23,14 +21,6 @@ import { useLocaleStore } from "@/stores/locale-store";
 type T = Record<string, string>;
 
 export default function NewCBBOReportPage() {
-  return (
-    <Suspense fallback={null}>
-      <NewCBBOReportPageInner />
-    </Suspense>
-  );
-}
-
-function NewCBBOReportPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const presetFpoId = searchParams.get("fpo_id");

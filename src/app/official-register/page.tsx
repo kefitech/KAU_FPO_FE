@@ -55,13 +55,28 @@ const ID_LABELS: Record<string, string> = {
 function makeBaseSchema(t: T) {
   return z.object({
     mode: z.enum(["government", "cbbo"]),
-    first_name: z.string().min(1, { message: t.val_first_name_required ?? "First name is required." }),
-    last_name: z.string().optional(),
+    first_name: z
+      .string()
+      .min(1, { message: t.val_first_name_required ?? "First name is required." })
+      .regex(/^[A-Za-z\s]+$/, {
+        message: t.val_first_name_invalid ?? "First name can only contain letters and spaces.",
+      }),
+    last_name: z
+      .string()
+      .regex(/^[A-Za-z\s]*$/, { message: t.val_last_name_invalid ?? "Last name can only contain letters and spaces." })
+      .optional(),
     email: z.string().email({ message: t.val_email_invalid ?? "Please enter a valid email address." }),
     phone: z
       .string()
       .regex(/^[6-9]\d{9}$/, { message: t.val_phone_invalid ?? "Enter a valid 10-digit Indian mobile number." }),
-    designation: z.string().min(1, { message: t.val_designation_required ?? "Designation is required." }),
+    designation: z
+      .string()
+      .min(1, { message: t.val_designation_required ?? "Designation is required." })
+      .regex(/^[A-Za-z][A-Za-z0-9\s/\-()]*$/, {
+        message:
+          t.val_designation_invalid ??
+          "Designation must start with a letter and can only contain letters, numbers, spaces, /, -, and brackets.",
+      }),
     department: z.string().optional(),
     user_category: z.string().optional(),
     id_number: z.string().optional(),
@@ -685,10 +700,11 @@ export default function OfficialRegisterPage() {
                     <Controller
                       control={form.control}
                       name="last_name"
-                      render={({ field }) => (
-                        <Field>
+                      render={({ field, fieldState }) => (
+                        <Field data-invalid={fieldState.invalid}>
                           <FieldLabel htmlFor="last-name">{t.field_last_name ?? "Last Name"}</FieldLabel>
-                          <Input {...field} id="last-name" />
+                          <Input {...field} id="last-name" aria-invalid={fieldState.invalid} />
+                          {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                         </Field>
                       )}
                     />
@@ -778,7 +794,9 @@ export default function OfficialRegisterPage() {
                       name="jurisdiction_type"
                       render={({ field }) => (
                         <Field>
-                          <FieldLabel htmlFor="jurisdiction-type">{t.field_jurisdiction ?? "Jurisdiction"} *</FieldLabel>
+                          <FieldLabel htmlFor="jurisdiction-type">
+                            {t.field_jurisdiction ?? "Jurisdiction"} *
+                          </FieldLabel>
                           <select
                             {...field}
                             id="jurisdiction-type"
@@ -868,7 +886,9 @@ export default function OfficialRegisterPage() {
                         name="district_code"
                         render={({ field, fieldState }) => (
                           <Field data-invalid={fieldState.invalid}>
-                            <FieldLabel htmlFor="district-code">{t.field_district_code ?? "District Code"} *</FieldLabel>
+                            <FieldLabel htmlFor="district-code">
+                              {t.field_district_code ?? "District Code"} *
+                            </FieldLabel>
                             <select
                               {...field}
                               id="district-code"

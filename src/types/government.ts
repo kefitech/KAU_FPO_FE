@@ -277,11 +277,14 @@ export interface GovtTrainingSession {
   fpo_name: string;
   district: string;
   topic: string;
+  trainer_name: string;
   date: string;
   duration_hours: string;
   participants_count: number;
   venue: string;
   attendance_count: number;
+  created_by_name: string;
+  can_edit: boolean;
 }
 
 export interface GovtTrainingSessionDetail {
@@ -289,6 +292,7 @@ export interface GovtTrainingSessionDetail {
   fpo: number;
   fpo_name: string;
   topic: string;
+  trainer_name: string;
   date: string;
   duration_hours: string;
   participants_count: number;
@@ -296,11 +300,14 @@ export interface GovtTrainingSessionDetail {
   attendance: { id: number; member_name: string; attended: boolean }[];
   created_at: string;
   updated_at: string;
+  created_by_name: string;
+  can_edit: boolean;
 }
 
 export interface GovtTrainingSessionPayload {
-  fpo_application_id: string;
+  fpo_application_ids: string[];
   topic: string;
+  trainer_name?: string;
   date: string;
   duration_hours: number;
   participants_count?: number;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
@@ -13,7 +14,17 @@ import type { GovernmentOfficial } from "@/types/admin";
 
 type T = Record<string, string>;
 
-function GovernmentActions({ official, t, tConfirm, tCommon }: { official: GovernmentOfficial; t: T; tConfirm: T; tCommon: T }) {
+function GovernmentActions({
+  official,
+  t,
+  tConfirm,
+  tCommon,
+}: {
+  official: GovernmentOfficial;
+  t: T;
+  tConfirm: T;
+  tCommon: T;
+}) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const confirm = useConfirmStore((s) => s.confirm);
@@ -121,7 +132,11 @@ export function getGovernmentColumns(t: T = {}, tConfirm: T = {}, tCommon: T = {
       accessorKey: "designation",
       header: t.col_designation ?? "Designation",
       meta: { hideOnMobile: true },
-      cell: ({ row }) => <span className="text-muted-foreground">{row.original.designation}</span>,
+      cell: ({ row }) => (
+        <span className="block max-w-[160px] truncate text-muted-foreground" title={row.original.designation}>
+          {row.original.designation}
+        </span>
+      ),
     },
     {
       accessorKey: "email",
@@ -154,7 +169,10 @@ export function getGovernmentColumns(t: T = {}, tConfirm: T = {}, tCommon: T = {
       header: t.col_status ?? "Status",
       cell: ({ row }) =>
         row.original.is_active ? (
-          <Badge variant="outline" className="border-green-500/40 bg-green-500/10 text-[11px] text-green-700 dark:text-green-400">
+          <Badge
+            variant="outline"
+            className="border-green-500/40 bg-green-500/10 text-[11px] text-green-700 dark:text-green-400"
+          >
             {t.status_active ?? "Active"}
           </Badge>
         ) : (
@@ -167,7 +185,9 @@ export function getGovernmentColumns(t: T = {}, tConfirm: T = {}, tCommon: T = {
       accessorKey: "date_joined",
       header: t.col_joined ?? "Joined",
       meta: { hideOnMobile: true },
-      cell: ({ row }) => <span className="text-muted-foreground text-sm">{new Date(row.original.date_joined).toLocaleDateString()}</span>,
+      cell: ({ row }) => (
+        <span className="text-muted-foreground text-sm">{new Date(row.original.date_joined).toLocaleDateString()}</span>
+      ),
     },
     {
       id: "actions",

@@ -19,11 +19,13 @@ function SchemeActions({
   currentUserId,
   t,
   tCommon,
+  onView,
 }: {
   scheme: GovtScheme;
   currentUserId: number | null;
   t: T;
   tCommon: T;
+  onView: (scheme: GovtScheme) => void;
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -48,7 +50,7 @@ function SchemeActions({
       actions={[
         {
           label: isOwner ? (t.action_edit ?? "Edit") : (t.action_view ?? "View"),
-          onClick: () => router.push(`/government/schemes/${scheme.id}/edit`),
+          onClick: () => (isOwner ? router.push(`/government/schemes/${scheme.id}/edit`) : onView(scheme)),
         },
         ...(isOwner
           ? [
@@ -78,6 +80,7 @@ export function getSchemeColumns(
   t: T = {},
   tCommon: T = {},
   locale = "en",
+  onView: (scheme: GovtScheme) => void = () => undefined,
 ): ColumnDef<GovtScheme>[] {
   return [
     {
@@ -140,7 +143,9 @@ export function getSchemeColumns(
               : "bg-muted text-muted-foreground"
           }
         >
-          {row.original.is_active ? (t.badge_active ?? tCommon.badge_active ?? "Active") : (t.badge_inactive ?? tCommon.badge_inactive ?? "Inactive")}
+          {row.original.is_active
+            ? (t.badge_active ?? tCommon.badge_active ?? "Active")
+            : (t.badge_inactive ?? tCommon.badge_inactive ?? "Inactive")}
         </Badge>
       ),
     },
@@ -149,7 +154,9 @@ export function getSchemeColumns(
       header: "",
       enableSorting: false,
       enableHiding: false,
-      cell: ({ row }) => <SchemeActions scheme={row.original} currentUserId={currentUserId} t={t} tCommon={tCommon} />,
+      cell: ({ row }) => (
+        <SchemeActions scheme={row.original} currentUserId={currentUserId} t={t} tCommon={tCommon} onView={onView} />
+      ),
     },
   ];
 }

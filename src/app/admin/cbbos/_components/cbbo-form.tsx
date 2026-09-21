@@ -237,8 +237,12 @@ export function CBBOForm({ mode, cbbo, t = {}, tCommon = {} }: CBBOFormProps) {
                       <Input
                         id="cb-first-name"
                         placeholder={t.first_name_placeholder ?? "John"}
-                        maxLength={50}
+                        maxLength={35}
                         {...field}
+                          onChange={(e) => {
+                         const value = e.target.value.replace(/[^a-zA-Z\s'-]/g, "");
+                        field.onChange(value);
+                        }}
                       />
                     )}
                   />
@@ -255,8 +259,12 @@ export function CBBOForm({ mode, cbbo, t = {}, tCommon = {} }: CBBOFormProps) {
                       <Input
                         id="cb-last-name"
                         placeholder={t.last_name_placeholder ?? "Doe"}
-                        maxLength={50}
+                        maxLength={35}
                         {...field}
+                         onChange={(e) => {
+                         const value = e.target.value.replace(/[^a-zA-Z\s'-]/g, "");
+                         field.onChange(value);
+                          }}
                       />
                     )}
                   />

@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useMemo } from "react";
+
 import { useRouter } from "next/navigation";
+
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Controller, type Resolver, useForm } from "react-hook-form";
@@ -12,7 +14,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import type { GovernmentOfficial, GovtJurisdictionType, GovernmentUpdatePayload, NotificationChannelType } from "@/types/admin";
+import type {
+  GovernmentOfficial,
+  GovernmentUpdatePayload,
+  GovtJurisdictionType,
+  NotificationChannelType,
+} from "@/types/admin";
 
 type T = Record<string, string>;
 
@@ -21,50 +28,83 @@ const NOTIFICATION_CHANNELS: { value: NotificationChannelType; label: string }[]
   { value: "sms", label: "SMS" },
 ];
 
-const createSchema = z.object({
-  email: z.string().email({ message: "Enter a valid email address" }).max(50, { message: "Email must be at most 50 characters" }),
-  first_name: z.string().min(1, { message: "First name is required" }).max(50, { message: "Max 50 characters" }),
-  last_name: z.string().min(1, { message: "Last name is required" }).max(50, { message: "Max 50 characters" }),
-  phone: z
-    .string()
-    .min(10, { message: "Enter a valid phone number" })
-    .max(15, { message: "Max 15 digits" })
-    .regex(/^\+?[0-9]{10,15}$/, { message: "Only digits allowed (optional leading +)" }),
-  notification_channel: z.enum(["email", "sms", "in_app"]),
-  designation: z.string().min(1, { message: "Designation is required" }).max(200),
-  department: z.string().min(1, { message: "Department is required" }).max(200),
-  jurisdiction_type: z.enum(["district", "block", "state"]),
-  assigned_district: z.string().nullable(),
-  assigned_block: z.string().nullable(),
-}).refine((data) => data.jurisdiction_type !== "district" || !!data.assigned_district, {
-  message: "Select a district",
-  path: ["assigned_district"],
-}).refine((data) => data.jurisdiction_type !== "block" || !!data.assigned_block, {
-  message: "Select a block",
-  path: ["assigned_block"],
-});
+const createSchema = z
+  .object({
+    email: z
+      .string()
+      .email({ message: "Enter a valid email address" })
+      .max(50, { message: "Email must be at most 50 characters" }),
+    first_name: z
+      .string()
+      .min(1, { message: "First name is required" })
+      .max(35, { message: "Max 35 characters" })
+      .regex(/^[a-zA-Z\s]+$/, { message: "Only letters and spaces allowed" }),
+    last_name: z
+      .string()
+      .min(1, { message: "Last name is required" })
+      .max(35, { message: "Max 35 characters" })
+      .regex(/^[a-zA-Z\s]+$/, { message: "Only letters and spaces allowed" }),
+    phone: z
+      .string()
+      .min(10, { message: "Enter a valid phone number" })
+      .max(10, { message: "Max 10 digits" })
+      .regex(/^\+?[0-9]{10}$/, { message: "Only digits allowed (optional leading +)" }),
+    notification_channel: z.enum(["email", "sms", "in_app"]),
+    designation: z
+      .string()
+      .min(1, { message: "Designation is required" })
+      .max(90)
+      .regex(/^[a-zA-Z\s]+$/, { message: "Only letters and spaces allowed" }),
+    department: z
+      .string()
+      .min(1, { message: "Department is required" })
+      .max(90)
+      .regex(/^[a-zA-Z\s]+$/, { message: "Only letters and spaces allowed" }),
+    jurisdiction_type: z.enum(["district", "block", "state"]),
+    assigned_district: z.string().nullable(),
+    assigned_block: z.string().nullable(),
+  })
+  .refine((data) => data.jurisdiction_type !== "district" || !!data.assigned_district, {
+    message: "Select a district",
+    path: ["assigned_district"],
+  })
+  .refine((data) => data.jurisdiction_type !== "block" || !!data.assigned_block, {
+    message: "Select a block",
+    path: ["assigned_block"],
+  });
 
-const editSchema = z.object({
-  email: z.string().email({ message: "Enter a valid email address" }).max(50),
-  first_name: z.string().min(1, { message: "First name is required" }).max(50),
-  last_name: z.string().min(1, { message: "Last name is required" }).max(50),
-  phone: z
-    .string()
-    .min(10, { message: "Enter a valid phone number" })
-    .max(15, { message: "Max 15 digits" })
-    .regex(/^\+?[0-9]{10,15}$/, { message: "Only digits allowed (optional leading +)" }),
-  designation: z.string().min(1, { message: "Designation is required" }).max(200),
-  department: z.string().min(1, { message: "Department is required" }).max(200),
-  jurisdiction_type: z.enum(["district", "block", "state"]),
-  assigned_district: z.string().nullable(),
-  assigned_block: z.string().nullable(),
-}).refine((data) => data.jurisdiction_type !== "district" || !!data.assigned_district, {
-  message: "Select a district",
-  path: ["assigned_district"],
-}).refine((data) => data.jurisdiction_type !== "block" || !!data.assigned_block, {
-  message: "Select a block",
-  path: ["assigned_block"],
-});
+const editSchema = z
+  .object({
+    email: z.string().email({ message: "Enter a valid email address" }).max(50),
+    first_name: z
+      .string()
+      .min(1, { message: "First name is required" })
+      .max(35)
+      .regex(/^[a-zA-Z\s]+$/, { message: "Only letters and spaces allowed" }),
+    last_name: z
+      .string()
+      .min(1, { message: "Last name is required" })
+      .max(35)
+      .regex(/^[a-zA-Z\s]+$/, { message: "Only letters and spaces allowed" }),
+    phone: z
+      .string()
+      .min(10, { message: "Enter a valid phone number" })
+      .max(10, { message: "Max 10 digits" })
+      .regex(/^\+?[0-9]{10}$/, { message: "Only digits allowed (optional leading +)" }),
+    designation: z.string().min(1, { message: "Designation is required" }).max(200),
+    department: z.string().min(1, { message: "Department is required" }).max(200),
+    jurisdiction_type: z.enum(["district", "block", "state"]),
+    assigned_district: z.string().nullable(),
+    assigned_block: z.string().nullable(),
+  })
+  .refine((data) => data.jurisdiction_type !== "district" || !!data.assigned_district, {
+    message: "Select a district",
+    path: ["assigned_district"],
+  })
+  .refine((data) => data.jurisdiction_type !== "block" || !!data.assigned_block, {
+    message: "Select a block",
+    path: ["assigned_block"],
+  });
 
 type FormValues = {
   email: string;
@@ -164,7 +204,12 @@ export function GovernmentForm({ mode, official, t = {}, tCommon = {} }: Governm
         };
         if (values.phone) basicPayload.phone = values.phone;
         await governmentApi.update(official.id, basicPayload);
-        await governmentApi.setJurisdiction(official.id, values.jurisdiction_type, values.assigned_district, values.assigned_block);
+        await governmentApi.setJurisdiction(
+          official.id,
+          values.jurisdiction_type,
+          values.assigned_district,
+          values.assigned_block,
+        );
       } else {
         await governmentApi.create({
           email: values.email,
@@ -181,7 +226,11 @@ export function GovernmentForm({ mode, official, t = {}, tCommon = {} }: Governm
       }
     },
     onSuccess: () => {
-      toast.success(isEdit ? (t.toast_updated ?? "Official updated successfully") : (t.toast_created ?? "Official created successfully"));
+      toast.success(
+        isEdit
+          ? (t.toast_updated ?? "Official updated successfully")
+          : (t.toast_created ?? "Official created successfully"),
+      );
       queryClient.invalidateQueries({ queryKey: ["government"] });
       if (isEdit && official) {
         queryClient.invalidateQueries({ queryKey: ["government-official", String(official.id)] });
@@ -225,7 +274,14 @@ export function GovernmentForm({ mode, official, t = {}, tCommon = {} }: Governm
                   <Controller
                     control={control}
                     name="first_name"
-                    render={({ field }) => <Input id="gv-first-name" placeholder={t.first_name_placeholder ?? "Jane"} maxLength={50} {...field} />}
+                    render={({ field }) => (
+                      <Input
+                        id="gv-first-name"
+                        placeholder={t.first_name_placeholder ?? "Jane"}
+                        maxLength={50}
+                        {...field}
+                      />
+                    )}
                   />
                   {errors.first_name && <FieldError errors={[errors.first_name]} />}
                 </Field>
@@ -236,7 +292,14 @@ export function GovernmentForm({ mode, official, t = {}, tCommon = {} }: Governm
                   <Controller
                     control={control}
                     name="last_name"
-                    render={({ field }) => <Input id="gv-last-name" placeholder={t.last_name_placeholder ?? "Doe"} maxLength={50} {...field} />}
+                    render={({ field }) => (
+                      <Input
+                        id="gv-last-name"
+                        placeholder={t.last_name_placeholder ?? "Doe"}
+                        maxLength={50}
+                        {...field}
+                      />
+                    )}
                   />
                   {errors.last_name && <FieldError errors={[errors.last_name]} />}
                 </Field>
@@ -249,7 +312,14 @@ export function GovernmentForm({ mode, official, t = {}, tCommon = {} }: Governm
                   control={control}
                   name="email"
                   render={({ field }) => (
-                    <Input id="gv-email" type="email" placeholder={t.email_placeholder ?? "official@example.com"} disabled={isEdit} maxLength={50} {...field} />
+                    <Input
+                      id="gv-email"
+                      type="email"
+                      placeholder={t.email_placeholder ?? "official@example.com"}
+                      disabled={isEdit}
+                      maxLength={50}
+                      {...field}
+                    />
                   )}
                 />
                 {errors.email && <FieldError errors={[errors.email]} />}
@@ -266,7 +336,7 @@ export function GovernmentForm({ mode, official, t = {}, tCommon = {} }: Governm
                       id="gv-phone"
                       type="tel"
                       placeholder={t.phone_placeholder ?? "+91 98765 43210"}
-                      maxLength={15}
+                      maxLength={10}
                       {...field}
                       onChange={(e) => field.onChange(e.target.value.replace(/(?!^\+)[^0-9]/g, ""))}
                     />
@@ -282,7 +352,14 @@ export function GovernmentForm({ mode, official, t = {}, tCommon = {} }: Governm
                   <Controller
                     control={control}
                     name="designation"
-                    render={({ field }) => <Input id="gv-designation" placeholder={t.designation_placeholder ?? "District Collector"} maxLength={200} {...field} />}
+                    render={({ field }) => (
+                      <Input
+                        id="gv-designation"
+                        placeholder={t.designation_placeholder ?? "District Collector"}
+                        maxLength={200}
+                        {...field}
+                      />
+                    )}
                   />
                   {errors.designation && <FieldError errors={[errors.designation]} />}
                 </Field>
@@ -293,7 +370,14 @@ export function GovernmentForm({ mode, official, t = {}, tCommon = {} }: Governm
                   <Controller
                     control={control}
                     name="department"
-                    render={({ field }) => <Input id="gv-department" placeholder={t.department_placeholder ?? "Agriculture"} maxLength={200} {...field} />}
+                    render={({ field }) => (
+                      <Input
+                        id="gv-department"
+                        placeholder={t.department_placeholder ?? "Agriculture"}
+                        maxLength={200}
+                        {...field}
+                      />
+                    )}
                   />
                   {errors.department && <FieldError errors={[errors.department]} />}
                 </Field>
@@ -324,7 +408,8 @@ export function GovernmentForm({ mode, official, t = {}, tCommon = {} }: Governm
                     )}
                   />
                   <p className="mt-1 text-[11px] text-muted-foreground">
-                    {t.notification_channel_hint ?? "A generated password will be sent to the official via this channel."}
+                    {t.notification_channel_hint ??
+                      "A generated password will be sent to the official via this channel."}
                   </p>
                 </Field>
               </div>
@@ -366,7 +451,7 @@ export function GovernmentForm({ mode, official, t = {}, tCommon = {} }: Governm
                       size="sm"
                       onClick={() => field.onChange("block")}
                     >
-                      {t.level_block ?? "Block"}
+                      {t.level_block ?? "Block/Taluk"}
                     </Button>
                   </div>
                 )}

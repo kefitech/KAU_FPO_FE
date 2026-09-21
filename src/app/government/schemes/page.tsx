@@ -83,8 +83,10 @@ export default function GovernmentSchemesPage() {
     <div className="flex flex-col gap-6 px-6 py-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-bold text-2xl">{tAdmin.page_title ?? "Schemes & Subsidies"}</h1>
-          <p className="mt-0.5 text-muted-foreground text-sm">{tAdmin.page_description ?? "Manage scheme catalog entries"}</p>
+          <h1 className="font-bold text-2xl">{tAdmin.card_title ?? "Schemes & Subsidies"}</h1>
+          <p className="mt-0.5 text-muted-foreground text-sm">
+            {tAdmin.page_description ?? "Manage scheme catalog entries"}
+          </p>
         </div>
         <Button size="sm" className="self-start sm:self-auto" onClick={() => router.push("/government/schemes/new")}>
           <Plus className="mr-1.5 h-4 w-4" />
@@ -96,7 +98,9 @@ export default function GovernmentSchemesPage() {
         <DataTable
           queryKey="government-schemes"
           queryFn={govtSchemesApi.getAll}
-          columns={getSchemeColumns(currentUserId, { ...tAdmin, ...t }, tCommon, locale)}
+          columns={getSchemeColumns(currentUserId, { ...tAdmin, ...t }, tCommon, locale, (row) =>
+            setSheet({ open: true, scheme: row }),
+          )}
           filters={filters}
           onRowClick={(row) => setSheet({ open: true, scheme: row })}
           searchPlaceholder={t.placeholder_search ?? "Search schemes..."}
