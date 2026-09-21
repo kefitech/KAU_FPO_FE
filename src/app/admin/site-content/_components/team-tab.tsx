@@ -80,6 +80,7 @@ function TeamDialog({
   const [name, setName] = useState("");
   const [designation, setDesignation] = useState("");
   const [order, setOrder] = useState(1);
+  const [isPatrons, setIsPatrons] = useState(false);
   const [photo, setPhoto] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -91,10 +92,12 @@ function TeamDialog({
       setName(editing.name);
       setDesignation(editing.designation ?? "");
       setOrder(editing.order);
+      setIsPatrons(editing.is_patrons ?? false);
     } else {
       setName("");
       setDesignation("");
       setOrder(1);
+      setIsPatrons(false);
     }
   }, [open, editing]);
 
@@ -105,6 +108,7 @@ function TeamDialog({
       formData.append("designation", designation.trim());
       formData.append("order", String(order));
       formData.append("is_active", "true");
+      formData.append("is_patrons", String(isPatrons));
       if (photo) formData.append("photo", photo);
       return editing ? teamApi.update(editing.id, formData) : teamApi.create(formData);
     },
@@ -249,6 +253,18 @@ function TeamDialog({
               className="w-28"
             />
           </div>
+
+          {/* Patrons */}
+          <label htmlFor="member-is-patrons" className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+            <input
+              id="member-is-patrons"
+              type="checkbox"
+              checked={isPatrons}
+              onChange={(e) => setIsPatrons(e.target.checked)}
+              className="h-4 w-4"
+            />
+            {t.field_is_patrons ?? "Is Patron"}
+          </label>
         </div>
 
         <DialogFooter>
@@ -379,6 +395,11 @@ export function TeamTab({ t = {} }: { t?: T }) {
                 <p className="text-sm font-medium leading-snug truncate w-full text-center">{member.name}</p>
                 {member.designation && (
                   <p className="text-xs text-muted-foreground truncate w-full text-center">{member.designation}</p>
+                )}
+                {member.is_patrons && (
+                  <Badge variant="outline" className="mt-1 text-xs">
+                    {t.badge_patron ?? "Patron"}
+                  </Badge>
                 )}
                 <Badge
                   variant="secondary"

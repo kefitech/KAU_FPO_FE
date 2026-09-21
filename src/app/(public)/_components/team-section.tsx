@@ -16,6 +16,7 @@ interface TeamMember {
   designation: string | null;
   photo_url: string | null;
   order: number;
+  is_patrons?: boolean;
 }
 
 function getInitials(name: string): string {
@@ -157,10 +158,14 @@ const TeamSection = ({ showAll = false }: Props) => {
   useEffect(() => {
     publicFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/public/team/`)
       .then((r) => r.json())
-      .then((json) => setMembers((json.data as TeamMember[]) ?? []))
+      .then((json) => {
+        const all = (json.data as TeamMember[]) ?? [];
+        // Landing page shows only Patrons; Our Team page shows everyone else
+        setMembers(all.filter((m) => (showAll ? !m.is_patrons : !!m.is_patrons)));
+      })
       .catch(() => setMembers([]))
       .finally(() => setLoading(false));
-  }, [locale]);
+  }, [locale, showAll]);
 
   // Team page — show all in a responsive grid
   if (showAll) {
