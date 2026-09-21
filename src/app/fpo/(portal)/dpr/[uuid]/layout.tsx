@@ -415,16 +415,19 @@ export default function DprWizardLayout({ children }: { children: React.ReactNod
           >
             {sidebarCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeft className="h-4 w-4" />}
           </Button>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             {isLoading ? (
               <Skeleton className="h-5 w-48" />
             ) : (
-              <div className="flex items-center gap-2">
-                <h1 className="truncate text-sm font-semibold">
+              <div className="flex min-w-0 items-center gap-2">
+                <h1
+                  className="truncate text-sm font-semibold"
+                  title={project?.title || "Untitled DPR"}
+                >
                   {project?.title || "Untitled DPR"}
                 </h1>
                 {project && (
-                  <Badge variant="secondary" className="text-[10px]">
+                  <Badge variant="secondary" className="shrink-0 text-[10px]">
                     {project.status.replace("_", " ")}
                   </Badge>
                 )}
@@ -432,7 +435,7 @@ export default function DprWizardLayout({ children }: { children: React.ReactNod
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {/* AI narrative shortcut — KAU RCD B.5 Phase 5. Placed next to the
               PDF button so users see it right when they're about to export.
               The X/N counter is Layer 1 of the AI-discoverability defense:

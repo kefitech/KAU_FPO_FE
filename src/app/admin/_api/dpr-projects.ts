@@ -45,6 +45,33 @@ export interface DPRSectionReadiness {
   is_complete: boolean;
 }
 
+/** One row of the per-chapter AI health roll-up (KAU 2026-09-19 P2.5).
+ *  Populated server-side by `apps.accounts.api.admin.dpr.project_detail`. */
+export interface AIContentHealthRow {
+  chapter: string;
+  chapter_display: string;
+  has_content: boolean;
+  needs_review: boolean;
+  placeholder_hits_count: number;
+  consistency_warnings_count: number;
+  /** First 8 placeholder-scrubber hits — full list truncated server-side. */
+  placeholder_hits: Array<{ raw: string; count: number }>;
+  /** First 8 consistency warnings — full list truncated server-side. */
+  consistency_warnings: Array<{
+    metric: string;
+    expected: string;
+    found: string;
+    kind: "drift" | "mismatch";
+    excerpt: string;
+  }>;
+  /** Active narrative text (user_edited if set, else original_ai). Empty
+   *  string when the chapter has never been generated. */
+  active_text?: string;
+  active_version?: "user_edited" | "original_ai";
+  /** Pending regeneration the FPO hasn't accepted yet. Empty when none. */
+  candidate_text?: string;
+}
+
 export interface DPRProjectDetail {
   project: {
     uuid: string;
@@ -71,6 +98,9 @@ export interface DPRProjectDetail {
       readiness: DPRSectionReadiness | null;
     }
   >;
+  /** KAU 2026-09-19 P2.5 — AI content health per chapter. Optional so
+   *  older backends still deserialise cleanly. */
+  ai_content_health?: AIContentHealthRow[];
 }
 
 // Applicability preview types — Phase 6e admin visibility surface for

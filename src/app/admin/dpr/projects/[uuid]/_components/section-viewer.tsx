@@ -24,6 +24,7 @@
 
 import dynamic from "next/dynamic";
 
+import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 // Leaflet touches `window` — must be SSR-disabled dynamic import. Reused
@@ -223,62 +224,79 @@ export function SectionViewer({ data }: { data: Record<string, unknown> | null }
   const sortedShortKeys = sortKeys(shortEntries.map(([k]) => k));
   const shortMap = new Map(shortEntries);
 
+  // Numbered cards — mirrors the FPO wizard's "1. Field", "2. Field" layout.
+  // Order: short primitives (grouped) → long text (own card each) → arrays
+  // (own card each) → geo map. Counter increments per rendered card.
+  let cardNo = 0;
+  const nextNo = () => ++cardNo;
+
   return (
     <div className="space-y-6">
-      {/* Geo map — rendered when the section carries lat + lng (Location section) */}
-      {hasGeo && (
-        <div className="space-y-1.5">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">
-            Pinned Location
-          </p>
-          <div className="overflow-hidden rounded-lg border">
-            <LocationMap lat={lat} lng={lng} />
-          </div>
-          <p className="text-[11px] text-muted-foreground">
-            {lat.toFixed(6)}, {lng.toFixed(6)}
-          </p>
-        </div>
-      )}
-
-      {/* Long-text fields — full-width readable cards */}
-      {longTextEntries.map(([k, v]) => (
-        <div key={k} className="space-y-1.5">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">
-            {humanizeKey(k)}
-          </p>
-          <div className="rounded-lg border bg-card p-4 text-sm leading-relaxed">
-            {v || <span className="italic text-muted-foreground">—</span>}
-          </div>
-        </div>
-      ))}
-
-      {/* Short primitives — 2 or 3 column definition grid */}
       {sortedShortKeys.length > 0 && (
-        <div className="overflow-hidden rounded-lg border bg-card">
-          <dl className="grid divide-y sm:grid-cols-2 sm:divide-y-0 sm:divide-x">
-            {sortedShortKeys.map((k) => {
-              const v = shortMap.get(k);
-              const { text, extraClass } = formatValue(k, v);
-              const empty = isEmpty(v);
-              return (
-                <div key={k} className="grid grid-cols-[minmax(140px,40%)_1fr] gap-3 border-t px-4 py-2.5 first:border-t-0 sm:border-t-0 sm:[&:nth-child(-n+2)]:border-t-0">
-                  <dt className="text-xs text-muted-foreground">
-                    {humanizeKey(k)}
-                  </dt>
-                  <dd className={`text-sm ${empty ? "text-muted-foreground italic" : ""} ${extraClass ?? ""}`}>
-                    {text}
-                  </dd>
-                </div>
-              );
-            })}
-          </dl>
-        </div>
+        <Card>
+          <CardContent className="space-y-4 p-6">
+            <h3 className="text-sm font-semibold">{nextNo()}. Details</h3>
+            <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+              {sortedShortKeys.map((k) => {
+                const v = shortMap.get(k);
+                const { text, extraClass } = formatValue(k, v);
+                const empty = isEmpty(v);
+                return (
+                  <div key={k} className="grid grid-cols-[minmax(140px,40%)_1fr] gap-3 border-b border-dashed py-1.5 last:border-b-0">
+                    <dt className="text-xs text-muted-foreground">
+                      {humanizeKey(k)}
+                    </dt>
+                    <dd className={`text-sm ${empty ? "text-muted-foreground italic" : ""} ${extraClass ?? ""}`}>
+                      {text}
+                    </dd>
+                  </div>
+                );
+              })}
+            </dl>
+          </CardContent>
+        </Card>
       )}
 
-      {/* Arrays */}
-      {arrayEntries.map(([k, arr]) => (
-        <ArraySection key={k} label={humanizeKey(k)} arr={arr} />
+      {longTextEntries.map(([k, v]) => (
+        <Card key={k}>
+          <CardContent className="space-y-4 p-6">
+            <h3 className="text-sm font-semibold">{nextNo()}. {humanizeKey(k)}</h3>
+            <div className="text-sm leading-relaxed">
+              {v || <span className="italic text-muted-foreground">—</span>}
+            </div>
+          </CardContent>
+        </Card>
       ))}
+
+      {arrayEntries.map(([k, arr]) => (
+        <Card key={k}>
+          <CardContent className="space-y-4 p-6">
+            <div className="flex items-baseline gap-2">
+              <h3 className="text-sm font-semibold">
+                {nextNo()}. {humanizeKey(k)}
+              </h3>
+              <span className="text-xs text-muted-foreground">
+                ({arr.length})
+              </span>
+            </div>
+            <ArrayBody arr={arr} />
+          </CardContent>
+        </Card>
+      ))}
+
+      {hasGeo && (
+        <Card>
+          <CardContent className="space-y-4 p-6">
+            <h3 className="text-sm font-semibold">{nextNo()}. Pinned Location</h3>
+            <div className="overflow-hidden rounded-lg border">
+              <LocationMap lat={lat} lng={lng} />
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              {lat.toFixed(6)}, {lng.toFixed(6)}
+            </p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
@@ -287,72 +305,43 @@ export function SectionViewer({ data }: { data: Record<string, unknown> | null }
 // Array renderer — decides between chips (labels) and table (rows)
 // ─────────────────────────────────────────────────────────────────────────────
 
-function ArraySection({ label, arr }: { label: string; arr: unknown[] }) {
+function ArrayBody({ arr }: { arr: unknown[] }) {
   if (arr.length === 0) {
     return (
-      <div className="space-y-2">
-        <div className="flex items-baseline gap-2">
-          <h4 className="text-sm font-semibold">{label}</h4>
-          <span className="text-xs text-muted-foreground">(empty)</span>
-        </div>
-        <div className="rounded-lg border border-dashed bg-muted/10 py-4 text-center text-xs text-muted-foreground">
-          No entries.
-        </div>
+      <div className="rounded-lg border border-dashed bg-muted/10 py-4 text-center text-xs text-muted-foreground">
+        No entries.
       </div>
     );
   }
 
-  // Chip list — bare strings / numbers
   if (arr.every((el) => typeof el === "string" || typeof el === "number")) {
     return (
-      <div className="space-y-2">
-        <div className="flex items-baseline gap-2">
-          <h4 className="text-sm font-semibold">{label}</h4>
-          <span className="text-xs text-muted-foreground">({arr.length})</span>
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {arr.map((el, i) => (
-            <span key={i} className="rounded-full border border-border bg-muted px-2.5 py-0.5 text-xs">
-              {String(el)}
-            </span>
-          ))}
-        </div>
+      <div className="flex flex-wrap gap-1.5">
+        {arr.map((el, i) => (
+          <span key={i} className="rounded-full border border-border bg-muted px-2.5 py-0.5 text-xs">
+            {String(el)}
+          </span>
+        ))}
       </div>
     );
   }
 
-  // FK-enriched label chips
   if (arr.every(isLabelObject)) {
     return (
-      <div className="space-y-2">
-        <div className="flex items-baseline gap-2">
-          <h4 className="text-sm font-semibold">{label}</h4>
-          <span className="text-xs text-muted-foreground">({arr.length})</span>
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {arr.map((el, i) => (
-            <span
-              key={i}
-              className="rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary"
-            >
-              {(el as { name: string }).name}
-            </span>
-          ))}
-        </div>
+      <div className="flex flex-wrap gap-1.5">
+        {arr.map((el, i) => (
+          <span
+            key={i}
+            className="rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary"
+          >
+            {(el as { name: string }).name}
+          </span>
+        ))}
       </div>
     );
   }
 
-  // Data table
-  return (
-    <div className="space-y-2">
-      <div className="flex items-baseline gap-2">
-        <h4 className="text-sm font-semibold">{label}</h4>
-        <span className="text-xs text-muted-foreground">({arr.length})</span>
-      </div>
-      <ArrayTable rows={arr as Record<string, unknown>[]} />
-    </div>
-  );
+  return <ArrayTable rows={arr as Record<string, unknown>[]} />;
 }
 
 function ArrayTable({ rows }: { rows: Record<string, unknown>[] }) {

@@ -16,14 +16,16 @@
  * Author: Athul Gopan (Kefi Tech Solutions)
  */
 
-import { use, useMemo, useState } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 
 import { useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
   ArrowLeft,
+  ArrowRight,
   CheckCircle2,
   Circle,
+  CircleDashed,
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
@@ -36,18 +38,39 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { DPR_SECTIONS, type DprSectionInfo } from "@/lib/api/dpr";
 import { cn } from "@/lib/utils";
 
+const STATUS_TOGGLE_STORAGE_KEY = "admin-dpr-status-dots";
+
+import { AIContentHealthCard } from "./_components/ai-content-health";
 import { SectionViewer } from "./_components/section-viewer";
 
-type ReadinessState = "empty" | "errors" | "warnings" | "complete";
+type ReadinessState = "empty" | "errors" | "warnings" | "complete" | "optional";
 
-function statusIcon(state: ReadinessState) {
-  if (state === "errors") return { Icon: XCircle, tone: "text-destructive" };
-  if (state === "warnings") return { Icon: AlertTriangle, tone: "text-amber-500" };
-  if (state === "complete") return { Icon: CheckCircle2, tone: "text-emerald-500" };
-  return { Icon: Circle, tone: "text-muted-foreground/40" };
+// Mirrors the FPO wizard's StatusDot — one big h-6 w-6 circle with either
+// a numeric step or a coloured readiness icon.
+function StatusDot({ state, active }: { state: ReadinessState; active: boolean }) {
+  const cfg = {
+    complete: { Icon: CheckCircle2, className: "text-emerald-500", title: "Complete" },
+    warnings: { Icon: AlertTriangle, className: "text-amber-500", title: "Has warnings" },
+    errors:   { Icon: XCircle,       className: "text-destructive", title: "Has errors" },
+    optional: { Icon: CircleDashed,  className: "text-blue-500/70", title: "Optional — not filled" },
+    empty:    { Icon: Circle,        className: "text-muted-foreground/40", title: "Not started" },
+  }[state];
+  const { Icon, className, title } = cfg;
+  return (
+    <span
+      className={cn(
+        "flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors",
+        active && "bg-primary/15",
+      )}
+      title={title}
+    >
+      <Icon className={cn("h-4 w-4", className)} />
+    </span>
+  );
 }
 
 export default function AdminDprProjectDetailPage({
@@ -63,6 +86,24 @@ export default function AdminDprProjectDetailPage({
     queryFn: () => adminDprProjectsApi.detail(uuid),
     staleTime: 30_000,
   });
+
+  // Applicability — reused for the sidebar 'M' badge (mandatory sections).
+  // Same query key as ApplicabilityPreview so both share the cache.
+  const { data: applicability } = useQuery({
+    queryKey: ["admin-dpr-applicability-preview", uuid],
+    queryFn: () => adminDprProjectsApi.applicability(uuid),
+    staleTime: 30_000,
+  });
+
+  // Numbers ↔ status dots toggle — persisted in localStorage per browser.
+  const [showStatus, setShowStatus] = useState(false);
+  useEffect(() => {
+    const stored = localStorage.getItem(STATUS_TOGGLE_STORAGE_KEY);
+    if (stored === "1") setShowStatus(true);
+  }, []);
+  useEffect(() => {
+    localStorage.setItem(STATUS_TOGGLE_STORAGE_KEY, showStatus ? "1" : "0");
+  }, [showStatus]);
 
   const activeSection = query.data?.sections?.[activeKey];
   const activeInfo = useMemo(
@@ -90,27 +131,47 @@ export default function AdminDprProjectDetailPage({
     return "empty";
   }
 
+  function isMandatory(key: string): boolean {
+    return applicability?.applicability?.[key] === "M";
+  }
+
+  // Prev/Next navigation — mirrors the FPO wizard SectionShell footer.
+  // Skips 'H' hidden sections so admins jump between the same visible
+  // sections the FPO sees.
+  const { prev, next } = useMemo(() => {
+    const isHidden = (k: string) => applicability?.applicability?.[k] === "H";
+    const visible = DPR_SECTIONS.filter((s) => !isHidden(s.key));
+    const idx = visible.findIndex((s) => s.key === activeKey);
+    return {
+      prev: idx > 0 ? visible[idx - 1] : null,
+      next: idx >= 0 && idx < visible.length - 1 ? visible[idx + 1] : null,
+    };
+  }, [applicability, activeKey]);
+
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col">
       {/* Header bar — matches FPO wizard style */}
       <header className="flex items-center justify-between gap-3 border-b bg-background px-6 py-3">
-        <div className="flex items-center gap-3">
-          <Button asChild variant="ghost" size="sm">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <Button asChild variant="ghost" size="sm" className="shrink-0">
             <Link href="/admin/dpr/projects">
               <ArrowLeft className="mr-1 h-4 w-4" /> Back
             </Link>
           </Button>
           {query.data ? (
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-base font-semibold">
+            <div className="min-w-0 flex-1">
+              <div className="flex min-w-0 items-center gap-2">
+                <h1
+                  className="truncate text-base font-semibold"
+                  title={query.data.project.title || "Untitled DPR"}
+                >
                   {query.data.project.title || (
                     <span className="italic text-muted-foreground">Untitled DPR</span>
                   )}
                 </h1>
                 <span
                   className={cn(
-                    "rounded-md px-2 py-0.5 text-[11px] font-medium",
+                    "shrink-0 rounded-md px-2 py-0.5 text-[11px] font-medium",
                     DPR_STATUS_COLORS[query.data.project.status],
                   )}
                 >
@@ -118,7 +179,7 @@ export default function AdminDprProjectDetailPage({
                 </span>
               </div>
               {query.data.fpo && (
-                <p className="text-xs text-muted-foreground">
+                <p className="truncate text-xs text-muted-foreground">
                   {query.data.fpo.name} · {query.data.fpo.district} ·
                   Tier {query.data.fpo.tier ?? "—"}
                   {query.data.fpo.application_id
@@ -132,7 +193,7 @@ export default function AdminDprProjectDetailPage({
           )}
         </div>
         {query.data?.fpo && (
-          <div className="hidden text-right text-xs text-muted-foreground sm:block">
+          <div className="hidden shrink-0 text-right text-xs text-muted-foreground sm:block">
             <p>{query.data.fpo.office_email || "—"}</p>
             <p>{query.data.fpo.office_phone || "—"}</p>
           </div>
@@ -149,7 +210,9 @@ export default function AdminDprProjectDetailPage({
         </div>
       ) : (
         <div className="flex flex-1 min-h-0">
-          {/* Sidebar — grouped by KAU stream, matches FPO wizard */}
+          {/* Sidebar — grouped by KAU stream, matches FPO wizard.
+              Same StatusDot + numeric-step + toggle pattern used on the
+              FPO side so admins get the same visual model. */}
           <aside className="w-64 shrink-0 overflow-y-auto border-r bg-background p-4">
             {query.isLoading ? (
               <div className="space-y-2">
@@ -158,50 +221,72 @@ export default function AdminDprProjectDetailPage({
                 ))}
               </div>
             ) : (
-              Object.entries(groupedSections).map(([group, sections], groupIdx) => (
-                <div key={group} className={groupIdx === 0 ? "mb-6" : "mb-6"}>
-                  <div className="mb-2 px-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-                    {group}
-                  </div>
-                  <nav className="space-y-0.5">
-                    {sections.map((section) => {
-                      const globalIdx = DPR_SECTIONS.findIndex((s) => s.key === section.key);
-                      const state = readinessOf(section.key);
-                      const { Icon, tone } = statusIcon(state);
-                      const active = activeKey === section.key;
-                      return (
-                        <button
-                          key={section.key}
-                          type="button"
-                          onClick={() => setActiveKey(section.key)}
-                          className={cn(
-                            "group relative flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-left text-sm transition-colors",
-                            active
-                              ? "bg-primary/10 text-foreground"
-                              : "text-muted-foreground hover:bg-muted",
-                          )}
-                        >
-                          {active && (
-                            <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r-full bg-primary" />
-                          )}
-                          <Icon className={cn("h-3.5 w-3.5 shrink-0", tone)} />
-                          <span
+              <>
+                <label className="mb-4 flex cursor-pointer items-center justify-between rounded-md border bg-muted/30 px-3 py-2 text-xs">
+                  <span className="font-medium">Show completion status</span>
+                  <Switch
+                    checked={showStatus}
+                    onCheckedChange={setShowStatus}
+                    aria-label="Toggle status dots"
+                  />
+                </label>
+
+                {Object.entries(groupedSections).map(([group, sections], groupIdx) => (
+                  <div key={group} className={groupIdx === 0 ? "mb-6" : "mb-6"}>
+                    <div className="mb-2 px-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                      {group}
+                    </div>
+                    <nav className="space-y-0.5">
+                      {sections.map((section) => {
+                        const globalIdx = DPR_SECTIONS.findIndex((s) => s.key === section.key);
+                        const state = readinessOf(section.key);
+                        const active = activeKey === section.key;
+                        const mandatory = isMandatory(section.key);
+                        return (
+                          <button
+                            key={section.key}
+                            type="button"
+                            onClick={() => setActiveKey(section.key)}
                             className={cn(
-                              "flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold",
+                              "group relative flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-left text-sm transition-colors",
                               active
-                                ? "bg-primary text-primary-foreground"
-                                : "bg-muted-foreground/10 text-muted-foreground group-hover:bg-muted-foreground/20",
+                                ? "bg-primary/10 text-foreground font-medium"
+                                : "text-muted-foreground hover:bg-muted hover:text-foreground",
                             )}
                           >
-                            {globalIdx + 1}
-                          </span>
-                          <span className="flex-1 truncate">{section.title}</span>
-                        </button>
-                      );
-                    })}
-                  </nav>
-                </div>
-              ))
+                            {active && (
+                              <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r-full bg-primary" />
+                            )}
+                            {showStatus ? (
+                              <StatusDot state={state} active={active} />
+                            ) : (
+                              <span
+                                className={cn(
+                                  "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-medium tabular-nums transition-colors",
+                                  active
+                                    ? "bg-primary text-primary-foreground"
+                                    : "bg-muted-foreground/10 text-muted-foreground group-hover:bg-muted-foreground/20",
+                                )}
+                              >
+                                {globalIdx + 1}
+                              </span>
+                            )}
+                            <span className="flex-1 truncate">{section.title}</span>
+                            {mandatory && (
+                              <span
+                                className="rounded bg-red-100 px-1 py-0.5 text-[9px] font-semibold text-red-700 dark:bg-red-950 dark:text-red-300"
+                                title="Required for submission"
+                              >
+                                M
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </nav>
+                  </div>
+                ))}
+              </>
             )}
           </aside>
 
@@ -212,6 +297,15 @@ export default function AdminDprProjectDetailPage({
                   Shows the rule engine's decision for this project so KAU
                   can validate the seeded rules without logging in as FPO. */}
               <ApplicabilityPreview uuid={uuid} />
+
+              {/* KAU 2026-09-19 P2.5 — AI Content Health card. Per-chapter
+                  roll-up of placeholder-scrubber + consistency-check
+                  results so admin can spot which AI chapters need review
+                  without opening each chapter. Card hides itself if the
+                  backend didn't send the field (older BE version). */}
+              {query.data?.ai_content_health && (
+                <AIContentHealthCard rows={query.data.ai_content_health} />
+              )}
 
               {/* Section header */}
               <div className="flex items-baseline justify-between">
@@ -266,12 +360,61 @@ export default function AdminDprProjectDetailPage({
                 </div>
               )}
 
-              {/* Section data */}
-              <Card>
-                <CardContent className="p-5">
-                  <SectionViewer data={activeSection?.data ?? null} />
-                </CardContent>
-              </Card>
+              {/* Section data — SectionViewer wraps each field in its own
+                  numbered Card, matching the FPO wizard's per-field layout. */}
+              <SectionViewer data={activeSection?.data ?? null} />
+
+              {/* Prev / Next footer — mirrors the FPO wizard SectionShell.
+                  Read-only, so no Save/Discard between them. Sticky so it's
+                  always reachable when scrolling long sections. */}
+              {(prev || next) && (
+                <div className="sticky bottom-0 -mx-6 border-t bg-background/95 px-6 py-3 backdrop-blur">
+                  <div className="mx-auto flex max-w-5xl items-center justify-between gap-2">
+                    <div>
+                      {prev ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setActiveKey(prev.key)}
+                          className="max-w-full"
+                          title={`Previous section — ${prev.title}`}
+                        >
+                          <ArrowLeft className="mr-1.5 h-4 w-4 shrink-0" />
+                          <span className="truncate">
+                            <span className="text-muted-foreground">Previous</span>
+                            <span className="mx-1 text-muted-foreground/60">·</span>
+                            <span>{prev.title}</span>
+                          </span>
+                        </Button>
+                      ) : (
+                        <span />
+                      )}
+                    </div>
+                    <div>
+                      {next ? (
+                        <Button
+                          type="button"
+                          variant="default"
+                          size="sm"
+                          onClick={() => setActiveKey(next.key)}
+                          className="max-w-full"
+                          title={`Next section — ${next.title}`}
+                        >
+                          <span className="truncate">
+                            <span className="opacity-80">Next</span>
+                            <span className="mx-1 opacity-60">·</span>
+                            <span>{next.title}</span>
+                          </span>
+                          <ArrowRight className="ml-1.5 h-4 w-4 shrink-0" />
+                        </Button>
+                      ) : (
+                        <span />
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </main>
         </div>
