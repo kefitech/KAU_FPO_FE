@@ -656,6 +656,7 @@ export interface AdminTeamMember {
   photo_url: string | null;
   order: number;
   is_active: boolean;
+  is_patrons: boolean;
   created_at: string;
 }
 
