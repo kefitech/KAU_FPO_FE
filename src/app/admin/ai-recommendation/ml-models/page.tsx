@@ -98,11 +98,11 @@ export default function MlModelsPage() {
           </p>
         </div>
         <div className="flex gap-2 self-start sm:self-auto">
-          <Button size="sm" variant="outline" onClick={() => router.push("/admin/ml-models/train")}>
+          <Button size="sm" variant="outline" onClick={() => router.push("/admin/ai-recommendation/ml-models/train")}>
             <Sparkles className="mr-1.5 h-4 w-4" />
             {t.btn_train ?? "Train from CSV"}
           </Button>
-          <Button size="sm" onClick={() => router.push("/admin/ml-models/new")}>
+          <Button size="sm" onClick={() => router.push("/admin/ai-recommendation/ml-models/new")}>
             <Plus className="mr-1.5 h-4 w-4" />
             {t.btn_register ?? "Register Model"}
           </Button>

@@ -132,7 +132,7 @@ export function CropPackageOfPracticesForm({ mode, id, t = {}, tCommon = {} }: P
         mode === "create" ? (t.toast_created ?? "Crop entry created") : (t.toast_updated ?? "Crop entry updated"),
       );
       queryClient.invalidateQueries({ queryKey: ["crop-package-of-practices"] });
-      router.push("/admin/crop-package-of-practices");
+      router.push("/admin/ai-recommendation/crop-package-of-practices");
     },
     onError: (err: unknown) => {
       toast.error(getErrorMessage(err, t.toast_save_failed ?? "Failed to save crop entry"));
@@ -414,7 +414,7 @@ export function CropPackageOfPracticesForm({ mode, id, t = {}, tCommon = {} }: P
       </div>
 
       <div className="flex items-center justify-end gap-3">
-        <Button type="button" variant="outline" onClick={() => router.push("/admin/crop-package-of-practices")}>
+        <Button type="button" variant="outline" onClick={() => router.push("/admin/ai-recommendation/crop-package-of-practices")}>
           {tCommon.cancel ?? "Cancel"}
         </Button>
         <Button type="submit" disabled={mutation.isPending}>

@@ -65,7 +65,7 @@ export default function CropZoneProfilesPage() {
   const columns = getCropZoneProfileColumns({
     t,
     tCommon,
-    onEdit: (item) => router.push(`/admin/crop-zone-profiles/${item.id}/edit`),
+    onEdit: (item) => router.push(`/admin/ai-recommendation/crop-zone-profiles/${item.id}/edit`),
     onDelete: (item) =>
       confirm({
         title: t.delete_title ?? "Delete crop zone profile",
@@ -103,7 +103,7 @@ export default function CropZoneProfilesPage() {
         </div>
         <Button
           className="self-start sm:self-auto bg-blue-700 hover:bg-blue-600"
-          onClick={() => router.push("/admin/crop-zone-profiles/new")}
+          onClick={() => router.push("/admin/ai-recommendation/crop-zone-profiles/new")}
         >
           <Plus className="mr-2 h-4 w-4" />
           {t.btn_add ?? "Add Profile"}
@@ -132,7 +132,7 @@ export default function CropZoneProfilesPage() {
               icon: Pencil,
               onClick: () => {
                 setSheet((prev) => ({ ...prev, open: false }));
-                router.push(`/admin/crop-zone-profiles/${sheet.item!.id}/edit`);
+                router.push(`/admin/ai-recommendation/crop-zone-profiles/${sheet.item!.id}/edit`);
               },
             },
           ]}

@@ -30,7 +30,7 @@ export default function ModelFeedbackPage() {
   return (
     <div className="flex flex-col gap-6 py-6">
       <div>
-        <Button variant="ghost" size="sm" onClick={() => router.push("/admin/ml-models")} className="mb-2 -ml-2">
+        <Button variant="ghost" size="sm" onClick={() => router.push("/admin/ai-recommendation/ml-models")} className="mb-2 -ml-2">
           <ArrowLeft className="mr-1.5 h-4 w-4" />
           Back to model versions
         </Button>
