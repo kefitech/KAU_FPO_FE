@@ -271,6 +271,17 @@ export interface GovtFPODetail {
 }
 
 // Added for Training Sessions and Schemes write access
+export interface GovtTrainingSessionPayload {
+  fpo_application_ids: string[];
+  topic: string;
+  trainer_name?: string;
+  date: string;
+  time?: string;
+  duration_hours: number;
+  participants_count: number;
+  venue?: string;
+}
+
 export interface GovtTrainingSession {
   id: number;
   fpo: number;
@@ -279,10 +290,12 @@ export interface GovtTrainingSession {
   topic: string;
   trainer_name: string;
   date: string;
-  duration_hours: string;
+  time: string;
+  duration_hours: number | string;
   participants_count: number;
   venue: string;
   attendance_count: number;
+  attendance_total: number;
   created_by_name: string;
   can_edit: boolean;
 }
@@ -294,7 +307,8 @@ export interface GovtTrainingSessionDetail {
   topic: string;
   trainer_name: string;
   date: string;
-  duration_hours: string;
+  time: string;
+  duration_hours: number | string;
   participants_count: number;
   venue: string;
   attendance: { id: number; member_name: string; attended: boolean }[];
@@ -302,16 +316,6 @@ export interface GovtTrainingSessionDetail {
   updated_at: string;
   created_by_name: string;
   can_edit: boolean;
-}
-
-export interface GovtTrainingSessionPayload {
-  fpo_application_ids: string[];
-  topic: string;
-  trainer_name?: string;
-  date: string;
-  duration_hours: number;
-  participants_count?: number;
-  venue?: string;
 }
 
 export interface GovtScheme {

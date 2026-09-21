@@ -49,14 +49,7 @@ export default function GovernmentPage() {
             {tTable.page_description ?? "Manage government official accounts and their jurisdiction"}
           </p>
         </div>
-        <Button
-          size="sm"
-          variant="outline"
-          className="self-start sm:self-auto"
-          onClick={() => router.push("/admin/government/pending")}
-        >
-          {tTable.pending_approvals_button ?? "Pending Approvals"}
-        </Button>
+
         <Button size="sm" className="self-start sm:self-auto" onClick={() => router.push("/admin/government/new")}>
           <Plus className="mr-1.5 h-4 w-4" />
           {tTable.add_button ?? "Add Official"}

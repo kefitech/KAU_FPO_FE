@@ -35,12 +35,15 @@ export default function NewTrainingSessionPage() {
     queryKey: ["government-fpos-for-training-picker"],
     queryFn: () => govtFposApi.getAll({ page: 1, page_size: 500 }),
   });
-  const fpoOptions = (fpoData?.data ?? []).map((f) => ({ code: f.application_id, name: f.name }));
+  const fpoOptions = (fpoData?.data ?? [])
+    .filter((f) => f.status !== "draft" && f.application_id)
+    .map((f) => ({ code: f.application_id, name: f.name }));
 
   const [fpoIds, setFpoIds] = useState<string[]>([]);
   const [topic, setTopic] = useState("");
   const [trainerName, setTrainerName] = useState("");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [time, setTime] = useState("");
   const [durationHours, setDurationHours] = useState("2");
   const [participantsCount, setParticipantsCount] = useState("0");
   const [venue, setVenue] = useState("");
@@ -52,6 +55,7 @@ export default function NewTrainingSessionPage() {
         topic,
         trainer_name: trainerName,
         date,
+        time,
         duration_hours: Number(durationHours),
         participants_count: Number(participantsCount) || 0,
         venue,
@@ -130,6 +134,10 @@ export default function NewTrainingSessionPage() {
                 <Field>
                   <FieldLabel htmlFor="date">{t.field_date ?? "Date"} *</FieldLabel>
                   <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="time">{t.field_time ?? "Time"}</FieldLabel>
+                  <Input id="time" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
                 </Field>
               </FieldGroup>
               <FieldGroup className="grid grid-cols-2 gap-4">

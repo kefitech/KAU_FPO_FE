@@ -40,7 +40,7 @@ export interface AvailabilityDay {
 }
 
 export const expertDashboardApi = {
-    getMyProfile: (): Promise<{ id: number; name_en: string; designation: string }> =>
+  getMyProfile: (): Promise<{ id: number; name_en: string; designation: string }> =>
     api.get<Wrapped<{ id: number; name_en: string; designation: string }>>("/experts/me/").then((r) => r.data.data),
 
   getMyBookings: (params?: { status?: string }): Promise<ExpertBooking[]> =>
@@ -50,17 +50,43 @@ export const expertDashboardApi = {
     api.post<Wrapped<ExpertBooking>>(`/experts/admin/bookings/${bookingId}/confirm/`).then((r) => r.data.data),
 
   rejectBooking: (bookingId: number, reason: string): Promise<ExpertBooking> =>
-    api.post<Wrapped<ExpertBooking>>(`/experts/admin/bookings/${bookingId}/reject/`, { reason }).then((r) => r.data.data),
+    api
+      .post<Wrapped<ExpertBooking>>(`/experts/admin/bookings/${bookingId}/reject/`, { reason })
+      .then((r) => r.data.data),
 
-  rescheduleBooking: (bookingId: number, payload: { new_date: string; new_time: string; reason?: string }): Promise<ExpertBooking> =>
-    api.post<Wrapped<ExpertBooking>>(`/experts/admin/bookings/${bookingId}/reschedule/`, payload).then((r) => r.data.data),
+  rescheduleBooking: (
+    bookingId: number,
+    payload: { new_date: string; new_time: string; reason?: string },
+  ): Promise<ExpertBooking> =>
+    api
+      .post<Wrapped<ExpertBooking>>(`/experts/admin/bookings/${bookingId}/reschedule/`, payload)
+      .then((r) => r.data.data),
 
-  setAvailability: (expertId: number, slots: { date: string; time_slots: { start: string; end: string; max_bookings: number }[] }[]): Promise<{ data: AvailabilityDay[]; message: string }> =>
-    api.post<Wrapped<AvailabilityDay[]>>(`/experts/admin/${expertId}/availability/`, { slots }).then((r) => ({ data: r.data.data, message: r.data.message })),
+  setAvailability: (
+    expertId: number,
+    slots: { date: string; time_slots: { start: string; end: string; max_bookings: number }[] }[],
+  ): Promise<{ data: AvailabilityDay[]; message: string }> =>
+    api
+      .post<Wrapped<AvailabilityDay[]>>(`/experts/admin/${expertId}/availability/`, { slots })
+      .then((r) => ({ data: r.data.data, message: r.data.message })),
 
-  getWeeklyDefaults: (expertId: number): Promise<{ weekday: number; start: string; end: string; max_bookings: number }[]> =>
-    api.get<Wrapped<{ weekday: number; start: string; end: string; max_bookings: number }[]>>(`/experts/admin/${expertId}/weekly-defaults/`).then((r) => r.data.data),
+  getWeeklyDefaults: (
+    expertId: number,
+  ): Promise<{ weekday: number; start: string; end: string; max_bookings: number }[]> =>
+    api
+      .get<Wrapped<{ weekday: number; start: string; end: string; max_bookings: number }[]>>(
+        `/experts/admin/${expertId}/weekly-defaults/`,
+      )
+      .then((r) => r.data.data),
 
-  setWeeklyDefaults: (expertId: number, slots: { weekday: number; start: string; end: string; max_bookings: number }[]): Promise<void> =>
+  setWeeklyDefaults: (
+    expertId: number,
+    slots: { weekday: number; start: string; end: string; max_bookings: number }[],
+  ): Promise<void> =>
     api.post<Wrapped<null>>(`/experts/admin/${expertId}/weekly-defaults/`, { slots }).then(() => undefined),
+
+  cancelBooking: (bookingId: number, reason: string): Promise<ExpertBooking> =>
+    api
+      .post<Wrapped<ExpertBooking>>(`/experts/admin/bookings/${bookingId}/cancel/`, { reason })
+      .then((r) => r.data.data),
 };
