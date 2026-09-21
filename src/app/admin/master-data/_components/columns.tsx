@@ -10,7 +10,7 @@ import {
   masterDataAdminApi,
   masterDataQueryKey,
 } from "@/app/admin/_api/master-data";
-import { CodeCell, StatusBadge, TextCell } from "@/components/data-table/cell-helpers";
+import { CodeCell, TextCell } from "@/components/data-table/cell-helpers";
 import { RowActions } from "@/components/data-table/row-actions";
 import { Badge } from "@/components/ui/badge";
 import { useConfirmStore } from "@/stores/confirm-store";
@@ -154,11 +154,16 @@ export function getMasterDataColumns(
       accessorKey: "is_active",
       header: t.col_status ?? "Status",
       cell: ({ row }) => (
-        <StatusBadge
-          active={row.original.is_active}
-          labelActive={t.status_active ?? "Active"}
-          labelInactive={t.status_inactive ?? "Inactive"}
-        />
+        <Badge
+          variant="secondary"
+          className={
+            row.original.is_active
+              ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+              : "bg-muted text-muted-foreground"
+          }
+        >
+          {row.original.is_active ? (t.status_active ?? "Active") : (t.status_inactive ?? "Inactive")}
+        </Badge>
       ),
     },
     {
