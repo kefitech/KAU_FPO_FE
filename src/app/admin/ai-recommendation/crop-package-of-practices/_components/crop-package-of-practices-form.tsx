@@ -26,25 +26,57 @@ import { getErrorMessage } from "@/lib/get-error-message";
 
 type T = Record<string, string>;
 
+// Form-side limits only (the API does not enforce them).
+const LIMITS = {
+  season: 500,
+  spacing: 500,
+  manuring_fertilizer: 3000,
+  plant_protection: 5000,
+  harvesting: 2000,
+  varietyName: 100,
+  varietyDescription: 500,
+  sectionHeading: 150,
+  sectionBody: 5000,
+} as const;
+
+const tooLong = (n: number) => ({ message: `Must be at most ${n.toLocaleString()} characters` });
+
+function CharCount({ value, max }: { value?: string; max: number }) {
+  const n = value?.length ?? 0;
+  const tone = n >= max ? "text-destructive" : n >= max * 0.9 ? "text-amber-600" : "text-muted-foreground";
+  return (
+    <p className={`mt-1 text-right text-xs tabular-nums ${tone}`}>
+      {n.toLocaleString()} / {max.toLocaleString()}
+    </p>
+  );
+}
+
+// Long text grows with its content (the base Textarea auto-sizes), so cap the height and scroll inside it.
+const SCROLL_SM = "max-h-40 overflow-y-auto";
+const SCROLL_LG = "max-h-64 overflow-y-auto";
+
 const varietySchema = z.object({
-  name: z.string().min(1, { message: "Variety name is required" }),
-  description: z.string().optional(),
+  name: z.string().min(1, { message: "Variety name is required" }).max(LIMITS.varietyName, tooLong(LIMITS.varietyName)),
+  description: z.string().max(LIMITS.varietyDescription, tooLong(LIMITS.varietyDescription)).optional(),
 });
 
 const sectionSchema = z.object({
-  heading: z.string().min(1, { message: "Section heading is required" }),
-  body: z.string(),
+  heading: z
+    .string()
+    .min(1, { message: "Section heading is required" })
+    .max(LIMITS.sectionHeading, tooLong(LIMITS.sectionHeading)),
+  body: z.string().max(LIMITS.sectionBody, tooLong(LIMITS.sectionBody)),
 });
 
 const schema = z.object({
   crop_name: z.string().min(1, { message: "Crop name is required" }).max(150),
   crop_group: z.string().max(100).optional(),
-  season: z.string().optional(),
+  season: z.string().max(LIMITS.season, tooLong(LIMITS.season)).optional(),
   varieties: z.array(varietySchema),
-  spacing: z.string().optional(),
-  manuring_fertilizer: z.string().optional(),
-  plant_protection: z.string().optional(),
-  harvesting: z.string().optional(),
+  spacing: z.string().max(LIMITS.spacing, tooLong(LIMITS.spacing)).optional(),
+  manuring_fertilizer: z.string().max(LIMITS.manuring_fertilizer, tooLong(LIMITS.manuring_fertilizer)).optional(),
+  plant_protection: z.string().max(LIMITS.plant_protection, tooLong(LIMITS.plant_protection)).optional(),
+  harvesting: z.string().max(LIMITS.harvesting, tooLong(LIMITS.harvesting)).optional(),
   expected_yield: z.string().max(255).optional(),
   sections: z.array(sectionSchema),
   source_reference: z.string().max(255).optional(),
@@ -65,7 +97,7 @@ const defaultValues: FormValues = {
   harvesting: "",
   expected_yield: "",
   sections: [],
-  source_reference: "KAU Package of Practices Recommendations: Crops 2024 (16th ed.)",
+  source_reference: "",
   source_page_range: "",
   is_active: false,
 };
@@ -199,7 +231,12 @@ export function CropPackageOfPracticesForm({ mode, id, t = {}, tCommon = {} }: P
           <Controller
             control={control}
             name="season"
-            render={({ field }) => <Textarea id="season" rows={2} {...field} />}
+            render={({ field }) => (
+              <>
+                <Textarea id="season" rows={2} maxLength={LIMITS.season} className={SCROLL_SM} {...field} />
+                <CharCount value={field.value} max={LIMITS.season} />
+              </>
+            )}
           />
         </Field>
 
@@ -209,7 +246,7 @@ export function CropPackageOfPracticesForm({ mode, id, t = {}, tCommon = {} }: P
             <Controller
               control={control}
               name="source_reference"
-              render={({ field }) => <Input id="source_reference" {...field} />}
+              render={({ field }) => <Input id="source_reference" maxLength={255} placeholder="KAU Package of Practices Recommendations: Crops 2024 (16th ed.)" {...field} />}
             />
           </Field>
           <Field>
@@ -217,7 +254,7 @@ export function CropPackageOfPracticesForm({ mode, id, t = {}, tCommon = {} }: P
             <Controller
               control={control}
               name="source_page_range"
-              render={({ field }) => <Input id="source_page_range" placeholder="e.g. 15-57" {...field} />}
+              render={({ field }) => <Input id="source_page_range" maxLength={50} placeholder="e.g. 15-57" {...field} />}
             />
           </Field>
         </div>
@@ -251,18 +288,27 @@ export function CropPackageOfPracticesForm({ mode, id, t = {}, tCommon = {} }: P
                     control={control}
                     name={`varieties.${index}.name`}
                     render={({ field: f }) => (
-                      <Input placeholder={t.placeholder_variety_name ?? "Variety name"} {...f} />
+                      <Input
+                        placeholder={t.placeholder_variety_name ?? "Variety name"}
+                        maxLength={LIMITS.varietyName}
+                        {...f}
+                      />
                     )}
                   />
                   <Controller
                     control={control}
                     name={`varieties.${index}.description`}
                     render={({ field: f }) => (
-                      <Textarea
-                        rows={2}
-                        placeholder={t.placeholder_variety_description ?? "Description (optional)"}
-                        {...f}
-                      />
+                      <>
+                        <Textarea
+                          rows={2}
+                          maxLength={LIMITS.varietyDescription}
+                          className={SCROLL_SM}
+                          placeholder={t.placeholder_variety_description ?? "Description (optional)"}
+                          {...f}
+                        />
+                        <CharCount value={f.value} max={LIMITS.varietyDescription} />
+                      </>
                     )}
                   />
                   {errors.varieties?.[index]?.name && <FieldError errors={[errors.varieties[index]!.name!]} />}
@@ -293,7 +339,12 @@ export function CropPackageOfPracticesForm({ mode, id, t = {}, tCommon = {} }: P
             <Controller
               control={control}
               name="spacing"
-              render={({ field }) => <Textarea id="spacing" rows={2} {...field} />}
+              render={({ field }) => (
+                <>
+                  <Textarea id="spacing" rows={2} maxLength={LIMITS.spacing} className={SCROLL_SM} {...field} />
+                  <CharCount value={field.value} max={LIMITS.spacing} />
+                </>
+              )}
             />
           </Field>
           <Field>
@@ -301,7 +352,7 @@ export function CropPackageOfPracticesForm({ mode, id, t = {}, tCommon = {} }: P
             <Controller
               control={control}
               name="expected_yield"
-              render={({ field }) => <Input id="expected_yield" {...field} />}
+              render={({ field }) => <Input id="expected_yield" maxLength={255} {...field} />}
             />
           </Field>
         </div>
@@ -312,7 +363,18 @@ export function CropPackageOfPracticesForm({ mode, id, t = {}, tCommon = {} }: P
           <Controller
             control={control}
             name="manuring_fertilizer"
-            render={({ field }) => <Textarea id="manuring_fertilizer" rows={4} {...field} />}
+            render={({ field }) => (
+              <>
+                <Textarea
+                  id="manuring_fertilizer"
+                  rows={4}
+                  maxLength={LIMITS.manuring_fertilizer}
+                  className={SCROLL_LG}
+                  {...field}
+                />
+                <CharCount value={field.value} max={LIMITS.manuring_fertilizer} />
+              </>
+            )}
           />
         </Field>
         <Field>
@@ -320,7 +382,18 @@ export function CropPackageOfPracticesForm({ mode, id, t = {}, tCommon = {} }: P
           <Controller
             control={control}
             name="plant_protection"
-            render={({ field }) => <Textarea id="plant_protection" rows={4} {...field} />}
+            render={({ field }) => (
+              <>
+                <Textarea
+                  id="plant_protection"
+                  rows={4}
+                  maxLength={LIMITS.plant_protection}
+                  className={SCROLL_LG}
+                  {...field}
+                />
+                <CharCount value={field.value} max={LIMITS.plant_protection} />
+              </>
+            )}
           />
         </Field>
         <Field>
@@ -328,7 +401,12 @@ export function CropPackageOfPracticesForm({ mode, id, t = {}, tCommon = {} }: P
           <Controller
             control={control}
             name="harvesting"
-            render={({ field }) => <Textarea id="harvesting" rows={3} {...field} />}
+            render={({ field }) => (
+              <>
+                <Textarea id="harvesting" rows={3} maxLength={LIMITS.harvesting} className={SCROLL_LG} {...field} />
+                <CharCount value={field.value} max={LIMITS.harvesting} />
+              </>
+            )}
           />
         </Field>
       </div>
@@ -365,14 +443,27 @@ export function CropPackageOfPracticesForm({ mode, id, t = {}, tCommon = {} }: P
                     control={control}
                     name={`sections.${index}.heading`}
                     render={({ field: f }) => (
-                      <Input placeholder={t.placeholder_section_heading ?? "Section heading"} {...f} />
+                      <Input
+                        placeholder={t.placeholder_section_heading ?? "Section heading"}
+                        maxLength={LIMITS.sectionHeading}
+                        {...f}
+                      />
                     )}
                   />
                   <Controller
                     control={control}
                     name={`sections.${index}.body`}
                     render={({ field: f }) => (
-                      <Textarea rows={4} placeholder={t.placeholder_section_body ?? "Section content"} {...f} />
+                      <>
+                        <Textarea
+                          rows={4}
+                          maxLength={LIMITS.sectionBody}
+                          className={SCROLL_LG}
+                          placeholder={t.placeholder_section_body ?? "Section content"}
+                          {...f}
+                        />
+                        <CharCount value={f.value} max={LIMITS.sectionBody} />
+                      </>
                     )}
                   />
                   {errors.sections?.[index]?.heading && <FieldError errors={[errors.sections[index]!.heading!]} />}
