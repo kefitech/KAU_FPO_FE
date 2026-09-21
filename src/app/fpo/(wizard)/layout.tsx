@@ -19,6 +19,7 @@ export default function FpoWizardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const { logout } = useAuth();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isSecondary = useAuthStore((s) => s.user?.role === "secondary");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -32,7 +33,14 @@ export default function FpoWizardLayout({ children }: { children: React.ReactNod
     }
   }, [mounted, isAuthenticated, pathname, router]);
 
-  if (!mounted || !isAuthenticated) {
+  // The registration wizard belongs to the primary user; team members only get /fpo/status.
+  const blockedForSecondary = isSecondary && pathname.startsWith("/fpo/register");
+
+  useEffect(() => {
+    if (mounted && blockedForSecondary) router.replace("/fpo/status");
+  }, [mounted, blockedForSecondary, router]);
+
+  if (!mounted || !isAuthenticated || blockedForSecondary) {
     return null;
   }
 

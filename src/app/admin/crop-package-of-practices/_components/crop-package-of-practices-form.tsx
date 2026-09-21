@@ -15,6 +15,7 @@ import {
   adminCropPackageOfPracticesApi,
   type CropPackageOfPracticesPayload,
 } from "@/app/admin/_api/crop-package-of-practices";
+import { MasterDataSelect } from "@/components/common/master-data-select";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -161,7 +162,14 @@ export function CropPackageOfPracticesForm({ mode, id, t = {}, tCommon = {} }: P
             <Controller
               control={control}
               name="crop_name"
-              render={({ field }) => <Input id="crop_name" placeholder="e.g. Coffee" {...field} />}
+              render={({ field }) => (
+                <MasterDataSelect
+                  category="crop_name"
+                  value={field.value}
+                  onChange={field.onChange}
+                  placeholder={t.placeholder_crop_name ?? "Select crop…"}
+                />
+              )}
             />
             <p className="mt-1 text-muted-foreground text-xs">
               {t.field_crop_name_help ??
@@ -174,7 +182,14 @@ export function CropPackageOfPracticesForm({ mode, id, t = {}, tCommon = {} }: P
             <Controller
               control={control}
               name="crop_group"
-              render={({ field }) => <Input id="crop_group" placeholder="e.g. Beverages and Stimulants" {...field} />}
+              render={({ field }) => (
+                <MasterDataSelect
+                  category="crop_group"
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  placeholder={t.placeholder_crop_group ?? "Select group…"}
+                />
+              )}
             />
           </Field>
         </div>

@@ -7,6 +7,7 @@ import { CheckCircle2, ChevronDown, ChevronUp, ClipboardList, Edit2, Loader2 } f
 import { toast } from "sonner";
 
 import { tierAssessmentApi } from "@/app/fpo/_api/tier-assessment";
+import { authApi } from "@/lib/api/auth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -276,6 +277,78 @@ function DomainScoreRow({
   );
 }
 
+/** Read-only overview of an in-progress assessment, for users who can't edit it. */
+function DraftOverview({ data, t }: { data: TierAssessmentData; t: T }) {
+  const [expandedDomain, setExpandedDomain] = useState<string | null>(null);
+  const { assessment } = data;
+  if (!assessment) return null;
+  const questions = data.questions ?? [];
+  const uploads = assessment.uploads ?? [];
+  const answerByQNo = new Map((assessment.answers ?? []).map((a) => [a.question_no, a]));
+  const uploadByQNo = new Map(uploads.map((u) => [u.question_no, u]));
+  const answerMap: AnswerMap = {};
+  for (const a of assessment.answers ?? []) {
+    answerMap[a.question_no] = (a as { answer?: string | number | string[] }).answer ?? "";
+  }
+  const visibleRequired = questions.filter((q) => q.is_required && q.input_type !== "computed" && isVisible(q, answerMap));
+  const answered = visibleRequired.filter((q) => {
+    const val = answerMap[q.question_no];
+    return Array.isArray(val) ? val.length > 0 : val !== undefined && val !== null && val !== "";
+  });
+  const domains = groupByDomain(questions);
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center gap-3 rounded-lg border bg-muted/30 px-4 py-2.5 text-sm">
+        <span className="text-muted-foreground">{t.progress_label ?? "Progress:"}</span>
+        <span className="font-medium">
+          {(t.progress_text ?? "{answered} / {total} required questions answered")
+            .replace("{answered}", String(answered.length))
+            .replace("{total}", String(visibleRequired.length))}
+        </span>
+        <div className="ml-auto hidden h-1.5 w-32 overflow-hidden rounded-full bg-muted sm:block">
+          <div
+            className="h-full rounded-full bg-primary transition-all"
+            style={{ width: visibleRequired.length > 0 ? `${(answered.length / visibleRequired.length) * 100}%` : "0%" }}
+          />
+        </div>
+      </div>
+
+      <div className="divide-y rounded-xl border bg-card shadow-sm">
+        {Array.from(domains.entries()).map(([domainName, qs]) => {
+          const expanded = expandedDomain === domainName;
+          return (
+            <div key={domainName}>
+              <button
+                type="button"
+                onClick={() => setExpandedDomain(expanded ? null : domainName)}
+                className="flex w-full items-center gap-3 px-4 sm:px-5 py-3 text-left"
+                aria-expanded={expanded}
+              >
+                <span className="min-w-0 flex-1 font-medium text-sm">{domainName}</span>
+                {expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+              </button>
+              {expanded && (
+                <div className="divide-y border-t bg-muted/20">
+                  {qs.filter((q) => isVisible(q, answerMap)).map((q) => (
+                    <AnsweredQuestionRow
+                      key={q.question_no}
+                      question={q}
+                      answerEntry={answerByQNo.get(q.question_no)}
+                      upload={uploadByQNo.get(q.question_no)}
+                      t={t}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function HistorySection({ items, currentYear, t }: { items: TierHistoryItem[]; currentYear: string; t: T }) {
   const [open, setOpen] = useState(false);
   const past = items.filter((i) => i.financial_year !== currentYear && i.status === "submitted");
@@ -342,6 +415,11 @@ export default function TierAssessmentPage() {
     queryFn: tierAssessmentApi.get,
     staleTime: 60_000,
   });
+
+  // Edit rights come from the permission matrix (fpo_access on /auth/me/).
+  // Read-only until loaded, so a secondary user never sees edit controls flash up.
+  const { data: me } = useQuery({ queryKey: ["auth-me", locale], queryFn: authApi.me, staleTime: 60_000 });
+  const canEdit = me ? (me.fpo_access?.pages?.["/fpo/tier-assessment"]?.can_edit ?? true) : false;
 
   const { data: history = [] } = useQuery({
     queryKey: ["fpo-tier-history"],
@@ -478,6 +556,7 @@ export default function TierAssessmentPage() {
               {t.not_started_desc ?? "Complete the annual tier assessment to receive your FPO performance rating and unlock relevant support programmes."}
             </p>
           </div>
+          {canEdit && (
           <Button onClick={() => startMutation.mutate()} disabled={startMutation.isPending} size="lg">
             {startMutation.isPending ? (
               <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t.btn_starting ?? "Starting…"}</>
@@ -485,6 +564,7 @@ export default function TierAssessmentPage() {
               t.btn_start ?? "Start Assessment"
             )}
           </Button>
+          )}
         </div>
 
         <HistorySection items={history} currentYear={financialYear} t={t} />
@@ -506,7 +586,26 @@ export default function TierAssessmentPage() {
           </Badge>
         </div>
 
-        <SubmittedView data={data} onReopen={() => reopenMutation.mutate()} reopening={reopenMutation.isPending} t={t} />
+        <SubmittedView data={data} onReopen={canEdit ? () => reopenMutation.mutate() : undefined} reopening={reopenMutation.isPending} t={t} />
+        <HistorySection items={history} currentYear={financialYear} t={t} />
+      </div>
+    );
+  }
+
+  // ── Draft, read-only — overview for users without edit rights ────────────────
+  if (!canEdit) {
+    return (
+      <div className="flex flex-col gap-6 px-3 sm:px-6 py-4 sm:py-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="font-bold text-2xl">{t.page_title ?? "Tier Assessment"}</h1>
+            <p className="mt-0.5 text-muted-foreground text-sm">{yearLabel}</p>
+          </div>
+          <Badge variant="secondary" className="bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
+            {t.badge_draft ?? "Draft"}
+          </Badge>
+        </div>
+        <DraftOverview data={data} t={t} />
         <HistorySection items={history} currentYear={financialYear} t={t} />
       </div>
     );

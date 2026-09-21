@@ -42,11 +42,17 @@ export interface BuyerRedirect {
   status: BuyerStatus;
 }
 
+export interface FpoAccess {
+  actions: Record<string, boolean>;
+  pages: Record<string, { can_edit: boolean }>;
+}
+
 export interface MeResponse {
   user: User;
   menu: SidebarMenuItem[] | null;
   redirect: FpoRedirect | null;
   buyer_redirect: BuyerRedirect | null;
+  fpo_access: FpoAccess | null;
 }
 
 export type LoginResponse =

@@ -20,6 +20,9 @@ const BASE = "/fpo/";
 type Wrapped<T> = { status: string; message: string; data: T };
 const unwrap = <T>(r: { data: Wrapped<T> }) => r.data.data;
 
+/** sessionStorage key: reply typed on the status page, sent with the wizard's final submit. */
+export const INFO_REPLY_KEY = "fpo-info-reply-notes";
+
 export const fpoRegistrationApi = {
   // Public endpoints — no session cookie sent to avoid 401 on AllowAny views
   checkEligibility: (payload: FpoEligibilityPayload) =>
@@ -40,7 +43,7 @@ export const fpoRegistrationApi = {
 
   getStatus: () => api.get<Wrapped<FpoApplicationStatus>>(`${BASE}me/status/`).then(unwrap),
 
-  submit: () => api.post<Wrapped<unknown>>(`${BASE}me/submit/`).then(unwrap),
+  submit: (notes?: string) => api.post<Wrapped<unknown>>(`${BASE}me/submit/`, notes ? { notes } : {}).then(unwrap),
 
   validateField: (field: string, value: string) =>
     api.post<Wrapped<FpoFieldValidation>>(`${BASE}validate-field/`, { field, value }).then(unwrap),

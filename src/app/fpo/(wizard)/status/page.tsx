@@ -6,12 +6,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, ArrowRight, CheckCircle2, Clock, FileText, Paperclip, RefreshCw, Send, ShieldOff, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { StatusBadge } from "@/components/data-table/cell-helpers";
-import { fpoRegistrationApi } from "@/app/fpo/_api/fpo-registration";
+import { fpoRegistrationApi, INFO_REPLY_KEY } from "@/app/fpo/_api/fpo-registration";
 import { useTranslations } from "@/hooks/use-translations";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { useAuthStore } from "@/stores/auth-store";
 import type { FpoStatus } from "@/types/fpo";
 function getStatusConfig(
   t: Record<string, string>,
@@ -74,6 +75,8 @@ function formatDate(iso: string) {
 export default function FpoStatusPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  // Invited team members can't act on the application — only the primary user can.
+  const isSecondary = useAuthStore((s) => s.user?.role === "secondary");
 
   const [notes, setNotes] = useState("");
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
@@ -175,7 +178,16 @@ export default function FpoStatusPage() {
       </div>
 
       {/* Info required — show admin's message + response form */}
-      {data.status === "info_required" && (() => {
+      {data.status === "info_required" && isSecondary && (
+        <div className="flex items-start gap-3 rounded-xl border bg-card p-5">
+          <Clock className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+          <p className="text-muted-foreground text-sm">
+            {t.secondary_info_required_notice ??
+              "Additional information has been requested for this application. The FPO manager will respond to it. You'll get access once the FPO is approved."}
+          </p>
+        </div>
+      )}
+      {data.status === "info_required" && !isSecondary && (() => {
         const adminNote = [...data.timeline].reverse().find((e) => e.notes);
         return (
           <div className="flex flex-col gap-4">
@@ -254,7 +266,18 @@ export default function FpoStatusPage() {
                   <Send className="h-4 w-4" />
                   {responseMutation.isPending ? (t.btn_submitting ?? "Submitting…") : (t.btn_submit_response ?? "Submit Response")}
                 </Button>
-                <Button variant="outline" className="gap-2" onClick={() => router.push("/fpo/register")}>
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => {
+                    // Keep the typed response so the wizard's final submit can send it to the admin
+                    try {
+                      if (notes.trim().length >= 10) sessionStorage.setItem(INFO_REPLY_KEY, notes.trim());
+                      else sessionStorage.removeItem(INFO_REPLY_KEY);
+                    } catch {}
+                    router.push("/fpo/register");
+                  }}
+                >
                   {t.btn_update_application ?? "Update Application"}
                   <ArrowRight className="h-4 w-4" />
                 </Button>
