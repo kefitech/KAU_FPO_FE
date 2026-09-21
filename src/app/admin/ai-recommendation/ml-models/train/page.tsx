@@ -56,7 +56,7 @@ export default function TrainMlModelPage() {
         toast.warning(data.validation_warnings.join(" "), { duration: 12_000 });
       }
       queryClient.invalidateQueries({ queryKey: ["ml-models"] });
-      router.push("/admin/ml-models");
+      router.push("/admin/ai-recommendation/ml-models");
     },
     onError: (error: unknown) => {
       // A rejected file (missing columns, wrong type, duplicate version code)
@@ -152,7 +152,7 @@ export default function TrainMlModelPage() {
         </Card>
 
         <div className="flex items-center justify-end gap-3">
-          <Button type="button" variant="outline" onClick={() => router.push("/admin/ml-models")}>
+          <Button type="button" variant="outline" onClick={() => router.push("/admin/ai-recommendation/ml-models")}>
             Cancel
           </Button>
           <Button type="submit" form="ml-model-train-form" disabled={mutation.isPending}>

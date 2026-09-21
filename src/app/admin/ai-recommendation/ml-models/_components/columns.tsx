@@ -102,7 +102,7 @@ function MlModelActions({
         },
         {
           label: t.action_view_feedback ?? "View Feedback",
-          onClick: () => router.push(`/admin/ml-models/${model.id}/feedback`),
+          onClick: () => router.push(`/admin/ai-recommendation/ml-models/${model.id}/feedback`),
         },
         {
           label: t.action_activate ?? "Activate",

@@ -63,7 +63,7 @@ export default function NewMlModelPage() {
         toast.warning(data.validation_warnings.join(" "), { duration: 10_000 });
       }
       queryClient.invalidateQueries({ queryKey: ["ml-models"] });
-      router.push("/admin/ml-models");
+      router.push("/admin/ai-recommendation/ml-models");
     },
     onError: (error: unknown) => {
       // A rejected file arrives here as a 422 whose message names the exact
@@ -166,7 +166,7 @@ export default function NewMlModelPage() {
         </Card>
 
         <div className="flex items-center justify-end gap-3">
-          <Button type="button" variant="outline" onClick={() => router.push("/admin/ml-models")}>
+          <Button type="button" variant="outline" onClick={() => router.push("/admin/ai-recommendation/ml-models")}>
             {t.cancel ?? "Cancel"}
           </Button>
           <Button type="submit" form="ml-model-form" disabled={mutation.isPending}>

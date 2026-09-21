@@ -108,7 +108,7 @@ export function CropZoneProfileForm({ mode, id, t = {}, tCommon = {} }: Props) {
     onSuccess: () => {
       toast.success(mode === "create" ? (t.toast_created ?? "Crop zone profile created") : (t.toast_updated ?? "Crop zone profile updated"));
       queryClient.invalidateQueries({ queryKey: ["crop-zone-profiles"] });
-      router.push("/admin/crop-zone-profiles");
+      router.push("/admin/ai-recommendation/crop-zone-profiles");
     },
     onError: (err: unknown) => {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
@@ -338,7 +338,7 @@ export function CropZoneProfileForm({ mode, id, t = {}, tCommon = {} }: Props) {
       </div>
 
       <div className="flex items-center justify-end gap-3">
-        <Button type="button" variant="outline" onClick={() => router.push("/admin/crop-zone-profiles")}>
+        <Button type="button" variant="outline" onClick={() => router.push("/admin/ai-recommendation/crop-zone-profiles")}>
           {tCommon.cancel ?? "Cancel"}
         </Button>
         <Button type="submit" disabled={mutation.isPending}>
