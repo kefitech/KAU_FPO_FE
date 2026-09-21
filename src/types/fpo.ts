@@ -525,6 +525,8 @@ export interface Product {
   ondc_product_id: string | null;
   is_public: boolean;
   status: ProductStatus;
+  /** Product photo URL — nullable when no image was uploaded (backend migration 0095). */
+  image: string | null;
   created_at: string;
   updated_at: string;
 }
