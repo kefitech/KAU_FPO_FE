@@ -719,11 +719,11 @@ export default function OfficialRegisterPage() {
                   <FieldGroup className="grid grid-cols-2 gap-4">
                     <Controller
                       control={form.control}
-                      name="first_name"
+                      name="first_name"              
                       render={({ field, fieldState }) => (
                         <Field data-invalid={fieldState.invalid}>
                           <FieldLabel htmlFor="first-name">{t.field_first_name ?? "First Name"} *</FieldLabel>
-                          <Input {...field} id="first-name" aria-invalid={fieldState.invalid} />
+                          <Input {...field} id="first-name" maxLength={35} aria-invalid={fieldState.invalid} />
                           {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                         </Field>
                       )}
@@ -733,8 +733,8 @@ export default function OfficialRegisterPage() {
                       name="last_name"
                       render={({ field, fieldState }) => (
                         <Field data-invalid={fieldState.invalid}>
-                          <FieldLabel htmlFor="last-name">{t.field_last_name ?? "Last Name"}</FieldLabel>
-                          <Input {...field} id="last-name" aria-invalid={fieldState.invalid} />
+                          <FieldLabel htmlFor="last-name">{t.field_last_name ?? "Last Name"} *</FieldLabel>
+                          <Input {...field} id="last-name" maxLength={35} aria-invalid={fieldState.invalid} />
                           {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                         </Field>
                       )}
@@ -754,7 +754,8 @@ export default function OfficialRegisterPage() {
                     render={({ field, fieldState }) => (
                       <Field data-invalid={fieldState.invalid}>
                         <FieldLabel htmlFor="designation">{t.field_designation ?? "Designation"} *</FieldLabel>
-                        <Input {...field} id="designation" aria-invalid={fieldState.invalid} />
+                        <Input {...field} id="designation"  maxLength={90} aria-invalid={fieldState.invalid} />
+                        
                         {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                       </Field>
                     )}

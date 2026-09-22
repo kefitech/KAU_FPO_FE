@@ -14,6 +14,18 @@ import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field
 import { Input } from "@/components/ui/input";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
+import { z } from "zod";
+
+// ... after your other imports, before the component or near PHONE_REGEX/EMAIL_REGEX
+
+const organisationSchema = z.object({
+  name: z.string().min(1, { message: "Name is required" }),
+  contact_person: z.string().min(1, { message: "Contact person is required" }),
+  contact_email: z.string().email({ message: "Enter a valid email address" }),
+  contact_phone: z.string().refine((v) => /^\d{10}$/.test(v), {
+    message: "Enter a valid 10-digit phone number",
+  }),
+});
 
 type T = Record<string, string>;
 
@@ -84,19 +96,30 @@ export function AddOrganisationDialog({ open, onOpenChange, onCreated }: AddOrga
     setErrors({});
   }
 
-  function handleSubmit() {
+ function handleSubmit() {
+  const result = organisationSchema.safeParse({
+    name,
+    contact_person: contactPerson,
+    contact_email: contactEmail,
+    contact_phone: contactPhone,
+  });
+
+  if (!result.success) {
     const newErrors: Record<string, string> = {};
-    if (!name.trim()) newErrors.name = t.val_name_required ?? "Name is required";
-    if (!contactPerson.trim()) newErrors.contactPerson = t.val_contact_person_required ?? "Contact person is required";
-    if (!contactEmail.trim()) newErrors.contactEmail = t.val_contact_email_required ?? "Contact email is required";
-    if (!contactPhone.trim()) newErrors.contactPhone = t.val_contact_phone_required ?? "Contact phone is required";
+    for (const issue of result.error.issues) {
+      const field = issue.path[0] as string;
+      newErrors[field] = issue.message;
+    }
     setErrors(newErrors);
-    if (Object.keys(newErrors).length > 0) return;
-    createMutation.mutate();
+    return;
   }
 
+  setErrors({});
+  createMutation.mutate();
+}
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t.add_org_dialog_title ?? "Add Organisation"}</DialogTitle>
@@ -122,10 +145,10 @@ export function AddOrganisationDialog({ open, onOpenChange, onCreated }: AddOrga
             </select>
           </Field>
 
-          <Field data-invalid={!!errors.contactPerson}>
+          <Field data-invalid={!!errors.contact_person}>
             <FieldLabel htmlFor="org-contact-person">{t.org_field_contact_person ?? "Contact Person"} *</FieldLabel>
             <Input id="org-contact-person" value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} />
-            {errors.contactPerson && <FieldError errors={[{ message: errors.contactPerson }]} />}
+            {errors.contact_person && <FieldError errors={[{ message: errors.contact_person }]} />}
           </Field>
 
           <Field>
@@ -133,16 +156,22 @@ export function AddOrganisationDialog({ open, onOpenChange, onCreated }: AddOrga
             <Input id="org-contact-designation" value={contactDesignation} onChange={(e) => setContactDesignation(e.target.value)} />
           </Field>
 
-          <Field data-invalid={!!errors.contactEmail}>
+          <Field data-invalid={!!errors.contact_email}>
             <FieldLabel htmlFor="org-contact-email">{t.org_field_contact_email ?? "Contact Email"} *</FieldLabel>
             <Input id="org-contact-email" type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} />
-            {errors.contactEmail && <FieldError errors={[{ message: errors.contactEmail }]} />}
+            {errors.contact_email && <FieldError errors={[{ message: errors.contact_email }]} />}
           </Field>
 
-          <Field data-invalid={!!errors.contactPhone}>
+          <Field data-invalid={!!errors.contact_phone}>
             <FieldLabel htmlFor="org-contact-phone">{t.org_field_contact_phone ?? "Contact Phone"} *</FieldLabel>
-            <Input id="org-contact-phone" type="tel" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} />
-            {errors.contactPhone && <FieldError errors={[{ message: errors.contactPhone }]} />}
+            <Input
+            id="org-contact-phone"
+            type="tel"
+            inputMode="numeric"
+            maxLength={10}
+            value={contactPhone}
+            onChange={(e) => setContactPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+            />
           </Field>
 
           <FieldGroup>
