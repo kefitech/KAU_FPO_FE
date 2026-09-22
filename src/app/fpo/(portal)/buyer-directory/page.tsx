@@ -26,10 +26,11 @@ import { useLocaleStore } from "@/stores/locale-store";
 
 type T = Record<string, string>;
 
-function ProductCard({ product, locale }: { product: BuyerProduct; locale: string }) {
+function ProductCard({ product, locale, t }: { product: BuyerProduct; locale: string; t: T }) {
   const name = locale === "ml" ? product.name.ml || product.name.en : product.name.en;
   const description = locale === "ml" ? product.description.ml || product.description.en : product.description.en;
   const [inquiryOpen, setInquiryOpen] = useState(false);
+  const [descExpanded, setDescExpanded] = useState(false);
   const imageUrl = toMediaUrl(product.image);
 
   return (
@@ -52,16 +53,31 @@ function ProductCard({ product, locale }: { product: BuyerProduct; locale: strin
           </div>
         </CardHeader>
         <CardContent className="flex flex-1 flex-col gap-3">
-          {description && <p className="line-clamp-2 text-muted-foreground text-sm">{description}</p>}
+          {description && (
+            <div className="flex flex-col gap-1">
+              <p className={descExpanded ? "text-muted-foreground text-sm" : "line-clamp-2 text-muted-foreground text-sm"}>
+                {description}
+              </p>
+              {description.length > 120 && (
+                <button
+                  type="button"
+                  onClick={() => setDescExpanded((v) => !v)}
+                  className="w-fit text-primary text-xs font-medium hover:underline"
+                >
+                  {descExpanded ? (t.read_less ?? "Read less") : (t.read_more ?? "Read more")}
+                </button>
+              )}
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div className="flex flex-col gap-0.5">
-              <span className="text-muted-foreground text-xs">Quantity</span>
+              <span className="text-muted-foreground text-xs">{t.label_quantity ?? "Quantity"}</span>
               <span className="font-medium">
                 {product.quantity} {product.unit}
               </span>
             </div>
             <div className="flex flex-col gap-0.5">
-              <span className="text-muted-foreground text-xs">Price</span>
+              <span className="text-muted-foreground text-xs">{t.label_price ?? "Price"}</span>
               <span className="font-medium">₹{product.price_per_unit}</span>
             </div>
           </div>
@@ -78,7 +94,7 @@ function ProductCard({ product, locale }: { product: BuyerProduct; locale: strin
           href={`/fpo/buyer-directory/fpo/${product.fpo}`}
           className="text-primary text-xs hover:underline"
         >
-          View all products from this FPO
+          {t.view_all_products ?? "View all products from this FPO"}
         </Link>
           <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
             <CalendarIcon className="h-3.5 w-3.5" />
@@ -86,7 +102,7 @@ function ProductCard({ product, locale }: { product: BuyerProduct; locale: strin
             {product.available_until ? ` – ${product.available_until}` : ""}
           </div>
           <Button size="sm" className="mt-auto" onClick={() => setInquiryOpen(true)}>
-            Inquire
+            {t.btn_inquire ?? "Inquire"}
           </Button>
         </CardContent>
       </Card>
@@ -258,7 +274,7 @@ function ProductCatalogSection({ locale, t }: { locale: string; t: T }) {
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {products.map((product) => (
-              <ProductCard key={product.id} product={product} locale={locale} />
+              <ProductCard key={product.id} product={product} locale={locale} t={t} />
             ))}
           </div>
           <DataTablePagination

@@ -30,7 +30,9 @@ export function ConfirmDialog() {
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription className="break-all">{description}</AlertDialogDescription>
+          {/* arunima s 14th sep */}
+          <AlertDialogDescription className="break-words">{description}</AlertDialogDescription>
+          {/* //--------------- */}
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
