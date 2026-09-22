@@ -124,12 +124,74 @@ export interface AdminApplicabilityPreview {
   >;
 }
 
+// ── FPO-first roll-up (2026-09-21 UX split) ────────────────────────────────
+
+/** One row of the FPO roll-up table on /admin/dpr/projects. */
+export interface DPRProjectFpoRollupRow {
+  id: number;
+  name: string;
+  district: string;
+  tier: string | null;
+  total_dprs: number;
+  draft_dprs: number;
+  in_progress_dprs: number;
+  submitted_dprs: number;
+  generated_dprs: number;
+  last_updated: string | null;
+}
+
+/** Drill-down payload used by /admin/dpr/projects/fpo/<id>. */
+export interface DPRProjectFpoRollupDetail {
+  fpo: {
+    id: number;
+    name: string;
+    application_id: string | null;
+    district: string;
+    tier: string | null;
+    office_email: string;
+    office_phone: string;
+    total_members: number;
+  };
+  stats: {
+    total_dprs: number;
+    generated_dprs: number;
+    by_status: Partial<Record<DPRProjectStatus, number>>;
+  };
+  monthly_counts: Array<{ month: string; count: number }>;
+  projects: Array<{
+    uuid: string;
+    title: string;
+    status: DPRProjectStatus;
+    created_at: string;
+    updated_at: string;
+  }>;
+}
+
 export const adminDprProjectsApi = {
   // DataTable-compatible signature: returns the raw StandardPagination shape
   // directly (data + meta.pagination) — DataTable consumes it as-is.
   getAll: async (params: DataTableParams): Promise<PaginatedResponse<DPRProjectRow>> => {
     const r = await api.get<PaginatedResponse<DPRProjectRow>>("/admin/dpr/projects/", { params });
     return r.data;
+  },
+
+  /** FPO-first roll-up (paginated, DataTable-compatible). */
+  getFpos: async (
+    params: DataTableParams,
+  ): Promise<PaginatedResponse<DPRProjectFpoRollupRow>> => {
+    const r = await api.get<PaginatedResponse<DPRProjectFpoRollupRow>>(
+      "/admin/dpr/projects/fpos/",
+      { params },
+    );
+    return r.data;
+  },
+
+  /** Drill-down for one FPO: profile + monthly chart series + project list. */
+  getFpoDetail: async (fpoId: number): Promise<DPRProjectFpoRollupDetail> => {
+    const r = await api.get<{ status: string; data: DPRProjectFpoRollupDetail }>(
+      `/admin/dpr/projects/fpos/${fpoId}/`,
+    );
+    return r.data.data;
   },
 
   detail: async (uuid: string) => {

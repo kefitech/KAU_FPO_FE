@@ -113,6 +113,38 @@ export function IdentificationSection({ uuid }: { uuid: string }) {
   const fieldWarnings = new Map<string, string>();
   for (const e of readinessQ.data?.errors ?? []) fieldErrors.set(e.field, e.message);
   for (const w of readinessQ.data?.warnings ?? []) fieldWarnings.set(w.field, w.message);
+  // Live-checked required fields — mirror identification_validators.py so the
+  // user sees an inline error the moment they blank a required input.
+  // Readiness-only errors are stale here: the FPO clears a field, hits Save,
+  // backend rejects the PATCH (400) so the DB still holds the old value, and
+  // the readiness endpoint keeps reporting "all good". Live checks override
+  // whatever readiness says for these keys.
+  if (form) {
+    if (!(form.title ?? "").trim()) {
+      fieldErrors.set("title", "Project Title is required.");
+    }
+    if (!form.project_types || form.project_types.length === 0) {
+      fieldErrors.set("project_types", "At least one project type shall be selected.");
+    }
+    const desc = (form.brief_description ?? "").trim();
+    if (!desc) {
+      fieldErrors.set("brief_description", "Brief Description of the Project is required.");
+    } else if (desc.length < 50) {
+      fieldErrors.set(
+        "brief_description",
+        `Brief Description shall be at least 50 characters (currently ${desc.length}).`,
+      );
+    }
+    if (form.primary_commodity === null || form.primary_commodity === undefined) {
+      fieldErrors.set("primary_commodity", "Primary Commodity is required.");
+    }
+    if ((!form.project_objectives || form.project_objectives.length === 0) && !(form.project_objectives_other ?? "").trim()) {
+      fieldErrors.set("project_objectives", "At least one Project Objective shall be specified.");
+    }
+    if ((!form.expected_outcomes || form.expected_outcomes.length === 0) && !(form.expected_outcomes_other ?? "").trim()) {
+      fieldErrors.set("expected_outcomes", "At least one Expected Outcome shall be specified.");
+    }
+  }
 
   // Mutation
   const mutation = useMutation({
@@ -140,7 +172,35 @@ export function IdentificationSection({ uuid }: { uuid: string }) {
     onError: (err) => {
       markSaved("identification");
       setSaveError(err instanceof Error ? err : new Error("Unknown error"));
-      toast.error("Failed to save. Please try again.");
+      // Surface the backend's exact reason ("Project Title is required.", …)
+      // instead of a generic "Failed to save". Axios interceptor rewrites
+      // rejections to { message, status, data }; DRF field-error payloads
+      // arrive under `data.errors` as { field: [msg1, msg2] }.
+      const errObj = err as {
+        message?: string | Record<string, unknown>;
+        data?: { message?: string | Record<string, unknown>; errors?: unknown };
+        response?: { data?: { message?: string | Record<string, unknown>; errors?: unknown } };
+      };
+      const source =
+        errObj?.data?.errors ??
+        errObj?.response?.data?.errors ??
+        errObj?.data?.message ??
+        errObj?.response?.data?.message ??
+        errObj?.message;
+      let msg = "Failed to save. Please try again.";
+      if (source) {
+        if (typeof source === "string") {
+          msg = source;
+        } else if (typeof source === "object") {
+          const lines: string[] = [];
+          for (const [field, value] of Object.entries(source as Record<string, unknown>)) {
+            const text = Array.isArray(value) ? value.join(" · ") : String(value);
+            lines.push(field === "non_field_errors" ? text : `${field}: ${text}`);
+          }
+          if (lines.length) msg = lines.join("\n");
+        }
+      }
+      toast.error(msg);
     },
   });
 
@@ -396,14 +456,17 @@ export function IdentificationSection({ uuid }: { uuid: string }) {
                   ))}
                 </div>
                 {otherObjectiveChecked && (
-                  <div className="space-y-1.5 border-l-2 border-primary/30 pl-4">
-                    <Label className="text-xs">Other objective — please specify *</Label>
+                  <div id="dpr-field-project_objectives_other" className="space-y-1.5 border-l-2 border-primary/30 pl-4">
+                    <Label className={`text-xs ${fieldErrors.has("project_objectives_other") ? "text-destructive" : ""}`}>
+                      Other objective — please specify *
+                    </Label>
                     <Input
                       value={form.project_objectives_other}
                       onChange={(e) => update("project_objectives_other", e.target.value)}
                       placeholder="Describe the objective you selected 'Other' for"
                       autoFocus
                     />
+                    <FieldError name="project_objectives_other" errors={fieldErrors} warnings={fieldWarnings} />
                   </div>
                 )}
                 <FieldError name="project_objectives" errors={fieldErrors} warnings={fieldWarnings} />
@@ -442,14 +505,17 @@ export function IdentificationSection({ uuid }: { uuid: string }) {
                   ))}
                 </div>
                 {otherOutcomeChecked && (
-                  <div className="space-y-1.5 border-l-2 border-primary/30 pl-4">
-                    <Label className="text-xs">Other outcome — please specify *</Label>
+                  <div id="dpr-field-expected_outcomes_other" className="space-y-1.5 border-l-2 border-primary/30 pl-4">
+                    <Label className={`text-xs ${fieldErrors.has("expected_outcomes_other") ? "text-destructive" : ""}`}>
+                      Other outcome — please specify *
+                    </Label>
                     <Input
                       value={form.expected_outcomes_other}
                       onChange={(e) => update("expected_outcomes_other", e.target.value)}
                       placeholder="Describe the outcome you selected 'Other' for"
                       autoFocus
                     />
+                    <FieldError name="expected_outcomes_other" errors={fieldErrors} warnings={fieldWarnings} />
                   </div>
                 )}
                 <FieldError name="expected_outcomes" errors={fieldErrors} warnings={fieldWarnings} />

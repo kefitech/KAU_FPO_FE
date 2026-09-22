@@ -319,8 +319,14 @@ export function LocationSection({ uuid }: { uuid: string }) {
     form.setValue("site_statuses", checked ? [...cur, id] : cur.filter((i) => i !== id), { shouldDirty: true });
   }
 
-  const hasOwnershipOther = (ownershipQuery.data ?? []).some((r) => (r.code as string).endsWith("_other") && ownershipIds.includes(r.id));
-  const hasSiteOther = (siteStatusQuery.data ?? []).some((r) => (r.code as string).endsWith("_other") && siteStatusIds.includes(r.id));
+  // Master rows for the "Others" option are seeded with code `"other"`
+  // (see scripts/seed_dpr/seed_infrastructure.py). Historic code checked
+  // `endsWith("_other")` which never matched, so the "Please specify"
+  // input silently never rendered even though the model field, backend
+  // rule and JSX were all in place.
+  const isOtherCode = (c: string) => c === "other" || c.endsWith("_other");
+  const hasOwnershipOther = (ownershipQuery.data ?? []).some((r) => isOtherCode(r.code as string) && ownershipIds.includes(r.id));
+  const hasSiteOther = (siteStatusQuery.data ?? []).some((r) => isOtherCode(r.code as string) && siteStatusIds.includes(r.id));
 
   // ── Watched values for every text/decimal field ────────────────────────
   // Every input now runs as a controlled input (value = watched, onChange =

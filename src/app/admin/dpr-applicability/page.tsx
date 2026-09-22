@@ -27,6 +27,7 @@ import {
   Loader2,
   RefreshCw,
   Search,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -198,11 +199,21 @@ export default function AdminDprApplicabilityPage() {
             <div className="relative">
               <Search className="pointer-events-none absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
               <Input
-                className="pl-7"
+                className="pl-7 pr-8"
                 placeholder="e.g. cold storage, rice mill"
                 value={componentFilter}
                 onChange={(e) => setComponentFilter(e.target.value)}
               />
+              {componentFilter && (
+                <button
+                  type="button"
+                  aria-label="Clear component search"
+                  onClick={() => setComponentFilter("")}
+                  className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
           </div>
           <div className="min-w-0 space-y-1">
@@ -210,11 +221,21 @@ export default function AdminDprApplicabilityPage() {
             <div className="relative">
               <Search className="pointer-events-none absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
               <Input
-                className="pl-7"
+                className="pl-7 pr-8"
                 placeholder="e.g. finance, utilities"
                 value={sectionFilter}
                 onChange={(e) => setSectionFilter(e.target.value)}
               />
+              {sectionFilter && (
+                <button
+                  type="button"
+                  aria-label="Clear section filter"
+                  onClick={() => setSectionFilter("")}
+                  className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
           </div>
           <div className="flex items-end">

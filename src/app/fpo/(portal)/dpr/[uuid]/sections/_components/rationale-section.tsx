@@ -299,7 +299,38 @@ export function RationaleSection({ uuid }: { uuid: string }) {
                     </span>
                   </label>
                   {isChecked && (
-                    <div className="mt-2 space-y-1 pl-6">
+                    <div className="mt-2 space-y-2 pl-6">
+                      {/* "Others" specify input renders FIRST — user tells us
+                          the label of the custom rationale before writing
+                          the reason for it. Same panel keeps the two
+                          related inputs visually adjacent. */}
+                      {item.id === otherId && (
+                        <div id="dpr-field-rationale_other" className="space-y-1">
+                          <Label
+                            htmlFor="rationale_other"
+                            className={`text-xs ${err("rationale_other") ? "text-destructive" : ""}`}
+                          >
+                            Please specify (Others) *
+                          </Label>
+                          <Input
+                            id="rationale_other"
+                            placeholder="Describe the other rationale…"
+                            value={rationaleOther as string}
+                            maxLength={MAX_OTHER_TEXT_CHARS}
+                            onChange={(e) =>
+                              setField("rationale_other", e.target.value.slice(0, MAX_OTHER_TEXT_CHARS))
+                            }
+                            className={
+                              err("rationale_other")
+                                ? "border-destructive focus-visible:ring-destructive/40"
+                                : undefined
+                            }
+                          />
+                          {err("rationale_other") && (
+                            <p className="text-xs text-destructive">{err("rationale_other")}</p>
+                          )}
+                        </div>
+                      )}
                       <Textarea
                         // rows={4} gives room for a real ~100-word
                         // justification without cramping. Textarea still
@@ -335,34 +366,6 @@ export function RationaleSection({ uuid }: { uuid: string }) {
               );
             })}
           </div>
-
-          {showOther && (
-            <div id="dpr-field-rationale_other" className="space-y-1.5 pt-2">
-              <Label
-                htmlFor="rationale_other"
-                className={err("rationale_other") ? "text-destructive" : undefined}
-              >
-                Please specify (Others) *
-              </Label>
-              {/* Controlled input (not register) so the Save button + autosave
-                  fire reliably on every keystroke — same fix pattern as
-                  location-section F3. `maxLength` matches backend
-                  CharField(200); defensive `.slice()` in onChange handles
-                  the rare programmatic-paste-past-cap case. */}
-              <Input
-                id="rationale_other"
-                placeholder="Describe the other rationale…"
-                value={rationaleOther as string}
-                maxLength={MAX_OTHER_TEXT_CHARS}
-                onChange={(e) =>
-                  setField("rationale_other", e.target.value.slice(0, MAX_OTHER_TEXT_CHARS))
-                }
-              />
-              {err("rationale_other") && (
-                <p className="text-xs text-destructive">{err("rationale_other")}</p>
-              )}
-            </div>
-          )}
         </CardContent>
       </Card>
     </SectionShell>

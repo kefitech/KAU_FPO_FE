@@ -223,14 +223,14 @@ function validateFuel(row: Fuel): FuelErrors {
     e.purpose = "Please enter a valid purpose (at least 3 letters or digits).";
   }
   const dc = (row.daily_consumption ?? "").trim();
-  if (dc && !_meaningful(dc)) {
+  if (dc && !/^\d+(\.\d+)?\s+\S/.test(dc)) {
     e.daily_consumption =
-      "Please enter a valid daily consumption (e.g. '20 L/day').";
+      "Enter a positive number and pick a unit (e.g. '20 litres').";
   }
   const ac = (row.annual_consumption ?? "").trim();
-  if (ac && !_meaningful(ac)) {
+  if (ac && !/^\d+(\.\d+)?\s+\S/.test(ac)) {
     e.annual_consumption =
-      "Please enter a valid annual consumption (e.g. '7300 L/yr').";
+      "Enter a positive number and pick a unit (e.g. '7300 litres').";
   }
   return e;
 }
@@ -246,7 +246,10 @@ function validateWaste(row: Waste): WasteErrors {
 }
 
 type RenewableErrors = Partial<
-  Record<"initiative" | "initiative_other" | "capacity", string>
+  Record<
+    "initiative" | "initiative_other" | "capacity" | "estimated_cost" | "expected_annual_savings",
+    string
+  >
 >;
 function validateRenewable(row: Renewable): RenewableErrors {
   const e: RenewableErrors = {};
@@ -257,9 +260,34 @@ function validateRenewable(row: Renewable): RenewableErrors {
       "Please enter a valid description (at least 3 letters or digits).";
   }
   const cap = (row.capacity ?? "").trim();
-  if (cap && !_meaningful(cap)) {
-    e.capacity =
-      "Please enter a valid capacity (at least 3 letters or digits, e.g. '5 kW').";
+  if (cap) {
+    // Capacity is composed as "<number> <unit>" in the modal — the number
+    // side comes from a numeric input, the unit side from the capacity-unit
+    // master dropdown. Validation just needs to confirm a leading numeric
+    // portion (>0) is present + some unit text follows.
+    if (!/^\d+(\.\d+)?\s+\S/.test(cap)) {
+      e.capacity =
+        "Enter a positive number and pick a unit (e.g. '5 litres').";
+    }
+  }
+  // Numeric fields — if the user types something, it must be a positive
+  // finite number. Backend serializer rejects zeros/negatives silently by
+  // treating them as no-cost rows, which was the source of the "saved but
+  // reappeared after refresh" bug — surface the error inline instead.
+  const costRaw = row.estimated_cost;
+  if (costRaw !== null && costRaw !== undefined && String(costRaw).trim() !== "") {
+    const c = Number(costRaw);
+    if (!Number.isFinite(c) || c <= 0) {
+      e.estimated_cost = "Estimated cost must be a positive number (₹).";
+    }
+  }
+  const savingsRaw = row.expected_annual_savings;
+  if (savingsRaw !== null && savingsRaw !== undefined && String(savingsRaw).trim() !== "") {
+    const s = Number(savingsRaw);
+    if (!Number.isFinite(s) || s <= 0) {
+      e.expected_annual_savings =
+        "Expected annual savings must be a positive number (₹).";
+    }
   }
   return e;
 }
@@ -318,6 +346,16 @@ export function UtilitiesSection({ uuid }: { uuid: string }) {
   const renewableQuery = useQuery({
     queryKey: ["dpr-master", "renewable-initiatives"],
     queryFn: () => dprMasterApi.list("renewable-initiatives"),
+    staleTime: 24 * 60 * 60 * 1000,
+  });
+  // Capacity-unit master (kg, MT, litres, cubic metres, bags…) — reused as
+  // the unit dropdown for the renewable-initiatives Capacity field. The
+  // dropdown only helps the tester compose a valid string like "5 litres";
+  // the resulting concatenation is still stored in the existing free-text
+  // `capacity` column, so no backend/model change is needed.
+  const capacityUnitQuery = useQuery({
+    queryKey: ["dpr-master", "capacity-units"],
+    queryFn: () => dprMasterApi.list("capacity-units"),
     staleTime: 24 * 60 * 60 * 1000,
   });
 
@@ -698,24 +736,84 @@ export function UtilitiesSection({ uuid }: { uuid: string }) {
                     onChange={(e) => set("purpose", e.target.value.slice(0, MAX_PURPOSE_CHARS))}
                   />
                 </ModalField>
-                <ModalRow>
-                  <ModalField label="Daily consumption" error={fErr.daily_consumption}>
-                    <Input
-                      value={row.daily_consumption}
-                      maxLength={MAX_TEXT_CHARS}
-                      placeholder="e.g. 20 L/day"
-                      onChange={(e) => set("daily_consumption", e.target.value.slice(0, MAX_TEXT_CHARS))}
-                    />
-                  </ModalField>
-                  <ModalField label="Annual consumption" error={fErr.annual_consumption}>
-                    <Input
-                      value={row.annual_consumption}
-                      maxLength={MAX_TEXT_CHARS}
-                      placeholder="e.g. 7300 L/yr"
-                      onChange={(e) => set("annual_consumption", e.target.value.slice(0, MAX_TEXT_CHARS))}
-                    />
-                  </ModalField>
-                </ModalRow>
+                {/* Consumption fields — same "<number> + <unit dropdown>"
+                    composition as Renewable Capacity. Unit master reused
+                    from `capacityUnitQuery`. Both halves join into the
+                    existing free-text column so no backend change is
+                    needed. */}
+                {(() => {
+                  const unitOptions = (capacityUnitQuery.data ?? []).map((u) => ({
+                    value: String(u.label ?? u.id),
+                    label: String(u.label ?? u.id),
+                  }));
+                  const parse = (s: string) => {
+                    const m = (s ?? "").trim().match(/^(\d+(?:\.\d+)?)\s*(.*)$/);
+                    return {
+                      value: m ? m[1] : "",
+                      unit: m ? m[2].trim() : (s ?? "").trim(),
+                    };
+                  };
+                  const join = (val: string, unit: string) => {
+                    const v = val.trim();
+                    const u = unit.trim();
+                    if (!v && !u) return "";
+                    return `${v}${v && u ? " " : ""}${u}`;
+                  };
+                  const dc = parse(row.daily_consumption);
+                  const ac = parse(row.annual_consumption);
+                  return (
+                    <div className="space-y-4">
+                      <ModalField label="Daily consumption" error={fErr.daily_consumption}>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <Input
+                            type="text"
+                            inputMode="decimal"
+                            maxLength={12}
+                            placeholder="e.g. 20"
+                            value={dc.value}
+                            onChange={(e) => {
+                              const cleaned = normaliseDecimalInput(e.target.value, {
+                                max: 1_000_000,
+                                maxDecimals: 2,
+                              });
+                              set("daily_consumption", join(cleaned, dc.unit));
+                            }}
+                          />
+                          <SearchableSelect
+                            value={dc.unit}
+                            options={unitOptions}
+                            onChange={(v) => set("daily_consumption", join(dc.value, v))}
+                            placeholder="Type to search unit…"
+                          />
+                        </div>
+                      </ModalField>
+                      <ModalField label="Annual consumption" error={fErr.annual_consumption}>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <Input
+                            type="text"
+                            inputMode="decimal"
+                            maxLength={14}
+                            placeholder="e.g. 7300"
+                            value={ac.value}
+                            onChange={(e) => {
+                              const cleaned = normaliseDecimalInput(e.target.value, {
+                                max: 100_000_000,
+                                maxDecimals: 2,
+                              });
+                              set("annual_consumption", join(cleaned, ac.unit));
+                            }}
+                          />
+                          <SearchableSelect
+                            value={ac.unit}
+                            options={unitOptions}
+                            onChange={(v) => set("annual_consumption", join(ac.value, v))}
+                            placeholder="Type to search unit…"
+                          />
+                        </div>
+                      </ModalField>
+                    </div>
+                  );
+                })()}
                 <ModalField label="Estimated annual cost (₹)">
                   <Input
                     type="text"
@@ -1034,16 +1132,58 @@ export function UtilitiesSection({ uuid }: { uuid: string }) {
                     />
                   </ModalField>
                 )}
-                <ModalField label="Capacity" error={rErr.capacity}>
-                  <Input
-                    value={row.capacity}
-                    maxLength={MAX_TEXT_CHARS}
-                    placeholder="e.g. 5 kW"
-                    onChange={(e) => set("capacity", e.target.value.slice(0, MAX_TEXT_CHARS))}
-                  />
-                </ModalField>
+                {/* Capacity — split into <number> + <unit dropdown>.
+                    Neither field is stored on its own; the two combine into
+                    the existing free-text `capacity` column ("5 litres") so
+                    no backend change is needed. Parse the stored string on
+                    render so the two inputs stay in sync when editing an
+                    existing row. */}
+                {(() => {
+                  const capStr = row.capacity ?? "";
+                  const m = capStr.trim().match(/^(\d+(?:\.\d+)?)\s*(.*)$/);
+                  const capValue = m ? m[1] : "";
+                  const capUnitLabel = m ? m[2].trim() : capStr.trim();
+                  const unitOptions = (capacityUnitQuery.data ?? []).map((u) => ({
+                    value: String(u.label ?? u.id),
+                    label: String(u.label ?? u.id),
+                  }));
+                  const join = (val: string, unit: string) => {
+                    const v = val.trim();
+                    const u = unit.trim();
+                    if (!v && !u) return "";
+                    return `${v}${v && u ? " " : ""}${u}`;
+                  };
+                  return (
+                    <ModalRow>
+                      <ModalField label="Capacity" error={rErr.capacity}>
+                        <Input
+                          type="text"
+                          inputMode="decimal"
+                          maxLength={12}
+                          placeholder="e.g. 5"
+                          value={capValue}
+                          onChange={(e) => {
+                            const cleaned = normaliseDecimalInput(e.target.value, {
+                              max: 1_000_000,
+                              maxDecimals: 2,
+                            });
+                            set("capacity", join(cleaned, capUnitLabel));
+                          }}
+                        />
+                      </ModalField>
+                      <ModalField label="Unit">
+                        <SearchableSelect
+                          value={capUnitLabel}
+                          options={unitOptions}
+                          onChange={(v) => set("capacity", join(capValue, v))}
+                          placeholder="Type to search unit…"
+                        />
+                      </ModalField>
+                    </ModalRow>
+                  );
+                })()}
                 <ModalRow>
-                  <ModalField label="Estimated cost (₹)">
+                  <ModalField label="Estimated cost (₹)" error={rErr.estimated_cost}>
                     <Input
                       type="text"
                       inputMode="decimal"
@@ -1056,7 +1196,7 @@ export function UtilitiesSection({ uuid }: { uuid: string }) {
                       }}
                     />
                   </ModalField>
-                  <ModalField label="Expected annual savings (₹)">
+                  <ModalField label="Expected annual savings (₹)" error={rErr.expected_annual_savings}>
                     <Input
                       type="text"
                       inputMode="decimal"

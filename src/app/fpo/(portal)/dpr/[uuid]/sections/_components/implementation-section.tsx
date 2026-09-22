@@ -106,15 +106,25 @@ type Data = z.infer<typeof Schema>;
 
 // ── Per-row validators (mirror implementation_validators.py) ──
 
-type ActivityErrors = Partial<Record<"activity_name" | "proposed_start_date", string>>;
+type ActivityErrors = Partial<
+  Record<"activity_name" | "proposed_start_date" | "proposed_completion_date", string>
+>;
 function validateActivity(row: Activity): ActivityErrors {
   const e: ActivityErrors = {};
   if (!(row.activity_name ?? "").trim()) {
     e.activity_name = "Activity name is required.";
   }
   if (row.proposed_start_date && row.proposed_completion_date) {
+    // ISO YYYY-MM-DD strings compare lexicographically — safe.
     if (row.proposed_start_date > row.proposed_completion_date) {
-      e.proposed_start_date = "Start Date shall precede Completion Date.";
+      // Surface the message on BOTH fields so the user sees it no matter
+      // which one they just edited (the original code only flagged the
+      // start field, which was easy to miss when the user was still
+      // focused on the completion picker).
+      e.proposed_start_date =
+        "Start date cannot be later than the completion date.";
+      e.proposed_completion_date =
+        "Completion date cannot be earlier than the start date.";
     }
   }
   return e;
@@ -298,10 +308,11 @@ export function ImplementationSection({ uuid }: { uuid: string }) {
                       onChange={(e) => set("proposed_start_date", e.target.value || null)}
                     />
                   </ModalField>
-                  <ModalField label="Proposed completion date">
+                  <ModalField label="Proposed completion date" error={aErr.proposed_completion_date}>
                     <Input
                       type="date"
                       value={row.proposed_completion_date ?? ""}
+                      min={row.proposed_start_date ?? undefined}
                       onChange={(e) => set("proposed_completion_date", e.target.value || null)}
                     />
                   </ModalField>

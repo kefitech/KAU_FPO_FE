@@ -394,8 +394,12 @@ export function TechnologySection({ uuid }: { uuid: string }) {
             { key: "risks", label: "Risks", render: (v) => `${(v as Risk[])?.length ?? 0} identified` },
           ]}
           // isValid — gate Save on full backend rule set (name/source
-          // plus Cat B/C/E/F/G rules) via validateTechnology.
-          isValid={(row) => Object.keys(validateTechnology(row, CURRENT_YEAR)).length === 0}
+          // plus Cat B/C/E/F/G rules) via validateTechnology,
+          // and reject any Cat H risk row that is missing type / mitigation.
+          isValid={(row) =>
+            Object.keys(validateTechnology(row, CURRENT_YEAR)).length === 0 &&
+            row.risks.every((r) => Object.keys(validateTechRisk(r)).length === 0)
+          }
           addLabel="Add technology"
           editLabel="Edit technology"
           emptyHint="No technologies yet. Click Add to describe a technology (grading, processing, storage, cold chain, etc.)."

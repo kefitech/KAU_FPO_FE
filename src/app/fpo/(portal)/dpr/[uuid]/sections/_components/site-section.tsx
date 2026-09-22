@@ -273,10 +273,20 @@ function validateConstraint(row: Constraint): ConstraintErrors {
 }
 
 function validateInfra(row: Infra) {
-  const e: Partial<Record<"infrastructure_type" | "infrastructure_type_other", string>> = {};
+  const e: Partial<Record<"infrastructure_type" | "infrastructure_type_other" | "year_of_construction", string>> = {};
   if (!row.infrastructure_type) e.infrastructure_type = "Infrastructure type is required.";
   if (row.infrastructure_type === "other" && !(row.infrastructure_type_other ?? "").trim()) {
     e.infrastructure_type_other = 'Please specify — "Others" was selected in infrastructure type.';
+  }
+  // Year of construction is optional, but if filled it must be a real 4-digit
+  // year in [1900, current year + 5]. `normaliseIntegerInput` caps the max
+  // as the user types but does not reject 1-, 2- or 3-digit input like "13",
+  // so we validate the final value here.
+  if (row.year_of_construction !== null && row.year_of_construction !== undefined && row.year_of_construction !== "") {
+    const y = Number(row.year_of_construction);
+    if (!Number.isFinite(y) || !Number.isInteger(y) || y < 1900 || y > MAX_INFRA_YEAR) {
+      e.year_of_construction = `Enter a valid 4-digit year between 1900 and ${MAX_INFRA_YEAR}.`;
+    }
   }
   return e;
 }
@@ -875,7 +885,7 @@ export function SiteSection({ uuid }: { uuid: string }) {
                     }}
                   />
                 </ModalField>
-                <ModalField label="Year of construction">
+                <ModalField label="Year of construction" error={validateInfra(row).year_of_construction}>
                   <Input
                     type="text"
                     inputMode="numeric"
@@ -883,11 +893,11 @@ export function SiteSection({ uuid }: { uuid: string }) {
                     placeholder="e.g. 2022"
                     value={row.year_of_construction !== null && row.year_of_construction !== undefined ? String(row.year_of_construction) : ""}
                     onChange={(e) => {
-                      // Cap at reasonable upper bound (current year + 5) — a
-                      // building "constructed" in 2200 is invalid input.
+                      // Cap only at the upper bound — a "1900" floor on every
+                      // keystroke would snap "2" up to "1900" mid-type. The
+                      // lower bound (1900) is enforced by `validateInfra`.
                       const cleaned = normaliseIntegerInput(e.target.value, {
                         max: MAX_INFRA_YEAR,
-                        min: 1900,
                       });
                       set("year_of_construction", cleaned === "" ? null : cleaned);
                     }}

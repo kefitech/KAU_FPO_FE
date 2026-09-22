@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -82,7 +82,11 @@ function isNumberLike(value: unknown): boolean {
 // ── Page ───────────────────────────────────────────────────────────────────
 
 export default function AdminMasterDataPage() {
-  const [activeCategory, setActiveCategory] = useState<DprMasterCategory>("fuel-types");
+  // Default to the first category in the sidebar (Project Types) so the
+  // page opens at the top of the list, not somewhere in the middle.
+  const [activeCategory, setActiveCategory] = useState<DprMasterCategory>(
+    DPR_MASTER_GROUPS[0].categories[0].slug,
+  );
 
   const activeInfo = useMemo(() => {
     for (const g of DPR_MASTER_GROUPS) {
@@ -302,6 +306,45 @@ function CategoryPane({ category, title }: { category: DprMasterCategory; title:
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
+                      {/* Move-up / move-down — swap `order` with the neighbour
+                          so the backend's `.order_by('order', 'code')` sort
+                          picks up the change. Two PATCHes per click; both
+                          share the same query-invalidation onSuccess, so
+                          the table re-renders once with the new sort. */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        aria-label="Move up"
+                        disabled={i === 0 || updateMut.isPending}
+                        onClick={() => {
+                          const above = rows[i - 1];
+                          if (!above) return;
+                          const myOrder = Number(row.order ?? i);
+                          const aboveOrder = Number(above.order ?? i - 1);
+                          updateMut.mutate({ id: above.id, payload: { order: myOrder } });
+                          updateMut.mutate({ id: row.id, payload: { order: aboveOrder } });
+                        }}
+                      >
+                        <ArrowUp className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        aria-label="Move down"
+                        disabled={i === rows.length - 1 || updateMut.isPending}
+                        onClick={() => {
+                          const below = rows[i + 1];
+                          if (!below) return;
+                          const myOrder = Number(row.order ?? i);
+                          const belowOrder = Number(below.order ?? i + 1);
+                          updateMut.mutate({ id: below.id, payload: { order: myOrder } });
+                          updateMut.mutate({ id: row.id, payload: { order: belowOrder } });
+                        }}
+                      >
+                        <ArrowDown className="h-3.5 w-3.5" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"

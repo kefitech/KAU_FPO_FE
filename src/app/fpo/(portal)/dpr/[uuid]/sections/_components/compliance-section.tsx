@@ -31,6 +31,12 @@ const MAX_TEXT_CHARS = 200;              // expected_resolution_timeline
 const MAX_LONG_CHARS = 300;              // present_status, issuing_authority
 const MAX_LONG_TEXT_CHARS = 2000;        // TextField defensive cap
 
+// Reject text that's only special characters — non-empty inputs must contain
+// ≥3 letters/digits/underscore. Mirrors backend `_validate_specify_text`
+// and the identical helper used in utilities-section / site-section.
+const _meaningful = (v: string): boolean =>
+  (v.match(/[\p{L}\p{N}_]/gu) ?? []).length >= 3;
+
 const StatusValues = [
   "available",
   "proposed_to_obtain",
@@ -275,16 +281,53 @@ export function ComplianceSection({ uuid }: { uuid: string }) {
     "items",
     "nature_of_case",
     "possible_impact",
+    "present_status",
+    "expected_resolution_timeline",
   ]);
   const liveErrors: Record<string, string | undefined> = {};
   if (!hasFpoRegistration && registrationsQuery.data) {
     liveErrors.items = "FPO / Producer Company Registration shall be specified (pick a status for the FPO Registration row in Cat A).";
   }
-  if (hasLegal && !String(natureOfCase).trim()) {
-    liveErrors.nature_of_case = "Nature of Case is required when pending legal issues are declared.";
+  if (hasLegal) {
+    const noc = String(natureOfCase).trim();
+    if (!noc) {
+      liveErrors.nature_of_case = "Nature of Case is required when pending legal issues are declared.";
+    } else if (!_meaningful(noc)) {
+      liveErrors.nature_of_case = "Please enter a valid description (at least 3 letters or digits).";
+    }
+    const pi = String(possibleImpact).trim();
+    if (!pi) {
+      liveErrors.possible_impact = "Possible Impact on Project is required when pending legal issues are declared.";
+    } else if (!_meaningful(pi)) {
+      liveErrors.possible_impact = "Please enter a valid description (at least 3 letters or digits).";
+    }
+    const ps = String(presentStatus).trim();
+    if (ps && !_meaningful(ps)) {
+      liveErrors.present_status = "Please enter a valid status (at least 3 letters or digits).";
+    }
+    const ert = String(expectedResolutionTimeline).trim();
+    if (ert && !_meaningful(ert)) {
+      liveErrors.expected_resolution_timeline = "Please enter a valid timeline (at least 3 letters or digits, e.g. 'Q2 2026').";
+    }
   }
-  if (hasLegal && !String(possibleImpact).trim()) {
-    liveErrors.possible_impact = "Possible Impact on Project is required when pending legal issues are declared.";
+  // Per-item validators — issuing authority + remarks must be meaningful
+  // (≥3 letters/digits) when the user types something. Only surfaced when
+  // the row also has a status (otherwise blank rows are dropped on save).
+  const itemErrors = new Map<string, { issuing_authority?: string; remarks?: string }>();
+  for (const it of items) {
+    if (!it.status && !it.custom_name.trim()) continue;
+    const ia = (it.issuing_authority ?? "").trim();
+    const rm = (it.remarks ?? "").trim();
+    const errs: { issuing_authority?: string; remarks?: string } = {};
+    if (ia && !_meaningful(ia)) {
+      errs.issuing_authority = "Please enter a valid authority (at least 3 letters or digits).";
+    }
+    if (rm && !_meaningful(rm)) {
+      errs.remarks = "Please enter valid remarks (at least 3 letters or digits).";
+    }
+    if (errs.issuing_authority || errs.remarks) {
+      itemErrors.set(String(it.registration), errs);
+    }
   }
   const err = (name: string): string | undefined =>
     LIVE_CHECKED.has(name) ? liveErrors[name] : fieldErrors.get(name);
@@ -387,13 +430,20 @@ export function ComplianceSection({ uuid }: { uuid: string }) {
                             {(cfg.showAuthority || cfg.showDate) && (
                               <div className="grid gap-2 sm:grid-cols-2">
                                 {cfg.showAuthority && (
-                                  <Input
-                                    className="h-8 text-xs"
-                                    placeholder="Issuing authority"
-                                    maxLength={MAX_LONG_CHARS}
-                                    value={item?.issuing_authority ?? ""}
-                                    onChange={(e) => updateFieldFor(reg.id, "issuing_authority", e.target.value.slice(0, MAX_LONG_CHARS))}
-                                  />
+                                  <div className="space-y-0.5">
+                                    <Input
+                                      className={`h-8 text-xs ${itemErrors.get(String(reg.id))?.issuing_authority ? "border-destructive focus-visible:ring-destructive/40" : ""}`}
+                                      placeholder="Issuing authority"
+                                      maxLength={MAX_LONG_CHARS}
+                                      value={item?.issuing_authority ?? ""}
+                                      onChange={(e) => updateFieldFor(reg.id, "issuing_authority", e.target.value.slice(0, MAX_LONG_CHARS))}
+                                    />
+                                    {itemErrors.get(String(reg.id))?.issuing_authority && (
+                                      <p className="text-[10px] text-destructive">
+                                        {itemErrors.get(String(reg.id))?.issuing_authority}
+                                      </p>
+                                    )}
+                                  </div>
                                 )}
                                 {cfg.showDate && (
                                   <div className="space-y-0.5">
@@ -410,13 +460,18 @@ export function ComplianceSection({ uuid }: { uuid: string }) {
                             )}
                             <div>
                               <Input
-                                className="h-8 text-xs"
+                                className={`h-8 text-xs ${itemErrors.get(String(reg.id))?.remarks ? "border-destructive focus-visible:ring-destructive/40" : ""}`}
                                 placeholder={cfg.remarksPlaceholder}
                                 maxLength={MAX_LONG_TEXT_CHARS}
                                 value={item?.remarks ?? ""}
                                 onChange={(e) => updateFieldFor(reg.id, "remarks", e.target.value.slice(0, MAX_LONG_TEXT_CHARS))}
                               />
-                              {cfg.remarksRecommended && remarksMissing && (
+                              {itemErrors.get(String(reg.id))?.remarks && (
+                                <p className="mt-1 text-[10px] text-destructive">
+                                  {itemErrors.get(String(reg.id))?.remarks}
+                                </p>
+                              )}
+                              {!itemErrors.get(String(reg.id))?.remarks && cfg.remarksRecommended && remarksMissing && (
                                 <p className="mt-1 text-[10px] text-amber-600 dark:text-amber-500">
                                   Recommended: add a brief explanation so bankers understand the context.
                                 </p>
@@ -478,20 +533,32 @@ export function ComplianceSection({ uuid }: { uuid: string }) {
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-1.5">
-                    <Label>Present status</Label>
+                    <Label className={err("present_status") ? "text-destructive" : undefined}>
+                      Present status
+                    </Label>
                     <Input
                       value={presentStatus as string}
                       maxLength={MAX_LONG_CHARS}
                       onChange={(e) => setField("present_status", e.target.value.slice(0, MAX_LONG_CHARS))}
+                      className={err("present_status") ? "border-destructive focus-visible:ring-destructive/40" : undefined}
                     />
+                    {err("present_status") && (
+                      <p className="text-xs text-destructive">{err("present_status")}</p>
+                    )}
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Expected resolution timeline</Label>
+                    <Label className={err("expected_resolution_timeline") ? "text-destructive" : undefined}>
+                      Expected resolution timeline
+                    </Label>
                     <Input
                       value={expectedResolutionTimeline as string}
                       maxLength={MAX_TEXT_CHARS}
                       onChange={(e) => setField("expected_resolution_timeline", e.target.value.slice(0, MAX_TEXT_CHARS))}
+                      className={err("expected_resolution_timeline") ? "border-destructive focus-visible:ring-destructive/40" : undefined}
                     />
+                    {err("expected_resolution_timeline") && (
+                      <p className="text-xs text-destructive">{err("expected_resolution_timeline")}</p>
+                    )}
                   </div>
                 </div>
               </div>

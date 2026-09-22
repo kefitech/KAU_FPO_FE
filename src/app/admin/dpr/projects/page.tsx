@@ -1,19 +1,19 @@
 "use client";
 
 /**
- * Admin — DPR Projects list.
+ * Admin — DPR Projects (FPO roll-up list).
  *
- * Read-only oversight of every DPR project across all FPOs. Uses the shared
- * `<DataTable>` component (same pattern as audit-logs / external-apis) so
- * pagination, search, filter chips, sortable columns and column visibility
- * toggles come for free.
+ * KAU 2026-09-21 UX split: this landing page shows one row per FPO with
+ * their DPR totals. Clicking View drills into
+ * /admin/dpr/projects/fpo/<fpo_id> which renders the activity chart and
+ * that FPO's individual DPR projects.
  *
- * Filters: status, district. Search: FPO name / DPR title contains.
+ * Backed by GET /api/admin/dpr/projects/fpos/ (paginated, DataTable-native).
  *
  * Author: Athul Gopan (Kefi Tech Solutions)
  */
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import type { ColumnDef } from "@tanstack/react-table";
 import { ArrowLeft, ExternalLink } from "lucide-react";
@@ -21,10 +21,7 @@ import Link from "next/link";
 
 import {
   adminDprProjectsApi,
-  DPR_STATUS_COLORS,
-  DPR_STATUS_LABELS,
-  type DPRProjectRow,
-  type DPRProjectStatus,
+  type DPRProjectFpoRollupRow,
 } from "@/app/admin/_api/dpr-projects";
 import { DataTable } from "@/components/data-table";
 import type { FilterConfig } from "@/components/data-table/data-table-toolbar";
@@ -32,30 +29,29 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { KERALA_DISTRICTS } from "@/lib/kerala-districts";
 
-function columns(): ColumnDef<DPRProjectRow>[] {
+function columns(): ColumnDef<DPRProjectFpoRollupRow>[] {
   return [
     {
-      accessorKey: "fpo",
+      accessorKey: "name",
       header: "FPO",
       enableSorting: false,
       cell: ({ row }) => (
-        <span className="font-medium">{row.original.fpo?.name ?? "—"}</span>
+        // Truncate long names to a single ellipsised line; full name shown
+        // as a native tooltip on hover so nothing is lost.
+        <span
+          className="block max-w-[220px] truncate font-medium"
+          title={row.original.name}
+        >
+          {row.original.name}
+        </span>
       ),
-    },
-    {
-      accessorKey: "title",
-      header: "DPR Title",
-      cell: ({ row }) =>
-        row.original.title || (
-          <span className="text-muted-foreground italic">Untitled</span>
-        ),
     },
     {
       accessorKey: "district",
       header: "District",
       enableSorting: false,
       cell: ({ row }) => (
-        <span className="text-sm">{row.original.fpo?.district ?? "—"}</span>
+        <span className="text-sm">{row.original.district || "—"}</span>
       ),
     },
     {
@@ -63,28 +59,61 @@ function columns(): ColumnDef<DPRProjectRow>[] {
       header: "Tier",
       enableSorting: false,
       cell: ({ row }) => (
-        <span className="text-sm">{row.original.fpo?.tier ?? "—"}</span>
+        <span className="text-sm">{row.original.tier ?? "—"}</span>
       ),
     },
     {
-      accessorKey: "status",
-      header: "Status",
+      accessorKey: "total_dprs",
+      header: "Total",
       enableSorting: false,
       cell: ({ row }) => (
-        <Badge
-          variant="secondary"
-          className={`text-[11px] font-medium ${DPR_STATUS_COLORS[row.original.status]}`}
-        >
-          {DPR_STATUS_LABELS[row.original.status]}
+        <Badge variant="secondary" className="text-[11px] font-semibold">
+          {row.original.total_dprs}
         </Badge>
       ),
     },
     {
-      accessorKey: "updated_at",
-      header: "Updated",
+      accessorKey: "draft_dprs",
+      header: "Draft",
+      enableSorting: false,
       cell: ({ row }) => (
-        <span className="text-muted-foreground text-xs whitespace-nowrap">
-          {new Date(row.original.updated_at).toLocaleString()}
+        <span className="text-xs text-muted-foreground">
+          {row.original.draft_dprs + row.original.in_progress_dprs}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "submitted_dprs",
+      header: "Submitted",
+      enableSorting: false,
+      cell: ({ row }) => (
+        <span className="text-xs text-muted-foreground">
+          {row.original.submitted_dprs}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "generated_dprs",
+      header: "Generated",
+      enableSorting: false,
+      cell: ({ row }) => (
+        <Badge
+          variant="secondary"
+          className="bg-emerald-100 text-[11px] font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
+        >
+          {row.original.generated_dprs}
+        </Badge>
+      ),
+    },
+    {
+      accessorKey: "last_updated",
+      header: "Last activity",
+      enableSorting: false,
+      cell: ({ row }) => (
+        <span className="whitespace-nowrap text-xs text-muted-foreground">
+          {row.original.last_updated
+            ? new Date(row.original.last_updated).toLocaleString()
+            : "—"}
         </span>
       ),
     },
@@ -94,7 +123,7 @@ function columns(): ColumnDef<DPRProjectRow>[] {
       enableSorting: false,
       cell: ({ row }) => (
         <Button asChild variant="ghost" size="sm">
-          <Link href={`/admin/dpr/projects/${row.original.uuid}`}>
+          <Link href={`/admin/dpr/projects/fpo/${row.original.id}`}>
             <ExternalLink className="mr-1 h-3.5 w-3.5" /> View
           </Link>
         </Button>
@@ -108,15 +137,6 @@ export default function AdminDprProjectsPage() {
 
   const filters: FilterConfig[] = useMemo(
     () => [
-      {
-        key: "status",
-        label: "Status",
-        type: "select",
-        options: (Object.keys(DPR_STATUS_LABELS) as DPRProjectStatus[]).map((s) => ({
-          value: s,
-          label: DPR_STATUS_LABELS[s],
-        })),
-      },
       {
         key: "district",
         label: "District",
@@ -141,20 +161,20 @@ export default function AdminDprProjectsPage() {
         <div>
           <h1 className="font-bold text-2xl">DPR Projects</h1>
           <p className="mt-0.5 text-muted-foreground text-sm">
-            Read-only oversight of every DPR project across all FPOs. Filter by status or
-            district; search by FPO name or DPR title.
+            One row per FPO with DPR activity. Click <span className="font-medium">View</span> to
+            see that FPO&apos;s activity chart and individual DPR projects.
           </p>
         </div>
       </div>
 
       <DataTable
-        queryKey="admin-dpr-projects"
-        queryFn={adminDprProjectsApi.getAll}
+        queryKey="admin-dpr-projects-fpos"
+        queryFn={adminDprProjectsApi.getFpos}
         columns={cols}
         filters={filters}
         columnsLabel="Columns"
         toggleColumnsLabel="Toggle columns"
-        searchPlaceholder="Search FPO name or DPR title…"
+        searchPlaceholder="Search FPO name…"
         clearLabel="Clear"
       />
     </div>
