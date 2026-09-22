@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useRef, useState } from "react";
+
 import dynamic from "next/dynamic";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -12,21 +13,19 @@ import { DataTable } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
+
 import { getZoneVersionColumns } from "./_components/columns";
 
 type T = Record<string, string>;
 
-const ZonesMap = dynamic(
-  () => import("./_components/zones-map").then((m) => ({ default: m.ZonesMap })),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex h-96 items-center justify-center rounded-lg border bg-muted/30">
-        <p className="text-muted-foreground text-sm">Loading map…</p>
-      </div>
-    ),
-  },
-);
+const ZonesMap = dynamic(() => import("./_components/zones-map").then((m) => ({ default: m.ZonesMap })), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-96 items-center justify-center rounded-lg border bg-muted/30">
+      <p className="text-muted-foreground text-sm">Loading map…</p>
+    </div>
+  ),
+});
 
 export default function GisZonesPage() {
   const queryClient = useQueryClient();
@@ -48,7 +47,11 @@ export default function GisZonesPage() {
   const [previewVersionId, setPreviewVersionId] = useState<number | null>(null);
   const [previewLabel, setPreviewLabel] = useState<string>("");
 
-  const { data: liveZones, isLoading: mapLoading, dataUpdatedAt: liveZonesUpdatedAt } = useQuery({
+  const {
+    data: liveZones,
+    isLoading: mapLoading,
+    dataUpdatedAt: liveZonesUpdatedAt,
+  } = useQuery({
     queryKey: ["gis-zones-map"],
     queryFn: adminGisZonesApi.getLiveZones,
   });
@@ -122,14 +125,15 @@ export default function GisZonesPage() {
         <div>
           <h1 className="font-bold text-2xl">{t.page_title ?? "Agro-Climatic Zone Boundaries"}</h1>
           <p className="mt-0.5 text-muted-foreground text-sm">
-            {t.page_description ?? 'Click a row below to preview it on the map — this does NOT make it live. Only "Activate" does that.'}
+            {t.page_description ??
+              'Click a row below to preview it on the map — this does NOT make it live. Only "Activate" does that.'}
           </p>
         </div>
         <div>
           <input
             ref={fileInputRef}
             type="file"
-            accept=".json,.geojson,application/geo+json,application/json"
+            accept=".geojson,application/geo+json"
             onChange={handleFileSelected}
             className="hidden"
           />
@@ -149,10 +153,9 @@ export default function GisZonesPage() {
           <div className="flex items-center gap-2 text-amber-800 dark:text-amber-400">
             <Eye className="h-4 w-4" />
             <span>
-              {(t.preview_banner ?? "Previewing {label} — not live, farmers still see the current active zones.").replace(
-                "{label}",
-                previewLabel,
-              )}
+              {(
+                t.preview_banner ?? "Previewing {label} — not live, farmers still see the current active zones."
+              ).replace("{label}", previewLabel)}
             </span>
           </div>
           <Button size="sm" variant="ghost" onClick={handleClearPreview}>

@@ -8,10 +8,13 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 
-import { type CropPackageOfPractices, adminCropPackageOfPracticesApi } from "@/app/admin/_api/crop-package-of-practices";
+import {
+  adminCropPackageOfPracticesApi,
+  type CropPackageOfPractices,
+} from "@/app/admin/_api/crop-package-of-practices";
 import { DataTable } from "@/components/data-table/data-table";
 import { Button } from "@/components/ui/button";
-import { ViewSheet, type SheetField } from "@/components/ui/view-sheet";
+import { type SheetField, ViewSheet } from "@/components/ui/view-sheet";
 import { translationsApi } from "@/lib/api/translations";
 import { useConfirmStore } from "@/stores/confirm-store";
 import { useLocaleStore } from "@/stores/locale-store";
@@ -101,7 +104,10 @@ export default function CropPackageOfPracticesPage() {
   const locale = useLocaleStore((s) => s.locale);
   const [t, setT] = useState<T>({});
   const [tCommon, setTCommon] = useState<T>({});
-  const [sheet, setSheet] = useState<{ open: boolean; item: CropPackageOfPractices | null }>({ open: false, item: null });
+  const [sheet, setSheet] = useState<{ open: boolean; item: CropPackageOfPractices | null }>({
+    open: false,
+    item: null,
+  });
   const [translationsLoading, setTranslationsLoading] = useState(true);
 
   useEffect(() => {
@@ -127,7 +133,9 @@ export default function CropPackageOfPracticesPage() {
 
   const toggleStatusMutation = useMutation({
     mutationFn: (item: CropPackageOfPractices) =>
-      item.is_active ? adminCropPackageOfPracticesApi.deactivate(item.id) : adminCropPackageOfPracticesApi.activate(item.id),
+      item.is_active
+        ? adminCropPackageOfPracticesApi.deactivate(item.id)
+        : adminCropPackageOfPracticesApi.activate(item.id),
     onSuccess: () => {
       toast.success(t.toast_status_updated ?? "Status updated");
       queryClient.invalidateQueries({ queryKey: ["crop-package-of-practices"] });
@@ -142,7 +150,9 @@ export default function CropPackageOfPracticesPage() {
     onDelete: (item) =>
       confirm({
         title: t.delete_title ?? "Delete crop entry",
-        description: t.delete_description ?? "Are you sure you want to delete this crop's Package of Practices entry?",
+        description: (
+          t.delete_description ?? 'Are you sure you want to delete "{name}"\'s Package of Practices entry?'
+        ).replace("{name}", item.crop_name),
         onConfirm: () => deleteMutation.mutateAsync(item.id),
       }),
     onToggleStatus: (item) => toggleStatusMutation.mutate(item),
