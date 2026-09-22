@@ -804,6 +804,8 @@ export function FinanceSection({ uuid }: { uuid: string }) {
   // LIVE_CHECKED fields the FE result is the truth.
   const LIVE_CHECKED = new Set<string>([
     "loan_amount",
+    "rate_of_interest_pct",
+    "repayment_period_years",
     "subsidy_scheme_name",
     "latest_annual_turnover",
   ]);
@@ -814,6 +816,18 @@ export function FinanceSection({ uuid }: { uuid: string }) {
       liveErrors.loan_amount = "Loan Amount is required when loan is proposed.";
     } else if (costTotal > 0 && laNum > costTotal) {
       liveErrors.loan_amount = `Loan Amount (₹${fmtInr(laNum)}) shall not exceed Total Project Cost (₹${fmtInr(costTotal)}).`;
+    }
+    // Rate + tenure feed EMI + interest expense + DSCR + IRR. Silent-blanks
+    // dropped the whole loan schedule (calc audit 2026-09-22).
+    const rNum = rateOfInterest !== null && rateOfInterest !== undefined && rateOfInterest !== "" ? Number(rateOfInterest) : null;
+    if (rNum === null || !Number.isFinite(rNum) || rNum <= 0) {
+      liveErrors.rate_of_interest_pct =
+        "Rate of Interest is required when loan is proposed and shall be greater than zero.";
+    }
+    const tNum = repaymentYears !== null && repaymentYears !== undefined && repaymentYears !== "" ? Number(repaymentYears) : null;
+    if (tNum === null || !Number.isFinite(tNum) || tNum <= 0) {
+      liveErrors.repayment_period_years =
+        "Repayment Period (years) is required when loan is proposed and shall be greater than zero.";
     }
   }
   if (subsidyProposed && !String(subsidySchemeName).trim()) {
@@ -943,9 +957,10 @@ export function FinanceSection({ uuid }: { uuid: string }) {
   const intInput = (
     value: unknown, key: keyof Data, label: string,
     max: number, placeholder = "",
+    errorMsg?: string,
   ) => (
     <div className="space-y-1">
-      <LabelWithBadge uuid={uuid} section="finance" field={String(key)} className="text-xs">
+      <LabelWithBadge uuid={uuid} section="finance" field={String(key)} className={errorMsg ? "text-xs text-destructive" : "text-xs"}>
         {label}
       </LabelWithBadge>
       <Input
@@ -958,7 +973,9 @@ export function FinanceSection({ uuid }: { uuid: string }) {
           const cleaned = normaliseIntegerInput(e.target.value, { max, min: 0 });
           setField(key, (cleaned === "" ? null : cleaned) as Data[keyof Data]);
         }}
+        className={errorMsg ? "border-destructive focus-visible:ring-destructive/40" : undefined}
       />
+      {errorMsg && <p className="text-xs text-destructive">{errorMsg}</p>}
     </div>
   );
 
@@ -1370,9 +1387,9 @@ export function FinanceSection({ uuid }: { uuid: string }) {
                   onChange={(e) => setField("lending_institution", e.target.value.slice(0, MAX_LONG_CHARS))}
                 />
               </div>
-              <div className="space-y-1">
+              <div id="dpr-field-rate_of_interest_pct" className="space-y-1">
                 <LabelWithBadge uuid={uuid} section="finance" field="rate_of_interest_pct" className="text-xs">
-                  Rate of interest (%)
+                  Rate of interest (%) *
                 </LabelWithBadge>
                 <Input
                   type="text"
@@ -1384,10 +1401,16 @@ export function FinanceSection({ uuid }: { uuid: string }) {
                     const cleaned = normaliseDecimalInput(e.target.value, { max: MAX_PCT, maxDecimals: 2 });
                     setField("rate_of_interest_pct", (cleaned === "" ? null : cleaned) as Data["rate_of_interest_pct"]);
                   }}
+                  className={err("rate_of_interest_pct") ? "border-destructive focus-visible:ring-destructive/40" : undefined}
                 />
+                {err("rate_of_interest_pct") && (
+                  <p className="text-xs text-destructive">{err("rate_of_interest_pct")}</p>
+                )}
               </div>
               {intInput(moratoriumMonths, "moratorium_period_months", "Moratorium (months)", MAX_MORATORIUM_MONTHS, "e.g. 6")}
-              {intInput(repaymentYears, "repayment_period_years", "Repayment period (years)", MAX_REPAYMENT_YEARS, "e.g. 7")}
+              <div id="dpr-field-repayment_period_years">
+                {intInput(repaymentYears, "repayment_period_years", "Repayment period (years) *", MAX_REPAYMENT_YEARS, "e.g. 7", err("repayment_period_years"))}
+              </div>
               <div className="space-y-1">
                 <LabelWithBadge uuid={uuid} section="finance" field="repayment_frequency" className="text-xs">
                   Repayment frequency

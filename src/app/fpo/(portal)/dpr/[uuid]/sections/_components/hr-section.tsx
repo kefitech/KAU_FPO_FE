@@ -190,7 +190,9 @@ function toDec(v: string | number | null | undefined): string | null {
 
 // ── Per-row validators (mirror hr_validators.py) ──────────────────────
 
-type EmpErrors = Partial<Record<"designation" | "number_required", string>>;
+type EmpErrors = Partial<
+  Record<"designation" | "number_required" | "monthly_salary", string>
+>;
 function validateEmployee(row: Emp): EmpErrors {
   const e: EmpErrors = {};
   if (!(row.designation ?? "").trim()) {
@@ -200,6 +202,19 @@ function validateEmployee(row: Emp): EmpErrors {
   const numNum = num !== null && num !== undefined && num !== "" ? Number(num) : null;
   if (numNum === null || !Number.isFinite(numNum) || numNum <= 0) {
     e.number_required = "Number of employees shall be greater than zero.";
+  }
+  // Wages feed the Salaries line of Operating Cost → EBITDA → DSCR. Blank
+  // silently drops the role from opex. Backend mirrors this check —
+  // needs either monthly or annual salary > 0.
+  const ms = row.monthly_salary;
+  const ys = row.annual_salary;
+  const msNum = ms !== null && ms !== undefined && ms !== "" ? Number(ms) : null;
+  const ysNum = ys !== null && ys !== undefined && ys !== "" ? Number(ys) : null;
+  const hasMs = msNum !== null && Number.isFinite(msNum) && msNum > 0;
+  const hasYs = ysNum !== null && Number.isFinite(ysNum) && ysNum > 0;
+  if (!hasMs && !hasYs) {
+    e.monthly_salary =
+      "Monthly salary (or Annual salary) is required and shall be greater than zero.";
   }
   return e;
 }
@@ -638,7 +653,7 @@ export function HRSection({ uuid }: { uuid: string }) {
                   </ModalField>
                 </ModalRow>
                 <ModalRow>
-                  <ModalField label="Monthly salary (₹)">
+                  <ModalField label="Monthly salary (₹) *" error={eErr.monthly_salary}>
                     <Input
                       type="text"
                       inputMode="decimal"

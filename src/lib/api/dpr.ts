@@ -55,6 +55,15 @@ export interface DprApplicability {
   visible_sections: string[];
   /** Section keys marked Mandatory — used by readiness badges. */
   mandatory_sections: string[];
+  /** Section keys that must be complete before the rest of the wizard
+   *  unlocks. Currently ["identification", "components"]. */
+  seed_section_keys: string[];
+  /** Per-seed completion booleans, keyed by section key. */
+  seed_section_status: Record<string, boolean>;
+  /** True once every seed section has passed its validator. Once true,
+   *  stays true for the lifetime of the DPR — later edits that break
+   *  completeness don't re-lock the sidebar. */
+  seed_sections_complete: boolean;
 }
 
 // ── Section registry — source of truth for wizard navigation ────────────────
@@ -234,11 +243,22 @@ export const dprApi = {
   saveSection: <T extends DprSectionData = DprSectionData>(
     uuid: string,
     key: DprSectionKey,
-    payload: Partial<T>,
-  ): Promise<T> =>
-    api
-      .patch<Wrapped<T>>(`/fpo/dpr/projects/${uuid}/sections/${key}/`, payload)
-      .then((r) => r.data.data),
+    payload: Partial<T> | FormData,
+  ): Promise<T> => {
+    // `FormData` support: when the section save carries file parts
+    // (Products atomically attaching images to new rows), we skip axios's
+    // JSON serialization and let the browser set the multipart boundary.
+    const isMultipart = typeof FormData !== "undefined" && payload instanceof FormData;
+    return api
+      .patch<Wrapped<T>>(
+        `/fpo/dpr/projects/${uuid}/sections/${key}/`,
+        payload,
+        isMultipart
+          ? { headers: { "Content-Type": "multipart/form-data" } }
+          : undefined,
+      )
+      .then((r) => r.data.data);
+  },
 
   // ── Readiness (validators, no save) ──
   getReadiness: (uuid: string, key: DprSectionKey): Promise<DprReadiness> =>
@@ -320,6 +340,17 @@ export const dprApi = {
       .post<Wrapped<DprDocument>>(`/fpo/dpr/projects/${uuid}/documents/generate/`, {}, {
         timeout: 30_000,
       })
+      .then((r) => r.data.data),
+
+  // FPO clicked Finish on the wizard's last section — flips project
+  // IN_PROGRESS → SUBMITTED, stamps `submitted_at`, fires FPO + admin
+  // notifications. Idempotent (200 on already-submitted / generated).
+  finishDpr: (uuid: string): Promise<{ uuid: string; status: string; submitted_at: string | null }> =>
+    api
+      .post<Wrapped<{ uuid: string; status: string; submitted_at: string | null }>>(
+        `/fpo/dpr/projects/${uuid}/finish/`,
+        {},
+      )
       .then((r) => r.data.data),
 
   // List all generated documents (newest first). Excludes archived by default.

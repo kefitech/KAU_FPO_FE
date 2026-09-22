@@ -193,20 +193,24 @@ function validateMachine(row: Machine): MachineErrors {
   if (rcNum !== null && rcNum > 0 && !row.capacity_unit) {
     e.capacity_unit = "Capacity Unit shall be specified when machinery capacity is entered.";
   }
+  // Unit cost + useful life feed depreciation, Fixed Capital Investment,
+  // Means of Finance, DSCR and payback. Blanks silently underscored the
+  // project cost (ChatGPT calc audit 2026-09-22) — hard-required per row
+  // to mirror the tightened backend validator.
   const uc = row.unit_cost;
   const ucNum = uc !== null && uc !== undefined && uc !== "" ? Number(uc) : null;
-  if (ucNum !== null && ucNum <= 0) {
-    e.unit_cost = "Unit Cost shall be greater than zero.";
+  if (ucNum === null || ucNum <= 0) {
+    e.unit_cost = "Unit Cost is required and shall be greater than zero.";
   }
   const life = row.useful_life_years;
   const lifeNum = life !== null && life !== undefined && life !== "" ? Number(life) : null;
-  if (lifeNum !== null && lifeNum <= 0) {
-    e.useful_life_years = "Useful Life shall be greater than zero.";
+  if (lifeNum === null || lifeNum <= 0) {
+    e.useful_life_years = "Useful Life is required and shall be greater than zero.";
   }
   return e;
 }
 
-type SupportingErrors = Partial<Record<"asset" | "quantity", string>>;
+type SupportingErrors = Partial<Record<"asset" | "quantity" | "estimated_cost", string>>;
 function validateSupporting(row: Supporting): SupportingErrors {
   const e: SupportingErrors = {};
   if (!row.asset) e.asset = "Asset is required.";
@@ -214,6 +218,15 @@ function validateSupporting(row: Supporting): SupportingErrors {
   const qtyNum = qty !== null && qty !== undefined && qty !== "" ? Number(qty) : null;
   if (qtyNum === null || !Number.isFinite(qtyNum) || qtyNum <= 0) {
     e.quantity = "Supporting asset quantity shall be greater than zero.";
+  }
+  // Supporting-asset cost feeds Fixed Capital Investment too — same
+  // silent-blank pattern as machinery unit_cost. Hard-required to
+  // mirror the tightened backend validator.
+  const ec = row.estimated_cost;
+  const ecNum = ec !== null && ec !== undefined && ec !== "" ? Number(ec) : null;
+  if (ecNum === null || !Number.isFinite(ecNum) || ecNum <= 0) {
+    e.estimated_cost =
+      "Estimated Cost is required and shall be greater than zero.";
   }
   return e;
 }
@@ -517,7 +530,7 @@ export function MachinerySection({ uuid }: { uuid: string }) {
                   </ModalField>
                 </ModalRow>
                 <ModalRow>
-                  <ModalField label="Unit cost (₹)" error={mErr.unit_cost}>
+                  <ModalField label="Unit cost (₹) *" error={mErr.unit_cost}>
                     <Input
                       type="text"
                       inputMode="decimal"
@@ -551,7 +564,7 @@ export function MachinerySection({ uuid }: { uuid: string }) {
                   </ModalField>
                 </ModalRow>
                 <ModalRow>
-                  <ModalField label="Useful life (years)" error={mErr.useful_life_years}>
+                  <ModalField label="Useful life (years) *" error={mErr.useful_life_years}>
                     <Input
                       type="text"
                       inputMode="numeric"
@@ -669,7 +682,7 @@ export function MachinerySection({ uuid }: { uuid: string }) {
                       }}
                     />
                   </ModalField>
-                  <ModalField label="Estimated cost (₹)">
+                  <ModalField label="Estimated cost (₹) *" error={sErr.estimated_cost}>
                     <Input
                       type="text"
                       inputMode="decimal"

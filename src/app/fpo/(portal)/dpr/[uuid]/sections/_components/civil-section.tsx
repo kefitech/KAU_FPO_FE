@@ -183,7 +183,9 @@ function validateExistingBuilding(row: ExistingBuilding): ExistingBuildingErrors
   return e;
 }
 
-type ProposedBuildingErrors = Partial<Record<"building_type" | "floor_area", string>>;
+type ProposedBuildingErrors = Partial<
+  Record<"building_type" | "floor_area" | "estimated_construction_cost", string>
+>;
 function validateProposedBuilding(row: ProposedBuilding): ProposedBuildingErrors {
   const e: ProposedBuildingErrors = {};
   if (!row.building_type) e.building_type = "Building Type shall be specified.";
@@ -191,6 +193,15 @@ function validateProposedBuilding(row: ProposedBuilding): ProposedBuildingErrors
   const faNum = fa !== null && fa !== undefined && fa !== "" ? Number(fa) : null;
   if (faNum === null || !Number.isFinite(faNum) || faNum <= 0) {
     e.floor_area = "Floor Area shall be greater than zero.";
+  }
+  // Estimated construction cost feeds Fixed Capital Investment, MoF and
+  // downstream ratios. Blank silently understated project cost (ChatGPT
+  // calc audit 2026-09-22) — hard-required to mirror the tightened backend.
+  const ec = row.estimated_construction_cost;
+  const ecNum = ec !== null && ec !== undefined && ec !== "" ? Number(ec) : null;
+  if (ecNum === null || !Number.isFinite(ecNum) || ecNum <= 0) {
+    e.estimated_construction_cost =
+      "Estimated Construction Cost is required and shall be greater than zero.";
   }
   return e;
 }
@@ -590,7 +601,10 @@ export function CivilSection({ uuid }: { uuid: string }) {
                       }}
                     />
                   </ModalField>
-                  <ModalField label="Estimated construction cost (₹)">
+                  <ModalField
+                    label="Estimated construction cost (₹) *"
+                    error={pErr.estimated_construction_cost}
+                  >
                     <Input
                       type="text"
                       inputMode="decimal"

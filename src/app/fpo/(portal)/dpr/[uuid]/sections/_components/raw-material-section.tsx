@@ -34,7 +34,10 @@ import { SectionShell } from "./section-shell";
 const MAX_NAME_CHARS = 200;
 const MAX_SCIENTIFIC_CHARS = 200;
 const MAX_VARIETY_CHARS = 100;
-const MAX_SEASON_CHARS = 200;
+// Backend `peak_harvest_season` + `lean_season` are CharField(max_length=100)
+// on `DPRRawMaterial`. Kept in sync so the FE doesn't allow past what the
+// server accepts.
+const MAX_SEASON_CHARS = 100;
 const MAX_GRADE_CHARS = 50;
 const MAX_OTHER_TEXT_CHARS = 200;
 const MAX_METHOD_TEXT_CHARS = 300;      // collection_method, transportation_arrangement
@@ -127,15 +130,51 @@ function validateRisk(row: { risk_type: string; mitigation_strategy: string }) {
   return e;
 }
 
-function validatePackaging(row: { material_name: string }) {
-  const e: Partial<Record<"material_name", string>> = {};
+function validatePackaging(row: {
+  material_name: string;
+  unit_cost?: string | number | null;
+  estimated_annual_requirement?: string | number | null;
+}) {
+  const e: Partial<
+    Record<"material_name" | "unit_cost" | "estimated_annual_requirement", string>
+  > = {};
   if (!(row.material_name ?? "").trim()) e.material_name = "Material name is required.";
+  // Unit cost + annual requirement feed Operating Cost (packaging line).
+  // Silent-blank pattern was under-costing the P&L (calc audit 2026-09-22).
+  const uc = row.unit_cost;
+  const ucNum = uc !== null && uc !== undefined && uc !== "" ? Number(uc) : null;
+  if (ucNum === null || !Number.isFinite(ucNum) || ucNum <= 0) {
+    e.unit_cost = "Unit Cost is required and shall be greater than zero.";
+  }
+  const ar = row.estimated_annual_requirement;
+  const arNum = ar !== null && ar !== undefined && ar !== "" ? Number(ar) : null;
+  if (arNum === null || !Number.isFinite(arNum) || arNum <= 0) {
+    e.estimated_annual_requirement =
+      "Estimated Annual Requirement is required and shall be greater than zero.";
+  }
   return e;
 }
 
-function validateConsumable(row: { name: string }) {
-  const e: Partial<Record<"name", string>> = {};
+function validateConsumable(row: {
+  name: string;
+  unit_cost?: string | number | null;
+  estimated_annual_requirement?: string | number | null;
+}) {
+  const e: Partial<
+    Record<"name" | "unit_cost" | "estimated_annual_requirement", string>
+  > = {};
   if (!(row.name ?? "").trim()) e.name = "Consumable name is required.";
+  const uc = row.unit_cost;
+  const ucNum = uc !== null && uc !== undefined && uc !== "" ? Number(uc) : null;
+  if (ucNum === null || !Number.isFinite(ucNum) || ucNum <= 0) {
+    e.unit_cost = "Unit Cost is required and shall be greater than zero.";
+  }
+  const ar = row.estimated_annual_requirement;
+  const arNum = ar !== null && ar !== undefined && ar !== "" ? Number(ar) : null;
+  if (arNum === null || !Number.isFinite(arNum) || arNum <= 0) {
+    e.estimated_annual_requirement =
+      "Estimated Annual Requirement is required and shall be greater than zero.";
+  }
   return e;
 }
 
@@ -669,15 +708,35 @@ export function RawMaterialSection({ uuid }: { uuid: string }) {
                         <Input
                           value={row.peak_harvest_season ?? ""}
                           maxLength={MAX_SEASON_CHARS}
+                          placeholder="e.g. Sep–Jan"
                           onChange={(e) => set("peak_harvest_season", e.target.value.slice(0, MAX_SEASON_CHARS))}
                         />
+                        <p
+                          className={`mt-1 text-right text-[10px] ${
+                            (row.peak_harvest_season?.length ?? 0) >= MAX_SEASON_CHARS
+                              ? "text-destructive"
+                              : "text-muted-foreground"
+                          }`}
+                        >
+                          {row.peak_harvest_season?.length ?? 0}/{MAX_SEASON_CHARS}
+                        </p>
                       </ModalField>
                       <ModalField label="Lean season">
                         <Input
                           value={row.lean_season ?? ""}
                           maxLength={MAX_SEASON_CHARS}
+                          placeholder="e.g. Mar–Jun"
                           onChange={(e) => set("lean_season", e.target.value.slice(0, MAX_SEASON_CHARS))}
                         />
+                        <p
+                          className={`mt-1 text-right text-[10px] ${
+                            (row.lean_season?.length ?? 0) >= MAX_SEASON_CHARS
+                              ? "text-destructive"
+                              : "text-muted-foreground"
+                          }`}
+                        >
+                          {row.lean_season?.length ?? 0}/{MAX_SEASON_CHARS}
+                        </p>
                       </ModalField>
                     </ModalRow>
                     <ModalField label="Off-season procurement strategy *" error={rErr.off_season_strategy}>
@@ -962,7 +1021,7 @@ export function RawMaterialSection({ uuid }: { uuid: string }) {
               </ModalField>
               <ModalRow>
                 <ModalField label="Unit"><MasterSearchableSelect value={row.unit} options={unitQuery.data ?? []} onChange={(v) => set("unit", v)} placeholder="Type to search unit…" /></ModalField>
-                <ModalField label="Estimated annual requirement">
+                <ModalField label="Estimated annual requirement *" error={rErr.estimated_annual_requirement}>
                   <Input
                     type="text"
                     inputMode="decimal"
@@ -977,7 +1036,7 @@ export function RawMaterialSection({ uuid }: { uuid: string }) {
                 </ModalField>
               </ModalRow>
               <ModalRow>
-                <ModalField label="Unit cost (₹)">
+                <ModalField label="Unit cost (₹) *" error={rErr.unit_cost}>
                   <Input
                     type="text"
                     inputMode="decimal"
@@ -1037,7 +1096,7 @@ export function RawMaterialSection({ uuid }: { uuid: string }) {
               </ModalField>
               <ModalRow>
                 <ModalField label="Unit"><MasterSearchableSelect value={row.unit} options={unitQuery.data ?? []} onChange={(v) => set("unit", v)} placeholder="Type to search unit…" /></ModalField>
-                <ModalField label="Estimated annual requirement">
+                <ModalField label="Estimated annual requirement *" error={rErr.estimated_annual_requirement}>
                   <Input
                     type="text"
                     inputMode="decimal"
@@ -1051,7 +1110,7 @@ export function RawMaterialSection({ uuid }: { uuid: string }) {
                   />
                 </ModalField>
               </ModalRow>
-              <ModalField label="Unit cost (₹)">
+              <ModalField label="Unit cost (₹) *" error={rErr.unit_cost}>
                 <Input
                   type="text"
                   inputMode="decimal"

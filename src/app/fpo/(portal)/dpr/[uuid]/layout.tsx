@@ -3,9 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { keepPreviousData, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, ArrowLeft, CheckCircle2, Circle, CircleDashed, Download, FileStack, Loader2, PanelLeft, PanelLeftOpen, RefreshCw, Sparkles, XCircle } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle2, Circle, CircleDashed, Download, FileStack, Loader2, Lock as LockIcon, PanelLeft, PanelLeftOpen, RefreshCw, Sparkles, XCircle } from "lucide-react";
 import Link from "next/link";
-import { useParams, usePathname } from "next/navigation";
+import { useParams, usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +39,7 @@ function SectionNavItem({
   showStatus,
   readiness,
   mandatory,
+  locked,
 }: {
   uuid: string;
   section: DprSectionInfo;
@@ -51,17 +52,12 @@ function SectionNavItem({
   readiness: ReadinessState;
   /** True when the rule engine flags this section as Mandatory. */
   mandatory?: boolean;
+  /** True until Identification + Components are both complete. Renders
+   *  the row as a non-clickable, greyed-out placeholder with a lock icon. */
+  locked?: boolean;
 }) {
-  return (
-    <Link
-      href={`/fpo/dpr/${uuid}/sections/${section.key}`}
-      className={cn(
-        "group relative flex items-center gap-3 rounded-md px-2.5 py-2 text-sm transition-colors",
-        active
-          ? "bg-primary/10 text-foreground font-medium"
-          : "text-muted-foreground hover:bg-muted hover:text-foreground",
-      )}
-    >
+  const commonBody = (
+    <>
       {active && (
         <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r-full bg-primary" />
       )}
@@ -80,7 +76,13 @@ function SectionNavItem({
         </span>
       )}
       <span className="flex-1 truncate">{section.title}</span>
-      {mandatory && (
+      {locked && (
+        <LockIcon
+          className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60"
+          aria-label="Locked"
+        />
+      )}
+      {!locked && mandatory && (
         <span
           className="rounded bg-red-100 px-1 py-0.5 text-[9px] font-semibold text-red-700 dark:bg-red-950 dark:text-red-300"
           title="Required for submission"
@@ -88,12 +90,43 @@ function SectionNavItem({
           M
         </span>
       )}
-      {dirty && (
+      {!locked && dirty && (
         <span
           className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500"
           title="Unsaved changes"
         />
       )}
+    </>
+  );
+
+  if (locked) {
+    return (
+      <div
+        role="button"
+        aria-disabled="true"
+        tabIndex={-1}
+        title="Complete Project Identification & Components to unlock the rest."
+        className={cn(
+          "group relative flex items-center gap-3 rounded-md px-2.5 py-2 text-sm",
+          "cursor-not-allowed text-muted-foreground/50 opacity-60",
+        )}
+      >
+        {commonBody}
+      </div>
+    );
+  }
+
+  return (
+    <Link
+      href={`/fpo/dpr/${uuid}/sections/${section.key}`}
+      className={cn(
+        "group relative flex items-center gap-3 rounded-md px-2.5 py-2 text-sm transition-colors",
+        active
+          ? "bg-primary/10 text-foreground font-medium"
+          : "text-muted-foreground hover:bg-muted hover:text-foreground",
+      )}
+    >
+      {commonBody}
     </Link>
   );
 }
@@ -216,37 +249,36 @@ function WizardRefreshButton() {
   );
 }
 
-// ── PDF download button ────────────────────────────────────────────────────
-// Fetches /api/fpo/dpr/projects/<uuid>/pdf/, triggers a browser download
-// without navigating away. Disabled while the PDF is being generated so the
-// user can see the click was received.
+// ── PDF preview button ─────────────────────────────────────────────────────
+// Fetches /api/fpo/dpr/projects/<uuid>/pdf/ (unversioned, no side effects)
+// and opens it in a new browser tab so the reviewer can eyeball the DPR
+// without bumping the version counter or downloading a file. Use "Manage
+// DPRs" for a permanent, versioned copy that goes into the audit history.
 
-function DownloadPdfButton({ uuid }: { uuid: string }) {
-  const [downloading, setDownloading] = useState(false);
+function PreviewPdfButton({ uuid }: { uuid: string }) {
+  const [loading, setLoading] = useState(false);
 
   async function handleClick() {
-    if (downloading) return;
-    setDownloading(true);
+    if (loading) return;
+    setLoading(true);
     try {
       const blob = await dprApi.downloadPdf(uuid);
-      // Trigger browser download via anchor click — no navigation, no popup blocker.
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `dpr_${uuid.slice(0, 8)}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      // Revoke after a short delay so the download completes on slow devices.
-      setTimeout(() => URL.revokeObjectURL(url), 4000);
-      toast.success("DPR PDF downloaded");
+      // Open in a new tab — no `a.download` attribute so the browser
+      // renders the PDF inline instead of forcing a save. Revoke the
+      // object URL after a beat so the tab has fully loaded first.
+      const win = window.open(url, "_blank", "noopener,noreferrer");
+      if (!win) {
+        toast.error("Popup blocked. Allow popups to preview the DPR.");
+      } else {
+        toast.success("Preview opened in a new tab.");
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (err) {
-      // Backend errors surface as a JSON body inside the blob when responseType='blob'
-      // was used. Best-effort parse; fall back to a generic message.
-      toast.error("Failed to generate PDF. Please save all sections and try again.");
-      console.warn("[DPR PDF] download error", err);
+      toast.error("Failed to generate preview. Save all sections and try again.");
+      console.warn("[DPR PDF] preview error", err);
     } finally {
-      setDownloading(false);
+      setLoading(false);
     }
   }
 
@@ -255,15 +287,15 @@ function DownloadPdfButton({ uuid }: { uuid: string }) {
       variant="outline"
       size="sm"
       onClick={handleClick}
-      disabled={downloading}
-      title="Download the DPR as a PDF (uses live financial calculation)"
+      disabled={loading}
+      title="Unversioned live preview in a new tab. Use Manage DPRs to release a permanent version."
     >
-      {downloading ? (
+      {loading ? (
         <Loader2 className="mr-1 h-4 w-4 animate-spin" />
       ) : (
         <Download className="mr-1 h-4 w-4" />
       )}
-      {downloading ? "Generating…" : "Download PDF"}
+      {loading ? "Preparing…" : "Preview PDF"}
     </Button>
   );
 }
@@ -272,6 +304,7 @@ function DownloadPdfButton({ uuid }: { uuid: string }) {
 
 export default function DprWizardLayout({ children }: { children: React.ReactNode }) {
   const params = useParams<{ uuid: string }>();
+  const router = useRouter();
   const uuid = params.uuid;
   const pathname = usePathname();
   const dirty = useDprWizardStore((s) => s.dirty);
@@ -325,6 +358,20 @@ export default function DprWizardLayout({ children }: { children: React.ReactNod
     return applicability.applicability[key] ?? "O";
   }
 
+  // Soft-lock — the rest of the wizard is greyed out until Identification
+  // + Components are both marked complete by their backend validators.
+  // While applicability is still loading, treat the wizard as UNLOCKED so
+  // we don't briefly lock every section on first mount.
+  const seedKeys: string[] = applicability?.seed_section_keys ?? [
+    "identification",
+    "components",
+  ];
+  const seedComplete = applicability?.seed_sections_complete ?? true;
+  function sectionLocked(key: string): boolean {
+    if (seedComplete) return false;
+    return !seedKeys.includes(key);
+  }
+
   // Split sections by KAU stream group for the sidebar — hides H sections
   // when the engine is enabled and returns hidden decisions. Sections stay
   // in canonical DPR_SECTIONS order within their group.
@@ -366,6 +413,23 @@ export default function DprWizardLayout({ children }: { children: React.ReactNod
   }, [showStatus]);
 
   const readinessMap = useAllSectionsReadiness(uuid, showStatus);
+
+  // Soft-lock guard — if the user URL-hops to a locked section (bookmark,
+  // browser back, or a stale link from an old email), bounce them to
+  // the first seed section so they finish the onboarding steps first.
+  // Only fires once applicability has loaded; skipping the redirect while
+  // it's still `undefined` avoids a flash on first mount.
+  useEffect(() => {
+    if (!applicability) return;
+    if (applicability.seed_sections_complete) return;
+    if (!activeSectionKey) return;
+    if (seedKeys.includes(activeSectionKey)) return;
+    router.replace(`/fpo/dpr/${uuid}/sections/${seedKeys[0] ?? "identification"}`);
+    // Intentionally exclude `router` + `uuid` + `seedKeys` from deps —
+    // stable across renders. The three that matter are the applicability
+    // payload + the currently active section key.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [applicability, activeSectionKey]);
 
   // Sidebar collapse toggle — hide the 22-step nav to give the section
   // form the full viewport width. Preference persisted in localStorage.
@@ -476,7 +540,7 @@ export default function DprWizardLayout({ children }: { children: React.ReactNod
               Manage DPRs
             </Link>
           </Button>
-          <DownloadPdfButton uuid={uuid} />
+          <PreviewPdfButton uuid={uuid} />
           <WizardRefreshButton />
           <SaveIndicator />
         </div>
@@ -487,6 +551,23 @@ export default function DprWizardLayout({ children }: { children: React.ReactNod
         {/* Expanded sidebar — full width with titles + group headings + toggle */}
         {!sidebarCollapsed && (
           <aside className="w-64 shrink-0 overflow-y-auto border-r bg-background p-4">
+            {/* Soft-lock banner — visible only until Identification +
+                Components are both marked complete. Tells the FPO what
+                needs to happen before the rest of the wizard unlocks. */}
+            {applicability && !applicability.seed_sections_complete && (
+              <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5 text-[11px] leading-snug text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+                <div className="mb-1 flex items-center gap-1.5 font-semibold">
+                  <LockIcon className="h-3.5 w-3.5" />
+                  Complete these first
+                </div>
+                <p>
+                  Fill <span className="font-medium">Project Identification</span>{" "}
+                  and <span className="font-medium">Project Components</span> to
+                  unlock the rest of the wizard. This lets the system scope
+                  the DPR to your project.
+                </p>
+              </div>
+            )}
             {/* Numbers ↔ colored status dots toggle. Persists in localStorage. */}
             <label className="mb-4 flex cursor-pointer items-center justify-between rounded-md border bg-muted/30 px-3 py-2 text-xs">
               <span className="font-medium">Show completion status</span>
@@ -512,6 +593,7 @@ export default function DprWizardLayout({ children }: { children: React.ReactNod
                         showStatus={showStatus}
                         readiness={readinessMap[section.key as DprSectionKey] ?? "empty"}
                         mandatory={sectionApplicability(section.key) === "M"}
+                        locked={sectionLocked(section.key)}
                       />
                     );
                   })}
@@ -530,20 +612,15 @@ export default function DprWizardLayout({ children }: { children: React.ReactNod
               {DPR_SECTIONS.filter((s) => visibleSectionKeys.includes(s.key)).map((section, i) => {
                 const active = activeSectionKey === section.key;
                 const readiness = readinessMap[section.key] ?? "empty";
-                return (
-                  <Link
-                    key={section.key}
-                    href={`/fpo/dpr/${uuid}/sections/${section.key}`}
-                    title={`${i + 1}. ${section.title}`}
-                    className={cn(
-                      "group relative flex h-9 w-9 items-center justify-center rounded-md transition-colors",
-                      active ? "bg-primary/10" : "hover:bg-muted",
-                    )}
-                  >
+                const isLocked = sectionLocked(section.key);
+                const inner = (
+                  <>
                     {active && (
                       <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r-full bg-primary" />
                     )}
-                    {showStatus ? (
+                    {isLocked ? (
+                      <LockIcon className="h-4 w-4 text-muted-foreground/50" />
+                    ) : showStatus ? (
                       <StatusDot state={readiness} active={active} />
                     ) : (
                       <span
@@ -557,12 +634,41 @@ export default function DprWizardLayout({ children }: { children: React.ReactNod
                         {i + 1}
                       </span>
                     )}
-                    {dirty[section.key] && (
+                    {!isLocked && dirty[section.key] && (
                       <span
                         className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-orange-500"
                         title="Unsaved changes"
                       />
                     )}
+                  </>
+                );
+                if (isLocked) {
+                  return (
+                    <div
+                      key={section.key}
+                      role="button"
+                      aria-disabled="true"
+                      title={`${i + 1}. ${section.title} — locked until Identification & Components are complete`}
+                      className={cn(
+                        "group relative flex h-9 w-9 items-center justify-center rounded-md",
+                        "cursor-not-allowed opacity-60",
+                      )}
+                    >
+                      {inner}
+                    </div>
+                  );
+                }
+                return (
+                  <Link
+                    key={section.key}
+                    href={`/fpo/dpr/${uuid}/sections/${section.key}`}
+                    title={`${i + 1}. ${section.title}`}
+                    className={cn(
+                      "group relative flex h-9 w-9 items-center justify-center rounded-md transition-colors",
+                      active ? "bg-primary/10" : "hover:bg-muted",
+                    )}
+                  >
+                    {inner}
                   </Link>
                 );
               })}

@@ -207,7 +207,7 @@ const _meaningful = (v: string): boolean =>
 
 type FuelErrors = Partial<
   Record<
-    "fuel" | "fuel_other" | "purpose" | "daily_consumption" | "annual_consumption",
+    "fuel" | "fuel_other" | "purpose" | "daily_consumption" | "annual_consumption" | "estimated_annual_cost",
     string
   >
 >;
@@ -231,6 +231,15 @@ function validateFuel(row: Fuel): FuelErrors {
   if (ac && !/^\d+(\.\d+)?\s+\S/.test(ac)) {
     e.annual_consumption =
       "Enter a positive number and pick a unit (e.g. '7300 litres').";
+  }
+  // Estimated annual cost feeds the P&L operating-cost line — silent-blank
+  // pattern that dropped ₹ crores from the calc engine. Hard-required to
+  // mirror the tightened backend validator.
+  const eac = row.estimated_annual_cost;
+  const eacNum = eac !== null && eac !== undefined && eac !== "" ? Number(eac) : null;
+  if (eacNum === null || !Number.isFinite(eacNum) || eacNum <= 0) {
+    e.estimated_annual_cost =
+      "Estimated Annual Cost is required and shall be greater than zero.";
   }
   return e;
 }
@@ -270,16 +279,18 @@ function validateRenewable(row: Renewable): RenewableErrors {
         "Enter a positive number and pick a unit (e.g. '5 litres').";
     }
   }
-  // Numeric fields — if the user types something, it must be a positive
-  // finite number. Backend serializer rejects zeros/negatives silently by
-  // treating them as no-cost rows, which was the source of the "saved but
-  // reappeared after refresh" bug — surface the error inline instead.
+  // Estimated cost feeds Fixed Capital Investment for renewable
+  // initiatives. Silent-blank pattern was the source of the "saved but
+  // reappeared after refresh" bug — hard-required to mirror the tightened
+  // backend validator so blank costs can never enter the calc.
   const costRaw = row.estimated_cost;
-  if (costRaw !== null && costRaw !== undefined && String(costRaw).trim() !== "") {
-    const c = Number(costRaw);
-    if (!Number.isFinite(c) || c <= 0) {
-      e.estimated_cost = "Estimated cost must be a positive number (₹).";
-    }
+  const costNum =
+    costRaw !== null && costRaw !== undefined && String(costRaw).trim() !== ""
+      ? Number(costRaw)
+      : null;
+  if (costNum === null || !Number.isFinite(costNum) || costNum <= 0) {
+    e.estimated_cost =
+      "Estimated Cost is required and shall be greater than zero (₹).";
   }
   const savingsRaw = row.expected_annual_savings;
   if (savingsRaw !== null && savingsRaw !== undefined && String(savingsRaw).trim() !== "") {
@@ -814,7 +825,10 @@ export function UtilitiesSection({ uuid }: { uuid: string }) {
                     </div>
                   );
                 })()}
-                <ModalField label="Estimated annual cost (₹)">
+                <ModalField
+                  label="Estimated annual cost (₹) *"
+                  error={fErr.estimated_annual_cost}
+                >
                   <Input
                     type="text"
                     inputMode="decimal"
@@ -1183,7 +1197,7 @@ export function UtilitiesSection({ uuid }: { uuid: string }) {
                   );
                 })()}
                 <ModalRow>
-                  <ModalField label="Estimated cost (₹)" error={rErr.estimated_cost}>
+                  <ModalField label="Estimated cost (₹) *" error={rErr.estimated_cost}>
                     <Input
                       type="text"
                       inputMode="decimal"

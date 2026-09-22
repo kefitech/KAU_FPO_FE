@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   AlertCircle,
   ArrowLeft,
@@ -219,6 +220,25 @@ export function SectionShell({
     return false;    // let the <Link> navigate normally
   }
 
+  // Finish button on the last section — flips project IN_PROGRESS →
+  // SUBMITTED via POST /finish/, then routes the user to Manage DPRs so
+  // they can generate a versioned PDF. Idempotent: re-clicking after
+  // SUBMITTED / GENERATED is a no-op 200.
+  const finishMutation = useMutation({
+    mutationFn: () => dprApi.finishDpr(uuid),
+    onSuccess: () => {
+      toast.success("DPR submitted. Generate the PDF from Manage DPRs.");
+      router.push(`/fpo/dpr/${uuid}/documents`);
+    },
+    onError: (err) => {
+      const msg = (err as { data?: { message?: string }; message?: string })
+        ?.data?.message
+        ?? (err as { message?: string })?.message
+        ?? "Failed to submit DPR. Please try again.";
+      toast.error(typeof msg === "string" ? msg : "Failed to submit DPR.");
+    },
+  });
+
   async function saveThenNavigate() {
     if (!onSave || !pendingNavUrl) return;
     const url = pendingNavUrl;
@@ -236,7 +256,14 @@ export function SectionShell({
       // Small delay to give React Query a chance to flush the mutation +
       // downstream refetch triggers before the next section mounts.
       await new Promise<void>((r) => setTimeout(r, 250));
-      router.push(url);
+      // Sentinel — Finish flow: save was successful, now fire the finish
+      // mutation instead of just navigating. `onSuccess` of the mutation
+      // routes to /documents, so no explicit push here.
+      if (url === "__finish__") {
+        finishMutation.mutate();
+      } else {
+        router.push(url);
+      }
     } finally {
       setPendingNavUrl(null);
       setSavingBeforeNav(false);
@@ -248,6 +275,11 @@ export function SectionShell({
     if (onDiscard) onDiscard();
     const url = pendingNavUrl;
     setPendingNavUrl(null);
+    // Finish sentinel — same-shape branch as saveThenNavigate.
+    if (url === "__finish__") {
+      finishMutation.mutate();
+      return;
+    }
     router.push(url);
   }
 
@@ -463,27 +495,33 @@ export function SectionShell({
                       </Link>
                     </Button>
                   ) : (
-                    // Last section — no forward destination. Show a subtle
-                    // link back to the DPR overview instead of leaving the
-                    // right column empty (also stops the layout jumping).
+                    // Last section — Finish. Flips project IN_PROGRESS →
+                    // SUBMITTED via POST /finish/, then routes to Manage
+                    // DPRs. If the section is dirty, the same unsaved-
+                    // changes dialog appears first (Save & continue then
+                    // triggers the finish once the save resolves via the
+                    // pendingNavUrl sentinel below).
                     <Button
-                      asChild
                       type="button"
-                      variant="outline"
+                      variant="default"
                       size="sm"
-                      title="Back to DPR project overview"
+                      disabled={finishMutation.isPending}
+                      onClick={() => {
+                        if (showSaveControls && isDirty) {
+                          setPendingNavUrl("__finish__");
+                          return;
+                        }
+                        finishMutation.mutate();
+                      }}
+                      title="Submit the DPR and go to Manage DPRs to generate a versioned PDF"
                     >
-                      <Link
-                        href={`/fpo/dpr/${uuid}`}
-                        onClick={(e) => {
-                          if (interceptNav(`/fpo/dpr/${uuid}`)) {
-                            e.preventDefault();
-                          }
-                        }}
-                      >
-                        Finish
+                      {finishMutation.isPending ? (
+                        <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                      ) : null}
+                      {finishMutation.isPending ? "Submitting…" : "Finish"}
+                      {!finishMutation.isPending && (
                         <ArrowRight className="ml-1.5 h-4 w-4" />
-                      </Link>
+                      )}
                     </Button>
                   )}
                 </div>

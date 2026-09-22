@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, CheckCircle2, ImagePlus, PackagePlus, Pencil, Trash2 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -55,8 +55,15 @@ const ProductItemSchema = z.object({
   is_value_added: z.boolean().nullable(),
   description: z.string(),
   // Read-only URL of the uploaded product photo (or null). Upload/delete
-  // go through the dedicated multipart endpoint, not the section save.
+  // for EXISTING rows go through the dedicated multipart endpoint. For
+  // NEW rows (no id yet) the file rides along on the section save via
+  // `_pendingImage` (see `serializePayload` + Products backend view).
   image: z.string().nullable().optional(),
+  // Ephemeral — never sent to the server as JSON. Holds a File the user
+  // picked inside the "Add product" modal before the row has a backend id.
+  // On section save, `serializePayload` moves it into a `FormData` blob
+  // and tags the row with a matching `_image_key`. Cleared on refetch.
+  _pendingImage: z.instanceof(File).nullable().optional(),
 });
 type ProductItem = z.infer<typeof ProductItemSchema>;
 
@@ -175,18 +182,51 @@ function validateRow(row: ProductItem): RowErrors {
   return errors;
 }
 
-function serializePayload(v: Data): Record<string, unknown> {
-  return {
-    items: v.items.map((it, idx) => ({
+function serializePayload(v: Data): Record<string, unknown> | FormData {
+  // Build the JSON `items` array first — same shape as before, but each
+  // new row with a pending File gets tagged with an `_image_key` so the
+  // backend can match it to a form file part.
+  let pendingCount = 0;
+  const items = v.items.map((it, idx) => {
+    const base: Record<string, unknown> = {
       ...it,
       order: idx,
       annual_quantity: toDecimalString(it.annual_quantity),
       selling_price_per_unit: toDecimalString(it.selling_price_per_unit),
-      // Coerce tri-state null → false so backend BooleanField stays
-      // non-null. Explicit Yes/No selections pass through unchanged.
       is_value_added: it.is_value_added === true,
-    })),
-  };
+    };
+    // Strip the ephemeral holder; it never goes to the server as JSON.
+    delete base._pendingImage;
+    // Only attach pending files for BRAND-NEW rows (no server id yet).
+    // Once the row has been saved and re-hydrated with an id, a lingering
+    // File in local state (e.g. after an autosave `keepDirtyValues` reset)
+    // must be ignored so we don't upload the same photo every 5 seconds.
+    if (!it.id && it._pendingImage instanceof File) {
+      pendingCount += 1;
+      base._image_key = `new_${pendingCount}`;
+    }
+    return base;
+  });
+
+  // No pending files → keep the old JSON shape. Preserves the JSON code
+  // path across the rest of the app (autosave, unchanged rows, etc).
+  if (pendingCount === 0) {
+    return { items };
+  }
+
+  // Multipart flow — same items JSON as a string field, plus one file
+  // part per pending image. Backend `DPRProductsSectionView.patch`
+  // detects this shape and attaches files after row creation.
+  const fd = new FormData();
+  fd.append("items", JSON.stringify(items));
+  let n = 0;
+  for (const it of v.items) {
+    if (!it.id && it._pendingImage instanceof File) {
+      n += 1;
+      fd.append(`image_new_${n}`, it._pendingImage);
+    }
+  }
+  return fd;
 }
 
 // ── Product image upload widget ───────────────────────────────────────────
@@ -211,12 +251,20 @@ function ProductImageField({
   uuid,
   rowId,
   currentImageUrl,
+  pendingFile,
   onChange,
+  onPendingChange,
 }: {
   uuid: string;
   rowId: number | undefined;
   currentImageUrl: string | null | undefined;
+  /** Ephemeral File the user picked before the row has a backend id.
+   *  Non-null only in the "attach on save" path. */
+  pendingFile?: File | null | undefined;
+  /** For existing rows: fires when the direct multipart upload succeeds. */
   onChange: (newUrl: string | null) => void;
+  /** For new rows: fires when the user picks / clears the pending file. */
+  onPendingChange?: (file: File | null) => void;
 }) {
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -253,24 +301,40 @@ function ProductImageField({
       toast.error("Image is larger than 5 MB.");
       return;
     }
-    uploadMut.mutate(f);
+    // Existing row → direct multipart upload for immediate feedback.
+    // New row → stash the file in the parent's ephemeral state; it will
+    // ride along on the section save.
+    if (rowId) {
+      uploadMut.mutate(f);
+    } else if (onPendingChange) {
+      onPendingChange(f);
+      toast.success("Photo attached. It will upload when you save the product.");
+    }
   }
 
-  // Row hasn't been saved yet — no id to attach the image to.
-  if (!rowId) {
-    return (
-      <p className="text-xs italic text-muted-foreground">
-        Save this product first, then reopen it to upload a photo.
-      </p>
-    );
-  }
+  // Preview source — existing image URL wins, else a local object URL for
+  // the pending file (so user sees a thumb inside the modal before save).
+  const previewUrl = useMemo(() => {
+    if (currentImageUrl) return currentImageUrl;
+    if (pendingFile) return URL.createObjectURL(pendingFile);
+    return null;
+  }, [currentImageUrl, pendingFile]);
+  // Revoke object URLs on unmount / file swap to avoid leaks.
+  useEffect(() => {
+    if (!currentImageUrl && pendingFile && previewUrl) {
+      return () => URL.revokeObjectURL(previewUrl);
+    }
+  }, [currentImageUrl, pendingFile, previewUrl]);
+
+  const hasPending = !!pendingFile;
+  const busy = uploadMut.isPending || deleteMut.isPending;
 
   return (
     <div className="flex items-start gap-4">
-      {currentImageUrl ? (
+      {previewUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={currentImageUrl}
+          src={previewUrl}
           alt="Product"
           className="h-24 w-32 rounded border object-cover"
         />
@@ -291,20 +355,36 @@ function ProductImageField({
           type="button"
           variant="outline"
           size="sm"
-          disabled={uploadMut.isPending || deleteMut.isPending}
+          disabled={busy}
           onClick={() => fileRef.current?.click()}
         >
           <ImagePlus className="mr-1.5 h-3.5 w-3.5" />
-          {uploadMut.isPending ? "Uploading…" : currentImageUrl ? "Replace" : "Upload"}
+          {uploadMut.isPending
+            ? "Uploading…"
+            : currentImageUrl || hasPending
+              ? "Replace"
+              : "Upload"}
         </Button>
-        {currentImageUrl && (
+        {currentImageUrl && rowId && (
           <Button
             type="button"
             variant="outline"
             size="sm"
             className="text-destructive hover:text-destructive"
-            disabled={uploadMut.isPending || deleteMut.isPending}
+            disabled={busy}
             onClick={() => deleteMut.mutate()}
+          >
+            <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+            Remove
+          </Button>
+        )}
+        {hasPending && !rowId && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="text-destructive hover:text-destructive"
+            onClick={() => onPendingChange?.(null)}
           >
             <Trash2 className="mr-1.5 h-3.5 w-3.5" />
             Remove
@@ -312,6 +392,7 @@ function ProductImageField({
         )}
         <p className="text-xs text-muted-foreground">
           JPEG, PNG, or WebP · Max 5 MB · Appears on the DPR PDF cover &amp; products page.
+          {hasPending && !rowId ? " Will upload when you save this product." : ""}
         </p>
       </div>
     </div>
@@ -573,6 +654,28 @@ export function ProductsSection({ uuid }: { uuid: string }) {
   // The Edit action on ViewSheet closes the drawer and pops the existing
   // edit modal for that row (via NestedListCard's exposed openEdit ref).
   const nestedRef = useRef<NestedListHandle>(null);
+
+  // Bridge from ReadinessPanel → this section's nested list. When the user
+  // clicks a warning like "items[2].product_type" in the right-hand panel,
+  // the panel scrolls the Products card into view and dispatches
+  // `dpr:field-focus`. We pick that up and pop the edit modal for the
+  // correct row so the user lands directly on the field to fix, not just
+  // in the vicinity of the products list.
+  useEffect(() => {
+    function handleFocus(evt: Event) {
+      const detail = (evt as CustomEvent<{ field?: string }>).detail;
+      const field = detail?.field ?? "";
+      const match = field.match(/^items\[(\d+)\]/);
+      if (!match) return;
+      const idx = Number(match[1]);
+      if (!Number.isInteger(idx) || idx < 0) return;
+      // Tiny defer so the scrollIntoView has painted before the modal
+      // opens on top — otherwise the flash highlight is invisible.
+      setTimeout(() => nestedRef.current?.openEdit(idx), 150);
+    }
+    window.addEventListener("dpr:field-focus", handleFocus as EventListener);
+    return () => window.removeEventListener("dpr:field-focus", handleFocus as EventListener);
+  }, []);
   const [rowView, setRowView] = useState<{
     open: boolean;
     row: ProductItem | null;
@@ -914,7 +1017,9 @@ export function ProductsSection({ uuid }: { uuid: string }) {
                 uuid={uuid}
                 rowId={row.id}
                 currentImageUrl={row.image ?? null}
+                pendingFile={row._pendingImage ?? null}
                 onChange={(newUrl) => set("image", newUrl)}
+                onPendingChange={(file) => set("_pendingImage", file)}
               />
             </ModalField>
           </>

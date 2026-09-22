@@ -13,6 +13,7 @@ import {
 import { toast } from "sonner";
 import type { ZodType } from "zod";
 
+import { humaniseFieldPath } from "@/app/fpo/(portal)/dpr/[uuid]/sections/_components/humanise-field";
 import { dprApi, type DprSectionKey } from "@/lib/api/dpr";
 import { useDprWizardStore } from "@/stores/dpr-store";
 
@@ -31,15 +32,39 @@ import { useReadinessErrorsByField } from "./use-readiness-errors";
  * so the user actually sees WHY the save failed.
  */
 function flattenBackendMessage(msg: unknown): string {
-  if (!msg) return "";
+  if (msg == null) return "";
   if (typeof msg === "string") return msg;
+  // Array of errors — recurse over items. Nested-list serializers
+  // (materials, products, machinery, activities, …) return the errors as
+  // `field: [{ subfield: ["msg"] }, {}, …]` where each dict is the error
+  // set for row N (empty for valid rows). Naive `.join(" · ")` on those
+  // stringifies each row-dict as "[object Object]" — this branch fixes
+  // that by tagging each non-empty row with its index.
+  if (Array.isArray(msg)) {
+    const parts: string[] = [];
+    msg.forEach((item, idx) => {
+      const inner = flattenBackendMessage(item);
+      if (!inner) return;
+      // Prefix with the row index for nested-list arrays of dicts, but
+      // leave plain string arrays alone (e.g. ["msg1", "msg2"]).
+      if (typeof item === "object" && !Array.isArray(item)) {
+        parts.push(`row ${idx + 1} → ${inner}`);
+      } else {
+        parts.push(inner);
+      }
+    });
+    return parts.join(" · ");
+  }
   if (typeof msg === "object") {
-    // Django REST field-error dict: { field: string | string[] }.
+    // Django REST field-error dict: { field: string | string[] | object }.
     // Non-field-error DRF payloads use `non_field_errors` — surface first.
     const record = msg as Record<string, unknown>;
     const lines: string[] = [];
     for (const [field, value] of Object.entries(record)) {
-      const text = Array.isArray(value) ? value.join(" · ") : String(value);
+      // Recurse so nested arrays-of-dicts get properly flattened instead
+      // of stringifying to "[object Object]".
+      const text = flattenBackendMessage(value);
+      if (!text) continue;
       // Skip generic "non_field_errors" label for readability.
       lines.push(field === "non_field_errors" ? text : `${field}: ${text}`);
     }
@@ -78,7 +103,11 @@ export interface UseDprSectionFormOptions<T extends FieldValues> {
    */
   schema: ZodType<T, T>;
   defaultValues: DefaultValues<T>;
-  serializePayload?: (values: T) => Record<string, unknown>;
+  // `serializePayload` may return either a plain JSON object OR a
+  // `FormData` instance. Sections that need to attach binary parts
+  // (product images, etc.) return FormData and the API client / axios
+  // handle the multipart headers automatically.
+  serializePayload?: (values: T) => Record<string, unknown> | FormData;
   mapServerToForm?: (server: unknown) => T;
 }
 
@@ -154,8 +183,16 @@ export function useDprSectionForm<T extends FieldValues>({
 
   const mutation = useMutation({
     mutationFn: (payload: T) => {
-      const body = (serializePayload ? serializePayload(payload) : payload) as Partial<T>;
-      return dprApi.saveSection<T>(uuid, sectionKey, body);
+      // `serializePayload` may hand back a plain object OR a FormData
+      // instance (multipart, e.g. Products section attaching photos to
+      // brand-new rows). `dprApi.saveSection` passes both through to axios,
+      // which sets the correct Content-Type for FormData automatically.
+      const body = serializePayload ? serializePayload(payload) : payload;
+      return dprApi.saveSection<T>(
+        uuid,
+        sectionKey,
+        body as Partial<T> | FormData,
+      );
     },
     onMutate: () => {
       markSaving(sectionKey);
@@ -176,6 +213,16 @@ export function useDprSectionForm<T extends FieldValues>({
       queryClient.setQueryData(["dpr-section", uuid, sectionKey], data);
       queryClient.refetchQueries({
         queryKey: ["dpr-readiness", uuid, sectionKey],
+      });
+      // Refresh applicability after every save so the sidebar reflects the
+      // FPO's latest choices immediately:
+      //   1. Rule engine re-runs → sections hidden by the newly-picked
+      //      component set drop out of the sidebar.
+      //   2. `seed_sections_complete` re-evaluates → soft-lock releases
+      //      once Identification + Components are both complete.
+      // Cheap — one small GET per save, only the sidebar consumes it.
+      queryClient.refetchQueries({
+        queryKey: ["dpr-applicability", uuid],
       });
       // Only clear our local dirty flag if the user hasn't kept typing after
       // save was queued. `formState.isDirty` (via useFormState) reflects the
@@ -222,22 +269,102 @@ export function useDprSectionForm<T extends FieldValues>({
       const errorsObj =
         errObj?.data?.errors ??
         errObj?.response?.data?.errors;
-      const displayMsg =
-        flattenBackendMessage(errorsObj ?? rawMsg) ||
-        "Failed to save. Please try again.";
-      toast.error(displayMsg);
-      // Extract per-field messages for inline display. Handles both shapes:
-      //   { block_panchayat: ["msg"] }               (DRF field-errors dict)
-      //   { block_panchayat: "msg" }                 (already flattened)
-      const fieldMap = new Map<string, string>();
-      const source = (errorsObj ?? rawMsg) as unknown;
-      if (source && typeof source === "object" && !Array.isArray(source)) {
-        for (const [field, value] of Object.entries(source as Record<string, unknown>)) {
-          if (field === "non_field_errors" || field === "detail") continue;
-          const text = Array.isArray(value) ? value.join(" · ") : String(value);
-          if (text) fieldMap.set(field, text);
+      // Build the toast message from humanised field paths so users see
+      // "Primary Raw Materials → Row 1 → Peak harvest season: max 100 chars"
+      // instead of "materials: row 1 → peak_harvest_season: …". Falls back
+      // to the raw flattener for non-field errors (plain strings, network
+      // failures, etc.) that don't fit the DRF field-error shape.
+      const readableLines: string[] = [];
+      /* Same walk as `collect` below but formats keys via humaniseFieldPath. */
+      function humaniseWalk(prefix: string, node: unknown) {
+        if (node == null) return;
+        if (typeof node === "string") {
+          const label = prefix ? humaniseFieldPath(prefix, sectionKey) : "";
+          readableLines.push(label ? `${label}: ${node}` : node);
+          return;
+        }
+        if (Array.isArray(node)) {
+          if (node.every((x) => typeof x === "string")) {
+            const label = prefix ? humaniseFieldPath(prefix, sectionKey) : "";
+            const text = node.join(" · ");
+            readableLines.push(label ? `${label}: ${text}` : text);
+            return;
+          }
+          node.forEach((item, idx) => {
+            const p = prefix ? `${prefix}[${idx}]` : `[${idx}]`;
+            humaniseWalk(p, item);
+          });
+          return;
+        }
+        if (typeof node === "object") {
+          for (const [key, value] of Object.entries(node as Record<string, unknown>)) {
+            if (key === "non_field_errors" || key === "detail") {
+              humaniseWalk(prefix, value);
+              continue;
+            }
+            const p = prefix ? `${prefix}.${key}` : key;
+            humaniseWalk(p, value);
+          }
         }
       }
+      humaniseWalk("", errorsObj ?? rawMsg);
+      const displayMsg =
+        readableLines.length > 0
+          ? readableLines.join("\n")
+          : flattenBackendMessage(errorsObj ?? rawMsg) ||
+            "Failed to save. Please try again.";
+      toast.error(displayMsg);
+      // Extract per-field messages for inline display. Handles four shapes:
+      //   1. { block_panchayat: ["msg"] }               (top-level field errors)
+      //   2. { block_panchayat: "msg" }                 (already flattened)
+      //   3. { materials: [{ peak_harvest_season: ["..."] }] }
+      //                                                 (nested-list errors —
+      //         common across raw-material / products / machinery / activities
+      //         serializers. We flatten to keys like `materials[0].peak_harvest_season`
+      //         so sections that render nested rows can look up the error
+      //         for a specific row's field.)
+      //   4. { materials: { "0": { peak_harvest_season: ["..."] } } }
+      //                                                 (some DRF fields
+      //         emit dict-keyed nested errors — treat identical to (3).)
+      const fieldMap = new Map<string, string>();
+      const source = (errorsObj ?? rawMsg) as unknown;
+      /**
+       * Walk the error tree and add flat keys to `fieldMap`. Path prefix
+       * tracks the current position ("materials[0]" etc.).
+       */
+      function collect(prefix: string, node: unknown) {
+        if (node == null) return;
+        if (typeof node === "string") {
+          if (prefix) fieldMap.set(prefix, node);
+          return;
+        }
+        if (Array.isArray(node)) {
+          // Array of strings → join, use current prefix.
+          if (node.every((x) => typeof x === "string")) {
+            if (prefix) fieldMap.set(prefix, node.join(" · "));
+            return;
+          }
+          // Array of objects (nested list errors) → recurse with [idx] suffix.
+          node.forEach((item, idx) => {
+            const p = prefix ? `${prefix}[${idx}]` : `[${idx}]`;
+            collect(p, item);
+          });
+          return;
+        }
+        if (typeof node === "object") {
+          for (const [key, value] of Object.entries(node as Record<string, unknown>)) {
+            if (key === "non_field_errors" || key === "detail") {
+              // Non-field errors get attached to the parent path so the
+              // caller can still show them (or fall back to the toast).
+              if (prefix) collect(prefix, value);
+              continue;
+            }
+            const p = prefix ? `${prefix}.${key}` : key;
+            collect(p, value);
+          }
+        }
+      }
+      collect("", source);
       setSaveFieldErrors(fieldMap);
       isExplicitSaveRef.current = false;
     },
