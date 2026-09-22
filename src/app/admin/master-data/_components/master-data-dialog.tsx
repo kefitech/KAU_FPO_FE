@@ -109,7 +109,11 @@ export function MasterDataDialog({ open, onOpenChange, category, categoryLabel, 
       };
       return isEdit
         ? masterDataAdminApi.update(category, editing!.id, { ...shared, name_ml: v.name_ml.trim() })
-        : masterDataAdminApi.create(category, { code: v.code || undefined, ...shared, name_ml: v.name_ml.trim() || undefined });
+        : masterDataAdminApi.create(category, {
+            code: v.code || undefined,
+            ...shared,
+            name_ml: v.name_ml.trim() || undefined,
+          });
     },
     onSuccess: () => {
       toast.success(isEdit ? (t.toast_updated ?? "Updated") : (t.toast_created ?? "Added"));
@@ -128,102 +132,112 @@ export function MasterDataDialog({ open, onOpenChange, category, categoryLabel, 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg" aria-describedby={undefined}>
-        <DialogHeader>
-          <DialogTitle>
-            {isEdit ? (t.edit_title ?? "Edit") : (t.add_title ?? "Add")} — {categoryLabel}
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className="flex flex-col max-h-[90vh] sm:max-w-lg gap-0 p-0" aria-describedby={undefined}>
+        <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="flex flex-col min-h-0">
+          {/* Sticky header */}
+          <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
+            <DialogTitle>
+              {isEdit ? (t.edit_title ?? "Edit") : (t.add_title ?? "Add")} — {categoryLabel}
+            </DialogTitle>
+          </DialogHeader>
 
-        <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="flex flex-col gap-4">
-          <FieldGroup className="gap-4">
-            <Field>
-              <FieldLabel htmlFor="md-code">
-                {t.code_label ?? "Code"} {!codeOptional && <span className="text-destructive">*</span>}
-              </FieldLabel>
-              <Input
-                id="md-code"
-                placeholder={
-                  codeOptional
-                    ? (t.code_placeholder_optional ?? "Optional — generated from the name")
-                    : (t.code_placeholder ?? "e.g. black_pepper")
-                }
-                disabled={isEdit}
-                {...register("code")}
-              />
-              {isEdit && (
-                <p className="text-muted-foreground text-xs">
-                  {t.code_locked_hint ?? "The code cannot be changed — other records refer to it."}
-                </p>
-              )}
-              {errors.code && <FieldError errors={[errors.code]} />}
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="md-name-en">
-                {t.name_en_label ?? "Name (English)"} <span className="text-destructive">*</span>
-              </FieldLabel>
-              <Input id="md-name-en" {...register("name_en")} />
-              {errors.name_en && <FieldError errors={[errors.name_en]} />}
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="md-name-ml">{t.name_ml_label ?? "Name (Malayalam)"}</FieldLabel>
-              <Input
-                id="md-name-ml"
-                placeholder={t.name_ml_placeholder ?? "Optional — defaults to the English name"}
-                {...register("name_ml")}
-              />
-            </Field>
-
-            {isCommodity && (
+          {/* Scrollable body */}
+          <div className="flex-1 overflow-y-auto px-6 py-5">
+            <FieldGroup className="gap-4">
               <Field>
-                <FieldLabel htmlFor="md-section">{t.section_label ?? "Section"}</FieldLabel>
-                <Controller
-                  control={control}
-                  name="section"
-                  render={({ field }) => (
-                    <NativeSelect id="md-section" className="w-full" value={field.value} onChange={field.onChange}>
-                      {COMMODITY_SECTIONS.map((s) => (
-                        <option key={s} value={s}>
-                          {t[`section_${s}`] ?? s.replace(/_/g, " ")}
-                        </option>
-                      ))}
-                    </NativeSelect>
-                  )}
+                <FieldLabel htmlFor="md-code">
+                  {t.code_label ?? "Code"} {!codeOptional && <span className="text-destructive">*</span>}
+                </FieldLabel>
+                <Input
+                  id="md-code"
+                  placeholder={
+                    codeOptional
+                      ? (t.code_placeholder_optional ?? "Optional — generated from the name")
+                      : (t.code_placeholder ?? "e.g. black_pepper")
+                  }
+                  disabled={isEdit}
+                  {...register("code")}
+                />
+                {isEdit && (
+                  <p className="text-muted-foreground text-xs">
+                    {t.code_locked_hint ?? "The code cannot be changed — other records refer to it."}
+                  </p>
+                )}
+                {errors.code && <FieldError errors={[errors.code]} />}
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="md-name-en">
+                  {t.name_en_label ?? "Name (English)"} <span className="text-destructive">*</span>
+                </FieldLabel>
+                <Input id="md-name-en" {...register("name_en")} />
+                {errors.name_en && <FieldError errors={[errors.name_en]} />}
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="md-name-ml">{t.name_ml_label ?? "Name (Malayalam)"}</FieldLabel>
+                <Input
+                  id="md-name-ml"
+                  placeholder={t.name_ml_placeholder ?? "Optional — defaults to the English name"}
+                  {...register("name_ml")}
                 />
               </Field>
-            )}
 
-            <Field>
-              <FieldLabel htmlFor="md-order">{t.order_label ?? "Display order"}</FieldLabel>
-              <Input
-                id="md-order"
-                inputMode="numeric"
-                placeholder={t.order_placeholder ?? "Optional — new entries go before “Other”"}
-                {...register("display_order")}
-              />
-              {errors.display_order && <FieldError errors={[errors.display_order]} />}
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="md-description">{t.description_label ?? "Description"}</FieldLabel>
-              <Textarea id="md-description" rows={2} {...register("description")} />
-            </Field>
-
-            <Controller
-              control={control}
-              name="is_active"
-              render={({ field }) => (
-                <div className="flex items-center gap-2">
-                  <Switch id="md-active" checked={field.value} onCheckedChange={field.onChange} />
-                  <FieldLabel htmlFor="md-active">{t.active_label ?? "Active (shown in dropdowns)"}</FieldLabel>
-                </div>
+              {isCommodity && (
+                <Field>
+                  <FieldLabel htmlFor="md-section">{t.section_label ?? "Section"}</FieldLabel>
+                  <Controller
+                    control={control}
+                    name="section"
+                    render={({ field }) => (
+                      <NativeSelect id="md-section" className="w-full" value={field.value} onChange={field.onChange}>
+                        {COMMODITY_SECTIONS.map((s) => (
+                          <option key={s} value={s}>
+                            {t[`section_${s}`] ?? s.replace(/_/g, " ")}
+                          </option>
+                        ))}
+                      </NativeSelect>
+                    )}
+                  />
+                </Field>
               )}
-            />
-          </FieldGroup>
 
-          <DialogFooter>
+              <Field>
+                <FieldLabel htmlFor="md-order">{t.order_label ?? "Display order"}</FieldLabel>
+                <Input
+                  id="md-order"
+                  inputMode="numeric"
+                  placeholder={t.order_placeholder ?? "Optional — new entries go before “Other”"}
+                  {...register("display_order")}
+                />
+                {errors.display_order && <FieldError errors={[errors.display_order]} />}
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="md-description">{t.description_label ?? "Description"}</FieldLabel>
+                <Textarea
+                  id="md-description"
+                  rows={2}
+                  className="max-h-40 overflow-y-auto"
+                  {...register("description")}
+                />
+              </Field>
+
+              <Controller
+                control={control}
+                name="is_active"
+                render={({ field }) => (
+                  <div className="flex items-center gap-2">
+                    <Switch id="md-active" checked={field.value} onCheckedChange={field.onChange} />
+                    <FieldLabel htmlFor="md-active">{t.active_label ?? "Active (shown in dropdowns)"}</FieldLabel>
+                  </div>
+                )}
+              />
+            </FieldGroup>
+          </div>
+
+          {/* Sticky footer */}
+          <DialogFooter className="px-6 pb-6 pt-4 border-t shrink-0">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {tCommon.cancel_btn ?? "Cancel"}
             </Button>
