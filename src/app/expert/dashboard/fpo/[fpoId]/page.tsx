@@ -50,6 +50,8 @@ export default function FpoDetailPage() {
     onSuccess: () => {
       toast.success("Booking rejected");
       queryClient.invalidateQueries({ queryKey: ["expert-my-bookings"] });
+      setRejectDialog({ open: false, booking: null }); // 👈 add this line
+      setRejectReason("");                              // 👈 add this line
     },
     onError: () => toast.error("Failed to reject booking"),
   });
@@ -59,6 +61,8 @@ export default function FpoDetailPage() {
     onSuccess: () => {
       toast.success("Booking cancelled");
       queryClient.invalidateQueries({ queryKey: ["expert-my-bookings"] });
+      setCancelDialog({ open: false, booking: null }); // 👈 add this
+    setCancelReason("");                              // 👈 add this
     },
     onError: () => toast.error("Failed to cancel booking"),
   });
@@ -204,6 +208,8 @@ export default function FpoDetailPage() {
             onChange={(e) => setRejectReason(e.target.value)}
             placeholder="Let the FPO know why you cannot accept this appointment"
             rows={4}
+            className="max-h-40 overflow-y-auto"
+            maxLength={1000}
           />
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setRejectDialog({ open: false, booking: null })}>
@@ -226,6 +232,8 @@ export default function FpoDetailPage() {
             onChange={(e) => setCancelReason(e.target.value)}
             placeholder="Let the FPO know why this confirmed appointment is being cancelled"
             rows={4}
+            className="max-h-40 overflow-y-auto"
+            maxLength={1000}
           />
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setCancelDialog({ open: false, booking: null })}>

@@ -174,7 +174,7 @@ export default function CbboDashboardPage() {
             <CardTitle>{t.section_assigned_fpos_title ?? "Assigned FPOs"}</CardTitle>
             <CardDescription>{t.section_assigned_fpos_subtitle ?? "FPOs in your jurisdiction"}</CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-2">
+          <CardContent className="grid max-h-80 gap-2 overflow-y-auto">
             {fpos.length === 0 && (
               <p className="text-muted-foreground text-sm">{t.empty_no_fpos ?? "No FPOs assigned yet."}</p>
             )}
@@ -195,6 +195,7 @@ export default function CbboDashboardPage() {
             })}
           </CardContent>
         </Card>
+        
 
         <Card>
           <CardHeader>
