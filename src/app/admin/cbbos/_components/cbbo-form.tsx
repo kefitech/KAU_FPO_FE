@@ -33,11 +33,7 @@ const createSchema = z
       .max(50, { message: "Email must be at most 50 characters" }),
     first_name: z.string().min(1, { message: "First name is required" }).max(50, { message: "Max 50 characters" }),
     last_name: z.string().min(1, { message: "Last name is required" }).max(50, { message: "Max 50 characters" }),
-    phone: z
-      .string()
-      .min(10, { message: "Enter a valid phone number" })
-      .max(15, { message: "Max 15 digits" })
-      .regex(/^\+?[0-9]{10,15}$/, { message: "Only digits allowed (optional leading +)" }),
+    phone: z.string().regex(/^[6-9]\d{9}$/, { message: "Enter a valid 10-digit mobile number" }),
     notification_channel: z.enum(["email", "sms", "in_app"]),
     level: z.enum(["district", "state"]),
     district_codes: z.array(z.string()),
@@ -56,11 +52,7 @@ const editSchema = z
       .max(35, { message: "Email must be at most 35 characters" }),
     first_name: z.string().min(1, { message: "First name is required" }).max(50, { message: "Max 50 characters" }),
     last_name: z.string().min(1, { message: "Last name is required" }).max(50, { message: "Max 50 characters" }),
-    phone: z
-      .string()
-      .min(10, { message: "Enter a valid phone number" })
-      .max(15, { message: "Max 15 digits" })
-      .regex(/^\+?[0-9]{10,15}$/, { message: "Only digits allowed (optional leading +)" }),
+    phone: z.string().regex(/^[6-9]\d{9}$/, { message: "Enter a valid 10-digit mobile number" }),
     level: z.enum(["district", "state"]),
     district_codes: z.array(z.string()),
   })
@@ -171,7 +163,19 @@ export function CBBOForm({ mode, cbbo, t = {}, tCommon = {} }: CBBOFormProps) {
             return;
           }
         } else {
-          await cbbosApi.setDistricts(cbbo.id, "replace", values.district_codes);
+          const districtsChanged =
+            JSON.stringify([...values.district_codes].sort()) !==
+            JSON.stringify([...(editingValues?.district_codes ?? [])].sort());
+          if (districtsChanged) {
+            if (!cbbo.is_active) {
+              toast.error(
+                t.toast_district_locked ??
+                  "This official is not yet activated. Activate the account before changing district assignments.",
+              );
+              return;
+            }
+            await cbbosApi.setDistricts(cbbo.id, "replace", values.district_codes);
+          }
         }
       } else {
         await cbbosApi.create({
@@ -193,9 +197,8 @@ export function CBBOForm({ mode, cbbo, t = {}, tCommon = {} }: CBBOFormProps) {
       queryClient.invalidateQueries({ queryKey: ["cbbos"] });
       if (isEdit && cbbo) {
         queryClient.invalidateQueries({ queryKey: ["cbbo", String(cbbo.id)] });
-      } else {
-        router.push("/admin/cbbos");
       }
+      router.push("/admin/cbbos");
     },
     onError: (error: unknown) => {
       const response = (error as { data?: { message?: string; errors?: Record<string, string[]> } })?.data;
@@ -239,9 +242,9 @@ export function CBBOForm({ mode, cbbo, t = {}, tCommon = {} }: CBBOFormProps) {
                         placeholder={t.first_name_placeholder ?? "John"}
                         maxLength={35}
                         {...field}
-                          onChange={(e) => {
-                         const value = e.target.value.replace(/[^a-zA-Z\s'-]/g, "");
-                        field.onChange(value);
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/[^a-zA-Z\s'-]/g, "");
+                          field.onChange(value);
                         }}
                       />
                     )}
@@ -261,10 +264,10 @@ export function CBBOForm({ mode, cbbo, t = {}, tCommon = {} }: CBBOFormProps) {
                         placeholder={t.last_name_placeholder ?? "Doe"}
                         maxLength={35}
                         {...field}
-                         onChange={(e) => {
-                         const value = e.target.value.replace(/[^a-zA-Z\s'-]/g, "");
-                         field.onChange(value);
-                          }}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/[^a-zA-Z\s'-]/g, "");
+                          field.onChange(value);
+                        }}
                       />
                     )}
                   />
@@ -302,10 +305,10 @@ export function CBBOForm({ mode, cbbo, t = {}, tCommon = {} }: CBBOFormProps) {
                     <Input
                       id="cb-phone"
                       type="tel"
-                      placeholder={t.phone_placeholder ?? "+91 98765 43210"}
-                      maxLength={15}
+                      placeholder={t.phone_placeholder ?? "98765 43210"}
+                      maxLength={10}
                       {...field}
-                      onChange={(e) => field.onChange(e.target.value.replace(/(?!^\+)[^0-9]/g, ""))}
+                      onChange={(e) => field.onChange(e.target.value.replace(/[^0-9]/g, ""))}
                     />
                   )}
                 />
@@ -396,16 +399,19 @@ export function CBBOForm({ mode, cbbo, t = {}, tCommon = {} }: CBBOFormProps) {
                     <FieldGroup className="gap-3">
                       {selected.length > 0 && (
                         <div className="flex flex-wrap gap-1.5">
-                          {selected.map((code) => (
-                            <Badge
-                              key={code}
-                              variant="secondary"
-                              className="cursor-pointer text-[10px]"
-                              onClick={() => field.onChange(selected.filter((s) => s !== code))}
-                            >
-                              {code} ×
-                            </Badge>
-                          ))}
+                          {selected.map((code) => {
+                            const name = availableDistricts.find((d) => d.code === code)?.name ?? code;
+                            return (
+                              <Badge
+                                key={code}
+                                variant="secondary"
+                                className="cursor-pointer text-[10px]"
+                                onClick={() => field.onChange(selected.filter((s) => s !== code))}
+                              >
+                                {name} ×
+                              </Badge>
+                            );
+                          })}
                         </div>
                       )}
                       <div className="grid max-h-72 grid-cols-2 gap-0.5 overflow-y-auto rounded-md border bg-background px-2 py-1 sm:grid-cols-3">

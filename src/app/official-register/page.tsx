@@ -52,6 +52,30 @@ const ID_LABELS: Record<string, string> = {
   atma_specialist: "Employee ID (6-8 digits) or PAN (10 characters)",
 };
 
+// Longest allowed value for each category, used to cap input length as the user types.
+const ID_MAX_LENGTH: Record<string, number> = {
+  agri_officer: 6,
+  university_official: 6,
+  sfac_official: 10,
+  cbbo_personnel: 21,
+  nabard_official: 6,
+  atma_specialist: 10,
+};
+
+// Categories whose ID is always numeric, so non-digit input can be blocked as it's typed.
+const ID_DIGITS_ONLY: Record<string, boolean> = {
+  agri_officer: true,
+  university_official: true,
+  nabard_official: true,
+};
+
+function sanitizeIdNumberInput(userCategory: string, rawValue: string): string {
+  const upper = rawValue.toUpperCase();
+  const filtered = ID_DIGITS_ONLY[userCategory] ? upper.replace(/[^0-9]/g, "") : upper.replace(/[^A-Z0-9]/g, "");
+  const maxLength = ID_MAX_LENGTH[userCategory] ?? 21;
+  return filtered.slice(0, maxLength);
+}
+
 function makeBaseSchema(t: T) {
   return z.object({
     mode: z.enum(["government", "cbbo"]),
@@ -112,6 +136,12 @@ function makeRegisterSchema(t: T) {
           ctx.addIssue({
             code: "custom",
             message: `Invalid format. Expected: ${ID_LABELS[data.user_category ?? ""]}`,
+            path: ["id_number"],
+          });
+        } else if (/^0+$/.test(value)) {
+          ctx.addIssue({
+            code: "custom",
+            message: t.val_id_number_all_zeros ?? "ID number cannot be all zeros.",
             path: ["id_number"],
           });
         }
@@ -507,6 +537,7 @@ export default function OfficialRegisterPage() {
   const phone = form.watch("phone");
   const jurisdictionType = form.watch("jurisdiction_type");
   const level = form.watch("level");
+  const userCategory = form.watch("user_category") ?? "agri_officer";
 
   const { data: organisations = [] } = useQuery({
     queryKey: ["public-organisations"],
@@ -763,6 +794,10 @@ export default function OfficialRegisterPage() {
                             {...field}
                             id="user-category"
                             className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+                            onChange={(e) => {
+                              field.onChange(e);
+                              form.setValue("id_number", "");
+                            }}
                           >
                             {USER_CATEGORIES.map((c) => (
                               <option key={c.value} value={c.value}>
@@ -782,6 +817,8 @@ export default function OfficialRegisterPage() {
                           <Input
                             {...field}
                             id="id-number"
+                            maxLength={ID_MAX_LENGTH[userCategory] ?? 21}
+                            onChange={(e) => field.onChange(sanitizeIdNumberInput(userCategory, e.target.value))}
                             placeholder={t.placeholder_id_number ?? "Matching the format for your selected category"}
                             aria-invalid={fieldState.invalid}
                           />
