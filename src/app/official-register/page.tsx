@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { masterDataApi } from "@/lib/api/master-data";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 import { DISTRICT_OPTIONS } from "@/types/fpo";
@@ -104,8 +105,9 @@ function makeBaseSchema(t: T) {
     department: z.string().optional(),
     user_category: z.string().optional(),
     id_number: z.string().optional(),
-    jurisdiction_type: z.enum(["district", "state"]).optional(),
+    jurisdiction_type: z.enum(["district", "block", "state"]).optional(),
     assigned_district: z.string().optional(),
+    assigned_block: z.string().optional(),
     organisation: z.string().optional(),
     level: z.enum(["district", "state"]).optional(),
     district_code: z.string().optional(),
@@ -153,6 +155,13 @@ function makeRegisterSchema(t: T) {
           path: ["assigned_district"],
         });
       }
+      if (data.jurisdiction_type === "block" && !data.assigned_block) {
+        ctx.addIssue({
+          code: "custom",
+          message: t.val_block_required ?? "Block / Taluk is required.",
+          path: ["assigned_block"],
+        });
+      }
     }
     if (data.mode === "cbbo") {
       if (!data.organisation) {
@@ -183,8 +192,9 @@ type RegisterValues = {
   department?: string;
   user_category?: string;
   id_number?: string;
-  jurisdiction_type?: "district" | "state";
+  jurisdiction_type?: "district" | "block" | "state";
   assigned_district?: string;
+  assigned_block?: string;
   organisation?: string;
   level?: "district" | "state";
   district_code?: string;
@@ -544,6 +554,11 @@ export default function OfficialRegisterPage() {
     queryFn: () => officialRegisterApi.getOrganisations(),
     enabled: mode === "cbbo",
   });
+  const { data: blocks = [] } = useQuery({
+    queryKey: ["master-data", "block", locale],
+    queryFn: () => masterDataApi.get("block", undefined, locale),
+    enabled: mode === "government" && jurisdictionType === "block",
+  });
 
   const govtMutation = useMutation({
     mutationFn: (vars: RegisterValues) =>
@@ -558,6 +573,7 @@ export default function OfficialRegisterPage() {
         id_number: vars.id_number ?? "",
         jurisdiction_type: vars.jurisdiction_type ?? "district",
         assigned_district: vars.jurisdiction_type === "district" ? vars.assigned_district : null,
+        assigned_block: vars.jurisdiction_type === "block" ? vars.assigned_block : null,
       }),
     onSuccess: () => {
       toast.success(t.toast_success ?? "Registration submitted. An administrator will review your account.");
@@ -719,7 +735,7 @@ export default function OfficialRegisterPage() {
                   <FieldGroup className="grid grid-cols-2 gap-4">
                     <Controller
                       control={form.control}
-                      name="first_name"              
+                      name="first_name"
                       render={({ field, fieldState }) => (
                         <Field data-invalid={fieldState.invalid}>
                           <FieldLabel htmlFor="first-name">{t.field_first_name ?? "First Name"} *</FieldLabel>
@@ -754,8 +770,8 @@ export default function OfficialRegisterPage() {
                     render={({ field, fieldState }) => (
                       <Field data-invalid={fieldState.invalid}>
                         <FieldLabel htmlFor="designation">{t.field_designation ?? "Designation"} *</FieldLabel>
-                        <Input {...field} id="designation"  maxLength={90} aria-invalid={fieldState.invalid} />
-                        
+                        <Input {...field} id="designation" maxLength={90} aria-invalid={fieldState.invalid} />
+
                         {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                       </Field>
                     )}
@@ -841,6 +857,7 @@ export default function OfficialRegisterPage() {
                             className="h-9 w-full rounded-md border bg-background px-3 text-sm"
                           >
                             <option value="district">{t.option_district ?? "District"}</option>
+                            <option value="block">{t.option_block ?? "Block / Taluk"}</option>
                             <option value="state">{t.option_state ?? "State"}</option>
                           </select>
                         </Field>
@@ -862,6 +879,30 @@ export default function OfficialRegisterPage() {
                               {DISTRICT_OPTIONS.map((d) => (
                                 <option key={d.value} value={d.value}>
                                   {d.label}
+                                </option>
+                              ))}
+                            </select>
+                            {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                          </Field>
+                        )}
+                      />
+                    )}
+                    {jurisdictionType === "block" && (
+                      <Controller
+                        control={form.control}
+                        name="assigned_block"
+                        render={({ field, fieldState }) => (
+                          <Field data-invalid={fieldState.invalid}>
+                            <FieldLabel htmlFor="block">{t.field_block ?? "Block / Taluk"} *</FieldLabel>
+                            <select
+                              {...field}
+                              id="block"
+                              className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+                            >
+                              <option value="">{t.placeholder_select_block ?? "Select a block / taluk"}</option>
+                              {blocks.map((b) => (
+                                <option key={b.code} value={b.code}>
+                                  {b.name}
                                 </option>
                               ))}
                             </select>
