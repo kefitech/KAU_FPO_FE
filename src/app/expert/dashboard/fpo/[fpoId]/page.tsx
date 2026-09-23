@@ -51,7 +51,7 @@ export default function FpoDetailPage() {
       toast.success("Booking rejected");
       queryClient.invalidateQueries({ queryKey: ["expert-my-bookings"] });
       setRejectDialog({ open: false, booking: null }); // 👈 add this line
-      setRejectReason("");                              // 👈 add this line
+      setRejectReason(""); // 👈 add this line
     },
     onError: () => toast.error("Failed to reject booking"),
   });
@@ -62,7 +62,7 @@ export default function FpoDetailPage() {
       toast.success("Booking cancelled");
       queryClient.invalidateQueries({ queryKey: ["expert-my-bookings"] });
       setCancelDialog({ open: false, booking: null }); // 👈 add this
-    setCancelReason("");                              // 👈 add this
+      setCancelReason(""); // 👈 add this
     },
     onError: () => toast.error("Failed to cancel booking"),
   });
@@ -86,7 +86,12 @@ export default function FpoDetailPage() {
 
   function submitReject() {
     if (!rejectDialog.booking) return;
-    rejectMutation.mutate({ id: rejectDialog.booking.id, reason: rejectReason });
+    const trimmedReason = rejectReason.trim();
+    if (!trimmedReason) {
+      toast.error("Please provide a reason for rejecting this booking.");
+      return;
+    }
+    rejectMutation.mutate({ id: rejectDialog.booking.id, reason: trimmedReason });
   }
 
   function handleCancel(booking: ExpertBooking) {
@@ -96,9 +101,13 @@ export default function FpoDetailPage() {
 
   function submitCancel() {
     if (!cancelDialog.booking) return;
-    cancelMutation.mutate({ id: cancelDialog.booking.id, reason: cancelReason });
+    const trimmedReason = cancelReason.trim();
+    if (!trimmedReason) {
+      toast.error("Please provide a reason for cancelling this booking.");
+      return;
+    }
+    cancelMutation.mutate({ id: cancelDialog.booking.id, reason: trimmedReason });
   }
-
   if (isLoading) {
     return <p className="text-muted-foreground text-sm">Loading...</p>;
   }
@@ -215,7 +224,12 @@ export default function FpoDetailPage() {
             <Button type="button" variant="outline" onClick={() => setRejectDialog({ open: false, booking: null })}>
               Cancel
             </Button>
-            <Button type="button" variant="destructive" onClick={submitReject} disabled={rejectMutation.isPending}>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={submitReject}
+              disabled={rejectMutation.isPending || !rejectReason.trim()}
+            >
               {rejectMutation.isPending ? "Rejecting..." : "Reject Booking"}
             </Button>
           </DialogFooter>
@@ -239,7 +253,12 @@ export default function FpoDetailPage() {
             <Button type="button" variant="outline" onClick={() => setCancelDialog({ open: false, booking: null })}>
               Back
             </Button>
-            <Button type="button" variant="destructive" onClick={submitCancel} disabled={cancelMutation.isPending}>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={submitCancel}
+              disabled={cancelMutation.isPending || !cancelReason.trim()}
+            >
               {cancelMutation.isPending ? "Cancelling..." : "Cancel Booking"}
             </Button>
           </DialogFooter>

@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
+
 import { useRouter } from "next/navigation";
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -84,7 +86,12 @@ export default function ExpertDashboardPage() {
 
   function submitReject() {
     if (!rejectDialog.booking) return;
-    rejectMutation.mutate({ id: rejectDialog.booking.id, reason: rejectReason });
+    const trimmedReason = rejectReason.trim();
+    if (trimmedReason.length === 0) {
+      toast.error(t.toast_reason_required ?? "Please provide a reason for rejecting this booking.");
+      return; // <-- hard stop, mutation.mutate() is never called
+    }
+    rejectMutation.mutate({ id: rejectDialog.booking.id, reason: trimmedReason });
   }
 
   if (isLoading) {
@@ -110,7 +117,15 @@ export default function ExpertDashboardPage() {
   }, {});
 
   Object.values(groupedByFpo).forEach((group) => {
-    group.sort((a, b) => new Date(b.requested_date).getTime() - new Date(a.requested_date).getTime());
+    console.log(
+      "before sort:",
+      group.map((b) => ({ id: b.id, created_at: b.created_at, requested_date: b.requested_date, status: b.status })),
+    );
+    group.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    console.log(
+      "after sort:",
+      group.map((b) => ({ id: b.id, created_at: b.created_at, status: b.status })),
+    );
   });
 
   const fpoGroups = Object.values(groupedByFpo).sort((a, b) => {
@@ -129,7 +144,9 @@ export default function ExpertDashboardPage() {
 
       <div className="flex flex-wrap items-end gap-3 rounded-md border p-3">
         <div className="flex flex-col gap-1">
-          <label className="text-muted-foreground text-xs" htmlFor="filter-status">{t.filter_status ?? "Status"}</label>
+          <label className="text-muted-foreground text-xs" htmlFor="filter-status">
+            {t.filter_status ?? "Status"}
+          </label>
           <select
             id="filter-status"
             value={filterStatus}
@@ -145,7 +162,9 @@ export default function ExpertDashboardPage() {
           </select>
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-muted-foreground text-xs" htmlFor="filter-from">{t.filter_from ?? "From"}</label>
+          <label className="text-muted-foreground text-xs" htmlFor="filter-from">
+            {t.filter_from ?? "From"}
+          </label>
           <input
             id="filter-from"
             type="date"
@@ -155,7 +174,9 @@ export default function ExpertDashboardPage() {
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-muted-foreground text-xs" htmlFor="filter-to">{t.filter_to ?? "To"}</label>
+          <label className="text-muted-foreground text-xs" htmlFor="filter-to">
+            {t.filter_to ?? "To"}
+          </label>
           <input
             id="filter-to"
             type="date"
@@ -165,7 +186,9 @@ export default function ExpertDashboardPage() {
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-muted-foreground text-xs" htmlFor="filter-search">{t.filter_search ?? "FPO name or district"}</label>
+          <label className="text-muted-foreground text-xs" htmlFor="filter-search">
+            {t.filter_search ?? "FPO name or district"}
+          </label>
           <input
             id="filter-search"
             type="text"
@@ -192,7 +215,9 @@ export default function ExpertDashboardPage() {
         )}
       </div>
 
-      {bookings.length === 0 && <p className="text-muted-foreground text-sm">{t.empty_no_bookings ?? "No bookings yet."}</p>}
+      {bookings.length === 0 && (
+        <p className="text-muted-foreground text-sm">{t.empty_no_bookings ?? "No bookings yet."}</p>
+      )}
 
       {fpoGroups.length === 0 && bookings.length > 0 && (
         <p className="text-muted-foreground text-sm">{t.empty_no_matches ?? "No bookings match your filters."}</p>
@@ -216,36 +241,57 @@ export default function ExpertDashboardPage() {
           >
             <CardHeader>
               <CardTitle className="text-base">{first.fpo_name}</CardTitle>
-              
+
               <div className="flex items-center gap-2">
-        
                 <p className="text-muted-foreground text-xs">
                   {(t.booking_count ?? "{count} booking(s)").replace("{count}", String(group.length))}
                 </p>
-                <Badge className={STATUS_COLORS[first.status]}>{getStatusLabel(first.status, first.status_display)}</Badge>
+                <Badge className={STATUS_COLORS[first.status]}>
+                  {getStatusLabel(first.status, first.status_display)}
+                </Badge>
               </div>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
               <div className="flex flex-col gap-1 border-b pb-3">
                 {first.fpo_application_id && (
-                  <p className="text-muted-foreground text-xs">{t.field_application_id ?? "Application ID"}: {first.fpo_application_id}</p>
+                  <p className="text-muted-foreground text-xs">
+                    {t.field_application_id ?? "Application ID"}: {first.fpo_application_id}
+                  </p>
                 )}
                 {first.fpo_contact_name && (
-                  <p className="text-muted-foreground text-xs">{t.field_contact ?? "Contact"}: {first.fpo_contact_name}</p>
+                  <p className="text-muted-foreground text-xs">
+                    {t.field_contact ?? "Contact"}: {first.fpo_contact_name}
+                  </p>
                 )}
-                {first.fpo_email && <p className="text-muted-foreground text-xs">{t.field_email ?? "Email"}: {first.fpo_email}</p>}
-                {first.fpo_phone && <p className="text-muted-foreground text-xs">{t.field_phone ?? "Phone"}: {first.fpo_phone}</p>}
+                {first.fpo_email && (
+                  <p className="text-muted-foreground text-xs">
+                    {t.field_email ?? "Email"}: {first.fpo_email}
+                  </p>
+                )}
+                {first.fpo_phone && (
+                  <p className="text-muted-foreground text-xs">
+                    {t.field_phone ?? "Phone"}: {first.fpo_phone}
+                  </p>
+                )}
                 {first.fpo_location && (
-                  <p className="text-muted-foreground text-xs">{t.field_location ?? "Location"}: {first.fpo_location}</p>
+                  <p className="text-muted-foreground text-xs">
+                    {t.field_location ?? "Location"}: {first.fpo_location}
+                  </p>
                 )}
                 {first.fpo_district && (
-                  <p className="text-muted-foreground text-xs">{t.field_district ?? "District"}: {first.fpo_district}</p>
+                  <p className="text-muted-foreground text-xs">
+                    {t.field_district ?? "District"}: {first.fpo_district}
+                  </p>
                 )}
                 {first.fpo_registration_number && (
-                  <p className="text-muted-foreground text-xs">{t.field_registration_number ?? "Registration No."}: {first.fpo_registration_number}</p>
+                  <p className="text-muted-foreground text-xs">
+                    {t.field_registration_number ?? "Registration No."}: {first.fpo_registration_number}
+                  </p>
                 )}
                 {first.fpo_total_members != null && (
-                  <p className="text-muted-foreground text-xs">{t.field_total_members ?? "Members"}: {first.fpo_total_members}</p>
+                  <p className="text-muted-foreground text-xs">
+                    {t.field_total_members ?? "Members"}: {first.fpo_total_members}
+                  </p>
                 )}
               </div>
             </CardContent>
@@ -268,8 +314,15 @@ export default function ExpertDashboardPage() {
             <Button type="button" variant="outline" onClick={() => setRejectDialog({ open: false, booking: null })}>
               {t.btn_cancel ?? "Cancel"}
             </Button>
-            <Button type="button" variant="destructive" onClick={submitReject} disabled={rejectMutation.isPending}>
-              {rejectMutation.isPending ? (t.btn_rejecting ?? "Rejecting...") : (t.btn_reject_booking ?? "Reject Booking")}
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={submitReject}
+              disabled={rejectMutation.isPending || rejectReason.trim().length === 0}
+            >
+              {rejectMutation.isPending
+                ? (t.btn_rejecting ?? "Rejecting...")
+                : (t.btn_reject_booking ?? "Reject Booking")}
             </Button>
           </DialogFooter>
         </DialogContent>
