@@ -1,22 +1,23 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useQuery } from "@tanstack/react-query";
-import { MapPin, Search, X } from "lucide-react";
+import { CalendarClock, MapPin, Search, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { fpoDashboardApi } from "@/app/fpo/_api/dashboard";
-import { expertsApi } from "@/lib/api/experts";
-import { translationsApi } from "@/lib/api/translations";
-import { useLocaleStore } from "@/stores/locale-store";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExpertEnquiryDialog } from "@/components/ui/expert-enquiry-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ExpertBookingDialog } from "@/components/ui/expert-booking-dialog";
+import { ExpertEnquiryDialog } from "@/components/ui/expert-enquiry-dialog";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { type ExpertBooking, expertsApi } from "@/lib/api/experts";
+import { translationsApi } from "@/lib/api/translations";
+import { useLocaleStore } from "@/stores/locale-store";
 import { DISTRICT_OPTIONS, type FpoExpert } from "@/types/fpo";
 
 type T = Record<string, string>;
@@ -34,6 +35,13 @@ const CATEGORY_BADGE_COLORS: Record<string, string> = {
   trainer: "bg-green-100 text-green-700 border-green-200",
   banker: "bg-blue-100 text-blue-700 border-blue-200",
   facilitator: "bg-teal-100 text-teal-700 border-teal-200",
+};
+
+const STATUS_BADGE_COLORS: Record<string, string> = {
+  pending: "bg-amber-100 text-amber-700 border-amber-200",
+  confirmed: "bg-green-100 text-green-700 border-green-200",
+  completed: "bg-blue-100 text-blue-700 border-blue-200",
+  cancelled: "bg-red-100 text-red-700 border-red-200",
 };
 
 const DISTRICT_SELECT_OPTIONS = [
@@ -61,45 +69,53 @@ function ExpertSkeleton() {
 function ExpertCard({
   expert,
   isApprovedFpo,
+  bookings,
   onContact,
   onBook,
+  onViewBookings,
   t,
   locale,
-}: 
-{
+}: {
   expert: FpoExpert;
   isApprovedFpo: boolean;
+  bookings: ExpertBooking[];
   onContact: (expert: FpoExpert) => void;
   onBook: (expert: FpoExpert) => void;
+  onViewBookings: (expert: FpoExpert) => void;
   t: T;
   locale: string;
 }) {
   const badgeClass = CATEGORY_BADGE_COLORS[expert.category] ?? "bg-muted text-muted-foreground";
-
-
-  
+  const hasBookings = bookings.length > 0;
 
   return (
     <div className="rounded-xl border bg-card shadow-sm hover:shadow-md transition-shadow flex flex-col gap-3 p-5">
       <div className="flex flex-col gap-1.5">
-        <Badge className={`w-fit text-xs font-medium border ${badgeClass}`} variant="outline">
-          {t[`filter_${expert.category}`] ?? expert.category_display}
-        </Badge>
+        <div className="flex items-center justify-between gap-2">
+          <Badge className={`w-fit text-xs font-medium border ${badgeClass}`} variant="outline">
+            {t[`filter_${expert.category}`] ?? expert.category_display}
+          </Badge>
+          {hasBookings && (
+            <Badge variant="outline" className="w-fit text-xs font-medium border bg-muted text-foreground">
+              {bookings.length} booking{bookings.length > 1 ? "s" : ""}
+            </Badge>
+          )}
+        </div>
         <div className="flex flex-col gap-0.5 min-w-0">
           <h3 className="font-semibold text-base leading-snug">
-            {locale === "ml" ? (expert.name_ml || expert.name_en) : expert.name_en}
+            {locale === "ml" ? expert.name_ml || expert.name_en : expert.name_en}
           </h3>
           {expert.designation && <p className="text-xs text-muted-foreground">{expert.designation}</p>}
-          {expert.organisation && (
-            <p className="text-xs text-muted-foreground">{expert.organisation}</p>
-          )}
+          {expert.organisation && <p className="text-xs text-muted-foreground">{expert.organisation}</p>}
         </div>
       </div>
 
       {expert.district && (
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <MapPin className="h-3 w-3 shrink-0" />
-          {t[`district_${expert.district}`] ?? DISTRICT_OPTIONS.find((d) => d.value === expert.district)?.label ?? expert.district}
+          {t[`district_${expert.district}`] ??
+            DISTRICT_OPTIONS.find((d) => d.value === expert.district)?.label ??
+            expert.district}
         </div>
       )}
 
@@ -109,15 +125,26 @@ function ExpertCard({
           <p className="text-xs text-muted-foreground line-clamp-2">{expert.primary_expertise}</p>
         </div>
       )}
-      <div className="mt-auto pt-2 flex gap-2">
+      <div className="mt-auto pt-2 grid grid-cols-2 gap-2">
         {isApprovedFpo ? (
           <>
-          <Button size="sm" variant="default" onClick={() => onContact(expert)}>
-            {t.btn_contact ?? "Contact Expert"}
-          </Button>
-         <Button size="sm" variant="outline" className="h-8.5 px-2 text-xs" onClick={() => onBook(expert)}>
-          Book Appointment
-        </Button>
+            <Button size="sm" variant="default" onClick={() => onContact(expert)}>
+              {t.btn_contact ?? "Contact Expert"}
+            </Button>
+            <Button size="sm" variant="outline" className="h-8.5 px-2 text-xs" onClick={() => onBook(expert)}>
+              Book Appointment
+            </Button>
+            {hasBookings && (
+              <Button
+                size="sm"
+                variant="secondary"
+                className="col-span-2 text-xs gap-1 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                onClick={() => onViewBookings(expert)}
+              >
+                <CalendarClock className="h-3.5 w-3.5" />
+                View Bookings
+              </Button>
+            )}
           </>
         ) : (
           <Button
@@ -135,6 +162,53 @@ function ExpertCard({
   );
 }
 
+function ExpertBookingsListDialog({
+  open,
+  onOpenChange,
+  expertName,
+  bookings,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  expertName?: string;
+  bookings: ExpertBooking[];
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Bookings with {expertName}</DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col gap-3 max-h-96 overflow-y-auto">
+          {bookings.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No bookings found.</p>
+          ) : (
+            bookings.map((b) => {
+              const statusClass = STATUS_BADGE_COLORS[b.status] ?? "bg-muted text-muted-foreground";
+              return (
+                <div key={b.id} className="rounded-lg border p-3 flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium">{b.requested_date}</span>
+                    <Badge variant="outline" className={`text-xs border ${statusClass}`}>
+                      {b.status_display ?? b.status}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{b.requested_time}</p>
+                  {b.topic && <p className="text-xs text-foreground">{b.topic}</p>}
+                  {b.notes && <p className="text-xs text-muted-foreground">{b.notes}</p>}
+                  {b.status === "cancelled" && b.cancellation_reason && (
+                    <p className="text-xs text-muted-foreground italic">Reason: {b.cancellation_reason}</p>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function FpoExpertsPage() {
   const locale = useLocaleStore((s) => s.locale);
   const [t, setT] = useState<T>({});
@@ -142,10 +216,10 @@ export default function FpoExpertsPage() {
   const [district, setDistrict] = useState("");
   const [translationsLoading, setTranslationsLoading] = useState(true);
 
-
   useEffect(() => {
     setTranslationsLoading(true);
-    translationsApi.getPublic(locale, "fpo_experts,districts,common")
+    translationsApi
+      .getPublic(locale, "fpo_experts,districts,common")
       .then((data) => setT({ ...(data.districts ?? {}), ...(data.fpo_experts ?? {}) }))
       .catch(() => undefined)
       .finally(() => setTranslationsLoading(false));
@@ -156,7 +230,7 @@ export default function FpoExpertsPage() {
         value: d.value,
         label: t[`district_${d.value}`] ?? d.label,
       })),
-    [t]
+    [t],
   );
 
   const [search, setSearch] = useState("");
@@ -166,6 +240,10 @@ export default function FpoExpertsPage() {
     expert: null,
   });
   const [bookingDialog, setBookingDialog] = useState<{ open: boolean; expert: FpoExpert | null }>({
+    open: false,
+    expert: null,
+  });
+  const [bookingsListDialog, setBookingsListDialog] = useState<{ open: boolean; expert: FpoExpert | null }>({
     open: false,
     expert: null,
   });
@@ -189,6 +267,24 @@ export default function FpoExpertsPage() {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Fetch this FPO's own bookings so we can flag which experts already have one.
+  const { data: bookings } = useQuery({
+    queryKey: ["fpo-bookings"],
+    queryFn: () => expertsApi.listMyBookings(),
+    enabled: !!isApprovedFpo,
+    staleTime: 60 * 1000,
+  });
+
+  const bookingsByExpertId = useMemo(() => {
+    const map = new Map<number, ExpertBooking[]>();
+    (bookings ?? []).forEach((b: ExpertBooking) => {
+      const list = map.get(b.expert) ?? [];
+      list.push(b);
+      map.set(b.expert, list);
+    });
+    return map;
+  }, [bookings]);
+
   // Debounce searchInput -> search, so the query re-fires automatically as
   // the user types (after a short pause) instead of needing a submit button.
   useEffect(() => {
@@ -206,12 +302,16 @@ export default function FpoExpertsPage() {
     setEnquiryDialog({ open: true, expert });
   }
   function handleBook(expert: FpoExpert) {
-  if (!isApprovedFpo) {
-    toast.error("Your FPO must be approved to book experts.");
-    return;
+    if (!isApprovedFpo) {
+      toast.error("Your FPO must be approved to book experts.");
+      return;
+    }
+    setBookingDialog({ open: true, expert });
   }
-  setBookingDialog({ open: true, expert });
-}
+  function handleViewBookings(expert: FpoExpert) {
+    setBookingsListDialog({ open: true, expert });
+  }
+
   if (translationsLoading) {
     return (
       <div className="flex flex-col gap-6 px-3 sm:px-6 py-4 sm:py-6 animate-pulse">
@@ -316,7 +416,9 @@ export default function FpoExpertsPage() {
       ) : !experts || experts.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center gap-2">
           <p className="text-muted-foreground text-sm">
-            {(activeCategory || district || search) ? (t.empty_filtered ?? "No experts match your search. Try adjusting your filters.") : (t.empty_state ?? "No experts found.")}
+            {activeCategory || district || search
+              ? (t.empty_filtered ?? "No experts match your search. Try adjusting your filters.")
+              : (t.empty_state ?? "No experts found.")}
           </p>
           {(activeCategory || district || search) && (
             <Button
@@ -340,8 +442,10 @@ export default function FpoExpertsPage() {
               key={expert.id}
               expert={expert}
               isApprovedFpo={!!isApprovedFpo}
+              bookings={bookingsByExpertId.get(expert.id) ?? []}
               onContact={handleContact}
               onBook={handleBook}
+              onViewBookings={handleViewBookings}
               t={t}
               locale={locale}
             />
@@ -359,13 +463,21 @@ export default function FpoExpertsPage() {
         />
       )}
       {bookingDialog.expert && (
-  <ExpertBookingDialog
-    open={bookingDialog.open}
-    onOpenChange={(open) => setBookingDialog((s) => ({ ...s, open }))}
-    expertId={bookingDialog.expert.id}
-    expertName={bookingDialog.expert.name}
-  />
-)}
+        <ExpertBookingDialog
+          open={bookingDialog.open}
+          onOpenChange={(open) => setBookingDialog((s) => ({ ...s, open }))}
+          expertId={bookingDialog.expert.id}
+          expertName={bookingDialog.expert.name}
+        />
+      )}
+      {bookingsListDialog.expert && (
+        <ExpertBookingsListDialog
+          open={bookingsListDialog.open}
+          onOpenChange={(open) => setBookingsListDialog((s) => ({ ...s, open }))}
+          expertName={bookingsListDialog.expert.name}
+          bookings={bookingsByExpertId.get(bookingsListDialog.expert.id) ?? []}
+        />
+      )}
     </div>
   );
 }
