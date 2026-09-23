@@ -8,13 +8,14 @@ import { type MarketHubInquiry, marketHubInquiriesApi } from "@/app/fpo/_api/mar
 import { RowActions } from "@/components/data-table/row-actions";
 import { Badge } from "@/components/ui/badge";
 
-const STATUS_LABEL: Record<MarketHubInquiry["status"], string> = {
-  suggested: "Pending",
-  accepted: "Accepted",
-  rejected: "Rejected",
-  completed: "Completed",
-};
-
+function getStatusLabel(t: Record<string, string>): Record<MarketHubInquiry["status"], string> {
+  return {
+    suggested: t.status_mh_pending ?? "Pending",
+    accepted: t.status_mh_accepted ?? "Accepted",
+    rejected: t.status_mh_rejected ?? "Rejected",
+    completed: t.mh_status_completed ?? "Completed",
+  };
+}
 function statusClasses(status: MarketHubInquiry["status"]): string {
   switch (status) {
     case "suggested":
@@ -28,26 +29,26 @@ function statusClasses(status: MarketHubInquiry["status"]): string {
   }
 }
 
-function MarketHubInquiryActions({ inquiry }: { inquiry: MarketHubInquiry }) {
+function MarketHubInquiryActions({ inquiry, t }: { inquiry: MarketHubInquiry; t: Record<string, string> }) {
   const queryClient = useQueryClient();
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["market-hub-inquiries"] });
 
   const markAcceptedMutation = useMutation({
     mutationFn: () => marketHubInquiriesApi.markAccepted(inquiry.id),
     onSuccess: () => {
-      toast.success("Inquiry marked as accepted");
+      toast.success(t.toast_marked_accepted ?? "Inquiry marked as accepted");
       invalidate();
     },
-    onError: () => toast.error("Only pending inquiries can be marked as accepted"),
+    onError: () => toast.error(t.toast_error_accept ?? "Only pending inquiries can be marked as accepted"),
   });
 
   const markRejectedMutation = useMutation({
     mutationFn: () => marketHubInquiriesApi.markRejected(inquiry.id),
     onSuccess: () => {
-      toast.success("Inquiry marked as rejected");
+      toast.success(t.toast_marked_rejected ?? "Inquiry marked as rejected");
       invalidate();
     },
-    onError: () => toast.error("Only pending inquiries can be marked as rejected"),
+    onError: () => toast.error(t.toast_error_reject ?? "Only pending inquiries can be marked as rejected"),
   });
 
   if (inquiry.status !== "suggested") {
@@ -58,12 +59,12 @@ function MarketHubInquiryActions({ inquiry }: { inquiry: MarketHubInquiry }) {
     <RowActions
       actions={[
         {
-          label: "Mark as Accepted",
+          label: t.action_mark_accepted ?? "Mark as Accepted",
           onClick: () => markAcceptedMutation.mutate(),
           disabled: markAcceptedMutation.isPending,
         },
         {
-          label: "Mark as Rejected",
+          label: t.action_mark_rejected ?? "Mark as Rejected",
           onClick: () => markRejectedMutation.mutate(),
           disabled: markRejectedMutation.isPending,
           destructive: true,
@@ -73,38 +74,40 @@ function MarketHubInquiryActions({ inquiry }: { inquiry: MarketHubInquiry }) {
   );
 }
 
-export function getMarketHubInquiryColumns(): ColumnDef<MarketHubInquiry>[] {
+export function getMarketHubInquiryColumns(t: Record<string, string> = {}): ColumnDef<MarketHubInquiry>[] {
+  const statusLabel = getStatusLabel(t);
+
   return [
     {
       accessorKey: "product_name",
-      header: "Product Name",
+      header: t.col_product_name ?? "Product Name",
       cell: ({ row }) => <div className="font-medium">{row.original.product_name}</div>,
     },
     {
       accessorKey: "name",
-      header: "Name",
+      header: t.col_name ?? "Name",
       cell: ({ row }) => row.original.name,
     },
     {
       accessorKey: "email",
-      header: "Email",
+      header: t.col_email ?? "Email",
       cell: ({ row }) => row.original.email,
     },
     {
       accessorKey: "phone",
-      header: "Phone",
+      header: t.col_phone ?? "Phone",
       cell: ({ row }) => row.original.phone || "—",
     },
     {
       accessorKey: "message",
-      header: "Message",
+      header: t.col_message ?? "Message",
       cell: ({ row }) => (
         <span className="text-muted-foreground text-sm">{row.original.message || "—"}</span>
       ),
     },
     {
       accessorKey: "created_at",
-      header: "Date Received",
+      header: t.col_date_received ?? "Date Received",
       cell: ({ row }) => (
         <span className="text-muted-foreground text-sm">
           {new Date(row.original.created_at).toLocaleDateString()}
@@ -113,17 +116,17 @@ export function getMarketHubInquiryColumns(): ColumnDef<MarketHubInquiry>[] {
     },
     {
       accessorKey: "status",
-      header: "Status",
+      header: t.col_status ?? "Status",
       cell: ({ row }) => (
         <Badge variant="outline" className={statusClasses(row.original.status)}>
-          {STATUS_LABEL[row.original.status]}
+          {statusLabel[row.original.status]}
         </Badge>
       ),
     },
     {
       id: "actions",
       header: "",
-      cell: ({ row }) => <MarketHubInquiryActions inquiry={row.original} />,
+      cell: ({ row }) => <MarketHubInquiryActions inquiry={row.original} t={t} />,
       enableSorting: false,
       enableHiding: false,
     },

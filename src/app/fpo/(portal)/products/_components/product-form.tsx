@@ -56,10 +56,7 @@ const schema = z
     description_en: z
       .string()
       .min(1, { message: "Description is required" })
-      .max(2000, { message: "Description must be 2000 characters or fewer" })
-      .regex(NAME_PATTERN, {
-        message: "Description must start with a letter and contain only letters, spaces, apostrophes, or hyphens",
-      }),
+      .max(2000, { message: "Description must be 2000 characters or fewer" }),
     description_ml: z
       .string()
       .optional()
@@ -189,11 +186,11 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
   const mutation = useMutation({
     mutationFn: (values: FormValues) => {
       const payload = {
-        name: { en: values.name_en, ml: values.name_ml || values.name_en },
+        name: { en: values.name_en, ml: values.name_ml || "" },
         commodity: Number(values.commodity),
         description: {
           en: values.description_en ?? "",
-          ml: values.description_ml || values.description_en || "",
+          ml: values.description_ml || "",
         },
         quantity: values.quantity,
         unit: values.unit as ProductUnit,

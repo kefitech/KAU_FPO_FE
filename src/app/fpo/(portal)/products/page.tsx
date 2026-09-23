@@ -68,29 +68,29 @@ export default function FpoProductsPage() {
     () => [
       {
         key: "status",
-        label: "Status",
+        label: tPage.col_status ?? "Status",
         options: [
-          { label: "Pending", value: "pending" },
-          { label: "Contacted", value: "contacted" },
-          { label: "Resolved", value: "resolved" },
+          { label: tPage.status_pending ?? "Pending", value: "pending" },
+          { label: tPage.status_contacted ?? "Contacted", value: "contacted" },
+          { label: tPage.status_resolved ?? "Resolved", value: "resolved" },
         ],
       },
     ],
-    [],
+    [tPage],
   );
     const MARKET_HUB_STATUS_FILTERS = useMemo(
     () => [
       {
         key: "status",
-        label: "Status",
+        label: tPage.col_status ?? "Status",
         options: [
-          { label: "Pending", value: "suggested" },
-          { label: "Accepted", value: "accepted" },
-          { label: "Rejected", value: "rejected" },
+          { label: tPage.status_mh_pending ?? "Pending", value: "suggested" },
+          { label: tPage.status_mh_accepted ?? "Accepted", value: "accepted" },
+          { label: tPage.status_mh_rejected ?? "Rejected", value: "rejected" },
         ],
       },
     ],
-    [],
+    [tPage],
   );
 
   const titles: Record<ViewMode, { title: string; description: string }> = {
@@ -99,12 +99,14 @@ export default function FpoProductsPage() {
       description: tPage.page_description ?? "List and manage your FPO's agricultural products for market linkage.",
     },
     inquiries: {
-      title: "My Product Inquiries",
-      description: "View and manage inquiries received on your products.",
+      title: tPage.inquiries_title ?? "My Product Inquiries",
+      description: tPage.inquiries_description ?? "View and manage inquiries received on your products.",
     },
     "market-hub-inquiries": {
-      title: "Market Hub Inquiries",
-      description: "View inquiries received from anonymous visitors on the public Market Hub.",
+      title: tPage.market_hub_inquiries_title ?? "Market Hub Inquiries",
+      description:
+        tPage.market_hub_inquiries_description ??
+        "View inquiries received from anonymous visitors on the public Market Hub.",
     },
   };
 
@@ -121,9 +123,11 @@ export default function FpoProductsPage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="products">My Products</SelectItem>
-              <SelectItem value="inquiries">Inquiries</SelectItem>
-              <SelectItem value="market-hub-inquiries">Market Hub Inquiries</SelectItem>
+              <SelectItem value="products">{tPage.view_products ?? "My Products"}</SelectItem>
+              <SelectItem value="inquiries">{tPage.view_inquiries ?? "Inquiries"}</SelectItem>
+              <SelectItem value="market-hub-inquiries">
+                {tPage.view_market_hub_inquiries ?? "Market Hub Inquiries"}
+              </SelectItem>
             </SelectContent>
           </Select>
           {viewMode === "products" && (
@@ -171,7 +175,7 @@ export default function FpoProductsPage() {
           <DataTable
             queryKey="market-hub-inquiries"
             queryFn={marketHubInquiriesApi.getAll}
-            columns={getMarketHubInquiryColumns()}
+            columns={getMarketHubInquiryColumns(tPage)}     
             filters={MARKET_HUB_STATUS_FILTERS}
             columnsLabel={tCommon.columns_header}
             toggleColumnsLabel={tCommon.columns_toggle_columns}

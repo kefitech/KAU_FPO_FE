@@ -78,7 +78,11 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<InboxNotification | null>(null);
   const pathname = usePathname();
-  const inboxPath = pathname.startsWith("/fpo") ? "/fpo/inbox" : "/admin/inbox";
+  const inboxPath = pathname.startsWith("/fpo")
+    ? "/fpo/inbox"
+    : pathname.startsWith("/buyer")
+      ? "/buyer/inbox"
+      : "/admin/inbox";
   const queryClient = useQueryClient();
   const { t } = useTranslations("notification_bell");
   const locale = useLocaleStore((s) => s.locale);
