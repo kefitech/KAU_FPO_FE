@@ -82,7 +82,7 @@ const schema = z
         message: "Quality certification must be 200 characters or fewer",
       }),
     available_from: z.string().min(1, { message: "Available from date is required" }),
-    available_until: z.string().optional(),
+    available_until: z.string().min(1, { message: "Available until date is required" }),  
     is_public: z.boolean(),
     image: z
       .instanceof(File)
@@ -96,10 +96,7 @@ const schema = z
       }),
   })
   .refine(
-    (data) => {
-      if (!data.available_until) return true;
-      return new Date(data.available_until) >= new Date(data.available_from);
-    },
+    (data) => new Date(data.available_until) >= new Date(data.available_from),
     {
       message: "Available until date must be the same as or after the Available from date",
       path: ["available_until"],
@@ -506,7 +503,9 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
                   name="available_until"
                   render={({ field }) => (
                     <Field>
-                      <FieldLabel htmlFor="product-until">{t.available_until_label ?? "Available until"}</FieldLabel>
+                      <FieldLabel htmlFor="product-until">
+                        {t.available_until_label ?? "Available until"} <span className="text-destructive">*</span>
+                      </FieldLabel>
                       <Input id="product-until" type="date" {...field} />
                       {errors.available_until && <FieldError errors={[errors.available_until]} />}
                     </Field>

@@ -102,8 +102,8 @@ function ProductCard({ product, locale }: { product: BuyerProduct; locale: strin
 
           <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
             <CalendarIcon className="h-3.5 w-3.5" />
-            {product.available_from}
-            {product.available_until ? ` – ${product.available_until}` : ""}
+            <span className="font-medium text-foreground">Available:</span>{" "}
+            {formatAvailability(product.available_from, product.available_until)}
           </div>
 
           <Button size="sm" className="mt-1" onClick={() => setInquiryOpen(true)}>
@@ -130,7 +130,26 @@ function formatDate(date: Date | undefined): string {
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
 }
+function formatAvailability(from: string, until?: string | null): string {
+  if (!from) return "";
+  const dateOpts: Intl.DateTimeFormatOptions = { day: "numeric", month: "short" };
+  const fromDate = new Date(from);
+  const fromWithYear = fromDate.toLocaleDateString("en-GB", { ...dateOpts, year: "numeric" });
 
+  if (!until || until === from) {
+    return fromWithYear;
+  }
+
+  const untilDate = new Date(until);
+  const untilWithYear = untilDate.toLocaleDateString("en-GB", { ...dateOpts, year: "numeric" });
+
+  if (fromDate.getFullYear() === untilDate.getFullYear()) {
+    const fromShort = fromDate.toLocaleDateString("en-GB", dateOpts);
+    return `${fromShort} – ${untilWithYear}`;
+  }
+
+  return `${fromWithYear} – ${untilWithYear}`;
+}
 export default function BuyerProductsPage() {
   const locale = useLocaleStore((s) => s.locale);
   const [t, setT] = useState<T>({});

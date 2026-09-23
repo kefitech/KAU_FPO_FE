@@ -12,6 +12,27 @@ import BreadCrumb from "../_components/bread-crumb";
 
 const PAGE_SIZE = 12;
 
+function formatAvailability(from: string, until?: string | null): string {
+  if (!from) return "";
+  const dateOpts: Intl.DateTimeFormatOptions = { day: "numeric", month: "short" };
+  const fromDate = new Date(from);
+  const fromWithYear = fromDate.toLocaleDateString("en-GB", { ...dateOpts, year: "numeric" });
+
+  if (!until || until === from) {
+    return fromWithYear;
+  }
+
+  const untilDate = new Date(until);
+  const untilWithYear = untilDate.toLocaleDateString("en-GB", { ...dateOpts, year: "numeric" });
+
+  if (fromDate.getFullYear() === untilDate.getFullYear()) {
+    const fromShort = fromDate.toLocaleDateString("en-GB", dateOpts);
+    return `${fromShort} – ${untilWithYear}`;
+  }
+
+  return `${fromWithYear} – ${untilWithYear}`;
+}
+
 export default function MarketHubPage() {
   const locale = useLocaleStore((s) => s.locale);
   const [t, setT] = useState<Record<string, string>>({});
@@ -260,7 +281,7 @@ export default function MarketHubPage() {
                             className="badge"
                             style={{ background: "var(--color-primary)", color: "#fff", padding: "4px 10px" }}
                           >
-                            {product.commodity_code}
+                            {product.commodity_name}
                           </span>
                         </div>
                         {productDesc(product) && (
@@ -337,8 +358,7 @@ export default function MarketHubPage() {
                           </span>
                         )}
                         <div style={{ fontSize: 13, color: "#888", marginTop: 10 }}>
-                          {t.label_available ?? "Available"}: {product.available_from}
-                          {product.available_until ? ` – ${product.available_until}` : ""}
+                          {t.label_available ?? "Available"}: {formatAvailability(product.available_from, product.available_until)}
                         </div>
                         <button
                           type="button"

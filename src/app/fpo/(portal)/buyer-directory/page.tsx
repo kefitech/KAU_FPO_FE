@@ -86,21 +86,21 @@ function ProductCard({ product, locale, t }: { product: BuyerProduct; locale: st
               {product.quality_certification}
             </Badge>
           )}
-        <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
-          <Building2 className="h-3.5 w-3.5" />
-          {product.fpo_name}
-        </div>
-        <Link
-          href={`/fpo/buyer-directory/fpo/${product.fpo}`}
-          className="text-primary text-xs hover:underline"
-        >
-          {t.view_all_products ?? "View all products from this FPO"}
-        </Link>
           <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
             <CalendarIcon className="h-3.5 w-3.5" />
-            {product.available_from}
-            {product.available_until ? ` – ${product.available_until}` : ""}
+            <span className="font-medium text-foreground">{t.label_available ?? "Available"}:</span>{" "}
+            {formatAvailability(product.available_from, product.available_until)}
           </div>
+          <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
+            <Building2 className="h-3.5 w-3.5" />
+            {product.fpo_name}
+          </div>
+          <Link
+            href={`/fpo/buyer-directory/fpo/${product.fpo}`}
+            className="text-primary text-xs hover:underline"
+          >
+            {t.view_all_products ?? "View all products from this FPO"}
+          </Link>
           <Button size="sm" className="mt-auto" onClick={() => setInquiryOpen(true)}>
             {t.btn_inquire ?? "Inquire"}
           </Button>
@@ -299,6 +299,26 @@ function formatDate(date: Date | undefined): string {
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
+}
+function formatAvailability(from: string, until?: string | null): string {
+  if (!from) return "";
+  const dateOpts: Intl.DateTimeFormatOptions = { day: "numeric", month: "short" };
+  const fromDate = new Date(from);
+  const fromWithYear = fromDate.toLocaleDateString("en-GB", { ...dateOpts, year: "numeric" });
+
+  if (!until || until === from) {
+    return fromWithYear;
+  }
+
+  const untilDate = new Date(until);
+  const untilWithYear = untilDate.toLocaleDateString("en-GB", { ...dateOpts, year: "numeric" });
+
+  if (fromDate.getFullYear() === untilDate.getFullYear()) {
+    const fromShort = fromDate.toLocaleDateString("en-GB", dateOpts);
+    return `${fromShort} – ${untilWithYear}`;
+  }
+
+  return `${fromWithYear} – ${untilWithYear}`;
 }
 
 export default function BuyerDirectoryPage() {
