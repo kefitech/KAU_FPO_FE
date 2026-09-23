@@ -29,15 +29,39 @@ import { Textarea } from "@/components/ui/textarea";
 
 type T = Record<string, string>;
 
+// Applied silently when the corresponding field is left blank.
+const FIELD_DEFAULTS = {
+  temp_lo: 20,
+  temp_hi: 32,
+  ph_lo: 5.0,
+  ph_hi: 6.5,
+};
+
 const schema = z
   .object({
     crop_name: z.string().min(1, { message: "Crop name is required" }).max(150),
     crop_group: z.string().optional(),
     kau_zone: z.enum(KAU_ZONES, { message: "KAU zone is required" }),
-    temp_lo: z.number(),
-    temp_hi: z.number(),
-    ph_lo: z.number(),
-    ph_hi: z.number(),
+    temp_lo: z
+      .number()
+      .min(-60, { message: "Temperature must be at least -60°C" })
+      .max(60, { message: "Temperature must be at most 60°C" })
+      .optional(),
+    temp_hi: z
+      .number()
+      .min(-60, { message: "Temperature must be at least -60°C" })
+      .max(60, { message: "Temperature must be at most 60°C" })
+      .optional(),
+    ph_lo: z
+      .number()
+      .min(3, { message: "pH must be at least 3" })
+      .max(10, { message: "pH must be at most 10" })
+      .optional(),
+    ph_hi: z
+      .number()
+      .min(3, { message: "pH must be at least 3" })
+      .max(10, { message: "pH must be at most 10" })
+      .optional(),
     seasons_text: z.string().optional(),
     seasons: z.array(z.string()),
     suitable_soils: z.array(z.string()),
@@ -45,8 +69,14 @@ const schema = z
     ph_is_real: z.boolean(),
     is_active: z.boolean(),
   })
-  .refine((v) => v.temp_lo <= v.temp_hi, { message: "Must be ≥ min temperature", path: ["temp_hi"] })
-  .refine((v) => v.ph_lo <= v.ph_hi, { message: "Must be ≥ min pH", path: ["ph_hi"] });
+  .refine((v) => (v.temp_lo ?? FIELD_DEFAULTS.temp_lo) <= (v.temp_hi ?? FIELD_DEFAULTS.temp_hi), {
+    message: "Max temperature must be greater than or equal to min temperature",
+    path: ["temp_hi"],
+  })
+  .refine((v) => (v.ph_lo ?? FIELD_DEFAULTS.ph_lo) <= (v.ph_hi ?? FIELD_DEFAULTS.ph_hi), {
+    message: "Max pH must be greater than or equal to min pH",
+    path: ["ph_hi"],
+  });
 
 type FormValues = z.infer<typeof schema>;
 
@@ -54,10 +84,10 @@ const defaultValues: FormValues = {
   crop_name: "",
   crop_group: "",
   kau_zone: "General (all zones)",
-  temp_lo: 20,
-  temp_hi: 32,
-  ph_lo: 5.0,
-  ph_hi: 6.5,
+  temp_lo: undefined,
+  temp_hi: undefined,
+  ph_lo: undefined,
+  ph_hi: undefined,
   seasons_text: "",
   seasons: [],
   suitable_soils: [],
@@ -115,7 +145,13 @@ export function CropZoneProfileForm({ mode, id, t = {}, tCommon = {} }: Props) {
 
   const mutation = useMutation({
     mutationFn: (values: FormValues) => {
-      const payload: CropZoneProfilePayload = { ...values };
+      const payload: CropZoneProfilePayload = {
+        ...values,
+        temp_lo: values.temp_lo ?? FIELD_DEFAULTS.temp_lo,
+        temp_hi: values.temp_hi ?? FIELD_DEFAULTS.temp_hi,
+        ph_lo: values.ph_lo ?? FIELD_DEFAULTS.ph_lo,
+        ph_hi: values.ph_hi ?? FIELD_DEFAULTS.ph_hi,
+      };
       return mode === "create"
         ? adminCropZoneProfilesApi.create(payload)
         : adminCropZoneProfilesApi.update(id!, payload);
@@ -227,12 +263,17 @@ export function CropZoneProfileForm({ mode, id, t = {}, tCommon = {} }: Props) {
               <Controller
                 control={control}
                 name="temp_lo"
-                render={({ field }) => (
+                render={({ field: { value, onChange, ...field } }) => (
                   <Input
                     type="number"
                     step="0.1"
-                    value={field.value}
-                    onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                    min={-60}
+                    max={60}
+                    value={Number.isNaN(value) || value == null ? "" : value}
+                    onChange={(e) => {
+                      onChange(e.target.value === "" ? undefined : e.target.valueAsNumber);
+                    }}
+                    placeholder={t.placeholder_temp_lo ?? `Default: ${FIELD_DEFAULTS.temp_lo}`}
                     aria-label={t.field_temp_lo ?? "Min temperature"}
                   />
                 )}
@@ -241,17 +282,23 @@ export function CropZoneProfileForm({ mode, id, t = {}, tCommon = {} }: Props) {
               <Controller
                 control={control}
                 name="temp_hi"
-                render={({ field }) => (
+                render={({ field: { value, onChange, ...field } }) => (
                   <Input
                     type="number"
                     step="0.1"
-                    value={field.value}
-                    onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                    min={-60}
+                    max={60}
+                    value={Number.isNaN(value) || value == null ? "" : value}
+                    onChange={(e) => {
+                      onChange(e.target.value === "" ? undefined : e.target.valueAsNumber);
+                    }}
+                    placeholder={t.placeholder_temp_hi ?? `Default: ${FIELD_DEFAULTS.temp_hi}`}
                     aria-label={t.field_temp_hi ?? "Max temperature"}
                   />
                 )}
               />
             </div>
+            {errors.temp_lo && <FieldError errors={[errors.temp_lo]} />}
             {errors.temp_hi && <FieldError errors={[errors.temp_hi]} />}
           </FieldGroup>
 
@@ -261,12 +308,18 @@ export function CropZoneProfileForm({ mode, id, t = {}, tCommon = {} }: Props) {
               <Controller
                 control={control}
                 name="ph_lo"
-                render={({ field }) => (
+                render={({ field: { value, onChange, ...field } }) => (
                   <Input
+                    {...field}
                     type="number"
                     step="0.1"
-                    value={field.value}
-                    onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                    min={3}
+                    max={10}
+                    value={Number.isNaN(value) || value == null ? "" : value}
+                    onChange={(e) => {
+                      onChange(e.target.value === "" ? undefined : e.target.valueAsNumber);
+                    }}
+                    placeholder={t.placeholder_ph_lo ?? `Default: ${FIELD_DEFAULTS.ph_lo}`}
                     aria-label={t.field_ph_lo ?? "Min pH"}
                   />
                 )}
@@ -275,17 +328,24 @@ export function CropZoneProfileForm({ mode, id, t = {}, tCommon = {} }: Props) {
               <Controller
                 control={control}
                 name="ph_hi"
-                render={({ field }) => (
+                render={({ field: { value, onChange, ...field } }) => (
                   <Input
+                    {...field}
                     type="number"
                     step="0.1"
-                    value={field.value}
-                    onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                    min={3}
+                    max={10}
+                    value={Number.isNaN(value) || value == null ? "" : value}
+                    onChange={(e) => {
+                      onChange(e.target.value === "" ? undefined : e.target.valueAsNumber);
+                    }}
+                    placeholder={t.placeholder_ph_hi ?? `Default: ${FIELD_DEFAULTS.ph_hi}`}
                     aria-label={t.field_ph_hi ?? "Max pH"}
                   />
                 )}
               />
             </div>
+            {errors.ph_lo && <FieldError errors={[errors.ph_lo]} />}
             {errors.ph_hi && <FieldError errors={[errors.ph_hi]} />}
           </FieldGroup>
         </div>
