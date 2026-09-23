@@ -67,6 +67,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useConfirmStore } from "@/stores/confirm-store";
 
 // DPR section keys — hard-coded so the filter select doesn't need a network call.
 // Backend filter accepts any string, so a mismatch is a UX issue not a bug.
@@ -106,6 +107,7 @@ type DialogState =
 export default function AdminDprKnowledgePage() {
   const qc = useQueryClient();
   const [dialog, setDialog] = useState<DialogState>({ mode: "closed" });
+  const confirm = useConfirmStore((s) => s.confirm);
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["admin-dpr-knowledge"] });
 
@@ -264,13 +266,12 @@ export default function AdminDprKnowledgePage() {
                 variant="ghost"
                 disabled={deactivateMutation.isPending}
                 onClick={() => {
-                  if (
-                    window.confirm(
-                      `Deactivate "${row.original.title}"? Existing narrative citations stay traceable.`,
-                    )
-                  ) {
-                    deactivateMutation.mutate(row.original.id);
-                  }
+                  confirm({
+                    title: "Deactivate knowledge entry?",
+                    description: `Deactivate "${row.original.title}"? Existing narrative citations stay traceable.`,
+                    confirmLabel: "Deactivate",
+                    onConfirm: () => deactivateMutation.mutateAsync(row.original.id),
+                  });
                 }}
                 title="Soft-deactivate (keeps entry for citation trace)"
               >
@@ -283,13 +284,13 @@ export default function AdminDprKnowledgePage() {
               className="text-destructive hover:text-destructive"
               disabled={deleteMutation.isPending}
               onClick={() => {
-                if (
-                  window.confirm(
-                    `Delete "${row.original.title}"? Deactivating is preferred — deleting removes citation trace.`,
-                  )
-                ) {
-                  deleteMutation.mutate(row.original.id);
-                }
+                confirm({
+                  title: "Delete knowledge entry?",
+                  description: `Delete "${row.original.title}"? Deactivating is preferred — deleting removes citation trace from past narratives.`,
+                  confirmLabel: "Delete",
+                  variant: "destructive",
+                  onConfirm: () => deleteMutation.mutateAsync(row.original.id),
+                });
               }}
               title="Hard delete"
             >
@@ -299,7 +300,7 @@ export default function AdminDprKnowledgePage() {
         ),
       },
     ],
-    [deactivateMutation, deleteMutation],
+    [deactivateMutation, deleteMutation, confirm],
   );
 
   const filters: FilterConfig[] = useMemo(
@@ -504,12 +505,16 @@ function EntryDialog({
               >
                 <SelectTrigger className="h-9 w-full">
                   {/* Explicit short label so the trigger stays compact
-                      regardless of the long option name. */}
+                      regardless of the long option name. `position="popper"`
+                      on SelectContent below is required — the default
+                      "item-aligned" mode needs a real <SelectValue/> child
+                      to compute the drop-down position, and having only a
+                      plain <span> here makes the drop-down fail to open. */}
                   <span className="truncate">
                     {SOURCE_TYPE_LABELS_SHORT[form.source_type] ?? "—"}
                   </span>
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent position="popper">
                   {SOURCE_TYPE_ORDER.map((t) => (
                     <SelectItem key={t} value={t}>
                       {SOURCE_TYPE_LABELS[t]}

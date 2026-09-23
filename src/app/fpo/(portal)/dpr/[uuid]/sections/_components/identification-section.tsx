@@ -93,6 +93,9 @@ export function IdentificationSection({ uuid }: { uuid: string }) {
   const [isDirty, setIsDirty] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [saveError, setSaveError] = useState<Error | null>(null);
+  // Per-field errors returned by the backend on the last failed Save. Cleared
+  // when the user edits the offending field OR on next successful save.
+  const [saveFieldErrors, setSaveFieldErrors] = useState<Record<string, string>>({});
   const hasSeededRef = useRef(false);
 
   useEffect(() => {
@@ -113,6 +116,10 @@ export function IdentificationSection({ uuid }: { uuid: string }) {
   const fieldWarnings = new Map<string, string>();
   for (const e of readinessQ.data?.errors ?? []) fieldErrors.set(e.field, e.message);
   for (const w of readinessQ.data?.warnings ?? []) fieldWarnings.set(w.field, w.message);
+  // Fold in the backend's per-field save errors from the most recent failed
+  // PATCH. Save-time errors WIN over readiness (the user just tried to save
+  // and got 400 — that's the freshest signal for those fields).
+  for (const [field, msg] of Object.entries(saveFieldErrors)) fieldErrors.set(field, msg);
   // Live-checked required fields — mirror identification_validators.py so the
   // user sees an inline error the moment they blank a required input.
   // Readiness-only errors are stale here: the FPO clears a field, hits Save,
@@ -153,10 +160,12 @@ export function IdentificationSection({ uuid }: { uuid: string }) {
     onMutate: () => {
       markSaving("identification");
       setSaveError(null);
+      setSaveFieldErrors({});
     },
     onSuccess: (data) => {
       markSaved("identification");
       markClean("identification");
+      setSaveFieldErrors({});
       setForm(data);
       queryClient.setQueryData(["dpr-identification", uuid], data);
       // Two readiness query keys reference the same underlying data:
@@ -192,12 +201,29 @@ export function IdentificationSection({ uuid }: { uuid: string }) {
         if (typeof source === "string") {
           msg = source;
         } else if (typeof source === "object") {
-          const lines: string[] = [];
+          // Two paths:
+          //   1. Per-field errors (`{ceo_experience_years: [...]}`) — push
+          //      into saveFieldErrors so each field renders its own inline
+          //      error via <FieldError>. Toast shows a short summary only.
+          //   2. Non-field errors (`{non_field_errors: [...]}`) — no field
+          //      to attach to, keep in the toast.
+          const perField: Record<string, string> = {};
+          const nonField: string[] = [];
           for (const [field, value] of Object.entries(source as Record<string, unknown>)) {
             const text = Array.isArray(value) ? value.join(" · ") : String(value);
-            lines.push(field === "non_field_errors" ? text : `${field}: ${text}`);
+            if (field === "non_field_errors" || field === "detail") {
+              nonField.push(text);
+            } else {
+              perField[field] = text;
+            }
           }
-          if (lines.length) msg = lines.join("\n");
+          if (Object.keys(perField).length) setSaveFieldErrors(perField);
+          const fieldCount = Object.keys(perField).length;
+          if (fieldCount && !nonField.length) {
+            msg = `Please fix ${fieldCount} field ${fieldCount === 1 ? "error" : "errors"} highlighted below.`;
+          } else if (nonField.length) {
+            msg = nonField.join(" · ");
+          }
         }
       }
       toast.error(msg);
@@ -210,6 +236,15 @@ export function IdentificationSection({ uuid }: { uuid: string }) {
     setForm((prev) => (prev ? { ...prev, [k]: v } : prev));
     setIsDirty(true);
     markDirty("identification");
+    // Clear the backend save-error for THIS field so the inline red text
+    // disappears the moment the user edits the offending value. Other fields'
+    // save-errors stay in place until the next save attempt.
+    if (saveFieldErrors[k as string]) {
+      setSaveFieldErrors((prev) => {
+        const { [k as string]: _dropped, ...rest } = prev;
+        return rest;
+      });
+    }
     if (timerRef.current) clearTimeout(timerRef.current);
     // The autosave callback calls `mutation.mutate()` directly — NOT wrapped
     // in another `setForm(cur => { … })` updater. React 19 warns loudly when
@@ -546,6 +581,7 @@ export function IdentificationSection({ uuid }: { uuid: string }) {
                   onChange={(e) => update("ceo_name", e.target.value)}
                   placeholder="Full name of the CEO / Chief Executive"
                 />
+                <FieldError name="ceo_name" errors={fieldErrors} warnings={fieldWarnings} />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">CEO qualification</Label>
@@ -555,6 +591,7 @@ export function IdentificationSection({ uuid }: { uuid: string }) {
                   onChange={(e) => update("ceo_qualification", e.target.value)}
                   placeholder="e.g. B.Sc Agri, MBA Agri-business"
                 />
+                <FieldError name="ceo_qualification" errors={fieldErrors} warnings={fieldWarnings} />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">CEO experience (years)</Label>
@@ -569,6 +606,7 @@ export function IdentificationSection({ uuid }: { uuid: string }) {
                   }}
                   placeholder="e.g. 12"
                 />
+                <FieldError name="ceo_experience_years" errors={fieldErrors} warnings={fieldWarnings} />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Board meeting frequency</Label>
@@ -586,6 +624,7 @@ export function IdentificationSection({ uuid }: { uuid: string }) {
                     <SelectItem value="annually">Annually</SelectItem>
                   </SelectContent>
                 </Select>
+                <FieldError name="board_meeting_frequency" errors={fieldErrors} warnings={fieldWarnings} />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Total farming area covered (acres)</Label>
@@ -600,6 +639,7 @@ export function IdentificationSection({ uuid }: { uuid: string }) {
                   }}
                   placeholder="e.g. 487.50"
                 />
+                <FieldError name="total_area_acreage" errors={fieldErrors} warnings={fieldWarnings} />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Women shareholding (%)</Label>
@@ -615,6 +655,7 @@ export function IdentificationSection({ uuid }: { uuid: string }) {
                   }}
                   placeholder="e.g. 44.00"
                 />
+                <FieldError name="women_shareholding_pct" errors={fieldErrors} warnings={fieldWarnings} />
               </div>
             </div>
 
@@ -627,6 +668,7 @@ export function IdentificationSection({ uuid }: { uuid: string }) {
                 onChange={(e) => update("landholding_summary", e.target.value)}
                 placeholder="e.g. 70% smallholders under 2 acres, 25% medium 2–5 acres, 5% above 5 acres"
               />
+              <FieldError name="landholding_summary" errors={fieldErrors} warnings={fieldWarnings} />
             </div>
 
             {/* PSC (Project Steering Committee) — variable-length repeatable list */}

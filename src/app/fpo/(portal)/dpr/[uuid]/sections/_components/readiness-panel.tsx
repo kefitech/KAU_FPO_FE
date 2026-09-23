@@ -8,6 +8,30 @@ import { dprApi, type DprSectionKey } from "@/lib/api/dpr";
 import { humaniseFieldPath } from "./humanise-field";
 
 /**
+ * Render a readiness message. When the backend message already identifies
+ * the offending record (e.g. `Product "Rice-3": category is missing`), the
+ * generic "Section → Row N → Field" prefix is redundant and confusing —
+ * we surface just the message. Otherwise we keep the path prefix so the
+ * user can navigate to the correct field.
+ */
+function renderMessage(field: string, message: string, sectionKey: DprSectionKey) {
+  // Heuristic: message is self-labelled when it starts with something like
+  //   Product "Rice-3": ...
+  //   Product 3: ...
+  //   Material "Rice husk": ...
+  //   Row 3 — ...
+  const selfLabelled = /^(Product|Material|Machine|Employee|Building|Row|Item)\s+["\d]/.test(message);
+  if (selfLabelled) {
+    return <span>{message}</span>;
+  }
+  return (
+    <>
+      <span className="font-medium">{humaniseFieldPath(field, sectionKey)}</span> — {message}
+    </>
+  );
+}
+
+/**
  * Reusable readiness display for any section.
  *
  * Fetches /readiness/ (backend runs the section's validator, returns
@@ -102,7 +126,7 @@ export function ReadinessPanel({
                   onClick={() => focusField(e.field)}
                   className="text-left underline-offset-2 hover:underline focus:outline-none focus-visible:underline"
                 >
-                  <span className="font-medium">{humaniseFieldPath(e.field, sectionKey)}</span> — {e.message}
+                  {renderMessage(e.field, e.message, sectionKey)}
                 </button>
               </li>
             ))}
@@ -123,7 +147,7 @@ export function ReadinessPanel({
                   onClick={() => focusField(w.field)}
                   className="text-left underline-offset-2 hover:underline focus:outline-none focus-visible:underline"
                 >
-                  <span className="font-medium">{humaniseFieldPath(w.field, sectionKey)}</span> — {w.message}
+                  {renderMessage(w.field, w.message, sectionKey)}
                 </button>
               </li>
             ))}

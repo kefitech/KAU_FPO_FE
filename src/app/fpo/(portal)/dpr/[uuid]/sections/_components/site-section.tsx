@@ -543,8 +543,8 @@ export function SiteSection({ uuid }: { uuid: string }) {
             "H — Site Constraints. At least one constraint recommended (water scarcity, flood risk, soil issues, etc.). Mitigation measure is required per row. 'Others' constraint type requires specify text.",
           ]}
           tips={[
-            "Component mapping in parcel modal is a KAU RCD requirement (B.8). Tick every component the parcel will host — Processing, Storage, Marketing, Cold Storage, etc. A parcel with 0 components blocks Save.",
-            "Land unit is fixed to 5 options (acre / cent / are / hectare / sqm) per KAU RCD B.3. If your land is measured in something else, convert first — 1 cent = 40.47 sqm, 1 acre = 40.47 are, 1 hectare = 100 are.",
+            "Component mapping is mandatory in the parcel modal — tick every component the parcel will host (Processing, Storage, Marketing, Cold Storage, etc.). A parcel with 0 components blocks Save.",
+            "Land unit is fixed to 5 options (acre / cent / are / hectare / sqm). If your land is measured in something else, convert first — 1 cent = 40.47 sqm, 1 acre = 40.47 are, 1 hectare = 100 are.",
             "Distances feed the market-linkage scoring downstream. A processing unit > 50 km from the raw-material source is a red flag for logistics viability — the AI narrative flags this automatically.",
             "GPS coordinates for the parcel go on the Location section (§2.3.2), not here. This section is about area + ownership + characteristics.",
             "'Land proposed for project' should be ≤ 'Total land available' per parcel — the FE surfaces a soft warning if you violate this, backend accepts either.",

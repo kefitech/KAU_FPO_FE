@@ -182,10 +182,18 @@ export function SectionShell({
   // being turned on. These always show the "optional" banner so the user
   // isn't confused by a "Section complete" state on an empty form.
   const ALWAYS_OPTIONAL_SECTIONS: DprSectionKey[] = ["investment"];
+  // Seed sections + anything backend calls "ALWAYS_MANDATORY". The banner
+  // must NEVER call these optional — the section-level validator will
+  // block Save, so contradicting text ("this section is optional") is a
+  // real UX bug (reported by tester 2026-09-23).
+  const ALWAYS_REQUIRED_SECTIONS: DprSectionKey[] = ["identification", "components"];
   const isSpecOptional = ALWAYS_OPTIONAL_SECTIONS.includes(sectionKey);
+  const isSpecRequired = ALWAYS_REQUIRED_SECTIONS.includes(sectionKey);
   const showOptionalBanner =
-    isSpecOptional || (engineEnabled && thisApplicability === "O");
-  const showRequiredBanner = engineEnabled && thisApplicability === "M";
+    !isSpecRequired &&
+    (isSpecOptional || (engineEnabled && thisApplicability === "O"));
+  const showRequiredBanner =
+    isSpecRequired || (engineEnabled && thisApplicability === "M");
 
   // Dismiss state — remembered PER SESSION per (uuid, sectionKey). Uses
   // sessionStorage so a fresh browser session shows the hint again (data

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff } from "lucide-react";
@@ -27,8 +27,21 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
+/**
+ * Sanitise the ?next= param. Only relative in-app paths are honoured; anything
+ * else (external URL, javascript:, protocol-relative) falls back to null so a
+ * hostile link can't hijack the post-login redirect.
+ */
+function safeNextPath(raw: string | null): string | null {
+  if (!raw) return null;
+  if (!raw.startsWith("/") || raw.startsWith("//")) return null;
+  return raw;
+}
+
 export function LoginForm({ t: tProp }: { t?: Record<string, string> }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextPath = safeNextPath(searchParams?.get("next") ?? null);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const setUser = useAuthStore((state) => state.setUser);
@@ -63,7 +76,14 @@ export function LoginForm({ t: tProp }: { t?: Record<string, string> }) {
         const meData = await authApi.me();
         setUser(meData.user, meData.redirect);
         sessionStorage.setItem("show_welcome", "1");
-        router.replace(resolvePostLoginPath(meData.redirect, meData.menu?.[0]?.path));
+        // Honour ?next= when the session was timed out mid-navigation — user
+        // expects to land back where they were, not on the default dashboard.
+        // resolvePostLoginPath's role-specific redirects (wizard / status /
+        // fpo-dashboard) override next, since those exist for stateful reasons.
+        const defaultPath = resolvePostLoginPath(meData.redirect, meData.menu?.[0]?.path);
+        const useNext =
+          nextPath && !meData.redirect;  // redirect from BE takes priority
+        router.replace(useNext ? nextPath! : defaultPath);
       }
     } catch (error) {
       const axiosErr = error as { response?: { data?: { message?: string } }; message?: string } | undefined;
