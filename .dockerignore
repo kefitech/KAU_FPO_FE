@@ -6,3 +6,7 @@ node_modules/
 .claude/
 CLAUDE.md
 README.md
+e2e-dpr-calc/
+playwright.config.ts
+playwright-report/
+test-results/
