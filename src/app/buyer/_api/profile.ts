@@ -4,6 +4,7 @@ type Wrapped<T> = { status: string; message: string; data: T };
 const unwrap = <T>(r: { data: Wrapped<T> }) => r.data.data;
 
 export interface BuyerProfileData {
+  organisation: string;
   location: string;
   commodities_interested: string[];
   min_quantity: string | null;
@@ -12,6 +13,7 @@ export interface BuyerProfileData {
 }
 
 export interface BuyerProfileUpdatePayload {
+  organisation?: string;
   location?: string;
   commodities_interested?: string[];
   min_quantity?: number | string | null;

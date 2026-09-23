@@ -18,6 +18,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { masterDataApi } from "@/lib/api/master-data";
@@ -63,6 +64,7 @@ export default function BuyerDashboardPage() {
 
   const [locationDraft, setLocationDraft] = useState("");
   const [commoditiesDraft, setCommoditiesDraft] = useState<string[]>([]);
+  const [organisationDraft, setOrganisationDraft] = useState("");
   const [editingProfile, setEditingProfile] = useState(false);
 
   const { data: commodities } = useQuery({
@@ -76,6 +78,7 @@ export default function BuyerDashboardPage() {
     if (data) {
       setLocationDraft(data.location || "");
       setCommoditiesDraft(data.commodities_interested || []);
+      setOrganisationDraft(data.organisation || "");
     }
   }, [data]);
 
@@ -84,6 +87,7 @@ export default function BuyerDashboardPage() {
       buyerProfileApi.update({
         location: locationDraft,
         commodities_interested: commoditiesDraft,
+        organisation: organisationDraft,
       }),
     onSuccess: () => {
       toast.success(t.profile_saved ?? "Profile updated");
@@ -148,6 +152,22 @@ export default function BuyerDashboardPage() {
             </p>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
+            {/* Organisation (optional) */}
+            <div className="flex flex-col gap-1.5">
+              <label className="font-medium text-sm">
+                {t.label_organisation ?? "Organisation"}{" "}
+                <span className="font-normal text-muted-foreground">
+                  ({t.optional ?? "optional"})
+                </span>
+              </label>
+              <Input
+                value={organisationDraft}
+                onChange={(e) => setOrganisationDraft(e.target.value)}
+                placeholder={t.organisation_placeholder ?? "Your organisation name"}
+                className="w-full sm:w-72"
+              />
+            </div>
+
             {/* Location */}
             <div className="flex flex-col gap-1.5">
               <label className="font-medium text-sm">
@@ -229,6 +249,7 @@ export default function BuyerDashboardPage() {
                   onClick={() => {
                     setLocationDraft(data.location || "");
                     setCommoditiesDraft(data.commodities_interested || []);
+                    setOrganisationDraft(data.organisation || "");
                     setEditingProfile(false);
                   }}
                 >
@@ -248,67 +269,66 @@ export default function BuyerDashboardPage() {
         </Card>
       )}
 
-      {/* ── Profile summary ── */}
+      {/* ── Profile summary (Buyer Profile + Commodities Interested, merged) ── */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between gap-2">
           <CardTitle className="text-base">{t.card_profile_title ?? "Buyer Profile"}</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-2">
-          <div className="flex flex-col gap-0.5">
-            <span className="text-muted-foreground text-xs">{t.label_organisation ?? "Organisation"}</span>
-            <span className="flex items-center gap-1.5 font-medium text-sm">
-              <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-              {data.organisation || "—"}
-            </span>
-          </div>
-          <div className="flex flex-col gap-0.5">
-            <span className="text-muted-foreground text-xs">{t.label_email ?? "Email"}</span>
-            <span className="flex items-center gap-1.5 font-medium text-sm">
-              <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-              {data.contact_email}
-            </span>
-          </div>
-          <div className="flex flex-col gap-0.5">
-            <span className="text-muted-foreground text-xs">{t.label_phone ?? "Phone"}</span>
-            <span className="flex items-center gap-1.5 font-medium text-sm">
-              <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-              {data.contact_phone || "—"}
-            </span>
-          </div>
-          <div className="flex flex-col gap-0.5">
-            <span className="text-muted-foreground text-xs">{t.label_location ?? "Location"}</span>
-            <span className="flex items-center gap-1.5 font-medium text-sm">
-              <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
-              {data.location || "—"}
-            </span>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* ── Commodities interested ── */}
-      {!profileIncomplete && (
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2">
-            <CardTitle className="text-base">{t.label_commodities ?? "Commodities Interested"}</CardTitle>
+          {!profileIncomplete && (
             <Button size="sm" variant="outline" onClick={() => setEditingProfile(true)}>
               {t.edit_btn ?? "Edit"}
             </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {data.commodities_interested.length > 0 ? (
-                data.commodities_interested.map((c) => (
-                  <Badge key={c} variant="secondary" className="font-normal">
-                    {c}
-                  </Badge>
-                ))
-              ) : (
-                <p className="text-muted-foreground text-sm">{t.no_commodities ?? "None specified yet."}</p>
-              )}
+          )}
+        </CardHeader>
+        <CardContent className="flex flex-col gap-5">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="flex flex-col gap-0.5">
+              <span className="text-muted-foreground text-xs">{t.label_organisation ?? "Organisation"}</span>
+              <span className="flex items-center gap-1.5 font-medium text-sm">
+                <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                {data.organisation || "—"}
+              </span>
             </div>
-          </CardContent>
-        </Card>
-      )}
+            <div className="flex flex-col gap-0.5">
+              <span className="text-muted-foreground text-xs">{t.label_email ?? "Email"}</span>
+              <span className="flex items-center gap-1.5 font-medium text-sm">
+                <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                {data.contact_email}
+              </span>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-muted-foreground text-xs">{t.label_phone ?? "Phone"}</span>
+              <span className="flex items-center gap-1.5 font-medium text-sm">
+                <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                {data.contact_phone || "—"}
+              </span>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-muted-foreground text-xs">{t.label_location ?? "Location"}</span>
+              <span className="flex items-center gap-1.5 font-medium text-sm">
+                <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                {data.location || "—"}
+              </span>
+            </div>
+          </div>
+
+          {!profileIncomplete && (
+            <div className="flex flex-col gap-1.5 border-t pt-4">
+              <span className="text-muted-foreground text-xs">{t.label_commodities ?? "Commodities Interested"}</span>
+              <div className="flex flex-wrap gap-2">
+                {data.commodities_interested.length > 0 ? (
+                  data.commodities_interested.map((c) => (
+                    <Badge key={c} variant="secondary" className="font-normal">
+                      {c}
+                    </Badge>
+                  ))
+                ) : (
+                  <p className="text-muted-foreground text-sm">{t.no_commodities ?? "None specified yet."}</p>
+                )}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

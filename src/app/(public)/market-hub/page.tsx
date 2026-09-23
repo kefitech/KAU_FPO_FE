@@ -24,6 +24,19 @@ export default function MarketHubPage() {
   const [loadingMore, setLoadingMore] = useState(false);
 
   // Inquiry modal state
+  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
+  const toggleExpanded = (id: number) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
   const [inquiryProduct, setInquiryProduct] = useState<MarketHubProduct | null>(null);
   const [inquiryName, setInquiryName] = useState("");
   const [inquiryEmail, setInquiryEmail] = useState("");
@@ -251,18 +264,47 @@ export default function MarketHubPage() {
                           </span>
                         </div>
                         {productDesc(product) && (
-                          <p
-                            style={{
-                              color: "#666",
-                              fontSize: 14,
-                              display: "-webkit-box",
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: "vertical",
-                              overflow: "hidden",
-                            }}
-                          >
-                            {productDesc(product)}
-                          </p>
+                          <>
+                            <p
+                              style={
+                                expandedIds.has(product.id)
+                                  ? { color: "#666", fontSize: 14 }
+                                  : {
+                                      color: "#666",
+                                      fontSize: 14,
+                                      display: "-webkit-box",
+                                      WebkitLineClamp: 2,
+                                      WebkitBoxOrient: "vertical",
+                                      overflow: "hidden",
+                                    }
+                              }
+                            >
+                              {productDesc(product)}
+                            </p>
+                            {productDesc(product).length > 120 && (
+                              <button
+                                type="button"
+                                onClick={() => toggleExpanded(product.id)}
+                                style={{
+                                  background: "none",
+                                  border: "none",
+                                  padding: 0,
+                                  marginTop: -4,
+                                  marginBottom: 10,
+                                  color: "var(--color-primary)",
+                                  fontSize: 13,
+                                  fontWeight: 600,
+                                  cursor: "pointer",
+                                  textAlign: "left",
+                                  alignSelf: "flex-start",
+                                }}
+                              >
+                                {expandedIds.has(product.id)
+                                  ? (t.btn_read_less ?? "Read less")
+                                  : (t.btn_read_more ?? "Read more")}
+                              </button>
+                            )}
+                          </>
                         )}
                         <div className="row mb-10">
                           <div className="col-6">

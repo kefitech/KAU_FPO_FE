@@ -13,10 +13,17 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { InquiryDialog } from "@/components/ui/inquiry-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { translationsApi } from "@/lib/api/translations";
 import { toMediaUrl } from "@/lib/utils/media-url";
@@ -28,6 +35,7 @@ function ProductCard({ product, locale }: { product: BuyerProduct; locale: strin
   const name = locale === "ml" ? product.name.ml || product.name.en : product.name.en;
   const description = locale === "ml" ? product.description.ml || product.description.en : product.description.en;
   const [inquiryOpen, setInquiryOpen] = useState(false);
+  const [descExpanded, setDescExpanded] = useState(false);
 
   return (
     <>
@@ -45,7 +53,22 @@ function ProductCard({ product, locale }: { product: BuyerProduct; locale: strin
           </div>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
-          {description && <p className="text-muted-foreground text-sm">{description}</p>}
+          {description && (
+            <div className="flex flex-col gap-1">
+              <p className={descExpanded ? "text-muted-foreground text-sm" : "line-clamp-2 text-muted-foreground text-sm"}>
+                {description}
+              </p>
+              {description.length > 120 && (
+                <button
+                  type="button"
+                  onClick={() => setDescExpanded((v) => !v)}
+                  className="w-fit text-primary text-xs font-medium hover:underline"
+                >
+                  {descExpanded ? "Read less" : "Read more"}
+                </button>
+              )}
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div className="flex flex-col gap-0.5">
@@ -114,7 +137,8 @@ export default function BuyerProductsPage() {
   const [translationsLoading, setTranslationsLoading] = useState(true);
 
   const [search, setSearch] = useState("");
-  const [commodity, setCommodity] = useState("all");
+  const [selectedCommodities, setSelectedCommodities] = useState<string[]>([]);
+  const [defaultApplied, setDefaultApplied] = useState(false);
   const [fromDate, setFromDate] = useState<Date | undefined>(undefined);
   const [untilDate, setUntilDate] = useState<Date | undefined>(undefined);
 const [page, setPage] = useState(1);
@@ -141,12 +165,17 @@ const resetPage = () => setPage(1);
     staleTime: 60_000,
   });
 
+  // Default the commodity filter to the buyer's interested commodities —
+  // but only once, the first time buyerDashboard data arrives. After that,
+  // whatever the buyer ticks/unticks themselves takes over completely.
   useEffect(() => {
-    if (commodity === "all" && buyerDashboard?.commodities_interested?.length) {
-      setCommodity(buyerDashboard.commodities_interested[0]);
+    if (!defaultApplied && buyerDashboard) {
+      if (buyerDashboard.commodities_interested?.length) {
+        setSelectedCommodities(buyerDashboard.commodities_interested);
+      }
+      setDefaultApplied(true);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [buyerDashboard]);
+  }, [buyerDashboard, defaultApplied]);
 
   // Date range filter requires BOTH dates before it's applied — picking
   // only one is treated as "no filter yet."
@@ -157,7 +186,7 @@ const resetPage = () => setPage(1);
       "buyer-products",
       locale,
       search,
-      commodity,
+      selectedCommodities,
       dateFilterReady ? fromDate : null,
       dateFilterReady ? untilDate : null,
       page,
@@ -168,11 +197,15 @@ const resetPage = () => setPage(1);
         page,
         page_size: pageSize,
         search: search || undefined,
-        commodity: commodity !== "all" ? commodity : undefined,
+        commodity: selectedCommodities.length > 0 ? selectedCommodities.join(",") : undefined,
         date_from: dateFilterReady ? formatDate(fromDate) : undefined,
         date_until: dateFilterReady ? formatDate(untilDate) : undefined,
       }),
     staleTime: 30_000,
+    // Wait until we've decided the default commodity selection (from the
+    // buyer's interests) before firing the first request, so we don't
+    // briefly show "all products" and then jump to the filtered list.
+    enabled: defaultApplied,
   });
 
   const products = data?.data ?? [];
@@ -200,25 +233,42 @@ const resetPage = () => setPage(1);
             className="pl-9"
           />
         </div>
-        <Select
-          value={commodity}
-          onValueChange={(v) => {
-            setCommodity(v);
-            resetPage();
-          }}
-        >
-          <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder={t.filter_commodity ?? "All commodities"} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t.filter_all ?? "All commodities"}</SelectItem>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="w-full justify-start font-normal sm:w-56">
+              {selectedCommodities.length > 0
+                ? `${selectedCommodities.length} ${t.commodities_selected_suffix ?? "commodities selected"}`
+                : (t.filter_commodity ?? "All commodities")}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="max-h-72 overflow-y-auto">
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault();
+                setSelectedCommodities([]);
+                resetPage();
+              }}
+            >
+              {t.filter_all ?? "All commodities"}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             {commodities.map((c) => (
-              <SelectItem key={c.id} value={c.code}>
+              <DropdownMenuCheckboxItem
+                key={c.id}
+                checked={selectedCommodities.includes(c.code)}
+                onSelect={(e) => e.preventDefault()}
+                onCheckedChange={(checked) => {
+                  setSelectedCommodities((prev) =>
+                    checked ? [...prev, c.code] : prev.filter((v) => v !== c.code),
+                  );
+                  resetPage();
+                }}
+              >
                 {c.name}
-              </SelectItem>
+              </DropdownMenuCheckboxItem>
             ))}
-          </SelectContent>
-        </Select>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <Popover>
           <PopoverTrigger asChild>
@@ -279,7 +329,7 @@ const resetPage = () => setPage(1);
       </div>
 
       {/* ── Product grid ── */}
-      {translationsLoading || isLoading ? (
+      {translationsLoading || !defaultApplied || isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <Skeleton key={i} className="h-64" />
