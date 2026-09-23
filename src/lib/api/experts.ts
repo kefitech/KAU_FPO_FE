@@ -45,15 +45,17 @@ export const expertsApi = {
       })
       .then((r) => r.data.data),
   getAvailability: (id: number): Promise<ExpertAvailabilityDay[]> =>
-    api
-      .get<{ status: string; data: ExpertAvailabilityDay[] }>(`/experts/${id}/availability/`)
-      .then((r) => r.data.data),
-  bookSlot: (id: number, payload: { requested_date: string; requested_time: string; time_slot_id?: number; topic?: string; notes?: string }): Promise<ExpertBooking> =>
-    api
-      .post<{ status: string; data: ExpertBooking }>(`/experts/${id}/book/`, payload)
-      .then((r) => r.data.data),
+    api.get<{ status: string; data: ExpertAvailabilityDay[] }>(`/experts/${id}/availability/`).then((r) => r.data.data),
+  bookSlot: (
+    id: number,
+    payload: { requested_date: string; requested_time: string; time_slot_id?: number; topic?: string; notes?: string },
+  ): Promise<ExpertBooking> =>
+    api.post<{ status: string; data: ExpertBooking }>(`/experts/${id}/book/`, payload).then((r) => r.data.data),
   cancelBooking: (bookingId: number, reason?: string): Promise<ExpertBooking> =>
     api
       .post<{ status: string; data: ExpertBooking }>(`/experts/bookings/${bookingId}/cancel/`, { reason })
       .then((r) => r.data.data),
+
+  listMyBookings: (params?: { expert?: number; status?: string }): Promise<ExpertBooking[]> =>
+    api.get<{ status: string; data: ExpertBooking[] }>("/experts/bookings/", { params }).then((r) => r.data.data),
 };

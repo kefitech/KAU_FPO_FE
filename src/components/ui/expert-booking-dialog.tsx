@@ -61,16 +61,48 @@ export function ExpertBookingDialog({ open, onOpenChange, expertId, expertName }
       const status = (error as { status?: number })?.status;
       if (status === 403) {
         toast.error("Your FPO must be approved to book experts.");
-      } else {
-        const msg = (error as { message?: string })?.message;
-        toast.error(msg ?? "Failed to submit booking. Please try again.");
+        return;
       }
+
+      const msg = (error as { message?: string })?.message;
+      const data = (error as { data?: Record<string, unknown> })?.data;
+
+      // 1) Prefer a real backend message (StandardResponse envelope: {status, message, data})
+      //    Axios's own generic fallback text ("Request failed with status code ...") or the
+      //    client.ts default ("An error occurred") should NOT be shown as-is — fall through instead.
+      const isGenericMsg =
+        !msg ||
+        msg === "An error occurred" ||
+        msg.toLowerCase().includes("request failed");
+
+      if (!isGenericMsg) {
+        toast.error(msg as string);
+        return;
+      }
+
+      // 2) Fall back to DRF field-level validation errors, e.g. {topic: ["Please enter a topic..."]}
+      if (data && typeof data === "object") {
+        const firstKey = Object.keys(data).find((k) => k !== "status" && k !== "message" && k !== "data");
+        const firstError = firstKey ? data[firstKey] : undefined;
+        const errorText = Array.isArray(firstError) ? firstError[0] : firstError;
+        if (errorText) {
+          toast.error(errorText as string);
+          return;
+        }
+      }
+
+      // 3) Last resort
+      toast.error(msg ?? "Failed to submit booking. Please try again.");
     },
   });
 
   function handleSubmit() {
     if (!selectedDate || !selectedTime) {
       toast.error("Please select a date and time.");
+      return;
+    }
+    if (!topic.trim()) {
+      toast.error("Please enter a topic for this appointment.");
       return;
     }
     mutation.mutate();
@@ -140,10 +172,17 @@ export function ExpertBookingDialog({ open, onOpenChange, expertId, expertName }
           )}
 
           <div className="flex flex-col gap-1.5">
-            <label className="font-medium text-sm" htmlFor="booking-topic">Topic</label>
-            <Input id="booking-topic" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="e.g. Crop disease consultation" />
+            <label className="font-medium text-sm" htmlFor="booking-topic">
+              Topic <span className="text-red-500">*</span>
+            </label>
+            <Input
+              id="booking-topic"
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              placeholder="e.g. Crop disease consultation"
+              required
+            />
           </div>
-
           <div className="flex flex-col gap-1.5">
             <label className="font-medium text-sm" htmlFor="booking-notes">Notes (optional)</label>
             <Textarea id="booking-notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Any details the expert should know" />
