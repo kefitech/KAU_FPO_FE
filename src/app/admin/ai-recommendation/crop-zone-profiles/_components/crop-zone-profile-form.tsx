@@ -153,8 +153,9 @@ export function CropZoneProfileForm({ mode, id, t = {}, tCommon = {} }: Props) {
       router.push("/admin/ai-recommendation/crop-zone-profiles");
     },
     onError: (err: unknown) => {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      toast.error(msg || (t.toast_save_failed ?? "Failed to save crop zone profile"));
+      const data = (err as { data?: { message?: string; errors?: Record<string, string[]> } })?.data;
+      const fieldError = data?.errors ? Object.values(data.errors)[0]?.[0] : undefined;
+      toast.error(fieldError || data?.message || (t.toast_save_failed ?? "Failed to save crop zone profile"));
     },
   });
 
@@ -346,6 +347,7 @@ export function CropZoneProfileForm({ mode, id, t = {}, tCommon = {} }: Props) {
                 <Textarea
                   id="seasons_text"
                   rows={3}
+                  className="max-h-40 overflow-y-auto"
                   placeholder={
                     t.placeholder_seasons_text ??
                     "e.g. Onset of southwest monsoon (main field planting, before heavy rains)"

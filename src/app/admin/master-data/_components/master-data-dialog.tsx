@@ -25,21 +25,28 @@ import { Textarea } from "@/components/ui/textarea";
 
 type T = Record<string, string>;
 
-const schema = z.object({
-  // Required for most tables; crop names/groups derive it from the name when left empty (checked below)
-  code: z
-    .string()
-    .max(50)
-    .refine((v) => v === "" || /^[a-z0-9_]+$/.test(v), { message: "Only lowercase letters, numbers and underscores" }),
-  name_en: z.string().min(1, { message: "English name is required" }),
-  name_ml: z.string(),
-  section: z.string(),
-  description: z.string(),
-  display_order: z.string().regex(/^\d*$/, { message: "Must be a whole number" }),
-  is_active: z.boolean(),
-});
+function makeSchema(t: T) {
+  return z.object({
+    // Required for most tables; crop names/groups derive it from the name when left empty (checked below)
+    code: z
+      .string()
+      .max(50, { message: t.val_code_max ?? "Max 50 characters" })
+      .refine((v) => v === "" || /^[a-z0-9_]+$/.test(v), {
+        message: t.val_code_invalid ?? "Only lowercase letters, numbers and underscores",
+      }),
+    name_en: z
+      .string()
+      .min(1, { message: t.val_name_en_required ?? "English name is required" })
+      .max(40, { message: t.val_name_en_max ?? "Max 40 characters" }),
+    name_ml: z.string(),
+    section: z.string(),
+    description: z.string(),
+    display_order: z.string().regex(/^\d*$/, { message: t.val_display_order_invalid ?? "Must be a whole number" }),
+    is_active: z.boolean(),
+  });
+}
 
-type FormValues = z.infer<typeof schema>;
+type FormValues = z.infer<ReturnType<typeof makeSchema>>;
 
 const defaultValues: FormValues = {
   code: "",
@@ -74,7 +81,7 @@ export function MasterDataDialog({ open, onOpenChange, category, categoryLabel, 
     register,
     setError,
     formState: { errors },
-  } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues });
+  } = useForm<FormValues>({ resolver: zodResolver(makeSchema(t)), defaultValues });
 
   useEffect(() => {
     if (!open) return;
@@ -96,8 +103,9 @@ export function MasterDataDialog({ open, onOpenChange, category, categoryLabel, 
   const mutation = useMutation({
     mutationFn: (v: FormValues) => {
       if (!isEdit && !codeOptional && !v.code) {
-        setError("code", { message: "Code is required" });
-        return Promise.reject({ message: "Code is required" });
+        const message = t.val_code_required ?? "Code is required";
+        setError("code", { message });
+        return Promise.reject({ message });
       }
       const order = v.display_order === "" ? undefined : Number(v.display_order);
       const shared = {
@@ -148,15 +156,23 @@ export function MasterDataDialog({ open, onOpenChange, category, categoryLabel, 
                 <FieldLabel htmlFor="md-code">
                   {t.code_label ?? "Code"} {!codeOptional && <span className="text-destructive">*</span>}
                 </FieldLabel>
-                <Input
-                  id="md-code"
-                  placeholder={
-                    codeOptional
-                      ? (t.code_placeholder_optional ?? "Optional — generated from the name")
-                      : (t.code_placeholder ?? "e.g. black_pepper")
-                  }
-                  disabled={isEdit}
-                  {...register("code")}
+                <Controller
+                  control={control}
+                  name="code"
+                  render={({ field }) => (
+                    <Input
+                      id="md-code"
+                      placeholder={
+                        codeOptional
+                          ? (t.code_placeholder_optional ?? "Optional — generated from the name")
+                          : (t.code_placeholder ?? "e.g. black_pepper")
+                      }
+                      disabled={isEdit}
+                      maxLength={50}
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.value.replace(/[^a-zA-Z0-9_]/g, "").toLowerCase())}
+                    />
+                  )}
                 />
                 {isEdit && (
                   <p className="text-muted-foreground text-xs">
@@ -170,7 +186,18 @@ export function MasterDataDialog({ open, onOpenChange, category, categoryLabel, 
                 <FieldLabel htmlFor="md-name-en">
                   {t.name_en_label ?? "Name (English)"} <span className="text-destructive">*</span>
                 </FieldLabel>
-                <Input id="md-name-en" {...register("name_en")} />
+                <Controller
+                  control={control}
+                  name="name_en"
+                  render={({ field }) => (
+                    <Input
+                      id="md-name-en"
+                      maxLength={40}
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.value.replace(/[^a-zA-Z0-9_ ]/g, ""))}
+                    />
+                  )}
+                />
                 {errors.name_en && <FieldError errors={[errors.name_en]} />}
               </Field>
 
