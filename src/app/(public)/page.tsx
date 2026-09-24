@@ -1,5 +1,9 @@
 "use client";
+import { useEffect, useState } from "react";
+
 import { translationsApi } from "@/lib/api/translations";
+import { useLocaleStore } from "@/stores/locale-store";
+
 import About from "./_components/about";
 import AgrulLayout from "./_components/agrul-layout";
 import NewsWidget from "./_components/announcement-news";
@@ -12,25 +16,24 @@ import HowToRegister from "./_components/how-to-register";
 import AgriTechServicesGrid from "./_components/more-info";
 import MoreInformantion from "./_components/more-info";
 import NewsSourcesStrip from "./_components/news-sources";
+import QuickLinksSection from "./_components/quick-links";
 import Services from "./_components/services";
 import TeamSection from "./_components/team-section";
 import VisitorTracker from "./_components/visitor-tracker";
 import WhyChoose from "./_components/why-choose";
-import { useEffect, useState } from "react";
-import { useLocaleStore } from "@/stores/locale-store";
-import QuickLinksSection from "./_components/quick-links";
+import YoutubeVideos from "./_components/youtube-videos";
 
 export default function HomePage() {
-    const locale = useLocaleStore((s) => s.locale);
-    const [t, setT] = useState<Record<string, string>>({});
-  
-    useEffect(() => {
-      if (!locale) return;
-      translationsApi.getPublic(locale, "contact").then((data) => {
-        setT(data.contact ?? {});
-      });
-    }, [locale]);
-  
+  const locale = useLocaleStore((s) => s.locale);
+  const [t, setT] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!locale) return;
+    translationsApi.getPublic(locale, "contact").then((data) => {
+      setT(data.contact ?? {});
+    });
+  }, [locale]);
+
   return (
     <AgrulLayout>
       <VisitorTracker />
@@ -39,6 +42,7 @@ export default function HomePage() {
       <QuickLinksSection />
       <TeamSection showAll={false} />
       <NewsWidget />
+      <YoutubeVideos />
       {/* <MoreInformantion /> */}
       {/* <HowToRegister /> */}
 
@@ -48,7 +52,7 @@ export default function HomePage() {
       {/* <Testimonial /> */}
       <Gallery />
       <Facts />
-      {/* <Contact /> */}   
+      {/* <Contact /> */}
       <NewsSourcesStrip />
       <Documents />
       <Contact t={t} />

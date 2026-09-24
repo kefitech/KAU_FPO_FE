@@ -697,6 +697,24 @@ export interface AdminPartner {
   created_at: string;
 }
 
+// ─── Site Content — YouTube Playlists ─────────────────────────────────────────
+
+export interface AdminYoutubePlaylist {
+  id: number;
+  title: Record<string, string>;
+  playlist_id: string;
+  playlist_url: string;
+  order: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface AdminYoutubePlaylistPayload {
+  playlist_url: string;
+  title: Record<string, string>;
+  order: number;
+}
+
 // ─── Site Content — News Sources ──────────────────────────────────────────────
 
 export interface AdminNewsSource {

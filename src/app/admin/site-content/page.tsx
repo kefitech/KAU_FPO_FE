@@ -8,31 +8,27 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Circle, Pencil, Save, X } from "lucide-react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { RichTextEditor } from "@/components/ui/rich-text-editor";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
-import { type AdminSiteBlock, adminSiteContentApi } from "@/app/admin/_api/site-content";
 import { languageApi } from "@/app/admin/_api/language";
+import { type AdminSiteBlock, adminSiteContentApi } from "@/app/admin/_api/site-content";
+import { Button } from "@/components/ui/button";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 import type { Language } from "@/types/admin";
 
 type T = Record<string, string>;
+
 import { DocumentsTab } from "./_components/documents-tab";
-import { GalleryTab } from "./_components/gallery-tab";
-import { TeamTab } from "./_components/team-tab";
-import { QuickLinksTab } from "./_components/quick-links-tab";
-import { PartnersTab } from "./_components/partners-tab";
-import { NewsSourcesTab } from "./_components/news-sources-tab";
 import { FeedbackTab } from "./_components/feedback-tab";
+import { GalleryTab } from "./_components/gallery-tab";
+import { NewsSourcesTab } from "./_components/news-sources-tab";
+import { PartnersTab } from "./_components/partners-tab";
+import { QuickLinksTab } from "./_components/quick-links-tab";
+import { TeamTab } from "./_components/team-tab";
+import { YoutubeTab } from "./_components/youtube-tab";
 
 const BLOCK_LABEL_FALLBACKS: Record<string, string> = {
   hero_headline: "Hero Headline",
@@ -58,7 +54,6 @@ const BLOCK_DESC_FALLBACKS: Record<string, string> = {
   mission_body: "Body content for the Mission section",
   vision_title: "Heading for the Vision section",
   vision_body: "Body content for the Vision section",
-
 };
 
 function getBlockLabel(key: string, t: T): string {
@@ -108,7 +103,7 @@ function BlockEditor({ block, languages, t }: BlockEditorProps) {
 
   const rawContent = typeof block.content === "object" ? (block.content as Record<string, string>) : {};
   const initialValues = Object.fromEntries(
-    Object.entries(rawContent).map(([k, v]) => [k, RICH_TEXT_BLOCKS.includes(block.block_key) ? toHtml(v) : v])
+    Object.entries(rawContent).map(([k, v]) => [k, RICH_TEXT_BLOCKS.includes(block.block_key) ? toHtml(v) : v]),
   );
   const [savedValues, setSavedValues] = useState<Record<string, string>>(initialValues);
   const [values, setValues] = useState<Record<string, string>>(initialValues);
@@ -173,9 +168,7 @@ function BlockEditor({ block, languages, t }: BlockEditorProps) {
                       <Circle className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
                     )}
                     {lang.native_name}
-                    {lang.is_default && (
-                      <span className="text-muted-foreground text-xs">(default)</span>
-                    )}
+                    {lang.is_default && <span className="text-muted-foreground text-xs">(default)</span>}
                   </span>
                 </SelectItem>
               );
@@ -257,6 +250,7 @@ function BlockEditor({ block, languages, t }: BlockEditorProps) {
 
       {/* View mode */}
       {!isEditing && (
+        // biome-ignore lint/a11y/useSemanticElements: preview holds rich-text block HTML, which a <button> cannot contain
         <div
           className="min-h-[80px] rounded-md border bg-muted/20 px-4 py-3 cursor-pointer hover:bg-muted/30 transition-colors"
           onClick={() => setIsEditing(true)}
@@ -284,7 +278,10 @@ function BlockEditor({ block, languages, t }: BlockEditorProps) {
         <div>
           {activeLang !== defaultLang?.code && (
             <p className="mb-2 text-muted-foreground text-xs">
-              {(t.optional_fallback ?? "Optional — leave blank to show {lang} as fallback.").replace("{lang}", defaultLang?.name ?? "default")}
+              {(t.optional_fallback ?? "Optional — leave blank to show {lang} as fallback.").replace(
+                "{lang}",
+                defaultLang?.name ?? "default",
+              )}
             </p>
           )}
           {isRichText ? (
@@ -333,9 +330,9 @@ function ContentBlocksTab({ t }: { t: T }) {
   const [activeKey, setActiveKey] = useState<string>("");
   const isLoading = blocksLoading || langsLoading;
 
-  const sortedBlocks = [...(blocks ?? [])].sort(
-    (a, b) => BLOCK_ORDER.indexOf(a.block_key) - BLOCK_ORDER.indexOf(b.block_key),
-  );
+  const sortedBlocks = (blocks ?? [])
+    .filter((b) => BLOCK_ORDER.includes(b.block_key))
+    .sort((a, b) => BLOCK_ORDER.indexOf(a.block_key) - BLOCK_ORDER.indexOf(b.block_key));
   const activeBlock = sortedBlocks.find((b) => b.block_key === activeKey) ?? sortedBlocks[0];
   const sortedLangs = [...languages].sort((a, b) => (b.is_default ? 1 : 0) - (a.is_default ? 1 : 0));
 
@@ -434,7 +431,9 @@ function ContentBlocksTab({ t }: { t: T }) {
         </ul>
         <div className="mt-4 px-3">
           <div className="rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
-            {(t.blocks_filled ?? "{filled} / {total} blocks filled").replace("{filled}", String(sortedBlocks.filter(getBlockFillStatus).length)).replace("{total}", String(sortedBlocks.length))}
+            {(t.blocks_filled ?? "{filled} / {total} blocks filled")
+              .replace("{filled}", String(sortedBlocks.filter(getBlockFillStatus).length))
+              .replace("{total}", String(sortedBlocks.length))}
           </div>
         </div>
       </nav>
@@ -456,13 +455,14 @@ function ContentBlocksTab({ t }: { t: T }) {
 
 const TABS = [
   { key: "content-blocks", label: "Content Blocks" },
-  { key: "documents",      label: "Documents"      },
-  { key: "gallery",        label: "Gallery"        },
-  { key: "team",           label: "Team"           },
-  { key: "quick-links",   label: "Quick Links"    },
-  { key: "partners",      label: "Partners"       },
-  { key: "news-sources",  label: "News Sources"   },
-  { key: "feedback",      label: "Feedback"       },
+  { key: "documents", label: "Documents" },
+  { key: "gallery", label: "Gallery" },
+  { key: "team", label: "Team" },
+  { key: "quick-links", label: "Quick Links" },
+  { key: "partners", label: "Partners" },
+  { key: "news-sources", label: "News Sources" },
+  { key: "youtube", label: "YouTube" },
+  { key: "feedback", label: "Feedback" },
 ] as const;
 
 type TabKey = (typeof TABS)[number]["key"];
@@ -475,6 +475,7 @@ const TAB_LABEL_KEYS: Record<string, string> = {
   "quick-links": "tab_quick_links",
   partners: "tab_partners",
   "news-sources": "tab_news_sources",
+  youtube: "tab_youtube",
   feedback: "tab_feedback",
 };
 
@@ -483,7 +484,7 @@ export default function SiteContentPage() {
   const searchParams = useSearchParams();
   const tab = (searchParams.get("tab") ?? "content-blocks") as TabKey;
   const locale = useLocaleStore((s) => s.locale);
-  const [t, setT] = useState<T>({});  
+  const [t, setT] = useState<T>({});
   const [tCommon, setTCommon] = useState<T>({});
   const [translationsLoading, setTranslationsLoading] = useState(true);
   useEffect(() => {
@@ -504,7 +505,6 @@ export default function SiteContentPage() {
     router.replace(`/admin/site-content?${params.toString()}`);
   }
 
-
   if (translationsLoading) {
     return (
       <div className="flex flex-col gap-0 py-6">
@@ -524,7 +524,7 @@ export default function SiteContentPage() {
       </div>
     );
   }
- 
+
   return (
     <div className="flex flex-col gap-0 py-6">
       {/* Page header */}
@@ -584,6 +584,7 @@ export default function SiteContentPage() {
           {tab === "quick-links" && <QuickLinksTab t={t} />}
           {tab === "partners" && <PartnersTab t={t} />}
           {tab === "news-sources" && <NewsSourcesTab t={t} />}
+          {tab === "youtube" && <YoutubeTab t={t} />}
           {tab === "feedback" && <FeedbackTab t={t} tCommon={tCommon} />}
         </div>
       </div>
