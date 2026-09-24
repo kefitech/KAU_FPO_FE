@@ -33,11 +33,7 @@ const createSchema = z.object({
     .max(50, { message: "Email must be at most 50 characters" }),
   first_name: z.string().min(1, { message: "First name is required" }).max(50, { message: "Max 50 characters" }),
   last_name: z.string().min(1, { message: "Last name is required" }).max(50, { message: "Max 50 characters" }),
-  phone: z
-    .string()
-    .min(10, { message: "Enter a valid phone number" })
-    .max(15, { message: "Max 15 digits" })
-    .regex(/^\+?[0-9]{10,15}$/, { message: "Only digits allowed (optional leading +)" }),
+  phone: z.string().regex(/^[6-9]\d{9}$/, { message: "Enter a valid 10-digit mobile number" }),
   notification_channel: z.enum(["email", "sms", "in_app"]),
   permissions: z.array(z.string()),
 });
@@ -49,11 +45,7 @@ const editSchema = z.object({
     .max(35, { message: "Email must be at most 35 characters" }),
   first_name: z.string().min(1, { message: "First name is required" }).max(50, { message: "Max 50 characters" }),
   last_name: z.string().min(1, { message: "Last name is required" }).max(50, { message: "Max 50 characters" }),
-  phone: z
-    .string()
-    .min(10, { message: "Enter a valid phone number" })
-    .max(15, { message: "Max 15 digits" })
-    .regex(/^\+?[0-9]{10,15}$/, { message: "Only digits allowed (optional leading +)" }),
+  phone: z.string().regex(/^[6-9]\d{9}$/, { message: "Enter a valid 10-digit mobile number" }),
   permissions: z.array(z.string()),
 });
 
@@ -291,11 +283,11 @@ export function SubAdminForm({ mode, subAdmin, t = {}, tCommon = {} }: SubAdminF
                     <Input
                       id="sa-phone"
                       type="tel"
-                      placeholder={t.phone_placeholder ?? "+91 98765 43210"}
-                      maxLength={15}
+                      placeholder={t.phone_placeholder ?? "98765 43210"}
+                      maxLength={10}
                       {...field}
                       onChange={(e) => {
-                        const val = e.target.value.replace(/(?!^\+)[^0-9]/g, "");
+                        const val = e.target.value.replace(/[^0-9]/g, "").slice(0, 10);
                         field.onChange(val);
                       }}
                     />

@@ -80,7 +80,7 @@ function EmailForm({ onSuccess, t }: { onSuccess: (email: string) => void; t: Re
 // ─── Phone form ───────────────────────────────────────────────────────────────
 
 const phoneSchema = z.object({
-  phone: z.string().min(10, "Enter a valid phone number"),
+  phone: z.string().regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit mobile number"),
 });
 type PhoneValues = z.infer<typeof phoneSchema>;
 

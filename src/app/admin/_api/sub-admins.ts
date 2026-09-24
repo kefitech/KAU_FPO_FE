@@ -1,5 +1,5 @@
 import { api } from "@/lib/api/client";
-import type { AvailablePermission, SubAdmin, SubAdminPayload, SubAdminUpdatePayload } from "@/types/admin";
+import type { AssignedFpo, AvailablePermission, SubAdmin, SubAdminPayload, SubAdminUpdatePayload } from "@/types/admin";
 import type { DataTableParams, PaginatedResponse } from "@/types/pagination";
 
 const BASE = "/admin/sub-admins/";
@@ -32,4 +32,10 @@ export const subAdminsApi = {
 
   getAvailablePermissions: (params?: DataTableParams) =>
     api.get<PaginatedResponse<AvailablePermission>>(`${BASE}available-permissions/`, { params }).then((r) => r.data),
+
+  getAssignedFpos: (id: number) => api.get<Wrapped<AssignedFpo[]>>(`${BASE}${id}/assigned-fpos/`).then(unwrap),
+
+  /** add — assign (moves an FPO off any other sub-admin); remove — unassign; replace — exact list */
+  setAssignedFpos: (id: number, action: "add" | "remove" | "replace", fpo_ids: number[]) =>
+    api.post<Wrapped<AssignedFpo[]>>(`${BASE}${id}/assigned-fpos/`, { action, fpo_ids }).then(unwrap),
 };

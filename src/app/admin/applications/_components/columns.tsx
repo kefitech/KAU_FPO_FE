@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
-import { CheckCheck, Eye, Info, MoreHorizontal, PauseCircle, XCircle } from "lucide-react";
+import { CheckCheck, Eye, Info, MoreHorizontal, PauseCircle, UserCog, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import { type ApplicationListItem, type ApplicationStatus, adminApplicationsApi } from "@/app/admin/_api/applications";
@@ -40,7 +40,22 @@ function StatusBadge({ status, label }: { status: ApplicationStatus; label: stri
   );
 }
 
-function ActionsCell({ row, t, tCommon }: { row: ApplicationListItem; t: T; tCommon: T }) {
+export interface ApplicationColumnHandlers {
+  /** super admin only — opens the Assign Sub-Admin dialog rendered at page level */
+  onAssignSubAdmin?: (row: ApplicationListItem) => void;
+}
+
+function ActionsCell({
+  row,
+  t,
+  tCommon,
+  handlers,
+}: {
+  row: ApplicationListItem;
+  t: T;
+  tCommon: T;
+  handlers: ApplicationColumnHandlers;
+}) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const confirm = useConfirmStore((s) => s.confirm);
@@ -85,6 +100,13 @@ function ActionsCell({ row, t, tCommon }: { row: ApplicationListItem; t: T; tCom
           <Eye className="mr-2 h-4 w-4" />
           {t.action_view ?? tCommon.view ?? "View Details"}
         </DropdownMenuItem>
+
+        {handlers.onAssignSubAdmin && (
+          <DropdownMenuItem onClick={() => handlers.onAssignSubAdmin?.(row)}>
+            <UserCog className="mr-2 h-4 w-4" />
+            {t.action_assign_subadmin ?? "Assign Sub-Admin"}
+          </DropdownMenuItem>
+        )}
 
         {(isApproved || isInfoRequired || row.status === "submitted" || canActivate) && <DropdownMenuSeparator />}
 
@@ -153,7 +175,12 @@ function ActionsCell({ row, t, tCommon }: { row: ApplicationListItem; t: T; tCom
   );
 }
 
-export function getApplicationColumns(t: T, tCommon: T, locale:string): ColumnDef<ApplicationListItem>[] {
+export function getApplicationColumns(
+  t: T,
+  tCommon: T,
+  locale: string,
+  handlers: ApplicationColumnHandlers = {},
+): ColumnDef<ApplicationListItem>[] {
   return [
     {
       accessorKey: "application_id",
@@ -208,6 +235,18 @@ export function getApplicationColumns(t: T, tCommon: T, locale:string): ColumnDe
       ),
     },
     {
+      accessorKey: "assigned_subadmin_name",
+      header: t.col_assigned_subadmin ?? "Sub-Admin",
+      meta: { hideOnMobile: true },
+      enableSorting: false,
+      cell: ({ row }) =>
+        row.original.assigned_subadmin_name ? (
+          <TextCell value={row.original.assigned_subadmin_name} maxWidth="max-w-[160px]" />
+        ) : (
+          <span className="text-muted-foreground text-xs">{t.unassigned ?? "Unassigned"}</span>
+        ),
+    },
+    {
       accessorKey: "current_tier",
       header: t.col_tier ?? "Tier",
       meta: { hideOnMobile: true },
@@ -243,7 +282,7 @@ export function getApplicationColumns(t: T, tCommon: T, locale:string): ColumnDe
       header: "",
       cell: ({ row }) => (
         <div className="sticky right-0 bg-background">
-          <ActionsCell row={row.original} t={t} tCommon={tCommon} />
+          <ActionsCell row={row.original} t={t} tCommon={tCommon} handlers={handlers} />
         </div>
       ),
       enableSorting: false,

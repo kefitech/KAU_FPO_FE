@@ -15,7 +15,24 @@ import type { SubAdmin } from "@/types/admin";
 
 type T = Record<string, string>;
 
-function SubAdminActions({ subAdmin, t, tConfirm, tCommon }: { subAdmin: SubAdmin; t: T; tConfirm: T; tCommon: T }) {
+export interface SubAdminColumnHandlers {
+  /** opens the Assign FPOs dialog (rendered at page level, outside the clickable row) */
+  onAssignFpos?: (subAdmin: SubAdmin) => void;
+}
+
+function SubAdminActions({
+  subAdmin,
+  t,
+  tConfirm,
+  tCommon,
+  handlers,
+}: {
+  subAdmin: SubAdmin;
+  t: T;
+  tConfirm: T;
+  tCommon: T;
+  handlers: SubAdminColumnHandlers;
+}) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const confirm = useConfirmStore((s) => s.confirm);
@@ -99,6 +116,11 @@ function SubAdminActions({ subAdmin, t, tConfirm, tCommon }: { subAdmin: SubAdmi
       actions={[
         { label: tCommon.edit ?? "Edit", onClick: () => router.push(`/admin/sub-admins/${subAdmin.id}/edit`) },
         {
+          label: t.assign_fpos ?? "Assign FPOs",
+          onClick: () => handlers.onAssignFpos?.(subAdmin),
+          hidden: !handlers.onAssignFpos,
+        },
+        {
           label: subAdmin.is_active ? (t.deactivate ?? "Deactivate") : (t.activate ?? "Activate"),
           onClick: () => (subAdmin.is_active ? deactivateMutation.mutate() : activateMutation.mutate()),
           disabled: activateMutation.isPending || deactivateMutation.isPending,
@@ -121,7 +143,12 @@ function SubAdminActions({ subAdmin, t, tConfirm, tCommon }: { subAdmin: SubAdmi
   );
 }
 
-export function getSubAdminColumns(t: T = {}, tConfirm: T = {}, tCommon: T = {}): ColumnDef<SubAdmin>[] {
+export function getSubAdminColumns(
+  t: T = {},
+  tConfirm: T = {},
+  tCommon: T = {},
+  handlers: SubAdminColumnHandlers = {},
+): ColumnDef<SubAdmin>[] {
   return [
     {
       accessorKey: "first_name",
@@ -165,6 +192,22 @@ export function getSubAdminColumns(t: T = {}, tConfirm: T = {}, tCommon: T = {})
       },
     },
     {
+      accessorKey: "assigned_fpos_count",
+      header: t.col_assigned_fpos ?? "Assigned FPOs",
+      meta: { hideOnMobile: true },
+      enableSorting: false,
+      cell: ({ row }) => {
+        const count = row.original.assigned_fpos_count ?? 0;
+        return count > 0 ? (
+          <Badge variant="secondary" className="text-[11px]">
+            {count}
+          </Badge>
+        ) : (
+          <span className="text-muted-foreground text-xs">{t.no_assigned_fpos_short ?? "None"}</span>
+        );
+      },
+    },
+    {
       accessorKey: "is_active",
       header: t.col_status ?? "Status",
       cell: ({ row }) =>
@@ -192,7 +235,9 @@ export function getSubAdminColumns(t: T = {}, tConfirm: T = {}, tCommon: T = {})
     {
       id: "actions",
       header: "",
-      cell: ({ row }) => <SubAdminActions subAdmin={row.original} t={t} tConfirm={tConfirm} tCommon={tCommon} />,
+      cell: ({ row }) => (
+        <SubAdminActions subAdmin={row.original} t={t} tConfirm={tConfirm} tCommon={tCommon} handlers={handlers} />
+      ),
     },
   ];
 }
