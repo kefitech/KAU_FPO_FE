@@ -78,7 +78,8 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<InboxNotification | null>(null);
   const pathname = usePathname();
-  const inboxPath = pathname.startsWith("/fpo") ? "/fpo/inbox" : "/admin/inbox";
+  // only the FPO and admin portals have a full inbox page
+  const inboxPath = pathname.startsWith("/fpo") ? "/fpo/inbox" : pathname.startsWith("/admin") ? "/admin/inbox" : null;
   const queryClient = useQueryClient();
   const { t } = useTranslations("notification_bell");
   const locale = useLocaleStore((s) => s.locale);
@@ -207,16 +208,20 @@ export function NotificationBell() {
               </div>
             </ScrollArea>
           )}
-          <Separator />
-          <div className="px-4 py-2.5">
-            <Link
-              href={inboxPath}
-              onClick={() => setOpen(false)}
-              className="text-xs text-primary hover:underline font-medium"
-            >
-              {t.view_all_link ?? "View all notifications →"}
-            </Link>
-          </div>
+          {inboxPath && (
+            <>
+              <Separator />
+              <div className="px-4 py-2.5">
+                <Link
+                  href={inboxPath}
+                  onClick={() => setOpen(false)}
+                  className="text-xs text-primary hover:underline font-medium"
+                >
+                  {t.view_all_link ?? "View all notifications →"}
+                </Link>
+              </div>
+            </>
+          )}
         </PopoverContent>
       </Popover>
 
