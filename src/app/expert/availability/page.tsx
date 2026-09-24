@@ -568,7 +568,25 @@ export default function ExpertAvailabilityPage() {
             mode="multiple"
             selected={matchingDates}
             onSelect={() => {}}
-            onDayClick={(day) => setExpandedDate(toLocalISODate(day))}
+            onDayClick={(day) => {
+              const dateStr = toLocalISODate(day);
+              setExpandedDate(dateStr);
+              setPerDateOverrides((prev) => {
+                if (prev[dateStr]) return prev;
+                const saved = existingAvailability.find((a) => a.date === dateStr);
+                if (saved && saved.time_slots.length > 0) {
+                  return {
+                    ...prev,
+                    [dateStr]: saved.time_slots.map((s) => ({
+                      start: s.start,
+                      end: s.end,
+                      max_bookings: s.max_bookings ?? 1,
+                    })),
+                  };
+                }
+                return prev;
+              });
+            }}
             disabled={(date) => !candidateDateStrings.has(toLocalISODate(date))}
             modifiers={{
               excluded: (date) => {

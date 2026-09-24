@@ -7,6 +7,7 @@ export interface AvailabilitySlot {
   id: number;
   start: string;
   end: string;
+  max_bookings?: number;
   is_booked?: boolean;
 }
 
