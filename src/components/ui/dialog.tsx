@@ -47,6 +47,17 @@ function DialogOverlay({
   )
 }
 
+/**
+ * Element inside the open dialog that popups (e.g. Combobox) should portal into.
+ * A modal Radix dialog blocks pointer events outside itself, so a popup portaled
+ * to <body> can only be used with the keyboard.
+ */
+const DialogPortalContainerContext = React.createContext<HTMLElement | null>(null)
+
+function useDialogPortalContainer() {
+  return React.useContext(DialogPortalContainerContext)
+}
+
 function DialogContent({
   className,
   children,
@@ -55,6 +66,7 @@ function DialogContent({
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
 }) {
+  const [portalHost, setPortalHost] = React.useState<HTMLDivElement | null>(null)
   return (
     <DialogPortal>
       <DialogOverlay />
@@ -66,7 +78,11 @@ function DialogContent({
         )}
         {...props}
       >
-        {children}
+        {/* absolutely positioned so it never becomes a grid row */}
+        <div ref={setPortalHost} data-slot="dialog-portal-host" className="absolute top-0 left-0" />
+        <DialogPortalContainerContext.Provider value={portalHost}>
+          {children}
+        </DialogPortalContainerContext.Provider>
         {showCloseButton && (
           <DialogPrimitive.Close data-slot="dialog-close" asChild>
             <Button
@@ -162,4 +178,5 @@ export {
   DialogPortal,
   DialogTitle,
   DialogTrigger,
+  useDialogPortalContainer,
 }

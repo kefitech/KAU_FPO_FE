@@ -44,11 +44,7 @@ const createSchema = z
       .min(1, { message: "Last name is required" })
       .max(35, { message: "Max 35 characters" })
       .regex(/^[a-zA-Z\s]+$/, { message: "Only letters and spaces allowed" }),
-    phone: z
-      .string()
-      .min(10, { message: "Enter a valid phone number" })
-      .max(10, { message: "Max 10 digits" })
-      .regex(/^\+?[0-9]{10}$/, { message: "Only digits allowed (optional leading +)" }),
+    phone: z.string().regex(/^[6-9]\d{9}$/, { message: "Enter a valid 10-digit mobile number" }),
     notification_channel: z.enum(["email", "sms", "in_app"]),
     designation: z
       .string()
@@ -86,11 +82,7 @@ const editSchema = z
       .min(1, { message: "Last name is required" })
       .max(35)
       .regex(/^[a-zA-Z\s]+$/, { message: "Only letters and spaces allowed" }),
-    phone: z
-      .string()
-      .min(10, { message: "Enter a valid phone number" })
-      .max(10, { message: "Max 10 digits" })
-      .regex(/^\+?[0-9]{10}$/, { message: "Only digits allowed (optional leading +)" }),
+    phone: z.string().regex(/^[6-9]\d{9}$/, { message: "Enter a valid 10-digit mobile number" }),
     designation: z.string().min(1, { message: "Designation is required" }).max(200),
     department: z.string().min(1, { message: "Department is required" }).max(200),
     jurisdiction_type: z.enum(["district", "block", "state"]),
@@ -335,10 +327,10 @@ export function GovernmentForm({ mode, official, t = {}, tCommon = {} }: Governm
                     <Input
                       id="gv-phone"
                       type="tel"
-                      placeholder={t.phone_placeholder ?? "+91 98765 43210"}
+                      placeholder={t.phone_placeholder ?? "98765 43210"}
                       maxLength={10}
                       {...field}
-                      onChange={(e) => field.onChange(e.target.value.replace(/(?!^\+)[^0-9]/g, ""))}
+                      onChange={(e) => field.onChange(e.target.value.replace(/[^0-9]/g, "").slice(0, 10))}
                     />
                   )}
                 />

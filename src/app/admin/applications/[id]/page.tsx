@@ -22,6 +22,7 @@ import {
   RefreshCw,
   ShieldCheck,
   Star,
+  UserCog,
   Users,
   XCircle,
 } from "lucide-react";
@@ -44,6 +45,7 @@ import { DataTablePagination } from "@/components/data-table/data-table-paginati
 import { RowActions } from "@/components/data-table/row-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AssignSubAdminDialog } from "@/app/admin/applications/_components/assign-subadmin-dialog";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -1289,6 +1291,7 @@ function ApplicationDetailContent() {
   const [rejectOpen, setRejectOpen] = useState(action === "reject");
   const [requestInfoOpen, setRequestInfoOpen] = useState(action === "request-info");
   const [assignTierOpen, setAssignTierOpen] = useState(false);
+  const [assignSubAdminOpen, setAssignSubAdminOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [infoResponseOpen, setInfoResponseOpen] = useState(false);
   const [infoDetailsDoc, setInfoDetailsDoc] = useState<
@@ -1447,10 +1450,27 @@ function ApplicationDetailContent() {
             {app.application_id && (
               <p className="mt-0.5 font-mono text-muted-foreground text-sm">{app.application_id}</p>
             )}
+            <p className="mt-1 flex items-center gap-1.5 text-muted-foreground text-sm">
+              <UserCog className="h-3.5 w-3.5 shrink-0" />
+              {t.col_assigned_subadmin ?? "Sub-Admin"}:{" "}
+              {app.assigned_subadmin ? (
+                <span className="font-medium text-foreground">{app.assigned_subadmin.name}</span>
+              ) : (
+                <span>{t.unassigned ?? "Unassigned"}</span>
+              )}
+            </p>
           </div>
         </div>
 
         <div className="flex w-full flex-wrap items-center justify-center gap-2 md:w-auto md:justify-end">
+          {isSuperAdmin && (
+            <Button size="sm" variant="outline" onClick={() => setAssignSubAdminOpen(true)}>
+              <UserCog className="mr-1.5 h-4 w-4" />
+              {app.assigned_subadmin
+                ? (t.btn_change_subadmin ?? "Change Sub-Admin")
+                : (t.action_assign_subadmin ?? "Assign Sub-Admin")}
+            </Button>
+          )}
           {/* <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
             <Pencil className="mr-1.5 h-4 w-4" />
             Edit Details
@@ -2031,6 +2051,17 @@ function ApplicationDetailContent() {
       />
 
       <AssignTierDialog fpoId={fpoId} open={assignTierOpen} onOpenChange={setAssignTierOpen} />
+      <AssignSubAdminDialog
+        fpo={{
+          id: app.id,
+          name: app.name,
+          assignedSubAdminId: app.assigned_subadmin?.id ?? null,
+          assignedSubAdminName: app.assigned_subadmin?.name ?? null,
+        }}
+        open={assignSubAdminOpen}
+        onOpenChange={setAssignSubAdminOpen}
+        t={t}
+      />
       <EditFPODialog
         fpoId={fpoId}
         open={editOpen}

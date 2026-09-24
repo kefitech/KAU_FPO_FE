@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
-import { Pencil, Plus } from "lucide-react";
+import { Building2, Pencil, Plus } from "lucide-react";
 
 import { subAdminsApi } from "@/app/admin/_api/sub-admins";
 import { DataTable } from "@/components/data-table";
@@ -14,6 +14,7 @@ import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 import type { SubAdmin } from "@/types/admin";
 
+import { AssignFposDialog } from "./_components/assign-fpos-dialog";
 import { getSubAdminColumns } from "./_components/columns";
 
 type T = Record<string, string>;
@@ -26,6 +27,8 @@ export default function SubAdminsPage() {
   const [tConfirm, setTConfirm] = useState<T>({});
   const [tCommon, setTCommon] = useState<T>({});
   const [subAdminView, setSubAdminView] = useState<{ open: boolean; row: SubAdmin | null }>({ open: false, row: null });
+  const [assignFpos, setAssignFpos] = useState<{ open: boolean; row: SubAdmin | null }>({ open: false, row: null });
+  const openAssignFpos = (row: SubAdmin) => setAssignFpos({ open: true, row });
 
   useEffect(() => {
     translationsApi
@@ -57,7 +60,7 @@ export default function SubAdminsPage() {
         <DataTable
           queryKey="sub-admins"
           queryFn={subAdminsApi.getAll}
-          columns={getSubAdminColumns(tTable, tConfirm, tCommon)}
+          columns={getSubAdminColumns(tTable, tConfirm, tCommon, { onAssignFpos: openAssignFpos })}
           onRowClick={(row) => setSubAdminView({ open: true, row })}
         />
       </Suspense>
@@ -73,6 +76,15 @@ export default function SubAdminsPage() {
                   label: tCommon.edit ?? "Edit",
                   icon: Pencil,
                   onClick: () => router.push(`/admin/sub-admins/${subAdminView.row?.id}/edit`),
+                },
+                {
+                  label: tTable.assign_fpos ?? "Assign FPOs",
+                  icon: Building2,
+                  onClick: () => {
+                    const row = subAdminView.row;
+                    setSubAdminView((s) => ({ ...s, open: false }));
+                    if (row) openAssignFpos(row);
+                  },
                 },
               ]
             : []
@@ -98,9 +110,20 @@ export default function SubAdminsPage() {
                 { label: tTable.col_date_joined ?? "Date Joined", type: "date", value: subAdminView.row.date_joined },
                 { label: tCommon.section_permissions ?? "Permissions", type: "section" },
                 { label: tTable.col_permissions ?? "Permissions", type: "tags", tags: subAdminView.row.permissions },
+                {
+                  label: tTable.col_assigned_fpos ?? "Assigned FPOs",
+                  value: String(subAdminView.row.assigned_fpos_count ?? 0),
+                },
               ]
             : []
         }
+      />
+
+      <AssignFposDialog
+        subAdmin={assignFpos.row}
+        open={assignFpos.open}
+        onOpenChange={(open) => setAssignFpos((s) => ({ ...s, open }))}
+        t={tTable}
       />
     </div>
   );

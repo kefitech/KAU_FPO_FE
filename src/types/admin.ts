@@ -232,6 +232,17 @@ export interface SubAdmin {
   is_active: boolean;
   date_joined: string;
   permissions: string[];
+  assigned_fpos_count: number;
+}
+
+/** FPO assigned to a sub-admin (P2-01 row-level security). */
+export interface AssignedFpo {
+  id: number;
+  application_id: string;
+  name: string;
+  district: string;
+  status: string;
+  tier: string | null;
 }
 
 export type NotificationChannelType = "email" | "sms" | "in_app";

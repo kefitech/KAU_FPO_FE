@@ -25,11 +25,7 @@ const createSchema = z.object({
   email: z.string().email({ message: "Enter a valid email address" }).max(50, { message: "Email must be at most 50 characters" }),
   first_name: z.string().min(1, { message: "First name is required" }).max(50, { message: "Max 50 characters" }),
   last_name: z.string().min(1, { message: "Last name is required" }).max(50, { message: "Max 50 characters" }),
-  phone: z
-    .string()
-    .min(10, { message: "Enter a valid phone number" })
-    .max(15, { message: "Max 15 digits" })
-    .regex(/^\+?[0-9]{10,15}$/, { message: "Only digits allowed (optional leading +)" }),
+  phone: z.string().regex(/^[6-9]\d{9}$/, { message: "Enter a valid 10-digit mobile number" }),
   notification_channel: z.enum(["email", "sms", "in_app"]),
   designation: z.string().min(1, { message: "Designation is required" }).max(200),
   department: z.string().min(1, { message: "Department is required" }).max(200),
@@ -44,11 +40,7 @@ const editSchema = z.object({
   email: z.string().email({ message: "Enter a valid email address" }).max(50),
   first_name: z.string().min(1, { message: "First name is required" }).max(50),
   last_name: z.string().min(1, { message: "Last name is required" }).max(50),
-  phone: z
-    .string()
-    .min(10, { message: "Enter a valid phone number" })
-    .max(15, { message: "Max 15 digits" })
-    .regex(/^\+?[0-9]{10,15}$/, { message: "Only digits allowed (optional leading +)" }),
+  phone: z.string().regex(/^[6-9]\d{9}$/, { message: "Enter a valid 10-digit mobile number" }),
   designation: z.string().min(1, { message: "Designation is required" }).max(200),
   department: z.string().min(1, { message: "Department is required" }).max(200),
   jurisdiction_type: z.enum(["district", "state"]),
@@ -247,10 +239,10 @@ export function GovernmentForm({ mode, official, t = {}, tCommon = {} }: Governm
                     <Input
                       id="gv-phone"
                       type="tel"
-                      placeholder={t.phone_placeholder ?? "+91 98765 43210"}
-                      maxLength={15}
+                      placeholder={t.phone_placeholder ?? "98765 43210"}
+                      maxLength={10}
                       {...field}
-                      onChange={(e) => field.onChange(e.target.value.replace(/(?!^\+)[^0-9]/g, ""))}
+                      onChange={(e) => field.onChange(e.target.value.replace(/[^0-9]/g, "").slice(0, 10))}
                     />
                   )}
                 />
