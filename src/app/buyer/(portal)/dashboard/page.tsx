@@ -99,7 +99,6 @@ export default function BuyerDashboardPage() {
       toast.error(axiosErr?.response?.data?.message ?? t.profile_save_failed ?? "Failed to save profile");
     },
   });
-
   if (translationsLoading || isLoading || !data) {
     return (
       <div className="flex flex-col gap-6 px-3 py-4 sm:px-6 sm:py-6">
@@ -108,6 +107,25 @@ export default function BuyerDashboardPage() {
       </div>
     );
   }
+
+  const hasProfileChanges = () => {
+    const currentCommodities = [...(data.commodities_interested || [])].sort();
+    const draftCommodities = [...commoditiesDraft].sort();
+    return (
+      organisationDraft !== (data.organisation || "") ||
+      locationDraft !== (data.location || "") ||
+      JSON.stringify(draftCommodities) !== JSON.stringify(currentCommodities)
+    );
+  };
+
+  const handleSaveProfile = () => {
+    if (!hasProfileChanges()) {
+      toast.info(t.no_changes ?? "No changes to save.");
+      setEditingProfile(false);
+      return;
+    }
+    saveMutation.mutate();
+  };
 
   const fullName = user ? `${user.first_name} ${user.last_name}`.trim() : data.name;
   const initials = user
@@ -144,7 +162,9 @@ export default function BuyerDashboardPage() {
         <Card className="border-amber-300 bg-amber-50/40 dark:bg-amber-950/20">
           <CardHeader>
             <CardTitle className="text-base">
-              {t.complete_profile_title ?? "Complete your buyer profile"}
+              {profileIncomplete
+                ? (t.complete_profile_title ?? "Complete your buyer profile")
+                : (t.edit_profile_title ?? "Edit your buyer profile")}
             </CardTitle>
             <p className="text-muted-foreground text-sm">
               {t.complete_profile_subtitle ??
@@ -257,7 +277,7 @@ export default function BuyerDashboardPage() {
                 </Button>
               )}
               <Button
-                onClick={() => saveMutation.mutate()}
+                onClick={handleSaveProfile}
                 disabled={saveMutation.isPending || !locationDraft || commoditiesDraft.length === 0}
               >
                 {saveMutation.isPending
@@ -270,6 +290,7 @@ export default function BuyerDashboardPage() {
       )}
 
       {/* ── Profile summary (Buyer Profile + Commodities Interested, merged) ── */}
+      {!editingProfile && (
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-2">
           <CardTitle className="text-base">{t.card_profile_title ?? "Buyer Profile"}</CardTitle>
@@ -329,6 +350,7 @@ export default function BuyerDashboardPage() {
           )}
         </CardContent>
       </Card>
+      )}
     </div>
   );
 }

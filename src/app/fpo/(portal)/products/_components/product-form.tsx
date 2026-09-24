@@ -30,11 +30,14 @@ const NAME_PATTERN = /^[A-Za-z][A-Za-z\s'-]*$/;
 function digitLimitRefinement(maxIntDigits: number, maxDecimalDigits: number, label: string) {
   return (val: string, ctx: z.RefinementCtx) => {
     if (!val) return;
+    const hasDecimal = val.includes(".");
     const [intPart, decPart] = val.split(".");
     if (intPart && intPart.replace(/^0+(?=\d)/, "").length > maxIntDigits) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: `${label} can have at most ${maxIntDigits} digits before the decimal point`,
+        message: hasDecimal
+          ? `${label} can have at most ${maxIntDigits} digits before the decimal point`
+          : `${label} can have at most ${maxIntDigits} digits`,
       });
     }
     if (decPart !== undefined && decPart.length > maxDecimalDigits) {
