@@ -31,7 +31,7 @@ export default function ExpertDashboardStatsPage() {
     translationsApi
       .getPublic(locale, "expert_stats,common")
       .then((data) => {
-        setT({ ...(data.expert_stats ?? {}), ...(data.common ?? {}) });
+        setT({ ...(data.common ?? {}), ...(data.expert_stats ?? {}) });
       })
       .catch(() => undefined);
   }, [locale]);
@@ -46,7 +46,7 @@ export default function ExpertDashboardStatsPage() {
   });
 
   function getStatusLabel(status: string | undefined, fallback: string | undefined) {
-    if (!status) return fallback ?? "Unknown";
+    if (!status) return fallback ?? t.status_unknown ?? "Unknown";
     return t[`status_${status}`] ?? fallback ?? status;
   }
 
@@ -193,7 +193,7 @@ export default function ExpertDashboardStatsPage() {
               <div key={code} className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-sm">{getStatusLabel(code, code)}</span>
-                  <span className="text-muted-foreground text-sm">{count} requests</span>
+                  <span className="text-muted-foreground text-sm">{(t.count_requests ?? "{count} requests").replace("{count}", String(count))}</span>
                 </div>
                 <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                   <div
