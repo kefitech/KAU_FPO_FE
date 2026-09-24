@@ -118,7 +118,7 @@ function PhoneOtpBlock({
     },
     onError: (err: unknown) => {
       const axiosErr = err as { response?: { data?: { message?: string } }; message?: string } | undefined;
-      setOtpError(axiosErr?.response?.data?.message ?? axiosErr?.message ?? (t.error_invalid_otp ?? "Invalid or expired OTP."));
+      setOtpError(axiosErr?.response?.data?.message ?? axiosErr?.message ?? (t.otp_error_default ?? "Invalid or expired OTP."));
     },
   });
   // biome-ignore lint/correctness/useExhaustiveDependencies: guarded by hasSentInitialOtp ref, intentionally runs once on mount
@@ -131,9 +131,9 @@ function PhoneOtpBlock({
   return (
     <div className="flex flex-col gap-4 rounded-lg border bg-muted/30 p-4">
       <div className="flex flex-col gap-1">
-        <span className="font-medium text-sm">{t.otp_verify_title ?? "Verify new phone number"}</span>
+        <span className="font-medium text-sm">{t.otp_title ?? "Verify new phone number"}</span>
         <p className="text-muted-foreground text-xs">
-          {t.otp_verify_desc ??
+          {t.otp_desc ??
             "We'll send a one-time password to confirm this number. It won't be saved to your profile until verified."}
         </p>
       </div>
@@ -142,7 +142,7 @@ function PhoneOtpBlock({
         <div className="flex items-start gap-2.5 rounded-lg border border-green-200 bg-green-50 px-3 py-2.5 dark:border-green-800 dark:bg-green-950/30">
           <Smartphone className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
           <p className="text-green-700 text-xs dark:text-green-300">
-            {t.otp_sent_to ?? "OTP sent to"} <span className="font-medium font-mono">{newPhone}</span>
+            {t.otp_sent_msg ?? "OTP sent to"} <span className="font-medium font-mono">{newPhone}</span>
           </p>
         </div>
       )}
@@ -170,7 +170,7 @@ function PhoneOtpBlock({
           disabled={confirmMutation.isPending || otp.length < 6}
           onClick={() => confirmMutation.mutate()}
         >
-          {confirmMutation.isPending ? (t.btn_verifying ?? "Verifying...") : (t.btn_confirm_save ?? "Confirm & Save")}
+          {confirmMutation.isPending ? (t.otp_confirming_btn ?? "Verifying...") : (t.otp_confirm_btn ?? "Confirm & Save")}
         </Button>
         <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
           {t.btn_cancel ?? "Cancel"}
@@ -181,7 +181,7 @@ function PhoneOtpBlock({
           disabled={sendMutation.isPending}
           className="ml-auto text-muted-foreground text-xs underline underline-offset-4 hover:text-foreground disabled:opacity-50"
         >
-          {sendMutation.isPending ? (t.btn_sending ?? "Sending...") : (t.btn_resend_otp ?? "Resend OTP")}
+          {sendMutation.isPending ? (t.otp_resending_btn ?? "Sending...") : (t.otp_resend_btn ?? "Resend OTP")}
         </button>
       </div>
     </div>
@@ -200,9 +200,9 @@ export default function ExpertSettingsProfilePage() {
 
   useEffect(() => {
     translationsApi
-      .getPublic(locale, "expert_settings,common")
+      .getPublic(locale, "fpo_settings,expert_settings,common")
       .then((data) => {
-        setT({ ...(data.common ?? {}), ...(data.expert_settings ?? {}) });
+        setT({ ...(data.common ?? {}), ...(data.fpo_settings ?? {}), ...(data.expert_settings ?? {}) });
       })
       .catch(() => undefined);
   }, [locale]);
@@ -386,7 +386,7 @@ export default function ExpertSettingsProfilePage() {
               ) : otpStep ? (
                 <div className="flex h-9 items-center gap-2 rounded-md border border-input bg-muted/50 px-3 text-muted-foreground text-sm">
                   <span className="font-mono">{pendingPhone}</span>
-                  <span className="ml-auto text-xs">{t.label_pending_verification ?? "Pending verification"}</span>
+                  <span className="ml-auto text-xs">{t.otp_pending_label ?? "Pending verification"}</span>
                 </div>
               ) : (
                 <span className="text-muted-foreground text-sm">{user?.phone || "—"}</span>
