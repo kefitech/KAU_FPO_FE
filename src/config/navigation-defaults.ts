@@ -140,6 +140,7 @@ export const buyerNavigationConfig: NavigationConfig = {
       items: [
         { id: "dashboard", title: "Dashboard", translations: { ml: "ഡാഷ്‌ബോർഡ്" }, url: "/buyer/dashboard", icon: "LayoutDashboard" },
         { id: "products", title: "Explore Products", translations: { ml: "ഉൽപ്പന്നങ്ങൾ പര്യവേക്ഷണം ചെയ്യുക" }, url: "/buyer/products", icon: "Package" },
+        { id: "profile", title: "My Profile", translations: { ml: "എന്റെ പ്രൊഫൈൽ" }, url: "/buyer/profile", icon: "User" },
       ],
     },
   ],

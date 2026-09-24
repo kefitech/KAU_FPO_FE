@@ -5,6 +5,7 @@ export interface MarketHubProduct {
   name: { en: string; ml: string };
   description: { en: string; ml: string };
   commodity_code: string;
+  commodity_name: string;
   quantity: number;
   unit: string;
   price_per_unit: number;
