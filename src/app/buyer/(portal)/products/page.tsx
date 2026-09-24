@@ -1,16 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+
 import Link from "next/link";
-import { buyerDashboardApi } from "@/app/buyer/_api/dashboard";
+
 import { useQuery } from "@tanstack/react-query";
 import { Building2, Calendar as CalendarIcon, Package, Search } from "lucide-react";
+import { toast } from "sonner";
+
+import { buyerDashboardApi } from "@/app/buyer/_api/dashboard";
 import { type BuyerProduct, buyerProductsApi } from "@/app/buyer/_api/products";
 import { masterDataApi } from "@/app/fpo/_api/master-data";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -31,7 +34,7 @@ import { useLocaleStore } from "@/stores/locale-store";
 
 type T = Record<string, string>;
 
-function ProductCard({ product, locale }: { product: BuyerProduct; locale: string }) {
+function ProductCard({ product, locale, t }: { product: BuyerProduct; locale: string; t: T }) {
   const name = locale === "ml" ? product.name.ml || product.name.en : product.name.en;
   const description = locale === "ml" ? product.description.ml || product.description.en : product.description.en;
   const [inquiryOpen, setInquiryOpen] = useState(false);
@@ -48,14 +51,18 @@ function ProductCard({ product, locale }: { product: BuyerProduct; locale: strin
           <div className="flex items-start justify-between gap-2">
             <CardTitle className="text-base">{name}</CardTitle>
             <Badge variant="outline" className="shrink-0 font-normal">
-              {product.commodity_code}
+              {product.commodity_name ?? product.commodity_code}
             </Badge>
           </div>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           {description && (
             <div className="flex flex-col gap-1">
-              <p className={descExpanded ? "text-muted-foreground text-sm" : "line-clamp-2 text-muted-foreground text-sm"}>
+              <p
+                className={
+                  descExpanded ? "text-muted-foreground text-sm" : "line-clamp-2 text-muted-foreground text-sm"
+                }
+              >
                 {description}
               </p>
               {description.length > 120 && (
@@ -64,7 +71,7 @@ function ProductCard({ product, locale }: { product: BuyerProduct; locale: strin
                   onClick={() => setDescExpanded((v) => !v)}
                   className="w-fit text-primary text-xs font-medium hover:underline"
                 >
-                  {descExpanded ? "Read less" : "Read more"}
+                  {descExpanded ? (t.read_less ?? "Read less") : (t.read_more ?? "Read more")}
                 </button>
               )}
             </div>
@@ -72,13 +79,13 @@ function ProductCard({ product, locale }: { product: BuyerProduct; locale: strin
 
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div className="flex flex-col gap-0.5">
-              <span className="text-muted-foreground text-xs">Quantity</span>
+              <span className="text-muted-foreground text-xs">{t.label_quantity ?? "Quantity"}</span>
               <span className="font-medium">
                 {product.quantity} {product.unit}
               </span>
             </div>
             <div className="flex flex-col gap-0.5">
-              <span className="text-muted-foreground text-xs">Price</span>
+              <span className="text-muted-foreground text-xs">{t.label_price ?? "Price"}</span>
               <span className="font-medium">₹{product.price_per_unit}</span>
             </div>
           </div>
@@ -89,25 +96,22 @@ function ProductCard({ product, locale }: { product: BuyerProduct; locale: strin
             </Badge>
           )}
 
-        <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
-          <Building2 className="h-3.5 w-3.5" />
-          {product.fpo_name}
-        </div>
-        <Link
-          href={`/buyer/products/fpo/${product.fpo}`}
-          className="text-primary text-xs hover:underline"
-        >
-          View all products from this FPO
-        </Link>
+          <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
+            <Building2 className="h-3.5 w-3.5" />
+            {product.fpo_name}
+          </div>
+          <Link href={`/buyer/products/fpo/${product.fpo}`} className="text-primary text-xs hover:underline">
+            {t.view_all_products ?? "View all products from this FPO"}
+          </Link>
 
           <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
             <CalendarIcon className="h-3.5 w-3.5" />
-            {product.available_from}
-            {product.available_until ? ` – ${product.available_until}` : ""}
+            <span className="font-medium text-foreground">{t.label_available ?? "Available"}:</span>{" "}
+            {formatAvailability(product.available_from, product.available_until)}
           </div>
 
           <Button size="sm" className="mt-1" onClick={() => setInquiryOpen(true)}>
-            Inquire
+            {t.btn_inquire ?? "Inquire"}
           </Button>
         </CardContent>
       </Card>
@@ -122,7 +126,6 @@ function ProductCard({ product, locale }: { product: BuyerProduct; locale: strin
     </>
   );
 }
-
 function formatDate(date: Date | undefined): string {
   if (!date) return "";
   const y = date.getFullYear();
@@ -141,10 +144,10 @@ export default function BuyerProductsPage() {
   const [defaultApplied, setDefaultApplied] = useState(false);
   const [fromDate, setFromDate] = useState<Date | undefined>(undefined);
   const [untilDate, setUntilDate] = useState<Date | undefined>(undefined);
-const [page, setPage] = useState(1);
-const [pageSize, setPageSize] = useState(20);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
-const resetPage = () => setPage(1);
+  const resetPage = () => setPage(1);
 
   useEffect(() => {
     setTranslationsLoading(true);
@@ -258,9 +261,7 @@ const resetPage = () => setPage(1);
                 checked={selectedCommodities.includes(c.code)}
                 onSelect={(e) => e.preventDefault()}
                 onCheckedChange={(checked) => {
-                  setSelectedCommodities((prev) =>
-                    checked ? [...prev, c.code] : prev.filter((v) => v !== c.code),
-                  );
+                  setSelectedCommodities((prev) => (checked ? [...prev, c.code] : prev.filter((v) => v !== c.code)));
                   resetPage();
                 }}
               >
@@ -288,7 +289,14 @@ const resetPage = () => setPage(1);
             />
             {fromDate && (
               <div className="flex justify-end border-t p-2">
-                <Button variant="ghost" size="sm" onClick={() => { setFromDate(undefined); resetPage(); }}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setFromDate(undefined);
+                    resetPage();
+                  }}
+                >
                   {t.date_filter_clear ?? "Clear"}
                 </Button>
               </div>
@@ -319,7 +327,14 @@ const resetPage = () => setPage(1);
             />
             {untilDate && (
               <div className="flex justify-end border-t p-2">
-                <Button variant="ghost" size="sm" onClick={() => { setUntilDate(undefined); resetPage(); }}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setUntilDate(undefined);
+                    resetPage();
+                  }}
+                >
                   {t.date_filter_clear ?? "Clear"}
                 </Button>
               </div>
@@ -344,7 +359,7 @@ const resetPage = () => setPage(1);
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {products.map((product) => (
-              <ProductCard key={product.id} product={product} locale={locale} />
+              <ProductCard key={product.id} product={product} locale={locale} t={t} />
             ))}
           </div>
           <DataTablePagination

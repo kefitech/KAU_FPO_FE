@@ -6,6 +6,7 @@ export interface BuyerProduct {
   name: { en: string; ml: string };
   description: { en: string; ml: string };
   commodity_code: string;
+  commodity_name: string | null;
   quantity: string;
   unit: string;
   price_per_unit: string;
@@ -24,6 +25,7 @@ export interface BuyerProductParams extends DataTableParams {
   price_max?: string;
   date_from?: string;
   date_until?: string;
+  lang?: string;
 }
 const BASE = "/marketplace/buyer/products/";
 
