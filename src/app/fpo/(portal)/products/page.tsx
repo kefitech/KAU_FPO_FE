@@ -18,9 +18,9 @@ import { useLocaleStore } from "@/stores/locale-store";
 import type { Product } from "@/types/fpo";
 import { PRODUCT_STATUS_LABEL } from "@/types/fpo";
 
+import { getProductColumns } from "./_components/columns";
 import { getInquiryColumns } from "./_components/inquiry-columns";
 import { getMarketHubInquiryColumns } from "./_components/market-hub-inquiry-columns";
-import { getProductColumns } from "./_components/columns";
 
 type T = Record<string, string>;
 type ViewMode = "products" | "inquiries" | "market-hub-inquiries";
@@ -78,7 +78,7 @@ export default function FpoProductsPage() {
     ],
     [tPage],
   );
-    const MARKET_HUB_STATUS_FILTERS = useMemo(
+  const MARKET_HUB_STATUS_FILTERS = useMemo(
     () => [
       {
         key: "status",
@@ -160,7 +160,7 @@ export default function FpoProductsPage() {
           <DataTable
             queryKey="inquiries"
             queryFn={inquiriesApi.getAll}
-            columns={getInquiryColumns()}
+            columns={getInquiryColumns(tPage)}
             filters={INQUIRY_STATUS_FILTERS}
             columnsLabel={tCommon.columns_header}
             toggleColumnsLabel={tCommon.columns_toggle_columns}
@@ -175,7 +175,7 @@ export default function FpoProductsPage() {
           <DataTable
             queryKey="market-hub-inquiries"
             queryFn={marketHubInquiriesApi.getAll}
-            columns={getMarketHubInquiryColumns(tPage)}     
+            columns={getMarketHubInquiryColumns(tPage)}
             filters={MARKET_HUB_STATUS_FILTERS}
             columnsLabel={tCommon.columns_header}
             toggleColumnsLabel={tCommon.columns_toggle_columns}
