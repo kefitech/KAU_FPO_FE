@@ -18,6 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAdminPermissions } from "@/hooks/use-admin-permissions";
 import { useConfirmStore } from "@/stores/confirm-store";
 
 type T = Record<string, string>;
@@ -84,9 +85,16 @@ function ActionsCell({
     },
   });
 
+  // sub-admins only see the actions the super admin granted them
+  const { can } = useAdminPermissions();
+  const canApprove = can("can_approve_fpo");
+  const canRequestInfo = can("can_request_info");
+
   const isApproved = row.status === "approved";
-  const isInfoRequired = row.status === "info_required";
-  const canActivate = row.status === "suspended" || row.status === "rejected";
+  const canActivate = (row.status === "suspended" || row.status === "rejected") && canApprove;
+  const showApprove = row.status === "submitted" && canApprove;
+  const showRequestInfo = isApproved && canRequestInfo;
+  const showApprovedActions = isApproved && canApprove;
 
   return (
     <DropdownMenu>
@@ -108,9 +116,9 @@ function ActionsCell({
           </DropdownMenuItem>
         )}
 
-        {(isApproved || isInfoRequired || row.status === "submitted" || canActivate) && <DropdownMenuSeparator />}
+        {(showApprove || showRequestInfo || showApprovedActions || canActivate) && <DropdownMenuSeparator />}
 
-        {row.status === "submitted" && (
+        {showApprove && (
           <DropdownMenuItem
             onClick={() => router.push(`/admin/applications/${row.id}?action=approve`)}
             className="text-green-600 focus:text-green-600"
@@ -120,19 +128,19 @@ function ActionsCell({
           </DropdownMenuItem>
         )}
 
-        {isApproved && (
+        {showRequestInfo && (
           <DropdownMenuItem onClick={() => router.push(`/admin/applications/${row.id}?action=request-info`)}>
             <Info className="mr-2 h-4 w-4 text-orange-500" />
             Request Info
           </DropdownMenuItem>
         )}
-        {isApproved && (
+        {showApprovedActions && (
           <DropdownMenuItem onClick={() => router.push(`/admin/applications/${row.id}?action=reject`)}>
             <XCircle className="mr-2 h-4 w-4 text-destructive" />
             Reject
           </DropdownMenuItem>
         )}
-        {isApproved && (
+        {showApprovedActions && (
           <DropdownMenuItem
             onClick={() =>
               confirm({
@@ -193,11 +201,7 @@ export function getApplicationColumns(
       header: t.col_fpo_name ?? "FPO Name",
       cell: ({ row }) => (
         <TextCell
-          value={
-            locale === "ml"
-              ? row.original.name_ml || row.original.name
-              : row.original.name
-          }
+          value={locale === "ml" ? row.original.name_ml || row.original.name : row.original.name}
           maxWidth="max-w-[220px]"
         />
       ),
@@ -207,10 +211,10 @@ export function getApplicationColumns(
       header: t.col_district ?? "District",
       meta: { hideOnMobile: true },
       cell: ({ row }) => (
-      <span className="text-sm text-muted-foreground">
-        {t[`district_${row.original.district}`] ?? row.original.district_display}
-      </span>
-    ),
+        <span className="text-sm text-muted-foreground">
+          {t[`district_${row.original.district}`] ?? row.original.district_display}
+        </span>
+      ),
     },
     {
       accessorKey: "status",

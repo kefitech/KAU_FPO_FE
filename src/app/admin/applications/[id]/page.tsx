@@ -41,16 +41,17 @@ import {
 } from "@/app/admin/_api/applications";
 import { auditLogsApi } from "@/app/admin/_api/audit-logs";
 import { fpoUsersApi } from "@/app/admin/_api/fpo-users";
+import { AssignSubAdminDialog } from "@/app/admin/applications/_components/assign-subadmin-dialog";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { RowActions } from "@/components/data-table/row-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AssignSubAdminDialog } from "@/app/admin/applications/_components/assign-subadmin-dialog";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { useAdminPermissions } from "@/hooks/use-admin-permissions";
 import { masterDataApi } from "@/lib/api/master-data";
 import { translationsApi } from "@/lib/api/translations";
 import { useAuthStore } from "@/stores/auth-store";
@@ -77,10 +78,10 @@ function formatStatus(status: string, t: Record<string, string>): string {
       .split("_")
       .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
       .join(" ")
-    );
+  );
 }
 
-function StatusBadge({ status, label }: { status: ApplicationStatus, label: string }) {
+function StatusBadge({ status, label }: { status: ApplicationStatus; label: string }) {
   const cls: Record<ApplicationStatus, string> = {
     draft: "bg-muted text-muted-foreground",
     submitted: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
@@ -458,12 +459,14 @@ function InfoResponseDialog({
   onOpenChange,
   onApprove,
   approving,
+  canApprove = true,
 }: {
   history: StatusHistoryEntry[];
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onApprove: () => void;
   approving: boolean;
+  canApprove?: boolean;
 }) {
   const infoEntry = [...history].reverse().find((h) => h.to_status === "info_required");
   const infoReply = infoEntry
@@ -520,9 +523,11 @@ function InfoResponseDialog({
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Close
           </Button>
-          <Button type="button" className="bg-green-600 hover:bg-green-700" onClick={onApprove} disabled={approving}>
-            {approving ? "Approving…" : "Approve"}
-          </Button>
+          {canApprove && (
+            <Button type="button" className="bg-green-600 hover:bg-green-700" onClick={onApprove} disabled={approving}>
+              {approving ? "Approving…" : "Approve"}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -977,17 +982,19 @@ function AuditLogTab({ fpoId }: { fpoId: number }) {
                       // Account deactivated on ownership transfer
                       if (c.action === "account_deactivated") {
                         return (
-                          <span className="text-xs font-semibold mt-0.5" style={{ color: "var(--color-destructive, #dc2626)" }}>
+                          <span
+                            className="text-xs font-semibold mt-0.5"
+                            style={{ color: "var(--color-destructive, #dc2626)" }}
+                          >
                             Account deactivated{c.fpo_name ? ` · ${c.fpo_name}` : ""}
                           </span>
                         );
                       }
 
-
                       // Generic field-level diff (e.g. fpo_profile_change): {field: {old, new}, ...}
                       if (log.action === "fpo_profile_change") {
                         const fieldEntries = Object.entries(c).filter(
-                          ([, v]) => v && typeof v === "object" && "old" in (v as any) && "new" in (v as any)
+                          ([, v]) => v && typeof v === "object" && "old" in (v as any) && "new" in (v as any),
                         ) as [string, { old: any; new: any }][];
                         if (fieldEntries.length === 0) return null;
                         if (fieldEntries.length === 1) {
@@ -998,7 +1005,7 @@ function AuditLogTab({ fpoId }: { fpoId: number }) {
                             </span>
                           );
                         }
-                        return (              
+                        return (
                           <span className="text-xs font-semibold mt-0.5" style={{ color: "var(--color-primary)" }}>
                             Changed: {fieldEntries.map(([f]) => fmt(f)).join(", ")}
                           </span>
@@ -1008,7 +1015,7 @@ function AuditLogTab({ fpoId }: { fpoId: number }) {
                       // Fallback for any other action: {field: {old, new}} pairs anywhere in changes
                       {
                         const fieldEntries = Object.entries(c).filter(
-                          ([, v]) => v && typeof v === "object" && "old" in (v as any) && "new" in (v as any)
+                          ([, v]) => v && typeof v === "object" && "old" in (v as any) && "new" in (v as any),
                         ) as [string, { old: any; new: any }][];
                         if (fieldEntries.length === 1) {
                           const [field, { old, new: nv }] = fieldEntries[0];
@@ -1026,11 +1033,12 @@ function AuditLogTab({ fpoId }: { fpoId: number }) {
                           );
                         }
                       }
- 
+
                       // Fallback for scalar changes not shaped as {old,new}, e.g. {member_name: "X"}
                       {
                         const scalarEntries = Object.entries(c).filter(
-                          ([, v]) => v !== null && (typeof v === "string" || typeof v === "number" || typeof v === "boolean")
+                          ([, v]) =>
+                            v !== null && (typeof v === "string" || typeof v === "number" || typeof v === "boolean"),
                         );
                         if (scalarEntries.length > 0) {
                           return (
@@ -1040,7 +1048,6 @@ function AuditLogTab({ fpoId }: { fpoId: number }) {
                           );
                         }
                       }
- 
 
                       return null;
                     })()}
@@ -1281,6 +1288,11 @@ function ApplicationDetailContent() {
   const user = useAuthStore((s) => s.user);
   const fpoId = Number(id);
   const isSuperAdmin = user?.role === "super_admin";
+  // sub-admins only get the actions the super admin granted them
+  const { can } = useAdminPermissions();
+  const canApprove = can("can_approve_fpo");
+  const canRequestInfo = can("can_request_info");
+  const canVerifyDocs = can("can_verify_documents");
   const activeTab = (searchParams.get("tab") ?? "overview") as TabKey;
 
   const confirm = useConfirmStore((s) => s.confirm);
@@ -1424,7 +1436,7 @@ function ApplicationDetailContent() {
     app.status === "submitted" &&
     lastStatusEntry?.from_status === "info_required" &&
     lastStatusEntry?.to_status === "submitted";
-  
+
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-8 py-6">
       {/* Header */}
@@ -1440,11 +1452,19 @@ function ApplicationDetailContent() {
           </Button> */}
           <div>
             <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="font-bold text-xl max-w-[800px] break-words whitespace-normal"> {locale === "ml" ? app.name_ml || app.name : app.name}</h1>
-               <StatusBadge
-               status={app.status}
-               label={t[`status_${app.status}`] ?? tCommon[`status_${app.status}`] ?? tAdmin[`status_${app.status}`] ?? app.status}
-             />
+              <h1 className="font-bold text-xl max-w-[800px] break-words whitespace-normal">
+                {" "}
+                {locale === "ml" ? app.name_ml || app.name : app.name}
+              </h1>
+              <StatusBadge
+                status={app.status}
+                label={
+                  t[`status_${app.status}`] ??
+                  tCommon[`status_${app.status}`] ??
+                  tAdmin[`status_${app.status}`] ??
+                  app.status
+                }
+              />
               {app.tier && <Badge variant="outline">Tier {app.tier}</Badge>}
             </div>
             {app.application_id && (
@@ -1475,19 +1495,19 @@ function ApplicationDetailContent() {
             <Pencil className="mr-1.5 h-4 w-4" />
             Edit Details
           </Button> */}
-          {app.status === "approved" && (
+          {app.status === "approved" && canRequestInfo && (
             <Button size="sm" variant="outline" onClick={() => setRequestInfoOpen(true)}>
               <AlertCircle className="mr-1.5 h-4 w-4" />
               {t.btn_request_info ?? "Request Info"}
             </Button>
           )}
-          {app.status === "approved" && (
+          {app.status === "approved" && canApprove && (
             <Button size="sm" variant="destructive" onClick={() => setRejectOpen(true)}>
               <XCircle className="mr-1.5 h-4 w-4" />
               {t.btn_reject ?? "Reject"}
             </Button>
           )}
-          {app.status === "approved" && (
+          {app.status === "approved" && canApprove && (
             <Button
               size="sm"
               variant="outline"
@@ -1510,7 +1530,7 @@ function ApplicationDetailContent() {
               {deactivateMutation.isPending ? (t.btn_suspend_loading ?? "Suspending…") : (t.btn_suspend ?? "Suspend")}
             </Button>
           )}
-          {(app.status === "suspended" || app.status === "rejected") && (
+          {(app.status === "suspended" || app.status === "rejected") && canApprove && (
             <Button
               size="sm"
               className="bg-green-600 hover:bg-green-700"
@@ -1536,7 +1556,7 @@ function ApplicationDetailContent() {
               Info Details
             </Button>
           )}
-          {app.status === "submitted" && !isInfoResubmission && (
+          {app.status === "submitted" && !isInfoResubmission && canApprove && (
             <Button
               size="sm"
               className="bg-green-600 hover:bg-green-700"
@@ -1913,7 +1933,7 @@ function ApplicationDetailContent() {
                         <ShieldCheck className="h-4 w-4" />
                         <span className="font-medium text-xs">{t.doc_verified ?? "Verified"}</span>
                       </div>
-                    ) : (
+                    ) : canVerifyDocs ? (
                       <Button
                         size="sm"
                         variant="outline"
@@ -1924,6 +1944,8 @@ function ApplicationDetailContent() {
                         <CheckCheck className="mr-1 h-3 w-3" />
                         {t.doc_verify_btn ?? "Verify"}
                       </Button>
+                    ) : (
+                      <span className="text-muted-foreground text-xs">{t.doc_not_verified ?? "Not verified"}</span>
                     )}
                   </div>
                 </div>
@@ -2034,12 +2056,18 @@ function ApplicationDetailContent() {
         );
       })()}
 
-      <RejectDialog fpoId={fpoId} t={t} tCommon={tCommon} open={rejectOpen} onOpenChange={setRejectOpen} />
+      <RejectDialog
+        fpoId={fpoId}
+        t={t}
+        tCommon={tCommon}
+        open={rejectOpen && canApprove}
+        onOpenChange={setRejectOpen}
+      />
       <RequestInfoDialog
         fpoId={fpoId}
         t={t}
         tCommon={tCommon}
-        open={requestInfoOpen}
+        open={requestInfoOpen && canRequestInfo}
         onOpenChange={setRequestInfoOpen}
       />
       <InfoResponseDialog
@@ -2048,6 +2076,7 @@ function ApplicationDetailContent() {
         onOpenChange={setInfoResponseOpen}
         onApprove={() => approveMutation.mutateAsync().then(() => setInfoResponseOpen(false))}
         approving={approveMutation.isPending}
+        canApprove={canApprove}
       />
 
       <AssignTierDialog fpoId={fpoId} open={assignTierOpen} onOpenChange={setAssignTierOpen} />
