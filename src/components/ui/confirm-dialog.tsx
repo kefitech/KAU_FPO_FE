@@ -20,6 +20,9 @@ export function ConfirmDialog() {
     setIsPending(true);
     try {
       await Promise.resolve(onConfirm());
+    } catch {
+      // callers pass mutateAsync(); the mutation's onError already shows the toast,
+      // so re-throwing here would only surface as an unhandled rejection
     } finally {
       close();
     }
