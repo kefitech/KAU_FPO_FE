@@ -18,8 +18,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { resolveTeamSection, TEAM_SECTIONS, type TeamSectionKey } from "@/lib/constants/team-sections";
 import { useConfirmStore } from "@/stores/confirm-store";
 import type { AdminTeamMember } from "@/types/admin";
 
@@ -68,19 +70,21 @@ function TeamDialog({
   open,
   onOpenChange,
   editing,
+  defaultSection,
   onSuccess,
   t,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   editing: AdminTeamMember | null;
+  defaultSection: TeamSectionKey | null;
   onSuccess: () => void;
   t: T;
 }) {
   const [name, setName] = useState("");
   const [designation, setDesignation] = useState("");
   const [order, setOrder] = useState(1);
-  const [isPatrons, setIsPatrons] = useState(false);
+  const [section, setSection] = useState<TeamSectionKey | null>(null);
   const [photo, setPhoto] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -92,14 +96,14 @@ function TeamDialog({
       setName(editing.name);
       setDesignation(editing.designation ?? "");
       setOrder(editing.order);
-      setIsPatrons(editing.is_patrons ?? false);
+      setSection(resolveTeamSection(editing));
     } else {
       setName("");
       setDesignation("");
       setOrder(1);
-      setIsPatrons(false);
+      setSection(defaultSection);
     }
-  }, [open, editing]);
+  }, [open, editing, defaultSection]);
 
   const mutation = useMutation({
     mutationFn: () => {
@@ -107,8 +111,9 @@ function TeamDialog({
       formData.append("name", name.trim());
       formData.append("designation", designation.trim());
       formData.append("order", String(order));
-      formData.append("is_active", "true");
-      formData.append("is_patrons", String(isPatrons));
+      formData.append("section", section ?? "");
+      // Only set on create — editing must not re-activate a deactivated member
+      if (!editing) formData.append("is_active", "true");
       if (photo) formData.append("photo", photo);
       return editing ? teamApi.update(editing.id, formData) : teamApi.create(formData);
     },
@@ -120,7 +125,7 @@ function TeamDialog({
     onError: () => toast.error(t.toast_save_failed ?? "Failed to save member."),
   });
 
-  const canSubmit = !!name.trim() && !!designation.trim() && (editing ? true : !!photo);
+  const canSubmit = !!name.trim() && !!designation.trim() && !!section && (editing ? true : !!photo);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -254,17 +259,24 @@ function TeamDialog({
             />
           </div>
 
-          {/* Patrons */}
-          <label htmlFor="member-is-patrons" className="flex items-center gap-2 text-sm font-medium cursor-pointer">
-            <input
-              id="member-is-patrons"
-              type="checkbox"
-              checked={isPatrons}
-              onChange={(e) => setIsPatrons(e.target.checked)}
-              className="h-4 w-4"
-            />
-            {t.field_is_patrons ?? "Is Patron"}
-          </label>
+          {/* Section */}
+          <div className="flex flex-col gap-1.5">
+            <p className="text-sm font-medium">
+              {t.field_section ?? "Section"} <span className="text-destructive">*</span>
+            </p>
+            <Select value={section ?? ""} onValueChange={(v) => setSection(v as TeamSectionKey)}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder={t.field_section_placeholder ?? "Select a section"} />
+              </SelectTrigger>
+              <SelectContent>
+                {TEAM_SECTIONS.map((s) => (
+                  <SelectItem key={s.key} value={s.key}>
+                    {t[s.labelKey] ?? s.fallback}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <DialogFooter>
@@ -284,13 +296,101 @@ function TeamDialog({
   );
 }
 
+// ─── Member Card ──────────────────────────────────────────────────────────────
+
+function MemberCard({
+  member,
+  onEdit,
+  onToggleActive,
+  onDelete,
+  t,
+}: {
+  member: AdminTeamMember;
+  onEdit: () => void;
+  onToggleActive: () => void;
+  onDelete: () => void;
+  t: T;
+}) {
+  return (
+    <div
+      className={`group relative flex flex-col items-center gap-3 rounded-lg border p-4 transition-shadow hover:shadow-md ${!member.is_active ? "opacity-60 grayscale" : ""}`}
+    >
+      {/* Photo / initials avatar */}
+      <div className="relative">
+        <MemberAvatar photo_url={member.photo_url} name={member.name} size="lg" />
+        <span
+          className={`absolute bottom-0.5 right-0.5 h-3 w-3 rounded-full ring-2 ring-background ${
+            member.is_active ? "bg-green-500" : "bg-muted-foreground"
+          }`}
+        />
+      </div>
+
+      {/* Info */}
+      <div className="flex flex-col items-center gap-0.5 text-center w-full min-w-0">
+        <p className="text-sm font-medium leading-snug truncate w-full text-center">{member.name}</p>
+        {member.designation && (
+          <p className="text-xs text-muted-foreground truncate w-full text-center">{member.designation}</p>
+        )}
+        <Badge
+          variant="secondary"
+          className={`mt-1 text-xs ${
+            member.is_active
+              ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+              : "bg-muted text-muted-foreground"
+          }`}
+        >
+          {member.is_active ? (t.badge_active ?? "Active") : (t.badge_inactive ?? "Inactive")}
+        </Badge>
+      </div>
+
+      {/* Actions */}
+      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="secondary" size="sm" className="h-7 w-7 p-0 shadow">
+              <MoreHorizontal className="h-3.5 w-3.5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-[190]">
+            <DropdownMenuItem onClick={onEdit}>
+              <Pencil className="mr-2 h-4 w-4" />
+              {t.action_edit ?? "Edit"}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onToggleActive}>
+              {member.is_active ? (
+                <>
+                  <EyeOff className="mr-2 h-4 w-4" />
+                  {t.action_deactivate ?? "Deactivate"}
+                </>
+              ) : (
+                <>
+                  <Eye className="mr-2 h-4 w-4" />
+                  {t.action_activate ?? "Activate"}
+                </>
+              )}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="text-destructive" onClick={onDelete}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              {t.action_delete ?? "Delete"}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
+  );
+}
+
 // ─── Team Tab ─────────────────────────────────────────────────────────────────
+
+const UNASSIGNED = "unassigned" as const;
 
 export function TeamTab({ t = {} }: { t?: T }) {
   const queryClient = useQueryClient();
   const confirm = useConfirmStore((s) => s.confirm);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<AdminTeamMember | null>(null);
+  const [defaultSection, setDefaultSection] = useState<TeamSectionKey | null>(null);
 
   const {
     data: members = [],
@@ -332,6 +432,24 @@ export function TeamTab({ t = {} }: { t?: T }) {
     });
   }
 
+  function openAdd(section: TeamSectionKey | null) {
+    setEditing(null);
+    setDefaultSection(section);
+    setDialogOpen(true);
+  }
+
+  const grouped = members.reduce<Record<string, AdminTeamMember[]>>((acc, m) => {
+    const key = resolveTeamSection(m) ?? UNASSIGNED;
+    acc[key] ??= [];
+    acc[key].push(m);
+    return acc;
+  }, {});
+
+  const groups: { key: TeamSectionKey | typeof UNASSIGNED; title: string }[] = [
+    ...TEAM_SECTIONS.map((s) => ({ key: s.key, title: t[s.labelKey] ?? s.fallback })),
+    ...(grouped[UNASSIGNED]?.length ? [{ key: UNASSIGNED, title: t.team_group_unassigned ?? "Unassigned" }] : []),
+  ];
+
   return (
     <div className="flex flex-col gap-4">
       {/* Header */}
@@ -341,20 +459,14 @@ export function TeamTab({ t = {} }: { t?: T }) {
           <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
             <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
           </Button>
-          <Button
-            size="sm"
-            onClick={() => {
-              setEditing(null);
-              setDialogOpen(true);
-            }}
-          >
+          <Button size="sm" onClick={() => openAdd(null)}>
             <Plus className="mr-1.5 h-4 w-4" />
             {t.btn_add_member ?? "Add Member"}
           </Button>
         </div>
       </div>
 
-      {/* Grid */}
+      {/* Sections */}
       {isLoading ? (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {Array.from({ length: 6 }).map((_, i) => (
@@ -366,96 +478,52 @@ export function TeamTab({ t = {} }: { t?: T }) {
             </div>
           ))}
         </div>
-      ) : members.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-2 rounded-lg border py-16 text-muted-foreground">
-          <UserRound className="h-8 w-8 opacity-40" />
-          <p className="text-sm">{t.empty_state_team ?? "No team members added yet."}</p>
-        </div>
       ) : (
-        <div
-          className={`grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 transition-opacity ${isFetching ? "opacity-60" : ""}`}
-        >
-          {members.map((member) => (
-            <div
-              key={member.id}
-              className={`group relative flex flex-col items-center gap-3 rounded-lg border p-4 transition-shadow hover:shadow-md ${!member.is_active ? "opacity-60 grayscale" : ""}`}
-            >
-              {/* Photo / initials avatar */}
-              <div className="relative">
-                <MemberAvatar photo_url={member.photo_url} name={member.name} size="lg" />
-                <span
-                  className={`absolute bottom-0.5 right-0.5 h-3 w-3 rounded-full ring-2 ring-background ${
-                    member.is_active ? "bg-green-500" : "bg-muted-foreground"
-                  }`}
-                />
-              </div>
-
-              {/* Info */}
-              <div className="flex flex-col items-center gap-0.5 text-center w-full min-w-0">
-                <p className="text-sm font-medium leading-snug truncate w-full text-center">{member.name}</p>
-                {member.designation && (
-                  <p className="text-xs text-muted-foreground truncate w-full text-center">{member.designation}</p>
-                )}
-                {member.is_patrons && (
-                  <Badge variant="outline" className="mt-1 text-xs">
-                    {t.badge_patron ?? "Patron"}
-                  </Badge>
-                )}
-                <Badge
-                  variant="secondary"
-                  className={`mt-1 text-xs ${
-                    member.is_active
-                      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                      : "bg-muted text-muted-foreground"
-                  }`}
-                >
-                  {member.is_active ? (t.badge_active ?? "Active") : (t.badge_inactive ?? "Inactive")}
-                </Badge>
-              </div>
-
-              {/* Actions */}
-              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="secondary" size="sm" className="h-7 w-7 p-0 shadow">
-                      <MoreHorizontal className="h-3.5 w-3.5" />
+        <div className={`flex flex-col gap-6 transition-opacity ${isFetching ? "opacity-60" : ""}`}>
+          {groups.map((group) => {
+            const items = grouped[group.key] ?? [];
+            return (
+              <section key={group.key} className="flex flex-col gap-3">
+                <div className="flex items-center justify-between gap-2 border-b pb-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <h3 className="text-sm font-semibold truncate">{group.title}</h3>
+                    <Badge variant="secondary" className="text-xs">
+                      {items.length}
+                    </Badge>
+                  </div>
+                  {group.key !== UNASSIGNED && (
+                    <Button variant="ghost" size="sm" onClick={() => openAdd(group.key as TeamSectionKey)}>
+                      <Plus className="mr-1 h-4 w-4" />
+                      {t.btn_add_to_section ?? "Add"}
                     </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="min-w-[190]">
-                    <DropdownMenuItem
-                      onClick={() => {
-                        setEditing(member);
-                        setDialogOpen(true);
-                      }}
-                    >
-                      <Pencil className="mr-2 h-4 w-4" />
-                      {t.action_edit ?? "Edit"}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => toggleMutation.mutate({ id: member.id, active: !member.is_active })}
-                    >
-                      {member.is_active ? (
-                        <>
-                          <EyeOff className="mr-2 h-4 w-4" />
-                          {t.action_deactivate ?? "Deactivate"}
-                        </>
-                      ) : (
-                        <>
-                          <Eye className="mr-2 h-4 w-4" />
-                          {t.action_activate ?? "Activate"}
-                        </>
-                      )}
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(member)}>
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      {t.action_delete ?? "Delete"}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-          ))}
+                  )}
+                </div>
+
+                {items.length === 0 ? (
+                  <div className="flex items-center justify-center gap-2 rounded-lg border border-dashed py-6 text-muted-foreground">
+                    <UserRound className="h-4 w-4 opacity-40" />
+                    <p className="text-xs">{t.empty_state_team_section ?? "No members in this section yet."}</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                    {items.map((member) => (
+                      <MemberCard
+                        key={member.id}
+                        member={member}
+                        t={t}
+                        onEdit={() => {
+                          setEditing(member);
+                          setDialogOpen(true);
+                        }}
+                        onToggleActive={() => toggleMutation.mutate({ id: member.id, active: !member.is_active })}
+                        onDelete={() => handleDelete(member)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </section>
+            );
+          })}
         </div>
       )}
 
@@ -463,6 +531,7 @@ export function TeamTab({ t = {} }: { t?: T }) {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         editing={editing}
+        defaultSection={defaultSection}
         onSuccess={() => queryClient.invalidateQueries({ queryKey: ["admin-team"] })}
         t={t}
       />

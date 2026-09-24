@@ -1,3 +1,5 @@
+import type { TeamSectionKey } from "@/lib/constants/team-sections";
+
 // ─── Languages ───────────────────────────────────────────────────────────────
 
 export interface Language {
@@ -667,6 +669,7 @@ export interface AdminTeamMember {
   photo_url: string | null;
   order: number;
   is_active: boolean;
+  section: TeamSectionKey | null;
   is_patrons: boolean;
   created_at: string;
 }

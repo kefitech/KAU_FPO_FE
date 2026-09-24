@@ -6,6 +6,7 @@ import { Autoplay, Navigation, Pagination } from "swiper/modules";
 import { Swiper, SwiperSlide } from "swiper/react";
 
 import { translationsApi } from "@/lib/api/translations";
+import { PUBLIC_TEAM_PAGE_SECTIONS, resolveTeamSection } from "@/lib/constants/team-sections";
 import { useLocaleStore } from "@/stores/locale-store";
 
 import { publicFetch } from "../_lib/public-fetch";
@@ -16,6 +17,7 @@ interface TeamMember {
   designation: string | null;
   photo_url: string | null;
   order: number;
+  section?: string | null;
   is_patrons?: boolean;
 }
 
@@ -35,8 +37,9 @@ function MemberCard({ member }: { member: TeamMember }) {
       <div
         className="thumb"
         style={{
-          width: 200,
-          height: 200,
+          width: "100%",
+          maxWidth: 200,
+          aspectRatio: "1",
           overflow: "hidden",
           borderRadius: "50%",
           flexShrink: 0,
@@ -160,15 +163,22 @@ const TeamSection = ({ showAll = false }: Props) => {
       .then((r) => r.json())
       .then((json) => {
         const all = (json.data as TeamMember[]) ?? [];
-        // Landing page shows only Patrons; Our Team page shows everyone else
-        setMembers(all.filter((m) => (showAll ? !m.is_patrons : !!m.is_patrons)));
+        // Landing page shows only Patrons; Our Team page shows every other section
+        setMembers(all.filter((m) => (resolveTeamSection(m) === "patron") !== showAll));
       })
       .catch(() => setMembers([]))
       .finally(() => setLoading(false));
   }, [locale, showAll]);
 
-  // Team page — show all in a responsive grid
+  // Team page — non-patron members grouped under section headings
   if (showAll) {
+    const groups = [
+      ...PUBLIC_TEAM_PAGE_SECTIONS.map((s) => ({ key: s.key as string, title: t[s.labelKey] ?? s.fallback })),
+      { key: "other", title: t.team_section_other ?? "Other Members" },
+    ]
+      .map((g) => ({ ...g, items: members.filter((m) => (resolveTeamSection(m) ?? "other") === g.key) }))
+      .filter((g) => g.items.length > 0);
+
     return (
       <div className="farmer-area default-padding bottom-less">
         <div className="container">
@@ -180,25 +190,37 @@ const TeamSection = ({ showAll = false }: Props) => {
           </div>
           <div className="row">
             <div className="col-lg-10 offset-lg-1">
-              <div className="row">
-                {loading ? (
-                  [0, 1, 2, 3, 4, 5].map((i) => (
+              {loading ? (
+                <div className="row">
+                  {[0, 1, 2, 3, 4, 5].map((i) => (
                     <div className="col-lg-4 col-md-6 farmer-stye-one" style={{ marginBottom: 30 }} key={i}>
                       <SkeletonCard />
                     </div>
-                  ))
-                ) : members.length === 0 ? (
-                  <div className="col-12 text-center" style={{ padding: "48px 0", color: "#888" }}>
-                    {t.team_empty ?? "No team members available."}
-                  </div>
-                ) : (
-                  members.map((member) => (
-                    <div className="col-lg-4 col-md-6 farmer-stye-one" style={{ marginBottom: 30 }} key={member.id}>
-                      <MemberCard member={member} />
+                  ))}
+                </div>
+              ) : groups.length === 0 ? (
+                <div className="text-center" style={{ padding: "48px 0", color: "#888" }}>
+                  {t.team_empty ?? "No team members available."}
+                </div>
+              ) : (
+                groups.map((group) => (
+                  <section key={group.key} style={{ marginBottom: 40 }}>
+                    <div className="site-heading text-start" style={{ marginBottom: 30 }}>
+                      <h3 className="title" style={{ fontSize: 28 }}>
+                        {group.title}
+                      </h3>
+                      <div className="devider" />
                     </div>
-                  ))
-                )}
-              </div>
+                    <div className="row justify-content-center">
+                      {group.items.map((member) => (
+                        <div className="col-lg-4 col-md-6 farmer-stye-one" style={{ marginBottom: 30 }} key={member.id}>
+                          <MemberCard member={member} />
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -219,7 +241,7 @@ const TeamSection = ({ showAll = false }: Props) => {
           <div className="col-lg-8 offset-lg-2">
             <div className="site-heading text-center">
               <h5 className="sub-title">{t.team_subtitle ?? "KAU-FPO Linkage Programme"}</h5>
-              <h2 className="title">{t.team_title ?? "Our Team"}</h2>
+              <h2 className="title">{t.patrons_title ?? "Our Patrons"}</h2>
               <div className="devider" />
             </div>
           </div>
@@ -274,6 +296,58 @@ const TeamSection = ({ showAll = false }: Props) => {
                 />
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Small green "Our Team" call-to-action — links to the full team
+            page. Rendered only in the homepage variant of this component. */}
+        <div className="row" style={{ marginTop: 28 }}>
+          <div className="col-lg-12 text-center">
+            <a
+              href="/team"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "12px 26px",
+                borderRadius: 999,
+                background: "#2e7d32",
+                color: "#ffffff",
+                fontWeight: 600,
+                fontSize: 14,
+                textDecoration: "none",
+                boxShadow: "0 6px 18px rgba(46, 125, 50, 0.28)",
+                transition: "background 0.2s ease, transform 0.15s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "#256128";
+                e.currentTarget.style.transform = "translateY(-1px)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "#2e7d32";
+                e.currentTarget.style.transform = "translateY(0)";
+              }}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+              {t.our_team_button ?? "Our Team"}
+              <span aria-hidden="true">→</span>
+            </a>
           </div>
         </div>
       </div>
