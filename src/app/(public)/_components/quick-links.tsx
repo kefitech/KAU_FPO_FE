@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 
-import { publicFetch } from "../_lib/public-fetch";
-import { useLocaleStore } from "@/stores/locale-store";
 import { useTranslations } from "@/hooks/use-translations";
+import { useLocaleStore } from "@/stores/locale-store";
+
+import { publicFetch } from "../_lib/public-fetch";
 
 interface QuickLinks {
   id: number;
@@ -52,11 +53,7 @@ function QuickLinkCard({ link }: { link: QuickLinks }) {
     >
       {link.logo_url ? (
         <>
-          <img
-            src={link.logo_url}
-            alt={link.name}
-            style={{ maxHeight: 86, maxWidth: "100%", objectFit: "contain" }}
-          />
+          <img src={link.logo_url} alt={link.name} style={{ maxHeight: 86, maxWidth: "100%", objectFit: "contain" }} />
           <span
             style={{
               color: "#333",
@@ -79,7 +76,7 @@ function QuickLinkCard({ link }: { link: QuickLinks }) {
             lineHeight: 1.3,
           }}
         >
-         {link.name} 
+          {link.name}
         </span>
       )}
     </a>
@@ -91,11 +88,12 @@ export default function QuickLinksSection() {
   const locale = useLocaleStore((s) => s.locale);
   const { t, loading } = useTranslations("quickLinks");
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: locale intentionally triggers a refetch
   useEffect(() => {
     publicFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/public/quick-links/`)
       .then((r) => r.json())
       .then((json) => setQuickLinks((json.data as QuickLinks[]) ?? []))
-      .catch(() => {});
+      .catch(() => setQuickLinks([]));
   }, [locale]);
 
   if (loading || quickLinks.length === 0) return null;
@@ -119,7 +117,6 @@ export default function QuickLinksSection() {
             flexWrap: "wrap",
             gap: 16,
             justifyContent: "center",
-            marginTop: 32,
           }}
         >
           {quickLinks.map((link) => (

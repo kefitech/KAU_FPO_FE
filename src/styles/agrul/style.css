@@ -633,8 +633,8 @@ p {
 }
 
 .default-padding {
-	padding-top: 120px;
-	padding-bottom: 120px;
+	padding-top: 80px;
+	padding-bottom: 80px;
 }
 
 @media only screen and (max-width: 767px) {
@@ -655,7 +655,7 @@ p {
 }
 
 .default-padding-top {
-	padding-top: 120px;
+	padding-top: 80px;
 }
 
 @media only screen and (max-width: 767px) {
@@ -665,7 +665,7 @@ p {
 }
 
 .default-padding-bottom {
-	padding-bottom: 100px;
+	padding-bottom: 70px;
 }
 
 @media only screen and (max-width: 767px) {
@@ -675,8 +675,8 @@ p {
 }
 
 .default-padding.bottom-less {
-	padding-top: 120px;
-	padding-bottom: 90px;
+	padding-top: 80px;
+	padding-bottom: 50px;
 }
 
 @media only screen and (max-width: 767px) {
@@ -687,7 +687,7 @@ p {
 }
 
 .default-padding-bottom.bottom-less {
-	padding-bottom: 90px;
+	padding-bottom: 50px;
 }
 
 @media only screen and (max-width: 767px) {
@@ -749,7 +749,7 @@ p {
 }
 
 .site-heading {
-	margin-bottom: 60px;
+	margin-bottom: 40px;
 }
 
 .title {
