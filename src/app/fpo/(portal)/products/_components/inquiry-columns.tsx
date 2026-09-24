@@ -8,6 +8,8 @@ import { type Inquiry, inquiriesApi } from "@/app/fpo/_api/inquiries";
 import { RowActions } from "@/components/data-table/row-actions";
 import { Badge } from "@/components/ui/badge";
 
+type T = Record<string, string>;
+
 function statusClasses(status: Inquiry["status"]): string {
   switch (status) {
     case "pending":
@@ -19,26 +21,26 @@ function statusClasses(status: Inquiry["status"]): string {
   }
 }
 
-function InquiryActions({ inquiry }: { inquiry: Inquiry }) {
+function InquiryActions({ inquiry, t }: { inquiry: Inquiry; t: T }) {
   const queryClient = useQueryClient();
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["inquiries"] });
 
   const markContactedMutation = useMutation({
     mutationFn: () => inquiriesApi.markContacted(inquiry.id),
     onSuccess: () => {
-      toast.success("Inquiry marked as contacted");
+      toast.success(t.toast_marked_contacted ?? "Inquiry marked as contacted");
       invalidate();
     },
-    onError: () => toast.error("Only pending inquiries can be marked as contacted"),
+    onError: () => toast.error(t.toast_error_contact ?? "Only pending inquiries can be marked as contacted"),
   });
 
   const markResolvedMutation = useMutation({
     mutationFn: () => inquiriesApi.markResolved(inquiry.id),
     onSuccess: () => {
-      toast.success("Inquiry marked as resolved");
+      toast.success(t.toast_marked_resolved ?? "Inquiry marked as resolved");
       invalidate();
     },
-    onError: () => toast.error("Only contacted inquiries can be marked as resolved"),
+    onError: () => toast.error(t.toast_error_resolve ?? "Only contacted inquiries can be marked as resolved"),
   });
 
   if (inquiry.status === "resolved") {
@@ -49,13 +51,13 @@ function InquiryActions({ inquiry }: { inquiry: Inquiry }) {
     <RowActions
       actions={[
         {
-          label: "Mark as Contacted",
+          label: t.action_mark_contacted ?? "Mark as Contacted",
           onClick: () => markContactedMutation.mutate(),
           hidden: inquiry.status !== "pending",
           disabled: markContactedMutation.isPending,
         },
         {
-          label: "Mark as Resolved",
+          label: t.action_mark_resolved ?? "Mark as Resolved",
           onClick: () => markResolvedMutation.mutate(),
           hidden: inquiry.status !== "contacted",
           disabled: markResolvedMutation.isPending,
@@ -65,63 +67,69 @@ function InquiryActions({ inquiry }: { inquiry: Inquiry }) {
   );
 }
 
-export function getInquiryColumns(): ColumnDef<Inquiry>[] {
+export function getInquiryColumns(t: T): ColumnDef<Inquiry>[] {
+  const statusLabels: Record<Inquiry["status"], string> = {
+    pending: t.status_pending ?? "Pending",
+    contacted: t.status_contacted ?? "Contacted",
+    resolved: t.status_resolved ?? "Resolved",
+  };
+
   return [
     {
       accessorKey: "product_name",
-      header: "Product Name",
+      header: t.col_product_name ?? "Product Name",
       cell: ({ row }) => <div className="font-medium">{row.original.product_name}</div>,
     },
     {
       accessorKey: "buyer_name",
-      header: "Buyer",
+      header: t.col_buyer ?? "Buyer",
       cell: ({ row }) => row.original.buyer_name,
     },
     {
       accessorKey: "quantity_requested",
-      header: "Quantity Requested",
+      header: t.col_quantity_requested ?? "Quantity Requested",
       cell: ({ row }) => row.original.quantity_requested,
     },
     {
       accessorKey: "contact_name",
-      header: "Contact Person",
-      cell: ({ row }) => row.original.contact_name ?? "Contact no longer available",
+      header: t.col_contact_person ?? "Contact Person",
+      cell: ({ row }) => row.original.contact_name ?? t.contact_unavailable ?? "Contact no longer available",
     },
     {
       accessorKey: "contact_phone",
-      header: "Phone",
+      header: t.col_phone ?? "Phone",
       cell: ({ row }) => row.original.contact_phone ?? "—",
     },
     {
       accessorKey: "contact_email",
-      header: "Email",
+      header: t.col_email ?? "Email",
       cell: ({ row }) => row.original.contact_email ?? "—",
     },
     {
       accessorKey: "message",
-      header: "Message",
+      header: t.col_message ?? "Message",
       cell: ({ row }) => <span className="text-muted-foreground text-sm">{row.original.message || "—"}</span>,
     },
     {
       accessorKey: "created_at",
-      header: "Date Received",
+      header: t.col_date_received ?? "Date Received",
       cell: ({ row }) => (
         <span className="text-muted-foreground text-sm">{new Date(row.original.created_at).toLocaleDateString()}</span>
       ),
     },
     {
       accessorKey: "status",
-      header: "Status",
+      header: t.col_status ?? "Status",
       cell: ({ row }) => (
         <Badge variant="outline" className={statusClasses(row.original.status)}>
-          {row.original.status.charAt(0).toUpperCase() + row.original.status.slice(1)}
+          {statusLabels[row.original.status]}
         </Badge>
       ),
     },
     {
       id: "actions",
       header: "",
-      cell: ({ row }) => <InquiryActions inquiry={row.original} />,
+      cell: ({ row }) => <InquiryActions inquiry={row.original} t={t} />,
       enableSorting: false,
       enableHiding: false,
     },

@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+
 import Link from "next/link";
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2, Calendar as CalendarIcon, CheckCircle2, Clock, Package, Search, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
@@ -48,14 +50,18 @@ function ProductCard({ product, locale, t }: { product: BuyerProduct; locale: st
           <div className="flex items-start justify-between gap-2">
             <CardTitle className="line-clamp-1 text-base">{name}</CardTitle>
             <Badge variant="outline" className="shrink-0 font-normal">
-              {product.commodity_code}
+              {product.commodity_name ?? product.commodity_code}
             </Badge>
           </div>
         </CardHeader>
         <CardContent className="flex flex-1 flex-col gap-3">
           {description && (
             <div className="flex flex-col gap-1">
-              <p className={descExpanded ? "text-muted-foreground text-sm" : "line-clamp-2 text-muted-foreground text-sm"}>
+              <p
+                className={
+                  descExpanded ? "text-muted-foreground text-sm" : "line-clamp-2 text-muted-foreground text-sm"
+                }
+              >
                 {description}
               </p>
               {description.length > 120 && (
@@ -95,10 +101,7 @@ function ProductCard({ product, locale, t }: { product: BuyerProduct; locale: st
             <Building2 className="h-3.5 w-3.5" />
             {product.fpo_name}
           </div>
-          <Link
-            href={`/fpo/buyer-directory/fpo/${product.fpo}`}
-            className="text-primary text-xs hover:underline"
-          >
+          <Link href={`/fpo/buyer-directory/fpo/${product.fpo}`} className="text-primary text-xs hover:underline">
             {t.view_all_products ?? "View all products from this FPO"}
           </Link>
           <Button size="sm" className="mt-auto" onClick={() => setInquiryOpen(true)}>
@@ -219,7 +222,14 @@ function ProductCatalogSection({ locale, t }: { locale: string; t: T }) {
             />
             {fromDate && (
               <div className="flex justify-end border-t p-2">
-                <Button variant="ghost" size="sm" onClick={() => { setFromDate(undefined); resetPage(); }}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setFromDate(undefined);
+                    resetPage();
+                  }}
+                >
                   {t.date_filter_clear ?? "Clear"}
                 </Button>
               </div>
@@ -250,7 +260,14 @@ function ProductCatalogSection({ locale, t }: { locale: string; t: T }) {
             />
             {untilDate && (
               <div className="flex justify-end border-t p-2">
-                <Button variant="ghost" size="sm" onClick={() => { setUntilDate(undefined); resetPage(); }}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setUntilDate(undefined);
+                    resetPage();
+                  }}
+                >
                   {t.date_filter_clear ?? "Clear"}
                 </Button>
               </div>
