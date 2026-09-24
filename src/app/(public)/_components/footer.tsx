@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+
 import Link from "next/link";
 
 import { Autoplay, Navigation } from "swiper/modules";
@@ -90,7 +91,7 @@ const Footer = () => {
       });
   }, [locale]);
 
-
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-measure once the partner logos have loaded
   useEffect(() => {
     if (!containerRef.current || !measureRowRef.current) return;
     const checkFit = () => {
@@ -118,13 +119,8 @@ const Footer = () => {
                 marginBottom: 24,
                 fontFamily: "var(--font-default)",
               }}
-            >
-              {t.partners ?? "Partners"}
-            </p>
-            <div
-              ref={containerRef}
-              style={{ position: "relative", padding: !fitsStatic ? "0 48px" : "0" }}
-            >
+            />
+            <div ref={containerRef} style={{ position: "relative", padding: !fitsStatic ? "0 48px" : "0" }}>
               {/* Hidden row used only to measure the natural width of all items */}
               <div
                 ref={measureRowRef}
@@ -142,7 +138,7 @@ const Footer = () => {
                   <PartnerBox key={`measure-${link.id}`} link={link} />
                 ))}
               </div>
- 
+
               {!fitsStatic && partners.length > 1 ? (
                 <>
                   {(() => {
