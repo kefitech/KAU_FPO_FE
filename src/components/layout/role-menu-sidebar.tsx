@@ -53,7 +53,9 @@ export function RoleMenuSidebar({ title, subtitle, settingsHref }: RoleMenuSideb
   const locale = useLocaleStore((s) => s.locale);
   const { setOpenMobile, isMobile } = useSidebar();
 
-  const closeMobile = () => { if (isMobile) setOpenMobile(false); };
+  const closeMobile = () => {
+    if (isMobile) setOpenMobile(false);
+  };
 
   const { data, isLoading } = useQuery({
     queryKey: ["auth-me", locale],
@@ -127,7 +129,11 @@ export function RoleMenuSidebar({ title, subtitle, settingsHref }: RoleMenuSideb
               <SidebarMenuButton
                 asChild
                 isActive={pathname.startsWith(settingsHref)}
-                className={pathname.startsWith(settingsHref) ? "!bg-slate-800 !text-white dark:!bg-slate-700 dark:!text-white" : ""}
+                className={
+                  pathname.startsWith(settingsHref)
+                    ? "!bg-slate-800 !text-white dark:!bg-slate-700 dark:!text-white"
+                    : ""
+                }
               >
                 <Link href={settingsHref} onClick={closeMobile}>
                   <Settings className="h-4 w-4 shrink-0" />

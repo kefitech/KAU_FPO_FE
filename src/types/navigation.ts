@@ -38,6 +38,6 @@ export interface NavigationConfig {
 /**
  * User portal type - determines which navigation to load
  */
-export type PortalType = "fpo" | "admin" | "government" | "cbbo";
+export type PortalType = "fpo" | "admin" | "government" | "cbbo" | "expert";
 
 export type IconName = string;

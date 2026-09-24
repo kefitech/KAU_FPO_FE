@@ -222,7 +222,7 @@ export function getApplicationColumns(t: T, tCommon: T, locale:string): ColumnDe
       enableSorting: false,
     },
     {
-      accessorKey: "total_members",
+      accessorKey: "total_mem_bers",
       header: t.col_members ?? "Members",
       meta: { hideOnMobile: true },
       cell: ({ row }) => row.original.total_members ?? "—",

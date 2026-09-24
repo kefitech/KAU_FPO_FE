@@ -7,6 +7,7 @@ import {
   adminNavigationConfig,
   cbboNavigationConfig,
   fpoNavigationConfig,
+  expertNavigationConfig,
   governmentNavigationConfig,
 } from "@/config/navigation-defaults";
 import { getNavigationConfig, getUserNavigation } from "@/lib/api/navigation";
@@ -52,6 +53,8 @@ function getDefaultConfig(portalType: PortalType): NavigationConfig {
       return governmentNavigationConfig;
     case "cbbo":
       return cbboNavigationConfig;
+    case "expert":
+      return expertNavigationConfig;
     default:
       return fpoNavigationConfig;
   }
