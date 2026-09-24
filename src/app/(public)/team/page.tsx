@@ -5,7 +5,7 @@ import TeamSection from "../_components/team-section";
 export default function TeamPage() {
   return (
     <AgrulLayout>
-      <BreadCrumb title="Our Team" breadCrumb="Team" />
+      <BreadCrumb title="Our Patrons" breadCrumb="Patrons" />
       <TeamSection showAll={true} />
     </AgrulLayout>
   );
