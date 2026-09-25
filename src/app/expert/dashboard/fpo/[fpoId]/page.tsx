@@ -127,8 +127,8 @@ export default function FpoDetailPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <Link href="/expert/dashboard" className="text-sm text-primary hover:underline">
-        ← Back to Dashboard
+      <Link href="/expert/stats" className="text-sm text-primary hover:underline">
+        ← Back
       </Link>
 
       <Card>

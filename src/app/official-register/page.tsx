@@ -70,6 +70,9 @@ const ID_DIGITS_ONLY: Record<string, boolean> = {
   nabard_official: true,
 };
 
+// Letters only, with spaces allowed *between* words (no leading/trailing/only-whitespace).
+const NAME_PATTERN = /^[A-Za-z]+(?:\s+[A-Za-z]+)*$/;
+
 function sanitizeIdNumberInput(userCategory: string, rawValue: string): string {
   const upper = rawValue.toUpperCase();
   const filtered = ID_DIGITS_ONLY[userCategory] ? upper.replace(/[^0-9]/g, "") : upper.replace(/[^A-Z0-9]/g, "");
@@ -77,32 +80,51 @@ function sanitizeIdNumberInput(userCategory: string, rawValue: string): string {
   return filtered.slice(0, maxLength);
 }
 
+// Pulls the most specific error message out of an API error, whatever shape the backend returns.
+function extractApiError(error: unknown, fallback: string): string {
+  const data = (error as { data?: Record<string, unknown> })?.data;
+  if (!data || typeof data !== "object") return fallback;
+  const bag = (data.errors as Record<string, unknown> | undefined) ?? data;
+  if (typeof bag.message === "string") return bag.message;
+  if (typeof bag.detail === "string") return bag.detail;
+  for (const v of Object.values(bag)) {
+    if (Array.isArray(v) && typeof v[0] === "string") return v[0];
+    if (typeof v === "string") return v;
+  }
+  return fallback;
+}
+
 function makeBaseSchema(t: T) {
   return z.object({
     mode: z.enum(["government", "cbbo"]),
     first_name: z
       .string()
+      .trim()
       .min(1, { message: t.val_first_name_required ?? "First name is required." })
-      .regex(/^[A-Za-z\s]+$/, {
+      .regex(NAME_PATTERN, {
         message: t.val_first_name_invalid ?? "First name can only contain letters and spaces.",
       }),
     last_name: z
       .string()
-      .regex(/^[A-Za-z\s]*$/, { message: t.val_last_name_invalid ?? "Last name can only contain letters and spaces." })
-      .optional(),
+      .trim()
+      .min(1, { message: t.val_last_name_required ?? "Last name is required." })
+      .regex(NAME_PATTERN, {
+        message: t.val_last_name_invalid ?? "Last name can only contain letters and spaces.",
+      }),
     email: z.string().email({ message: t.val_email_invalid ?? "Please enter a valid email address." }),
     phone: z
       .string()
       .regex(/^[6-9]\d{9}$/, { message: t.val_phone_invalid ?? "Enter a valid 10-digit Indian mobile number." }),
     designation: z
       .string()
+      .trim()
       .min(1, { message: t.val_designation_required ?? "Designation is required." })
       .regex(/^[A-Za-z][A-Za-z0-9\s/\-()]*$/, {
         message:
           t.val_designation_invalid ??
           "Designation must start with a letter and can only contain letters, numbers, spaces, /, -, and brackets.",
       }),
-    department: z.string().optional(),
+    department: z.string().trim().optional(),
     user_category: z.string().optional(),
     id_number: z.string().optional(),
     jurisdiction_type: z.enum(["district", "block", "state"]).optional(),
@@ -185,7 +207,7 @@ function makeRegisterSchema(t: T) {
 type RegisterValues = {
   mode: "government" | "cbbo";
   first_name: string;
-  last_name?: string;
+  last_name: string;
   email: string;
   phone: string;
   designation: string;
@@ -564,11 +586,11 @@ export default function OfficialRegisterPage() {
     mutationFn: (vars: RegisterValues) =>
       officialRegisterApi.registerGovernment({
         email: vars.email,
-        first_name: vars.first_name,
-        last_name: vars.last_name ?? "",
+        first_name: vars.first_name.trim(),
+        last_name: vars.last_name.trim(),
         phone: vars.phone,
-        designation: vars.designation ?? "",
-        department: vars.department ?? "",
+        designation: vars.designation?.trim() ?? "",
+        department: vars.department?.trim() ?? "",
         user_category: vars.user_category ?? "",
         id_number: vars.id_number ?? "",
         jurisdiction_type: vars.jurisdiction_type ?? "district",
@@ -580,8 +602,7 @@ export default function OfficialRegisterPage() {
       router.push("/v1/login");
     },
     onError: (error: unknown) => {
-      const errors = (error as { data?: { errors?: Record<string, string[]> } })?.data?.errors;
-      toast.error(errors ? Object.values(errors)[0]?.[0] : (t.toast_failed ?? "Registration failed"));
+      toast.error(extractApiError(error, t.toast_failed ?? "Registration failed"));
     },
   });
 
@@ -589,10 +610,10 @@ export default function OfficialRegisterPage() {
     mutationFn: (vars: RegisterValues) =>
       officialRegisterApi.registerCBBO({
         email: vars.email,
-        first_name: vars.first_name,
-        last_name: vars.last_name ?? "",
+        first_name: vars.first_name.trim(),
+        last_name: vars.last_name.trim(),
         phone: vars.phone,
-        designation: vars.designation ?? "",
+        designation: vars.designation?.trim() ?? "",
         organisation: Number(vars.organisation),
         level: vars.level ?? "district",
         district_codes: vars.level === "district" && vars.district_code ? [vars.district_code] : [],
@@ -602,8 +623,7 @@ export default function OfficialRegisterPage() {
       router.push("/v1/login");
     },
     onError: (error: unknown) => {
-      const errors = (error as { data?: { errors?: Record<string, string[]> } })?.data?.errors;
-      toast.error(errors ? Object.values(errors)[0]?.[0] : (t.toast_failed ?? "Registration failed"));
+      toast.error(extractApiError(error, t.toast_failed ?? "Registration failed"));
     },
   });
 

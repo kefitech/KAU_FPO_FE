@@ -86,7 +86,7 @@ export default function ExpertDashboardStatsPage() {
   return (
     <div className="flex flex-col gap-6 p-6">
       <div>
-        <h1 className="font-bold text-2xl">{t.page_title ?? "Booking Overview"}</h1>
+        <h1 className="font-bold text-2xl">{t.page_title ?? "Expert Dashboard"}</h1>
         <p className="text-muted-foreground">
           {t.page_description ?? "Track your booking requests across every status"}
         </p>
@@ -193,7 +193,9 @@ export default function ExpertDashboardStatsPage() {
               <div key={code} className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-sm">{getStatusLabel(code, code)}</span>
-                  <span className="text-muted-foreground text-sm">{(t.count_requests ?? "{count} requests").replace("{count}", String(count))}</span>
+                  <span className="text-muted-foreground text-sm">
+                    {(t.count_requests ?? "{count} requests").replace("{count}", String(count))}
+                  </span>
                 </div>
                 <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                   <div
