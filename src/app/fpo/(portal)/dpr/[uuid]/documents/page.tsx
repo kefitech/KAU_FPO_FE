@@ -130,12 +130,25 @@ export default function FpoDprDocumentsPage({
   const aiDone = (aiRows ?? []).filter((r) => r.has_active).length;
   const aiTotal = CHAPTER_ORDER.length;
 
+  // Pre-flight — same rules the BE runs on Generate, checked eagerly on
+  // page load so the FPO sees the blocker list + fix links BEFORE clicking.
+  const { data: preFlight } = useQuery({
+    queryKey: ["dpr-pre-flight", uuid],
+    queryFn: () => dprApi.preFlight(uuid),
+    enabled: !!uuid,
+    staleTime: 15_000,
+  });
+  const blockers = preFlight?.blockers ?? [];
+  const canGenerate = preFlight?.can_generate ?? true;
+
   const generateMutation = useMutation({
     mutationFn: () => dprApi.generateDocument(uuid),
     onSuccess: (doc) => {
       qc.invalidateQueries({ queryKey: ["dpr-documents", uuid] });
-      // Also invalidate the calc — a generation may trigger cached recompute.
       qc.invalidateQueries({ queryKey: ["dpr-calculation", uuid] });
+      // Pre-flight state may shift after a generation (e.g. AI staleness
+      // clearing on regen chain).
+      qc.invalidateQueries({ queryKey: ["dpr-pre-flight", uuid] });
       toast.success(`DPR v${doc.version_number} generated.`);
     },
     onError: (err: unknown) => {
@@ -253,7 +266,8 @@ export default function FpoDprDocumentsPage({
                 generateMutation.mutate();
               }
             }}
-            disabled={generating}
+            disabled={generating || !canGenerate}
+            title={!canGenerate ? "Fix the blockers listed below before generating" : undefined}
           >
             {generating ? (
               <Loader2 className="mr-1 h-4 w-4 animate-spin" />
@@ -264,6 +278,62 @@ export default function FpoDprDocumentsPage({
           </Button>
         </div>
       </div>
+
+      {/* Pre-flight blocker banner — lists rules that would fail at Generate
+          time. Uses the same _pre_final_validation call as the BE gate, so
+          "banner empty" == "Generate will succeed". Applicability-hidden
+          sections are filtered server-side. */}
+      {blockers.length > 0 && (
+        <Card className="border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/40">
+          <CardContent className="space-y-3 p-4">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-300" />
+              <div className="text-sm font-medium text-amber-900 dark:text-amber-200">
+                {blockers.length === 1
+                  ? "1 item must be fixed before you can generate this DPR"
+                  : `${blockers.length} items must be fixed before you can generate this DPR`}
+              </div>
+            </div>
+            <ul className="space-y-2">
+              {blockers.map((b, idx) => (
+                <li
+                  key={idx}
+                  className="flex flex-col gap-1 rounded-md border border-amber-200 bg-white p-2 dark:border-amber-800 dark:bg-amber-950/20 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs font-semibold text-amber-900 dark:text-amber-200">
+                      {b.target === "ai-content"
+                        ? b.chapter_label ?? "AI Content"
+                        : b.section_label ?? "Section"}
+                    </div>
+                    <div className="text-xs text-amber-900/80 dark:text-amber-200/80">
+                      {b.message}
+                    </div>
+                  </div>
+                  {b.target === "wizard" && b.section_key && (
+                    <Button asChild size="sm" variant="outline">
+                      <Link href={`/fpo/dpr/${uuid}/sections/${b.section_key}`}>
+                        Fix in section →
+                      </Link>
+                    </Button>
+                  )}
+                  {b.target === "ai-content" && b.chapter && (
+                    <Button asChild size="sm" variant="outline">
+                      <Link href={`/fpo/dpr/${uuid}/ai-content?chapter=${b.chapter}`}>
+                        <Sparkles className="mr-1 h-3 w-3" />
+                        Regenerate →
+                      </Link>
+                    </Button>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <div className="text-[11px] text-amber-800/70 dark:text-amber-300/70">
+              You can still preview the current DPR via the wizard's Preview PDF button — this banner only blocks the versioned banker-ready Generate.
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {isLoading && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">

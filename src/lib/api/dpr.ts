@@ -342,6 +342,14 @@ export const dprApi = {
       })
       .then((r) => r.data.data),
 
+  // Pre-flight — list current Generate blockers so the FE can render a
+  // banner + disable the Generate button before the FPO wastes a click.
+  // Side-effect-free, safe to poll.
+  preFlight: (uuid: string): Promise<PreFlightResult> =>
+    api
+      .get<Wrapped<PreFlightResult>>(`/fpo/dpr/projects/${uuid}/pre-flight/`)
+      .then((r) => r.data.data),
+
   // FPO clicked Finish on the wizard's last section — flips project
   // IN_PROGRESS → SUBMITTED, stamps `submitted_at`, fires FPO + admin
   // notifications. Idempotent (200 on already-submitted / generated).
@@ -399,6 +407,22 @@ export interface DprDocument {
   status_display: string;
   is_archived: boolean;
   filename: string;
+}
+
+// Pre-flight blockers — one per rule that would fail at Generate time.
+// `target` drives FE navigation from the "Fix in section →" button.
+export interface PreFlightBlocker {
+  message: string;
+  target: "wizard" | "ai-content" | "unknown";
+  section_key?: string;    // present when target='wizard'
+  section_label?: string;  // present when target='wizard' or 'unknown'
+  chapter?: string;        // present when target='ai-content'
+  chapter_label?: string;  // present when target='ai-content'
+}
+
+export interface PreFlightResult {
+  can_generate: boolean;
+  blockers: PreFlightBlocker[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
