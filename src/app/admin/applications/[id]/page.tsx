@@ -54,6 +54,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAdminPermissions } from "@/hooks/use-admin-permissions";
 import { masterDataApi } from "@/lib/api/master-data";
 import { translationsApi } from "@/lib/api/translations";
+import { getErrorMessage } from "@/lib/get-error-message";
 import { useAuthStore } from "@/stores/auth-store";
 import { useConfirmStore } from "@/stores/confirm-store";
 import { useLocaleStore } from "@/stores/locale-store";
@@ -762,10 +763,7 @@ function TeamUserRow({ user }: { user: FpoUser }) {
   const resetPasswordMutation = useMutation({
     mutationFn: () => fpoUsersApi.resetPassword(user.id),
     onSuccess: () => toast.success("Temporary password sent"),
-    onError: (err: unknown) => {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      toast.error(msg ?? "Failed to reset password");
-    },
+    onError: (err: unknown) => toast.error(getErrorMessage(err, "Failed to reset password")),
   });
 
   function handleResetPassword() {

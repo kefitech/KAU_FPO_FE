@@ -10,6 +10,7 @@ import { subAdminsApi } from "@/app/admin/_api/sub-admins";
 import { RowActions } from "@/components/data-table/row-actions";
 import { Badge } from "@/components/ui/badge";
 import { twoFactorApi } from "@/lib/api/two-factor";
+import { getErrorMessage } from "@/lib/get-error-message";
 import { useConfirmStore } from "@/stores/confirm-store";
 import type { SubAdmin } from "@/types/admin";
 
@@ -58,10 +59,7 @@ function SubAdminActions({
   const resetPasswordMutation = useMutation({
     mutationFn: () => subAdminsApi.resetPassword(subAdmin.id),
     onSuccess: () => toast.success(t.toast_password_reset ?? "Temporary password sent successfully"),
-    onError: (error: unknown) => {
-      const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      toast.error(msg ?? "Failed to reset password");
-    },
+    onError: (error: unknown) => toast.error(getErrorMessage(error, "Failed to reset password")),
   });
 
   const disable2faMutation = useMutation({

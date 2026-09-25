@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { governmentApi } from "@/app/admin/_api/government";
 import { RowActions } from "@/components/data-table/row-actions";
 import { Badge } from "@/components/ui/badge";
+import { getErrorMessage } from "@/lib/get-error-message";
 import { useConfirmStore } from "@/stores/confirm-store";
 import type { GovernmentOfficial } from "@/types/admin";
 
@@ -52,10 +53,7 @@ function GovernmentActions({
   const resetPasswordMutation = useMutation({
     mutationFn: () => governmentApi.resetPassword(official.id),
     onSuccess: () => toast.success(t.toast_password_reset ?? "Temporary password sent successfully"),
-    onError: (error: unknown) => {
-      const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      toast.error(msg ?? "Failed to reset password");
-    },
+    onError: (error: unknown) => toast.error(getErrorMessage(error, "Failed to reset password")),
   });
 
   const deleteMutation = useMutation({
