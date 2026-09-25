@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useQuery } from "@tanstack/react-query";
-import { CalendarClock, MapPin, Search, X } from "lucide-react";
+import { CalendarClock, ChevronLeft, ChevronRight, MapPin, Search, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { fpoDashboardApi } from "@/app/fpo/_api/dashboard";
@@ -21,6 +21,8 @@ import { useLocaleStore } from "@/stores/locale-store";
 import { DISTRICT_OPTIONS, type FpoExpert } from "@/types/fpo";
 
 type T = Record<string, string>;
+
+const PAGE_SIZE = 12;
 
 const EXPERT_CATEGORIES = [
   { value: "", label: "All Experts" },
@@ -256,16 +258,29 @@ export default function FpoExpertsPage() {
 
   const isApprovedFpo = dashboard?.profile?.status === "approved";
 
-  const { data: experts, isLoading } = useQuery({
-    queryKey: ["fpo-experts", activeCategory, district, search],
+  // The page belongs to the filter set it was chosen under, so any filter
+  // change falls back to page 1 without an extra request for a stale page.
+  const filterKey = `${activeCategory}|${district}|${search}`;
+  const [pageState, setPageState] = useState({ filterKey, page: 1 });
+  const page = pageState.filterKey === filterKey ? pageState.page : 1;
+  const setPage = (next: number) => setPageState({ filterKey, page: next });
+
+  const { data: expertsPage, isLoading } = useQuery({
+    queryKey: ["fpo-experts", activeCategory, district, search, page],
     queryFn: () =>
       expertsApi.list({
         ...(activeCategory ? { category: activeCategory } : {}),
         ...(district ? { district } : {}),
         ...(search ? { search } : {}),
+        page,
+        page_size: PAGE_SIZE,
       }),
     staleTime: 5 * 60 * 1000,
   });
+
+  const experts = expertsPage?.data;
+  const totalCount = expertsPage?.meta?.pagination?.total_count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   // Fetch this FPO's own bookings so we can flag which experts already have one.
   const { data: bookings } = useQuery({
@@ -436,21 +451,44 @@ export default function FpoExpertsPage() {
           )}
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {experts.map((expert) => (
-            <ExpertCard
-              key={expert.id}
-              expert={expert}
-              isApprovedFpo={!!isApprovedFpo}
-              bookings={bookingsByExpertId.get(expert.id) ?? []}
-              onContact={handleContact}
-              onBook={handleBook}
-              onViewBookings={handleViewBookings}
-              t={t}
-              locale={locale}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {experts.map((expert) => (
+              <ExpertCard
+                key={expert.id}
+                expert={expert}
+                isApprovedFpo={!!isApprovedFpo}
+                bookings={bookingsByExpertId.get(expert.id) ?? []}
+                onContact={handleContact}
+                onBook={handleBook}
+                onViewBookings={handleViewBookings}
+                t={t}
+                locale={locale}
+              />
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between border-t pt-4">
+              <p className="text-muted-foreground text-sm">
+                {(t.pagination_summary ?? "Page {page} of {total_pages} · {count} experts")
+                  .replace("{page}", String(page))
+                  .replace("{total_pages}", String(totalPages))
+                  .replace("{count}", String(totalCount))}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+                  <ChevronLeft className="mr-1 h-4 w-4" />
+                  {t.btn_previous ?? "Previous"}
+                </Button>
+                <Button size="sm" variant="outline" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
+                  {t.btn_next ?? "Next"}
+                  <ChevronRight className="ml-1 h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Enquiry Dialog */}

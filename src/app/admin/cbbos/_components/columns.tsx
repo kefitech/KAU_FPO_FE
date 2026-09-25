@@ -15,7 +15,9 @@ import type { CBBO } from "@/types/admin";
 type T = Record<string, string>;
 
 function getErrorMessage(error: unknown): string | undefined {
-  return (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+  // The api client rejects with { message, status, data }, not an AxiosError
+  const e = error as { data?: { message?: string }; response?: { data?: { message?: string } } };
+  return e?.data?.message ?? e?.response?.data?.message;
 }
 
 function CBBOActions({ cbbo, t, tConfirm, tCommon }: { cbbo: CBBO; t: T; tConfirm: T; tCommon: T }) {

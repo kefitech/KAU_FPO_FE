@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { translationsApi } from "@/lib/api/translations";
+import { getErrorMessage } from "@/lib/get-error-message";
 import { useAuthStore } from "@/stores/auth-store";
 import { useConfirmStore } from "@/stores/confirm-store";
 import { useLocaleStore } from "@/stores/locale-store";
@@ -141,7 +142,8 @@ export default function FpoTeamPage() {
   const resetPasswordMutation = useMutation({
     mutationFn: (id: number) => fpoTeamApi.resetPassword(id),
     onSuccess: () => toast.success(t.toast_password_reset ?? "Temporary password sent to member's email"),
-    onError: () => toast.error(t.toast_password_reset_failed ?? "Failed to reset password"),
+    onError: (error: unknown) =>
+      toast.error(getErrorMessage(error, t.toast_password_reset_failed ?? "Failed to reset password")),
   });
 
   const bulkActivateMutation = useMutation({
