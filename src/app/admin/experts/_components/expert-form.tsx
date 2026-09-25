@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
+
 import { useRouter } from "next/navigation";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -40,7 +41,11 @@ const schema = z.object({
   category: z.string().min(1, { message: "Category is required" }),
   district: z.string().optional(),
   email: z.string().email({ message: "Valid email is required" }),
-  phone: z.string().regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit mobile number").optional().or(z.literal("")),
+  phone: z
+    .string()
+    .regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit mobile number")
+    .optional()
+    .or(z.literal("")),
   is_active: z.boolean().optional(),
 });
 
@@ -104,11 +109,11 @@ export function ExpertForm({ mode, expert, t = {}, tCommon = {} }: ExpertFormPro
 
   const translatedCategories = useMemo(
     () => EXPERT_CATEGORIES.map((c) => ({ ...c, label: t[`cat_${c.value}`] ?? c.label })),
-    [t]
+    [t],
   );
   const translatedDistricts = useMemo(
     () => DISTRICT_SELECT_OPTIONS.map((d) => ({ ...d, label: t[`district_${d.value}`] ?? d.label })),
-    [t]
+    [t],
   );
 
   const mutation = useMutation({
@@ -123,13 +128,22 @@ export function ExpertForm({ mode, expert, t = {}, tCommon = {} }: ExpertFormPro
       return isEdit ? adminExpertsApi.update(expert!.id, payload) : adminExpertsApi.create(payload);
     },
     onSuccess: () => {
-      toast.success(isEdit ? (t.toast_updated ?? "Expert updated successfully") : (t.toast_created ?? "Expert created successfully"));
+      toast.success(
+        isEdit
+          ? (t.toast_updated ?? "Expert updated successfully")
+          : (t.toast_created ?? "Expert created successfully"),
+      );
       queryClient.invalidateQueries({ queryKey: ["experts"] });
       router.push("/admin/experts");
     },
     onError: (error: unknown) => {
       const msg = (error as { message?: string })?.message;
-      toast.error(msg ?? (isEdit ? (t.toast_update_failed ?? "Failed to update expert") : (t.toast_create_failed ?? "Failed to create expert")));
+      toast.error(
+        msg ??
+          (isEdit
+            ? (t.toast_update_failed ?? "Failed to update expert")
+            : (t.toast_create_failed ?? "Failed to create expert")),
+      );
     },
   });
 
@@ -161,9 +175,7 @@ export function ExpertForm({ mode, expert, t = {}, tCommon = {} }: ExpertFormPro
                 <Controller
                   control={control}
                   name="name_ml"
-                  render={({ field }) => (
-                    <Input id="name_ml" placeholder="മലയാളം പേര്" maxLength={200} {...field} />
-                  )}
+                  render={({ field }) => <Input id="name_ml" placeholder="മലയാളം പേര്" maxLength={200} {...field} />}
                 />
               </Field>
 
@@ -206,7 +218,7 @@ export function ExpertForm({ mode, expert, t = {}, tCommon = {} }: ExpertFormPro
                   name="category"
                   render={({ field }) => (
                     <SearchableSelect
-                      key={field.value}  // Add this line
+                      key={field.value} // Add this line
                       value={field.value}
                       onChange={field.onChange}
                       options={translatedCategories}
@@ -226,14 +238,21 @@ export function ExpertForm({ mode, expert, t = {}, tCommon = {} }: ExpertFormPro
                     control={control}
                     name="primary_expertise"
                     render={({ field }) => (
-                      <Input id="primary_expertise" placeholder="e.g. Agricultural Engineering" maxLength={200} {...field} />
+                      <Input
+                        id="primary_expertise"
+                        placeholder="e.g. Agricultural Engineering"
+                        maxLength={200}
+                        {...field}
+                      />
                     )}
                   />
                   {errors.primary_expertise && <FieldError errors={[errors.primary_expertise]} />}
                 </Field>
 
                 <Field>
-                  <FieldLabel htmlFor="secondary_expertise">{t.field_secondary_expertise ?? "Secondary Expertise"}</FieldLabel>
+                  <FieldLabel htmlFor="secondary_expertise">
+                    {t.field_secondary_expertise ?? "Secondary Expertise"}
+                  </FieldLabel>
                   <Controller
                     control={control}
                     name="secondary_expertise"
@@ -279,20 +298,20 @@ export function ExpertForm({ mode, expert, t = {}, tCommon = {} }: ExpertFormPro
                     {errors.email && <FieldError errors={[errors.email]} />}
                   </Field>
 
-                 <Field>
+                  <Field>
                     <FieldLabel htmlFor="phone">{t.field_phone ?? "Phone"}</FieldLabel>
                     <Controller
                       control={control}
                       name="phone"
                       render={({ field }) => (
-                        <Input 
-                          id="phone" 
+                        <Input
+                          id="phone"
                           type="tel"
                           maxLength={10}
                           placeholder="eg: 9876543210"
                           {...field}
                           onChange={(e) => {
-                            const value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+                            const value = e.target.value.replace(/\D/g, ""); // Remove non-digits
                             field.onChange(value);
                           }}
                         />
@@ -307,11 +326,7 @@ export function ExpertForm({ mode, expert, t = {}, tCommon = {} }: ExpertFormPro
                     control={control}
                     name="is_active"
                     render={({ field }) => (
-                      <Checkbox
-                        id="is_active"
-                        checked={!!field.value}
-                        onCheckedChange={field.onChange}
-                      />
+                      <Checkbox id="is_active" checked={!!field.value} onCheckedChange={field.onChange} />
                     )}
                   />
                   <label htmlFor="is_active" className="text-sm font-medium cursor-pointer">
@@ -328,9 +343,9 @@ export function ExpertForm({ mode, expert, t = {}, tCommon = {} }: ExpertFormPro
         <Button type="button" variant="outline" onClick={() => router.push("/admin/experts")}>
           {tCommon.cancel ?? "Cancel"}
         </Button>
-        <Button 
-          type="button" 
-          variant="ghost" 
+        <Button
+          type="button"
+          variant="ghost"
           onClick={() => {
             const resetData = expert ? expertToForm(expert) : defaultValues;
             reset(resetData, { keepValues: false });
@@ -339,7 +354,13 @@ export function ExpertForm({ mode, expert, t = {}, tCommon = {} }: ExpertFormPro
           {tCommon.reset ?? "Reset"}
         </Button>
         <Button type="submit" form="expert-form" disabled={mutation.isPending}>
-          {mutation.isPending ? (t.btn_saving ?? "Saving…") : (t.btn_save ?? "Save")}
+          {isEdit
+            ? mutation.isPending
+              ? (t.btn_saving ?? "Saving…")
+              : (t.btn_save ?? "Save Changes")
+            : mutation.isPending
+              ? (t.btn_creating ?? "Adding…")
+              : (t.btn_create ?? "Add Expert")}
         </Button>
       </div>
     </div>
