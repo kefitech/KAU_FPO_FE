@@ -430,6 +430,39 @@ function ChapterPane({
       {row.has_candidate && diff && !mergeMode && (
         <Card>
           <CardContent className="space-y-3 p-5">
+            {/* Placeholder-scrubber banner — mirrors the one on the status card
+                so it's visible right next to the candidate being reviewed. The
+                top-card banner scrolls off once the diff card expands. */}
+            {row.needs_review && (
+              <div className="rounded-md border border-rose-300 bg-rose-50 p-3 text-xs text-rose-900 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-200">
+                <div className="mb-1 flex items-start gap-2">
+                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <span>
+                    <strong>Review required.</strong>{" "}
+                    {row.placeholder_hits.reduce((n, h) => n + h.count, 0)} placeholder
+                    {row.placeholder_hits.reduce((n, h) => n + h.count, 0) === 1 ? "" : "s"}{" "}
+                    {row.placeholder_hits.reduce((n, h) => n + h.count, 0) === 1 ? "was" : "were"}{" "}
+                    auto-replaced with "Not available" in this candidate. Fill the missing
+                    values on the relevant wizard section and regenerate to clear the flag.
+                  </span>
+                </div>
+                {row.placeholder_hits.length > 0 && (
+                  <ul className="mt-2 ml-5 list-disc space-y-0.5">
+                    {row.placeholder_hits.slice(0, 8).map((h, idx) => (
+                      <li key={idx}>
+                        <code className="rounded bg-rose-100 px-1 dark:bg-rose-900/50">{h.raw}</code>
+                        {h.count > 1 && <span className="ml-1 text-rose-700/80">× {h.count}</span>}
+                      </li>
+                    ))}
+                    {row.placeholder_hits.length > 8 && (
+                      <li className="text-rose-700/80">
+                        … and {row.placeholder_hits.length - 8} more.
+                      </li>
+                    )}
+                  </ul>
+                )}
+              </div>
+            )}
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="text-[10px]">Candidate awaiting review</Badge>
