@@ -1,3 +1,4 @@
+import type { ExpertBooking } from "@/app/expert/_api/dashboard";
 import { api } from "@/lib/api/client";
 import type { AdminExpert, AdminExpertPayload, ExpertEnquiry } from "@/types/admin";
 import type { DataTableParams, PaginatedResponse } from "@/types/pagination";
@@ -8,8 +9,7 @@ type Wrapped<T> = { status: string; message: string; data: T };
 const unwrap = <T>(r: { data: Wrapped<T> }) => r.data.data;
 
 export const adminExpertsApi = {
-  getAll: (params: DataTableParams) =>
-    api.get<PaginatedResponse<AdminExpert>>(BASE, { params }).then((r) => r.data),
+  getAll: (params: DataTableParams) => api.get<PaginatedResponse<AdminExpert>>(BASE, { params }).then((r) => r.data),
 
   getById: (id: number) => api.get<Wrapped<AdminExpert>>(`${BASE}${id}/`).then(unwrap),
 
@@ -26,4 +26,6 @@ export const adminExpertsApi = {
 
   getEnquiries: (id: number): Promise<ExpertEnquiry[]> =>
     api.get<{ status: string; data: ExpertEnquiry[] }>(`${BASE}${id}/enquiries/`).then((r) => r.data.data),
+
+  bookings: (id: number | string) => api.get(`/admin/experts/${id}/bookings/`),
 };
