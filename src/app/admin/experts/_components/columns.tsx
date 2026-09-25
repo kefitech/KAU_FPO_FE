@@ -61,6 +61,7 @@ function ExpertActions({ expert, t, tCommon }: { expert: AdminExpert; t: T; tCom
     <RowActions
       actions={[
         { label: t.action_edit ?? "Edit", onClick: () => router.push(`/admin/experts/${expert.id}/edit`) },
+        { label: t.action_bookings ?? "Bookings", onClick: () => router.push(`/admin/experts/${expert.id}/bookings`) },
         {
           label: expert.is_active ? (t.action_deactivate ?? "Deactivate") : (t.action_activate ?? "Activate"),
           onClick: () => activateMutation.mutate(),
@@ -78,7 +79,7 @@ const CATEGORY_BADGE_COLORS: Record<string, string> = {
   banker: "bg-blue-100 text-blue-700",
   facilitator: "bg-teal-100 text-teal-700",
 };
-export function getExpertColumns(t: T = {}, tCommon: T = {}, locale: string = "en"): ColumnDef<AdminExpert>[] {
+export function getExpertColumns(t: T = {}, tCommon: T = {}, locale = "en"): ColumnDef<AdminExpert>[] {
   return [
     {
       accessorKey: "name_en",
@@ -86,7 +87,7 @@ export function getExpertColumns(t: T = {}, tCommon: T = {}, locale: string = "e
       cell: ({ row }) => (
         <div className="flex flex-col">
           <TextCell
-            value={locale === "ml" ? (row.original.name_ml || row.original.name_en) : row.original.name_en}
+            value={locale === "ml" ? row.original.name_ml || row.original.name_en : row.original.name_en}
             maxWidth="max-w-[200px]"
           />
           <TextCell value={row.original.designation} maxWidth="max-w-[200px]" muted />

@@ -19,10 +19,47 @@ import { useLocaleStore } from "@/stores/locale-store";
 
 type T = Record<string, string>;
 
+// Letters only, with spaces allowed between words (no leading/trailing/only-whitespace).
+const NAME_PATTERN = /^[A-Za-z]+(?:\s+[A-Za-z]+)*$/;
+
+const PROFILE_FIELDS = ["first_name", "last_name", "phone", "preferred_language"] as const;
+
+// Reads field-level errors from the API error, whatever shape the backend returns.
+function extractApiErrors(error: unknown): { fields: Record<string, string>; message?: string } {
+  const e = error as { data?: unknown; response?: { data?: unknown }; message?: string } | undefined;
+  const data = (e?.data ?? e?.response?.data) as Record<string, unknown> | undefined;
+  const fields: Record<string, string> = {};
+  let message: string | undefined;
+  if (data && typeof data === "object") {
+    const bag = (data.errors as Record<string, unknown> | undefined) ?? data;
+    for (const [key, value] of Object.entries(bag)) {
+      const text = Array.isArray(value)
+        ? value.find((v) => typeof v === "string")
+        : typeof value === "string"
+          ? value
+          : undefined;
+      if (!text) continue;
+      if ((PROFILE_FIELDS as readonly string[]).includes(key)) fields[key] = text;
+      else if (!message && key !== "success" && key !== "status") message = text;
+    }
+    if (typeof data.message === "string") message = data.message;
+    if (typeof data.detail === "string") message = data.detail;
+  }
+  return { fields, message };
+}
+
 function makeProfileSchema(t: T) {
   return z.object({
-    first_name: z.string().min(1, { message: t.val_first_name_required ?? "First name is required." }),
-    last_name: z.string().min(1, { message: t.val_last_name_required ?? "Last name is required." }),
+    first_name: z
+      .string()
+      .trim()
+      .min(1, { message: t.val_first_name_required ?? "First name is required." })
+      .regex(NAME_PATTERN, { message: t.val_first_name_invalid ?? "First name can only contain letters and spaces." }),
+    last_name: z
+      .string()
+      .trim()
+      .min(1, { message: t.val_last_name_required ?? "Last name is required." })
+      .regex(NAME_PATTERN, { message: t.val_last_name_invalid ?? "Last name can only contain letters and spaces." }),
     phone: z
       .string()
       .optional()
@@ -103,7 +140,9 @@ function PhoneOtpBlock({
     },
     onError: (err: unknown) => {
       const axiosErr = err as { response?: { data?: { message?: string } }; message?: string } | undefined;
-      toast.error(axiosErr?.response?.data?.message ?? axiosErr?.message ?? (t.toast_otp_send_failed ?? "Failed to send OTP."));
+      toast.error(
+        axiosErr?.response?.data?.message ?? axiosErr?.message ?? t.toast_otp_send_failed ?? "Failed to send OTP.",
+      );
     },
   });
 
@@ -118,7 +157,9 @@ function PhoneOtpBlock({
     },
     onError: (err: unknown) => {
       const axiosErr = err as { response?: { data?: { message?: string } }; message?: string } | undefined;
-      setOtpError(axiosErr?.response?.data?.message ?? axiosErr?.message ?? (t.otp_error_default ?? "Invalid or expired OTP."));
+      setOtpError(
+        axiosErr?.response?.data?.message ?? axiosErr?.message ?? t.otp_error_default ?? "Invalid or expired OTP.",
+      );
     },
   });
   // biome-ignore lint/correctness/useExhaustiveDependencies: guarded by hasSentInitialOtp ref, intentionally runs once on mount
@@ -170,7 +211,9 @@ function PhoneOtpBlock({
           disabled={confirmMutation.isPending || otp.length < 6}
           onClick={() => confirmMutation.mutate()}
         >
-          {confirmMutation.isPending ? (t.otp_confirming_btn ?? "Verifying...") : (t.otp_confirm_btn ?? "Confirm & Save")}
+          {confirmMutation.isPending
+            ? (t.otp_confirming_btn ?? "Verifying...")
+            : (t.otp_confirm_btn ?? "Confirm & Save")}
         </Button>
         <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
           {t.btn_cancel ?? "Cancel"}
@@ -244,7 +287,17 @@ export default function ExpertSettingsProfilePage() {
       toast.success(t.toast_updated ?? "Profile updated successfully.");
     },
     onError: (error: unknown) => {
-      toast.error(error instanceof Error ? error.message : (t.toast_failed ?? "Failed to update profile."));
+      const { fields, message } = extractApiErrors(error);
+      const fieldKeys = Object.keys(fields) as (keyof ProfileValues)[];
+      if (fieldKeys.length > 0) {
+        setEditing(true);
+        for (const key of fieldKeys) {
+          form.setError(key, { type: "server", message: fields[key] });
+        }
+        toast.error(t.toast_fix_errors ?? "Please correct the highlighted fields.");
+        return;
+      }
+      toast.error(message ?? t.toast_failed ?? "Failed to update profile.");
     },
   });
 
@@ -338,7 +391,12 @@ export default function ExpertSettingsProfilePage() {
             <SettingRow label={t.label_first_name ?? "First Name"}>
               {editing ? (
                 <div className="flex flex-col gap-1">
-                  <Input {...field} disabled={otpStep} placeholder={t.label_first_name ?? "First name"} aria-invalid={fieldState.invalid} />
+                  <Input
+                    {...field}
+                    disabled={otpStep}
+                    placeholder={t.label_first_name ?? "First name"}
+                    aria-invalid={fieldState.invalid}
+                  />
                   {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                 </div>
               ) : (
@@ -355,7 +413,12 @@ export default function ExpertSettingsProfilePage() {
             <SettingRow label={t.label_last_name ?? "Last Name"}>
               {editing ? (
                 <div className="flex flex-col gap-1">
-                  <Input {...field} disabled={otpStep} placeholder={t.label_last_name ?? "Last name"} aria-invalid={fieldState.invalid} />
+                  <Input
+                    {...field}
+                    disabled={otpStep}
+                    placeholder={t.label_last_name ?? "Last name"}
+                    aria-invalid={fieldState.invalid}
+                  />
                   {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                 </div>
               ) : (
@@ -369,7 +432,10 @@ export default function ExpertSettingsProfilePage() {
           control={form.control}
           name="phone"
           render={({ field, fieldState }) => (
-            <SettingRow label={t.label_phone ?? "Phone"} description={t.label_phone_desc ?? "Used for SMS notifications and account recovery."}>
+            <SettingRow
+              label={t.label_phone ?? "Phone"}
+              description={t.label_phone_desc ?? "Used for SMS notifications and account recovery."}
+            >
               {editing && !otpStep ? (
                 <div className="flex flex-col gap-1">
                   <Input
@@ -405,7 +471,10 @@ export default function ExpertSettingsProfilePage() {
           control={form.control}
           name="preferred_language"
           render={({ field, fieldState }) => (
-            <SettingRow label={t.label_language ?? "Preferred Language"} description={t.label_language_desc ?? "Language used for notifications and emails."}>
+            <SettingRow
+              label={t.label_language ?? "Preferred Language"}
+              description={t.label_language_desc ?? "Language used for notifications and emails."}
+            >
               {editing ? (
                 <select
                   {...field}
@@ -432,7 +501,10 @@ export default function ExpertSettingsProfilePage() {
       <SectionHeading title={t.section_account ?? "Account"} />
 
       <div className="flex flex-col">
-        <SettingRow label={t.label_email ?? "Email Address"} description={t.label_email_desc ?? "Your email cannot be changed."}>
+        <SettingRow
+          label={t.label_email ?? "Email Address"}
+          description={t.label_email_desc ?? "Your email cannot be changed."}
+        >
           <span className="text-muted-foreground text-sm">{user?.email}</span>
         </SettingRow>
 

@@ -42,6 +42,7 @@ const STATUS_BADGE_COLORS: Record<string, string> = {
   confirmed: "bg-green-100 text-green-700 border-green-200",
   completed: "bg-blue-100 text-blue-700 border-blue-200",
   cancelled: "bg-red-100 text-red-700 border-red-200",
+  rejected: "bg-red-100 text-red-700 border-red-200",
 };
 
 const DISTRICT_SELECT_OPTIONS = [
@@ -199,6 +200,15 @@ function ExpertBookingsListDialog({
                   {b.status === "cancelled" && b.cancellation_reason && (
                     <p className="text-xs text-muted-foreground italic">Reason: {b.cancellation_reason}</p>
                   )}
+                  {b.status === "rejected" &&
+                    ((b as ExpertBooking & { rejection_reason?: string | null }).rejection_reason ||
+                      b.cancellation_reason) && (
+                      <p className="text-xs text-muted-foreground italic">
+                        Reason:{" "}
+                        {(b as ExpertBooking & { rejection_reason?: string | null }).rejection_reason ||
+                          b.cancellation_reason}
+                      </p>
+                    )}
                 </div>
               );
             })
