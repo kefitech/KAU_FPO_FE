@@ -370,14 +370,16 @@ export default function FpoDprDocumentsPage({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col-reverse gap-2 sm:flex-row">
-            <AlertDialogCancel
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <Button
+              variant="outline"
               onClick={() => {
                 setConfirmGenerateOpen(false);
                 generateMutation.mutate();
               }}
             >
               Generate anyway
-            </AlertDialogCancel>
+            </Button>
             <AlertDialogAction asChild>
               <Link href={`/fpo/dpr/${uuid}/ai-content`}>
                 <Sparkles className="mr-1 h-4 w-4" />
