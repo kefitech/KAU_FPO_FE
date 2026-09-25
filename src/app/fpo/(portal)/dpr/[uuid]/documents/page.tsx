@@ -138,10 +138,23 @@ export default function FpoDprDocumentsPage({
       qc.invalidateQueries({ queryKey: ["dpr-calculation", uuid] });
       toast.success(`DPR v${doc.version_number} generated.`);
     },
-    onError: () => {
-      toast.error(
-        "Failed to generate DPR. Please save all sections and try again.",
-      );
+    onError: (err: unknown) => {
+      // BE returns a structured 400 for the pre-final gate:
+      //   { message, errors: { chapters: [{chapter, reason}, ...] } }
+      // Prefer the specific message + first-chapter reason so the FPO
+      // knows exactly what to fix. Fall back to generic on other errors.
+      const e = err as { message?: string; data?: { errors?: { chapters?: Array<{ chapter: string; reason: string }> } } };
+      const chapters = e?.data?.errors?.chapters ?? [];
+      if (chapters.length > 0) {
+        const first = chapters[0];
+        const more = chapters.length > 1 ? ` (+${chapters.length - 1} more)` : "";
+        toast.error(`${e.message ?? "DPR cannot be finalised yet."}${more}`, {
+          description: first.reason,
+          duration: 10_000,
+        });
+        return;
+      }
+      toast.error(e?.message || "Failed to generate DPR. Please save all sections and try again.");
     },
   });
 
@@ -247,7 +260,7 @@ export default function FpoDprDocumentsPage({
             ) : (
               <Plus className="mr-1 h-4 w-4" />
             )}
-            {generating ? "Generating…" : "Generate new DPR"}
+            {generating ? "Generating…" : "Generate new DPR report"}
           </Button>
         </div>
       </div>
@@ -274,7 +287,7 @@ export default function FpoDprDocumentsPage({
               No DPR versions yet.
             </p>
             <p className="max-w-md text-xs text-muted-foreground">
-              Click <strong>Generate new DPR</strong> above to produce your
+              Click <strong>Generate new DPR report</strong> above to produce your
               first versioned PDF. The FPO name and district appear on the
               cover; each version bears a monotonic <code>v1</code>,
               <code>v2</code>… identifier.
