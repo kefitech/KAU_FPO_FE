@@ -7,6 +7,8 @@ import { APP_CONFIG } from "@/config/app-config";
 import { LoginForm } from "../../_components/login-form";
 import { GoogleButton } from "../../_components/social-auth/google-button";
 
+export const dynamic = "force-dynamic";
+
 export default function LoginV2() {
   return (
     <>
