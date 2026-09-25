@@ -35,16 +35,17 @@ export default function EditProductPage() {
   const cachedList = queryClient.getQueryData<PaginatedResponse<Product>>(["products"]);
   const cachedProduct = cachedList?.data?.find((p) => p.id === Number(id));
 
-  const {
-    data: product,
-    isLoading,
-    isError,
-  } = useQuery({
-    queryKey: ["product", id],
-    queryFn: () => productsApi.getById(Number(id)),
-    enabled: !!id,
-    initialData: cachedProduct,
-  });
+const {
+  data: product,
+  isLoading,
+  isError,
+} = useQuery({
+  queryKey: ["product", id],
+  queryFn: () => productsApi.getById(Number(id)),
+  enabled: !!id,
+  initialData: cachedProduct,
+  refetchOnMount: "always",   // ← add this line
+});
 
   if (isLoading) {
     return <div className="flex items-center justify-center p-12 text-muted-foreground text-sm">Loading...</div>;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
+import { DetailModal } from "@/components/shared/detail-modal";
 import Link from "next/link";
 
 import { useQuery } from "@tanstack/react-query";
@@ -38,14 +38,19 @@ function ProductCard({ product, locale, t }: { product: BuyerProduct; locale: st
   const name = locale === "ml" ? product.name.ml || product.name.en : product.name.en;
   const description = locale === "ml" ? product.description.ml || product.description.en : product.description.en;
   const [inquiryOpen, setInquiryOpen] = useState(false);
-  const [descExpanded, setDescExpanded] = useState(false);
+  const [descriptionOpen, setDescriptionOpen] = useState(false);
+  const [qualityOpen, setQualityOpen] = useState(false);
 
   return (
     <>
       <Card className="overflow-hidden">
-        {toMediaUrl(product.image) && (
+        {toMediaUrl(product.image) ? (
           // biome-ignore lint/performance/noImgElement: product photo URL is dynamic, not a static asset
           <img src={toMediaUrl(product.image) ?? undefined} alt={name} className="h-40 w-full object-cover" />
+        ) : (
+          <div className="flex h-40 w-full items-center justify-center bg-muted">
+            <span className="text-muted-foreground text-sm">{t.no_image ?? "No image"}</span>
+          </div>
         )}
         <CardHeader>
           <div className="flex items-start justify-between gap-2">
@@ -56,26 +61,20 @@ function ProductCard({ product, locale, t }: { product: BuyerProduct; locale: st
           </div>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
-          {description && (
-            <div className="flex flex-col gap-1">
-              <p
-                className={
-                  descExpanded ? "text-muted-foreground text-sm" : "line-clamp-2 text-muted-foreground text-sm"
-                }
+        {description && (
+          <div className="flex flex-col gap-1">
+            <p className="line-clamp-2 text-muted-foreground text-sm">{description}</p>
+            {description.length > 120 && (
+              <button
+                type="button"
+                onClick={() => setDescriptionOpen(true)}
+                className="w-fit text-primary text-xs font-medium hover:underline"
               >
-                {description}
-              </p>
-              {description.length > 120 && (
-                <button
-                  type="button"
-                  onClick={() => setDescExpanded((v) => !v)}
-                  className="w-fit text-primary text-xs font-medium hover:underline"
-                >
-                  {descExpanded ? (t.read_less ?? "Read less") : (t.read_more ?? "Read more")}
-                </button>
-              )}
-            </div>
-          )}
+                {t.read_more ?? "Read more"}
+              </button>
+            )}
+          </div>
+        )}
 
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div className="flex flex-col gap-0.5">
@@ -91,9 +90,20 @@ function ProductCard({ product, locale, t }: { product: BuyerProduct; locale: st
           </div>
 
           {product.quality_certification && (
-            <Badge variant="secondary" className="w-fit font-normal">
-              {product.quality_certification}
-            </Badge>
+            <div className="flex min-w-0 flex-col gap-1">
+              <Badge variant="secondary" className="block max-w-full min-w-0 font-normal">
+                <span className="block truncate">{product.quality_certification}</span>
+              </Badge>
+              {product.quality_certification.length > 30 && (
+                <button
+                  type="button"
+                  onClick={() => setQualityOpen(true)}
+                  className="w-fit text-primary text-xs font-medium hover:underline"
+                >
+                  {t.read_more ?? "Read more"}
+                </button>
+              )}
+            </div>
           )}
 
           <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
@@ -115,6 +125,20 @@ function ProductCard({ product, locale, t }: { product: BuyerProduct; locale: st
           </Button>
         </CardContent>
       </Card>
+      <DetailModal open={descriptionOpen} onClose={() => setDescriptionOpen(false)} title={t.description_label ?? "Description"}>
+        <p style={{ color: "#666", fontSize: 14, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+          {description}
+        </p>
+      </DetailModal>
+      <DetailModal
+        open={qualityOpen}
+        onClose={() => setQualityOpen(false)}
+        title={t.quality_label ?? "Quality Certification"}
+      >
+        <p style={{ color: "#666", fontSize: 14, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+          {product.quality_certification}
+        </p>
+      </DetailModal>
       <InquiryDialog
         open={inquiryOpen}
         onOpenChange={setInquiryOpen}

@@ -155,6 +155,7 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
   const isEdit = mode === "edit";
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
+  const [imageRemoved, setImageRemoved] = useState(false);
 
   const locale = useLocaleStore((s) => s.locale);
 
@@ -180,6 +181,7 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
       reset(toFormValues(product));
       setExistingImageUrl(product.image ?? null);
       setSelectedFileName(null);
+      setImageRemoved(false);
     }
   }, [product?.id, reset, product]);
 
@@ -199,7 +201,7 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
         available_from: values.available_from,
         available_until: values.available_until || null,
         is_public: values.is_public,
-        image: values.image ?? undefined,
+        image: values.image ?? (imageRemoved ? null : undefined),
       };
       if (isEdit && product) {
         return productsApi.update(product.id, payload);
@@ -338,6 +340,7 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
                                   onChange(null);
                                   setSelectedFileName(null);
                                   setExistingImageUrl(null);
+                                  setImageRemoved(true);
                                   const input = document.getElementById("product-image") as HTMLInputElement | null;
                                   if (input) input.value = "";
                                 }}
@@ -364,6 +367,7 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
                             const file = e.target.files?.[0] ?? null;
                             onChange(file);
                             setSelectedFileName(file?.name ?? null);
+                            setImageRemoved(false);
                           }}
                           {...field}
                         />
@@ -426,7 +430,15 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
                       <FieldLabel htmlFor="product-quantity">
                         {t.quantity_label ?? "Quantity"} <span className="text-destructive">*</span>
                       </FieldLabel>
-                      <Input id="product-quantity" inputMode="decimal" {...field} />
+                      <Input
+                        id="product-quantity"
+                        inputMode="decimal"
+                        {...field}
+                        onChange={(e) => {
+                          const cleaned = e.target.value.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1");
+                          field.onChange(cleaned);
+                        }}
+                      />
                       {errors.quantity && <FieldError errors={[errors.quantity]} />}
                     </Field>
                   )}
@@ -460,7 +472,15 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
                       <FieldLabel htmlFor="product-price">
                         {t.price_label ?? "Price per unit (₹)"} <span className="text-destructive">*</span>
                       </FieldLabel>
-                      <Input id="product-price" inputMode="decimal" {...field} />
+                      <Input
+                        id="product-price"
+                        inputMode="decimal"
+                        {...field}
+                        onChange={(e) => {
+                          const cleaned = e.target.value.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1");
+                          field.onChange(cleaned);
+                        }}
+                      />
                       {errors.price_per_unit && <FieldError errors={[errors.price_per_unit]} />}
                     </Field>
                   )}
