@@ -13,6 +13,10 @@ import { buyerAccountProfileApi } from "@/app/buyer/_api/account-profile";
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { translationsApi } from "@/lib/api/translations";
+import { useLocaleStore } from "@/stores/locale-store";
+
+type T = Record<string, string>;
 
 const profileSchema = z.object({
   first_name: z.string().min(1, { message: "First name is required." }),
@@ -22,10 +26,7 @@ const profileSchema = z.object({
 });
 type ProfileValues = z.infer<typeof profileSchema>;
 
-const LANGUAGES = [
-  { value: "en", label: "English" },
-  { value: "ml", label: "Malayalam" },
-];
+const LANGUAGE_CODES = ["en", "ml"] as const;
 
 function UserAvatar({ name }: { name: string }) {
   const initials = name
@@ -72,10 +73,12 @@ function PhoneOtpBlock({
   newPhone,
   onVerified,
   onCancel,
+  t,
 }: {
   newPhone: string;
   onVerified: () => void;
   onCancel: () => void;
+  t: T;
 }) {
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState("");
@@ -90,7 +93,7 @@ function PhoneOtpBlock({
     },
     onError: (err: unknown) => {
       const axiosErr = err as { response?: { data?: { message?: string } }; message?: string } | undefined;
-      toast.error(axiosErr?.response?.data?.message ?? axiosErr?.message ?? "Failed to send OTP.");
+      toast.error(axiosErr?.response?.data?.message ?? axiosErr?.message ?? (t.toast_otp_send_failed ?? "Failed to send OTP."));
     },
   });
 
@@ -100,12 +103,12 @@ function PhoneOtpBlock({
       return buyerAccountProfileApi.update({ phone: newPhone });
     },
     onSuccess: () => {
-      toast.success("Phone number updated and verified.");
+      toast.success(t.toast_phone_updated ?? "Phone number updated and verified.");
       onVerified();
     },
     onError: (err: unknown) => {
       const axiosErr = err as { response?: { data?: { message?: string } }; message?: string } | undefined;
-      setOtpError(axiosErr?.response?.data?.message ?? axiosErr?.message ?? "Invalid or expired OTP.");
+      setOtpError(axiosErr?.response?.data?.message ?? axiosErr?.message ?? (t.err_otp_invalid ?? "Invalid or expired OTP."));
     },
   });
   // biome-ignore lint/correctness/useExhaustiveDependencies: guarded by hasSentInitialOtp ref, intentionally runs once on mount
@@ -118,9 +121,10 @@ function PhoneOtpBlock({
   return (
     <div className="flex flex-col gap-4 rounded-lg border bg-muted/30 p-4">
       <div className="flex flex-col gap-1">
-        <span className="font-medium text-sm">Verify new phone number</span>
+        <span className="font-medium text-sm">{t.otp_verify_title ?? "Verify new phone number"}</span>
         <p className="text-muted-foreground text-xs">
-          We'll send a one-time password to confirm this number. It won't be saved to your profile until verified.
+          {t.otp_verify_desc ??
+            "We'll send a one-time password to confirm this number. It won't be saved to your profile until verified."}
         </p>
       </div>
 
@@ -128,7 +132,7 @@ function PhoneOtpBlock({
         <div className="flex items-start gap-2.5 rounded-lg border border-green-200 bg-green-50 px-3 py-2.5 dark:border-green-800 dark:bg-green-950/30">
           <Smartphone className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
           <p className="text-green-700 text-xs dark:text-green-300">
-            OTP sent to <span className="font-medium font-mono">{newPhone}</span>
+            {t.otp_sent_prefix ?? "OTP sent to"} <span className="font-medium font-mono">{newPhone}</span>
           </p>
         </div>
       )}
@@ -136,7 +140,7 @@ function PhoneOtpBlock({
       {otpSent && (
         <div className="flex flex-col gap-1">
           <Input
-            placeholder="6-digit OTP"
+            placeholder={t.otp_placeholder ?? "6-digit OTP"}
             maxLength={6}
             value={otp}
             onChange={(e) => {
@@ -156,10 +160,10 @@ function PhoneOtpBlock({
           disabled={confirmMutation.isPending || otp.length < 6}
           onClick={() => confirmMutation.mutate()}
         >
-          {confirmMutation.isPending ? "Verifying..." : "Confirm & Save"}
+          {confirmMutation.isPending ? (t.btn_verifying ?? "Verifying...") : (t.btn_confirm_save ?? "Confirm & Save")}
         </Button>
         <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
-          Cancel
+          {t.btn_cancel ?? "Cancel"}
         </Button>
         <button
           type="button"
@@ -167,7 +171,7 @@ function PhoneOtpBlock({
           disabled={sendMutation.isPending}
           className="ml-auto text-muted-foreground text-xs underline underline-offset-4 hover:text-foreground disabled:opacity-50"
         >
-          {sendMutation.isPending ? "Sending..." : "Resend OTP"}
+          {sendMutation.isPending ? (t.btn_sending ?? "Sending...") : (t.btn_resend ?? "Resend OTP")}
         </button>
       </div>
     </div>
@@ -178,9 +182,18 @@ function PhoneOtpBlock({
 
 export default function BuyerProfilePage() {
   const queryClient = useQueryClient();
+  const locale = useLocaleStore((s) => s.locale);
+  const [t, setT] = useState<T>({});
   const [editing, setEditing] = useState(false);
   const [otpStep, setOtpStep] = useState(false);
   const [pendingPhone, setPendingPhone] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!locale) return;
+    translationsApi.getPublic(locale, "buyer_my_profile").then((data) => {
+      setT(data.buyer_my_profile ?? {});
+    });
+  }, [locale]);
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ["buyer-account-profile"],
@@ -210,10 +223,10 @@ export default function BuyerProfilePage() {
     mutationFn: buyerAccountProfileApi.update,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["buyer-account-profile"] });
-      toast.success("Profile updated successfully.");
+      toast.success(t.toast_profile_updated ?? "Profile updated successfully.");
     },
     onError: (error: unknown) => {
-      toast.error(error instanceof Error ? error.message : "Failed to update profile.");
+      toast.error(error instanceof Error ? error.message : (t.toast_update_failed ?? "Failed to update profile."));
     },
   });
 
@@ -227,7 +240,7 @@ export default function BuyerProfilePage() {
     const phoneChanged = values.phone !== (profile?.phone ?? "");
 
     if (Object.keys(payload).length === 0 && !phoneChanged) {
-      toast.info("No changes to save.");
+      toast.info(t.toast_no_changes ?? "No changes to save.");
       setEditing(false);
       return;
     }
@@ -278,31 +291,31 @@ export default function BuyerProfilePage() {
   return (
     <div className="px-3 py-4 sm:px-6 sm:py-6">
       <div className="mb-4">
-        <h1 className="font-bold text-xl sm:text-2xl">My Profile</h1>
-        <p className="text-muted-foreground text-sm">Manage your account profile.</p>
+        <h1 className="font-bold text-xl sm:text-2xl">{t.page_title ?? "My Profile"}</h1>
+        <p className="text-muted-foreground text-sm">{t.page_subtitle ?? "Manage your account profile."}</p>
       </div>
 
       <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-1 rounded-xl border bg-card p-4 sm:p-6">
         <div className="flex items-center justify-between">
-          <SectionHeading title="Profile" />
+          <SectionHeading title={t.section_profile ?? "Profile"} />
           {!editing ? (
             <Button type="button" size="sm" variant="outline" onClick={() => setEditing(true)}>
-              Edit
+              {t.btn_edit ?? "Edit"}
             </Button>
           ) : !otpStep ? (
             <div className="flex gap-2">
               <Button type="button" size="sm" variant="ghost" onClick={handleCancel}>
-                Cancel
+                {t.btn_cancel ?? "Cancel"}
               </Button>
               <Button type="submit" size="sm" disabled={mutation.isPending}>
-                {mutation.isPending ? "Saving..." : "Save"}
+                {mutation.isPending ? (t.btn_saving ?? "Saving...") : (t.btn_save ?? "Save")}
               </Button>
             </div>
           ) : null}
         </div>
 
         <div className="flex flex-col">
-          <SettingRow label="Avatar">
+          <SettingRow label={t.label_avatar ?? "Avatar"}>
             {fullName ? <UserAvatar name={fullName} /> : <span className="text-muted-foreground text-sm">—</span>}
           </SettingRow>
 
@@ -310,10 +323,15 @@ export default function BuyerProfilePage() {
             control={form.control}
             name="first_name"
             render={({ field, fieldState }) => (
-              <SettingRow label="First Name">
+              <SettingRow label={t.label_first_name ?? "First Name"}>
                 {editing ? (
                   <div className="flex flex-col gap-1">
-                    <Input {...field} disabled={otpStep} placeholder="First name" aria-invalid={fieldState.invalid} />
+                    <Input
+                      {...field}
+                      disabled={otpStep}
+                      placeholder={t.placeholder_first_name ?? "First name"}
+                      aria-invalid={fieldState.invalid}
+                    />
                     {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                   </div>
                 ) : (
@@ -327,10 +345,15 @@ export default function BuyerProfilePage() {
             control={form.control}
             name="last_name"
             render={({ field, fieldState }) => (
-              <SettingRow label="Last Name">
+              <SettingRow label={t.label_last_name ?? "Last Name"}>
                 {editing ? (
                   <div className="flex flex-col gap-1">
-                    <Input {...field} disabled={otpStep} placeholder="Last name" aria-invalid={fieldState.invalid} />
+                    <Input
+                      {...field}
+                      disabled={otpStep}
+                      placeholder={t.placeholder_last_name ?? "Last name"}
+                      aria-invalid={fieldState.invalid}
+                    />
                     {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                   </div>
                 ) : (
@@ -344,16 +367,24 @@ export default function BuyerProfilePage() {
             control={form.control}
             name="phone"
             render={({ field, fieldState }) => (
-              <SettingRow label="Phone" description="Used for SMS notifications and account recovery.">
+              <SettingRow
+                label={t.label_phone ?? "Phone"}
+                description={t.desc_phone ?? "Used for SMS notifications and account recovery."}
+              >
                 {editing && !otpStep ? (
                   <div className="flex flex-col gap-1">
-                    <Input {...field} type="tel" placeholder="+91 98765 43210" aria-invalid={fieldState.invalid} />
+                    <Input
+                      {...field}
+                      type="tel"
+                      placeholder={t.placeholder_phone ?? "+91 98765 43210"}
+                      aria-invalid={fieldState.invalid}
+                    />
                     {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                   </div>
                 ) : otpStep ? (
                   <div className="flex h-9 items-center gap-2 rounded-md border border-input bg-muted/50 px-3 text-muted-foreground text-sm">
                     <span className="font-mono">{pendingPhone}</span>
-                    <span className="ml-auto text-xs">Pending verification</span>
+                    <span className="ml-auto text-xs">{t.pending_verification ?? "Pending verification"}</span>
                   </div>
                 ) : (
                   <span className="text-muted-foreground text-sm">{profile?.phone || "—"}</span>
@@ -364,7 +395,7 @@ export default function BuyerProfilePage() {
 
           {otpStep && pendingPhone && (
             <div className="py-4">
-              <PhoneOtpBlock newPhone={pendingPhone} onVerified={handleVerified} onCancel={handleCancel} />
+              <PhoneOtpBlock newPhone={pendingPhone} onVerified={handleVerified} onCancel={handleCancel} t={t} />
             </div>
           )}
 
@@ -372,22 +403,28 @@ export default function BuyerProfilePage() {
             control={form.control}
             name="preferred_language"
             render={({ field, fieldState }) => (
-              <SettingRow label="Preferred Language" description="Language used for notifications and emails.">
+              <SettingRow
+                label={t.label_preferred_language ?? "Preferred Language"}
+                description={t.desc_preferred_language ?? "Language used for notifications and emails."}
+              >
                 {editing ? (
                   <select
                     {...field}
                     disabled={otpStep}
                     className="h-9 w-full rounded-md border bg-background px-3 text-foreground text-sm shadow-xs focus:outline-none focus:ring-1 focus:ring-ring"
                   >
-                    {LANGUAGES.map((l) => (
-                      <option key={l.value} value={l.value}>
-                        {l.label}
+                    {LANGUAGE_CODES.map((code) => (
+                      <option key={code} value={code}>
+                        {t[`lang_${code}`] ?? (code === "en" ? "English" : "Malayalam")}
                       </option>
                     ))}
                   </select>
                 ) : (
                   <span className="text-muted-foreground text-sm">
-                    {LANGUAGES.find((l) => l.value === (profile?.preferred_language ?? "en"))?.label ?? "English"}
+                    {(() => {
+                      const code = profile?.preferred_language ?? "en";
+                      return t[`lang_${code}`] ?? (code === "en" ? "English" : "Malayalam");
+                    })()}
                   </span>
                 )}
                 {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
@@ -396,9 +433,9 @@ export default function BuyerProfilePage() {
           />
         </div>
 
-        <SectionHeading title="Account" />
+        <SectionHeading title={t.section_account ?? "Account"} />
         <div className="flex flex-col">
-          <SettingRow label="Email Address" description="Your email cannot be changed.">
+          <SettingRow label={t.label_email ?? "Email Address"} description={t.desc_email ?? "Your email cannot be changed."}>
             <span className="text-muted-foreground text-sm">{profile?.email}</span>
           </SettingRow>
         </div>
