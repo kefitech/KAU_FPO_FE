@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { toMediaUrl } from "@/lib/utils/media-url";
-
+import { DetailModal } from "@/components/shared/detail-modal";
 import { type MarketHubProduct, marketHubApi } from "@/lib/api/market-hub";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
@@ -43,20 +43,8 @@ export default function MarketHubPage() {
   const [hasNext, setHasNext] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-
-  // Inquiry modal state
-  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
-  const toggleExpanded = (id: number) => {
-    setExpandedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  };
+  const [descriptionProduct, setDescriptionProduct] = useState<MarketHubProduct | null>(null);
+  const [qualityProduct, setQualityProduct] = useState<MarketHubProduct | null>(null);
 
   const [inquiryProduct, setInquiryProduct] = useState<MarketHubProduct | null>(null);
   const [inquiryName, setInquiryName] = useState("");
@@ -287,25 +275,21 @@ export default function MarketHubPage() {
                         {productDesc(product) && (
                           <>
                             <p
-                              style={
-                                expandedIds.has(product.id)
-                                  ? { color: "#666", fontSize: 14 }
-                                  : {
-                                      color: "#666",
-                                      fontSize: 14,
-                                      display: "-webkit-box",
-                                      WebkitLineClamp: 2,
-                                      WebkitBoxOrient: "vertical",
-                                      overflow: "hidden",
-                                    }
-                              }
+                              style={{
+                                color: "#666",
+                                fontSize: 14,
+                                display: "-webkit-box",
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                              }}
                             >
                               {productDesc(product)}
                             </p>
                             {productDesc(product).length > 120 && (
                               <button
                                 type="button"
-                                onClick={() => toggleExpanded(product.id)}
+                                onClick={() => setDescriptionProduct(product)}
                                 style={{
                                   background: "none",
                                   border: "none",
@@ -320,9 +304,7 @@ export default function MarketHubPage() {
                                   alignSelf: "flex-start",
                                 }}
                               >
-                                {expandedIds.has(product.id)
-                                  ? (t.btn_read_less ?? "Read less")
-                                  : (t.btn_read_more ?? "Read more")}
+                                {t.btn_read_more ?? "Read more"}
                               </button>
                             )}
                           </>
@@ -340,22 +322,42 @@ export default function MarketHubPage() {
                           </div>
                         </div>
                         {product.quality_certification && (
-                          <span
-                            className="badge"
-                            style={{
-                              background: "#f0f0f0",
-                              color: "#333",
-                              padding: "4px 10px",
-                              marginBottom: 10,
-                              maxWidth: "100%",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                              display: "inline-block",
-                            }}
-                          >
-                            {product.quality_certification}
-                          </span>
+                          <div style={{ marginBottom: 10 }}>
+                            <span
+                              className="badge"
+                              style={{
+                                background: "#f0f0f0",
+                                color: "#333",
+                                padding: "4px 10px",
+                                maxWidth: "100%",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                                display: "inline-block",
+                              }}
+                            >
+                              {product.quality_certification}
+                            </span>
+                            {product.quality_certification.length > 30 && (
+                              <button
+                                type="button"
+                                onClick={() => setQualityProduct(product)}
+                                style={{
+                                  display: "block",
+                                  background: "none",
+                                  border: "none",
+                                  padding: 0,
+                                  marginTop: 4,
+                                  color: "var(--color-primary)",
+                                  fontSize: 13,
+                                  fontWeight: 600,
+                                  cursor: "pointer",
+                                }}
+                              >
+                                {t.btn_read_more ?? "Read more"}
+                              </button>
+                            )}
+                          </div>
                         )}
                         <div style={{ fontSize: 13, color: "#888", marginTop: 10 }}>
                           {t.label_available ?? "Available"}: {formatAvailability(product.available_from, product.available_until)}
@@ -498,6 +500,24 @@ export default function MarketHubPage() {
           </div>
         </div>
       )}
+      <DetailModal
+        open={!!descriptionProduct}
+        onClose={() => setDescriptionProduct(null)}
+        title={t.description_label ?? "Description"}
+      >
+        <p style={{ color: "#666", fontSize: 14, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+          {descriptionProduct ? productDesc(descriptionProduct) : ""}
+        </p>
+      </DetailModal>
+      <DetailModal
+        open={!!qualityProduct}
+        onClose={() => setQualityProduct(null)}
+        title={t.quality_label ?? "Quality Certification"}
+      >
+        <p style={{ color: "#666", fontSize: 14, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+          {qualityProduct?.quality_certification}
+        </p>
+      </DetailModal>
     </AgrulLayout>
   );
 }
