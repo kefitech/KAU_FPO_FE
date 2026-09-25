@@ -83,7 +83,12 @@ export function LoginForm({ t: tProp }: { t?: Record<string, string> }) {
         const defaultPath = resolvePostLoginPath(meData.redirect, meData.menu?.[0]?.path);
         const useNext =
           nextPath && !meData.redirect;  // redirect from BE takes priority
-        router.replace(useNext ? nextPath! : defaultPath);
+        // Hard navigation intentionally — Next.js keeps route segments in a
+        // client cache. If we soft-navigate here, the Back button after a
+        // previous logout can render the PREVIOUS user's pages from cache
+        // with no auth re-check. window.location wipes it and starts the
+        // new user's session on a clean React tree.
+        window.location.href = useNext ? nextPath! : defaultPath;
       }
     } catch (error) {
       const axiosErr = error as { response?: { data?: { message?: string } }; message?: string } | undefined;
