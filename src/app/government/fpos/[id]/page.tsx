@@ -1,14 +1,17 @@
 "use client";
-import { useEffect, useState } from "react";
-import { use } from "react";
+import { use, useEffect, useState } from "react";
+
 import { useRouter } from "next/navigation";
+
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, MapPin } from "lucide-react";
+
 import { govtFposApi } from "@/app/government/_api/fpos";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { translationsApi } from "@/lib/api/translations";
+import { formatLakhsAsRupees } from "@/lib/utils";
 import { useLocaleStore } from "@/stores/locale-store";
 
 type T = Record<string, string>;
@@ -58,7 +61,11 @@ export default function GovernmentFPODetailPage({ params }: { params: Promise<{ 
     return tStatus[`status_${key}`] ?? fallback ?? status;
   }
 
-  const { data: fpo, isLoading, isError } = useQuery({
+  const {
+    data: fpo,
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: ["government", "fpo", id],
     queryFn: () => govtFposApi.getById(Number(id)),
   });
@@ -93,7 +100,10 @@ export default function GovernmentFPODetailPage({ params }: { params: Promise<{ 
                     <MapPin className="h-3 w-3" /> {fpo.district_display ?? fpo.district}
                   </p>
                 </div>
-                <Badge variant="outline" className={STATUS_BADGE_STYLES[fpo.status] ?? "border-muted text-muted-foreground"}>
+                <Badge
+                  variant="outline"
+                  className={STATUS_BADGE_STYLES[fpo.status] ?? "border-muted text-muted-foreground"}
+                >
                   {getStatusLabel(fpo.status, fpo.status_display)}
                 </Badge>
               </div>
@@ -121,7 +131,10 @@ export default function GovernmentFPODetailPage({ params }: { params: Promise<{ 
               />
               <InfoRow label={tApp.field_legal_structure ?? "Legal Structure"} value={fpo.legal_structure_display} />
               <InfoRow label={tApp.field_promoting_agency ?? "Promoting Agency"} value={fpo.promoting_agency_display} />
-              <InfoRow label={tApp.field_facilitating_agency ?? "Facilitating Agency"} value={fpo.facilitating_agency_name} />
+              <InfoRow
+                label={tApp.field_facilitating_agency ?? "Facilitating Agency"}
+                value={fpo.facilitating_agency_name}
+              />
             </CardContent>
           </Card>
 
@@ -133,7 +146,10 @@ export default function GovernmentFPODetailPage({ params }: { params: Promise<{ 
               <InfoRow label={tApp.field_block_taluk ?? "Block/Taluk"} value={fpo.block_taluk} />
               <InfoRow label={tApp.field_village_town ?? "Village/Town"} value={fpo.village_town} />
               <InfoRow label={tApp.field_pincode ?? "Pincode"} value={fpo.pincode} />
-              <InfoRow label={tApp.field_address ?? "Address"} value={[fpo.address_line1, fpo.address_line2].filter(Boolean).join(", ")} />
+              <InfoRow
+                label={tApp.field_address ?? "Address"}
+                value={[fpo.address_line1, fpo.address_line2].filter(Boolean).join(", ")}
+              />
               <InfoRow label={tApp.field_office_phone ?? "Office Phone"} value={fpo.office_phone} />
               <InfoRow label={tApp.field_office_email ?? "Office Email"} value={fpo.office_email} />
               <InfoRow label={tApp.field_website ?? "Website"} value={fpo.website} />
@@ -151,8 +167,14 @@ export default function GovernmentFPODetailPage({ params }: { params: Promise<{ 
               <InfoRow label={tApp.field_total_directors ?? "Total Directors"} value={fpo.total_directors} />
               <InfoRow label={tApp.field_women_directors ?? "Women Directors"} value={fpo.women_directors} />
               <InfoRow label={tApp.field_directors_under35 ?? "Directors Under 35"} value={fpo.directors_under_35} />
-              <InfoRow label={tApp.field_ceo_available ?? "CEO Available"} value={fpo.ceo_available ? (tApp.field_yes ?? "Yes") : (tApp.field_no ?? "No")} />
-              <InfoRow label={tApp.field_accountant_available ?? "Accountant Available"} value={fpo.accountant_available ? (tApp.field_yes ?? "Yes") : (tApp.field_no ?? "No")} />
+              <InfoRow
+                label={tApp.field_ceo_available ?? "CEO Available"}
+                value={fpo.ceo_available ? (tApp.field_yes ?? "Yes") : (tApp.field_no ?? "No")}
+              />
+              <InfoRow
+                label={tApp.field_accountant_available ?? "Accountant Available"}
+                value={fpo.accountant_available ? (tApp.field_yes ?? "Yes") : (tApp.field_no ?? "No")}
+              />
             </CardContent>
           </Card>
 
@@ -164,7 +186,9 @@ export default function GovernmentFPODetailPage({ params }: { params: Promise<{ 
               <div>
                 <p className="mb-1.5 text-muted-foreground text-xs">{t.label_primary ?? "Primary"}</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {fpo.primary_commodities_display.length === 0 && <span className="text-muted-foreground text-sm">-</span>}
+                  {fpo.primary_commodities_display.length === 0 && (
+                    <span className="text-muted-foreground text-sm">-</span>
+                  )}
                   {fpo.primary_commodities_display.map((c) => (
                     <Badge key={c} variant="secondary" className="text-[11px]">
                       {c}
@@ -175,7 +199,9 @@ export default function GovernmentFPODetailPage({ params }: { params: Promise<{ 
               <div>
                 <p className="mb-1.5 text-muted-foreground text-xs">{t.label_secondary ?? "Secondary"}</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {fpo.secondary_commodities_display.length === 0 && <span className="text-muted-foreground text-sm">-</span>}
+                  {fpo.secondary_commodities_display.length === 0 && (
+                    <span className="text-muted-foreground text-sm">-</span>
+                  )}
                   {fpo.secondary_commodities_display.map((c) => (
                     <Badge key={c} variant="outline" className="text-[11px]">
                       {c}
@@ -183,7 +209,10 @@ export default function GovernmentFPODetailPage({ params }: { params: Promise<{ 
                   ))}
                 </div>
               </div>
-              <InfoRow label={tApp.field_annual_turnover ?? "Annual Turnover"} value={fpo.annual_turnover} />
+              <InfoRow
+                label={tApp.field_annual_turnover ?? "Annual Turnover"}
+                value={formatLakhsAsRupees(fpo.annual_turnover)}
+              />
             </CardContent>
           </Card>
 
@@ -196,7 +225,10 @@ export default function GovernmentFPODetailPage({ params }: { params: Promise<{ 
               <InfoRow label={tApp.field_designation ?? "Designation"} value={fpo.signatory_designation_display} />
               <InfoRow label={tApp.field_signatory_phone ?? "Signatory Phone"} value={fpo.signatory_phone} />
               <InfoRow label={tApp.field_signatory_email ?? "Signatory Email"} value={fpo.signatory_email} />
-              <InfoRow label={tApp.field_aadhaar_last4 ?? "Aadhaar Last 4 Digits"} value={fpo.signatory_aadhaar_last4} />
+              <InfoRow
+                label={tApp.field_aadhaar_last4 ?? "Aadhaar Last 4 Digits"}
+                value={fpo.signatory_aadhaar_last4}
+              />
             </CardContent>
           </Card>
 

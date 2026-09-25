@@ -1,18 +1,30 @@
 "use client";
 
 import { useEffect, useState } from "react";
+
 import { useParams, useRouter } from "next/navigation";
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
 import {
-  Building2, CheckCheck, CheckCircle2, ChevronLeft, ExternalLink,
-  FileText, Landmark, MapPin, ShieldCheck, Users, XCircle,
+  Building2,
+  CheckCheck,
+  CheckCircle2,
+  ChevronLeft,
+  ExternalLink,
+  FileText,
+  Landmark,
+  MapPin,
+  ShieldCheck,
+  Users,
+  XCircle,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { cbboFposApi } from "@/app/cbbo/_api/fpos";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { translationsApi } from "@/lib/api/translations";
+import { formatLakhsAsRupees } from "@/lib/utils";
 import { useLocaleStore } from "@/stores/locale-store";
 import type { AssignedFPO } from "@/types/cbbo";
 
@@ -70,7 +82,8 @@ function DocumentsSection({ fpoId, documents, t }: { fpoId: number; documents: A
       toast.success(t.doc_verified ?? "Document verified");
       queryClient.invalidateQueries({ queryKey: ["cbbo-fpo", fpoId] });
     },
-    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : (t.doc_verify_failed ?? "Failed to verify")),
+    onError: (err: unknown) =>
+      toast.error(err instanceof Error ? err.message : (t.doc_verify_failed ?? "Failed to verify")),
   });
 
   if (!documents || documents.length === 0) {
@@ -147,7 +160,11 @@ export default function CBBOFPODetailPage() {
       .catch(() => undefined);
   }, [locale]);
 
-  const { data: fpo, isLoading, isError } = useQuery({
+  const {
+    data: fpo,
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: ["cbbo-fpo", fpoId],
     queryFn: () => cbboFposApi.getById(fpoId),
     enabled: !Number.isNaN(fpoId),
@@ -159,7 +176,11 @@ export default function CBBOFPODetailPage() {
   }
 
   if (isLoading) {
-    return <div className="flex h-60 items-center justify-center text-muted-foreground text-sm">{t.loading ?? "Loading..."}</div>;
+    return (
+      <div className="flex h-60 items-center justify-center text-muted-foreground text-sm">
+        {t.loading ?? "Loading..."}
+      </div>
+    );
   }
   if (isError || !fpo) {
     return (
@@ -183,7 +204,10 @@ export default function CBBOFPODetailPage() {
 
       <div className="flex items-center gap-3">
         <h1 className="font-bold text-2xl">{fpo.name}</h1>
-        <Badge variant="outline" className={`text-[11px] ${STATUS_BADGE_STYLES[fpo.status] ?? "border-muted text-muted-foreground"}`}>
+        <Badge
+          variant="outline"
+          className={`text-[11px] ${STATUS_BADGE_STYLES[fpo.status] ?? "border-muted text-muted-foreground"}`}
+        >
           {getStatusLabel(fpo.status, fpo.status_display)}
         </Badge>
       </div>
@@ -218,14 +242,23 @@ export default function CBBOFPODetailPage() {
             <div className="grid grid-cols-2 gap-3">
               <InfoRow label={t.field_name_en ?? "FPO Name (English)"} value={fpo.name} />
               <InfoRow label={t.field_name_ml ?? "FPO Name (Malayalam)"} value={fpo.name_ml} />
-              <InfoRow label={t.field_registered_under ?? "Registered Under"} value={fpo.legal_structure_display ?? fpo.legal_structure} />
+              <InfoRow
+                label={t.field_registered_under ?? "Registered Under"}
+                value={fpo.legal_structure_display ?? fpo.legal_structure}
+              />
               {fpo.legal_structure_detail && (
                 <InfoRow label={t.field_state_csa_act ?? "State CSA Act"} value={fpo.legal_structure_detail} />
               )}
               <InfoRow label={t.field_reg_number ?? "Registration Number"} value={fpo.registration_number} />
               <InfoRow label={t.field_reg_date ?? "Date of Registration"} value={fpo.date_of_registration} />
-              <InfoRow label={t.field_promoting_agency ?? "Promoting Agency"} value={fpo.promoting_agency_display ?? fpo.promoting_agency} />
-              <InfoRow label={t.field_facilitating_agency ?? "Facilitating Agency"} value={fpo.facilitating_agency_name} />
+              <InfoRow
+                label={t.field_promoting_agency ?? "Promoting Agency"}
+                value={fpo.promoting_agency_display ?? fpo.promoting_agency}
+              />
+              <InfoRow
+                label={t.field_facilitating_agency ?? "Facilitating Agency"}
+                value={fpo.facilitating_agency_name}
+              />
             </div>
           </SectionCard>
 
@@ -250,7 +283,10 @@ export default function CBBOFPODetailPage() {
           <SectionCard icon={Users} title={t.section_signatory ?? "Signatory & Members"}>
             <div className="grid grid-cols-2 gap-3">
               <InfoRow label={t.field_signatory_name ?? "Signatory Name"} value={fpo.signatory_name} />
-              <InfoRow label={t.field_designation ?? "Designation"} value={fpo.signatory_designation_display ?? fpo.signatory_designation} />
+              <InfoRow
+                label={t.field_designation ?? "Designation"}
+                value={fpo.signatory_designation_display ?? fpo.signatory_designation}
+              />
               <InfoRow label={t.field_signatory_phone ?? "Signatory Phone"} value={fpo.signatory_phone} />
               <InfoRow label={t.field_signatory_email ?? "Signatory Email"} value={fpo.signatory_email} />
               <InfoRow label={t.field_aadhaar_last4 ?? "Aadhaar Last 4"} value={fpo.signatory_aadhaar_last4} />
@@ -263,11 +299,32 @@ export default function CBBOFPODetailPage() {
             </div>
             {fpo.total_directors != null && (
               <div className="grid grid-cols-3 gap-3 border-t pt-3">
-                <InfoRow label={t.field_ceo_available ?? "CEO Available"} value={fpo.ceo_available == null ? undefined : fpo.ceo_available ? (t.field_yes ?? "Yes") : (t.field_no ?? "No")} />
-                <InfoRow label={t.field_accountant_available ?? "Accountant Available"} value={fpo.accountant_available == null ? undefined : fpo.accountant_available ? (t.field_yes ?? "Yes") : (t.field_no ?? "No")} />
+                <InfoRow
+                  label={t.field_ceo_available ?? "CEO Available"}
+                  value={
+                    fpo.ceo_available == null
+                      ? undefined
+                      : fpo.ceo_available
+                        ? (t.field_yes ?? "Yes")
+                        : (t.field_no ?? "No")
+                  }
+                />
+                <InfoRow
+                  label={t.field_accountant_available ?? "Accountant Available"}
+                  value={
+                    fpo.accountant_available == null
+                      ? undefined
+                      : fpo.accountant_available
+                        ? (t.field_yes ?? "Yes")
+                        : (t.field_no ?? "No")
+                  }
+                />
                 <InfoRow label={t.field_total_directors ?? "Total Directors"} value={fpo.total_directors?.toString()} />
                 <InfoRow label={t.field_women_directors ?? "Women Directors"} value={fpo.women_directors?.toString()} />
-                <InfoRow label={t.field_directors_under35 ?? "Directors Under 35"} value={fpo.directors_under_35?.toString()} />
+                <InfoRow
+                  label={t.field_directors_under35 ?? "Directors Under 35"}
+                  value={fpo.directors_under_35?.toString()}
+                />
               </div>
             )}
           </SectionCard>
@@ -275,14 +332,25 @@ export default function CBBOFPODetailPage() {
           <SectionCard icon={Landmark} title={t.section_business ?? "Business & Bank"}>
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2">
-                <InfoRow label={t.field_primary_commodities ?? "Primary Commodities"} value={(fpo.primary_commodities_display ?? fpo.primary_commodities ?? []).join(", ")} />
+                <InfoRow
+                  label={t.field_primary_commodities ?? "Primary Commodities"}
+                  value={(fpo.primary_commodities_display ?? fpo.primary_commodities ?? []).join(", ")}
+                />
               </div>
               {(fpo.secondary_commodities ?? []).length > 0 && (
                 <div className="col-span-2">
-                  <InfoRow label={t.field_secondary_commodities ?? "Secondary Commodities"} value={(fpo.secondary_commodities_display ?? fpo.secondary_commodities ?? []).join(", ")} />
+                  <InfoRow
+                    label={t.field_secondary_commodities ?? "Secondary Commodities"}
+                    value={(fpo.secondary_commodities_display ?? fpo.secondary_commodities ?? []).join(", ")}
+                  />
                 </div>
               )}
-              {fpo.annual_turnover && <InfoRow label={t.field_annual_turnover ?? "Annual Turnover"} value={fpo.annual_turnover} />}
+              {fpo.annual_turnover && (
+                <InfoRow
+                  label={t.field_annual_turnover ?? "Annual Turnover"}
+                  value={formatLakhsAsRupees(fpo.annual_turnover)}
+                />
+              )}
             </div>
             <div className="grid grid-cols-2 gap-3 border-t pt-3">
               <InfoRow label={t.field_bank_name ?? "Bank Name"} value={fpo.bank_name_display ?? fpo.bank_name} />
