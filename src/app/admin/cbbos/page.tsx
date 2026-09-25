@@ -101,6 +101,8 @@ export default function CBBOsPage() {
                   active: cbboView.row.is_active,
                   activeLabel: tCommon.badge_active ?? "Active",
                   inactiveLabel: tCommon.badge_inactive ?? "Inactive",
+                  pending: cbboView.row.registration_status === "pending",
+                  pendingLabel: tTable.status_pending ?? "Pending Approval",
                 },
                 { label: tTable.col_date_joined ?? "Date Joined", type: "date", value: cbboView.row.date_joined },
                 { label: tCommon.section_scope ?? "Scope", type: "section" },

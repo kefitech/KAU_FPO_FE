@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
 import { type ExpertBooking, expertDashboardApi } from "@/app/expert/_api/dashboard";
@@ -16,6 +17,8 @@ import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 
 type T = Record<string, string>;
+
+const PAGE_SIZE = 10;
 
 const STATUS_COLORS: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-800",
@@ -54,6 +57,13 @@ export default function ExpertDashboardPage() {
   const [filterDateFrom, setFilterDateFrom] = useState<string>("");
   const [filterDateTo, setFilterDateTo] = useState<string>("");
   const [filterSearch, setFilterSearch] = useState<string>("");
+
+  // The page belongs to the filter set it was chosen under, so changing any
+  // filter drops back to page 1.
+  const filterKey = `${filterStatus}|${filterDateFrom}|${filterDateTo}|${filterSearch}`;
+  const [pageState, setPageState] = useState({ filterKey, page: 1 });
+  const page = pageState.filterKey === filterKey ? pageState.page : 1;
+  const setPage = (next: number) => setPageState({ filterKey, page: next });
 
   const confirmMutation = useMutation({
     mutationFn: (id: number) => expertDashboardApi.confirmBooking(id),
@@ -117,15 +127,7 @@ export default function ExpertDashboardPage() {
   }, {});
 
   Object.values(groupedByFpo).forEach((group) => {
-    console.log(
-      "before sort:",
-      group.map((b) => ({ id: b.id, created_at: b.created_at, requested_date: b.requested_date, status: b.status })),
-    );
     group.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-    console.log(
-      "after sort:",
-      group.map((b) => ({ id: b.id, created_at: b.created_at, status: b.status })),
-    );
   });
 
   const fpoGroups = Object.values(groupedByFpo).sort((a, b) => {
@@ -134,6 +136,10 @@ export default function ExpertDashboardPage() {
     if (aHasPending !== bHasPending) return aHasPending ? -1 : 1;
     return new Date(b[0].requested_date).getTime() - new Date(a[0].requested_date).getTime();
   });
+
+  const totalPages = Math.max(1, Math.ceil(fpoGroups.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pagedFpoGroups = fpoGroups.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   return (
     <div className="flex flex-col gap-6">
@@ -223,7 +229,7 @@ export default function ExpertDashboardPage() {
         <p className="text-muted-foreground text-sm">{t.empty_no_matches ?? "No bookings match your filters."}</p>
       )}
 
-      {fpoGroups.map((group) => {
+      {pagedFpoGroups.map((group) => {
         const first = group[0];
         return (
           <Card
@@ -242,14 +248,9 @@ export default function ExpertDashboardPage() {
             <CardHeader>
               <CardTitle className="text-base">{first.fpo_name}</CardTitle>
 
-              <div className="flex items-center gap-2">
-                <p className="text-muted-foreground text-xs">
-                  {(t.booking_count ?? "{count} booking(s)").replace("{count}", String(group.length))}
-                </p>
-                <Badge className={STATUS_COLORS[first.status]}>
-                  {getStatusLabel(first.status, first.status_display)}
-                </Badge>
-              </div>
+              <p className="text-muted-foreground text-xs">
+                {(t.booking_count ?? "{count} booking(s)").replace("{count}", String(group.length))}
+              </p>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
               <div className="flex flex-col gap-1 border-b pb-3">
@@ -294,10 +295,57 @@ export default function ExpertDashboardPage() {
                   </p>
                 )}
               </div>
+
+              {/* Every booking that matches the filters, each with its own status */}
+              <div className="flex flex-col gap-2">
+                {group.map((b) => (
+                  <div key={b.id} className="flex items-start justify-between gap-3 text-sm">
+                    <div className="flex min-w-0 flex-col">
+                      <span>
+                        {b.requested_date} · {b.requested_time}
+                      </span>
+                      {b.topic && (
+                        <span className="truncate text-muted-foreground text-xs">
+                          {t.field_topic ?? "Topic"}: {b.topic}
+                        </span>
+                      )}
+                    </div>
+                    <Badge className={`shrink-0 ${STATUS_COLORS[b.status] ?? ""}`}>
+                      {getStatusLabel(b.status, b.status_display)}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         );
       })}
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between border-t pt-4">
+          <p className="text-muted-foreground text-sm">
+            {(t.pagination_summary ?? "Page {page} of {total_pages} · {count} FPOs")
+              .replace("{page}", String(currentPage))
+              .replace("{total_pages}", String(totalPages))
+              .replace("{count}", String(fpoGroups.length))}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)}>
+              <ChevronLeft className="mr-1 h-4 w-4" />
+              {t.btn_previous ?? "Previous"}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={currentPage >= totalPages}
+              onClick={() => setPage(currentPage + 1)}
+            >
+              {t.btn_next ?? "Next"}
+              <ChevronRight className="ml-1 h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       <Dialog open={rejectDialog.open} onOpenChange={(open) => setRejectDialog((s) => ({ ...s, open }))}>
         <DialogContent className="max-w-md">

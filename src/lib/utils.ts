@@ -40,3 +40,11 @@ export function formatCurrency(
 
   return new Intl.NumberFormat(locale, formatOptions).format(amount);
 }
+
+// FPO annual turnover is stored in lakhs (e.g. "0.25000" = ₹25,000); show it in rupees.
+export function formatLakhsAsRupees(lakhs: string | number | null | undefined): string | null {
+  if (lakhs === null || lakhs === undefined || lakhs === "") return null;
+  const value = Number(lakhs);
+  if (Number.isNaN(value)) return null;
+  return formatCurrency(value * 100000, { currency: "INR", locale: "en-IN", noDecimals: true });
+}

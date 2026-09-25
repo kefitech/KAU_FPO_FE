@@ -710,7 +710,9 @@ export default function OfficialRegisterPage() {
               </div>
 
               <div className="flex flex-col gap-5 rounded-xl border bg-card p-6 shadow-sm">
+                {/* Keyed by mode so switching tabs remounts the blocks and clears their OTP state. */}
                 <PhoneOtpVerifyBlock
+                  key={`phone-${mode}`}
                   phone={phone}
                   onChangePhone={(v) => form.setValue("phone", v)}
                   mode={mode}
@@ -720,6 +722,7 @@ export default function OfficialRegisterPage() {
                 />
 
                 <EmailOtpVerifyBlock
+                  key={`email-${mode}`}
                   email={form.watch("email")}
                   onChangeEmail={(v) => form.setValue("email", v)}
                   mode={mode}

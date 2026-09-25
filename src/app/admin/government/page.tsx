@@ -101,6 +101,8 @@ export default function GovernmentPage() {
                   active: officialView.row.is_active,
                   activeLabel: tCommon.badge_active ?? "Active",
                   inactiveLabel: tCommon.badge_inactive ?? "Inactive",
+                  pending: officialView.row.registration_status === "pending",
+                  pendingLabel: tTable.status_pending ?? "Pending Approval",
                 },
                 { label: tTable.col_date_joined ?? "Date Joined", type: "date", value: officialView.row.date_joined },
                 { label: tCommon.section_scope ?? "Jurisdiction", type: "section" },

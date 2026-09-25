@@ -27,6 +27,9 @@ export interface SheetField {
   active?: boolean;
   activeLabel?: string;
   inactiveLabel?: string;
+  /** Takes precedence over `active` — e.g. self-registrations awaiting admin approval. */
+  pending?: boolean;
+  pendingLabel?: string;
   tags?: string[];
   node?: React.ReactNode;
 }
@@ -68,6 +71,17 @@ function renderField(field: SheetField) {
       );
 
     case "status":
+      if (field.pending) {
+        return (
+          <Badge
+            variant="outline"
+            className="border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[11px] font-medium px-2.5"
+          >
+            <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-amber-500 inline-block" />
+            {field.pendingLabel ?? "Pending Approval"}
+          </Badge>
+        );
+      }
       return field.active ? (
         <Badge
           variant="outline"

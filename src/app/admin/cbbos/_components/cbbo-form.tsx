@@ -20,6 +20,9 @@ import type { CBBO, CBBOLevel, CBBOUpdatePayload, NotificationChannelType } from
 
 type T = Record<string, string>;
 
+// Client-side save guard; its message is shown as-is instead of the generic API error fallback.
+class FormGuardError extends Error {}
+
 const NOTIFICATION_CHANNELS: { value: NotificationChannelType; label: string }[] = [
   { value: "email", label: "Email" },
   { value: "sms", label: "SMS" },
@@ -143,6 +146,31 @@ export function CBBOForm({ mode, cbbo, t = {}, tCommon = {} }: CBBOFormProps) {
   const mutation = useMutation({
     mutationFn: async (values: FormValues) => {
       if (isEdit && cbbo) {
+        // Run the guards before any request so a blocked save doesn't partially apply,
+        // and throw (not return) so the mutation fails instead of reporting success.
+        // Switching level after creation isn't handled by /districts/ — it needs a dedicated backend action.
+        if (values.level === "state" && cbbo.scope !== "STATE") {
+          throw new FormGuardError(
+            "Switching an existing CBBO to state-wide isn't supported yet. Deactivate and recreate instead.",
+          );
+        }
+        const districtsChanged =
+          values.level !== "state" &&
+          JSON.stringify([...values.district_codes].sort()) !==
+            JSON.stringify([...(editingValues?.district_codes ?? [])].sort());
+        if (districtsChanged) {
+          // Mirrors the backend: pending registrations are inactive but still editable.
+          if (cbbo.registration_status === "rejected") {
+            throw new FormGuardError("Cannot assign districts for a rejected registration.");
+          }
+          if (!cbbo.is_active && cbbo.registration_status !== "pending") {
+            throw new FormGuardError(
+              t.toast_district_locked ??
+                "This CBBO is deactivated. Activate the account before changing district assignments.",
+            );
+          }
+        }
+
         const basicPayload: CBBOUpdatePayload = {
           first_name: values.first_name,
           last_name: values.last_name,
@@ -150,32 +178,8 @@ export function CBBOForm({ mode, cbbo, t = {}, tCommon = {} }: CBBOFormProps) {
         if (values.phone) basicPayload.phone = values.phone;
         await cbbosApi.update(cbbo.id, basicPayload);
 
-        if (values.level === "state") {
-          // Backend rejects district-level assignment once state-wide exists;
-          // for edit-to-state we simply clear existing district rows via "replace" with empty list,
-          // then rely on create-time state row only if it doesn't already exist.
-          // Simpler: not supported here — switching level after creation isn't handled by /districts/.
-          // If needed, this requires a dedicated backend action; skip silently if already state.
-          if (cbbo.scope !== "STATE") {
-            toast.error(
-              "Switching an existing CBBO to state-wide isn't supported yet. Deactivate and recreate instead.",
-            );
-            return;
-          }
-        } else {
-          const districtsChanged =
-            JSON.stringify([...values.district_codes].sort()) !==
-            JSON.stringify([...(editingValues?.district_codes ?? [])].sort());
-          if (districtsChanged) {
-            if (!cbbo.is_active) {
-              toast.error(
-                t.toast_district_locked ??
-                  "This official is not yet activated. Activate the account before changing district assignments.",
-              );
-              return;
-            }
-            await cbbosApi.setDistricts(cbbo.id, "replace", values.district_codes);
-          }
+        if (districtsChanged) {
+          await cbbosApi.setDistricts(cbbo.id, "replace", values.district_codes);
         }
       } else {
         await cbbosApi.create({
@@ -201,6 +205,10 @@ export function CBBOForm({ mode, cbbo, t = {}, tCommon = {} }: CBBOFormProps) {
       router.push("/admin/cbbos");
     },
     onError: (error: unknown) => {
+      if (error instanceof FormGuardError) {
+        toast.error(error.message);
+        return;
+      }
       const response = (error as { data?: { message?: string; errors?: Record<string, string[]> } })?.data;
       const fieldErrors = response?.errors;
       if (fieldErrors) {
