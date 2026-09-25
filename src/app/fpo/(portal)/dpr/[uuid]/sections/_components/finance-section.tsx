@@ -274,6 +274,10 @@ const REPAYMENT_FREQ = [
   { value: "half_yearly", label: "Half-yearly" },
   { value: "yearly", label: "Yearly" },
 ];
+const REPAYMENT_METHODS = [
+  { value: "reducing_balance", label: "Reducing Balance (Equal Principal Instalments)" },
+  { value: "emi", label: "EMI (Equated Monthly Instalments)" },
+];
 const SUBSIDY_STATUS = [
   { value: "not_applied", label: "Not Applied" },
   { value: "applied", label: "Applied" },
@@ -444,6 +448,7 @@ const Schema = z.object({
   moratorium_period_months: intNullable,
   repayment_period_years: intNullable,
   repayment_frequency: z.string(),
+  repayment_method: z.string(),
   // G. Subsidy — BE column names are `subsidy_implementing_agency` /
   // `subsidy_application_status` (was mis-named as short forms before).
   subsidy_proposed: z.boolean(),
@@ -588,6 +593,7 @@ function buildDefaults(): Data {
     moratorium_period_months: null,
     repayment_period_years: null,
     repayment_frequency: "",
+    repayment_method: "reducing_balance",
     subsidy_proposed: false,
     subsidy_scheme_name: "",
     subsidy_implementing_agency: "",
@@ -764,6 +770,7 @@ export function FinanceSection({ uuid }: { uuid: string }) {
   const isOperational = useWatch({ control: form.control, name: "is_operational" });
   const loanType = useWatch({ control: form.control, name: "loan_type" });
   const repaymentFreq = useWatch({ control: form.control, name: "repayment_frequency" });
+  const repaymentMethod = useWatch({ control: form.control, name: "repayment_method" });
   const applicationStatus = useWatch({ control: form.control, name: "subsidy_application_status" });
   const loanAmount = useWatch({ control: form.control, name: "loan_amount" });
   const lendingInstitution = useWatch({ control: form.control, name: "lending_institution" }) ?? "";
@@ -1421,6 +1428,20 @@ export function FinanceSection({ uuid }: { uuid: string }) {
                   onChange={(v: string) => setField("repayment_frequency", v)}
                   placeholder="Type to search…"
                 />
+              </div>
+              <div className="space-y-1">
+                <LabelWithBadge uuid={uuid} section="finance" field="repayment_method" className="text-xs">
+                  Repayment method
+                </LabelWithBadge>
+                <SearchableSelect
+                  value={repaymentMethod ?? ""}
+                  options={REPAYMENT_METHODS}
+                  onChange={(v: string) => setField("repayment_method", v)}
+                  placeholder="Type to search…"
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  NABARD default: reducing balance. Switch to EMI only when a specific scheme requires it.
+                </p>
               </div>
             </div>
           )}
