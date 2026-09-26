@@ -260,8 +260,20 @@ export default function AdminDashboardPage() {
       <div className="flex items-center gap-2">
         <LayoutDashboard className="h-5 w-5 text-muted-foreground" />
         <div>
-          <h1 className="font-bold text-2xl">{t.page_title ?? "Admin Dashboard"}</h1>
-          <p className="text-muted-foreground text-sm">{t.page_description ?? "FPO platform overview"}</p>
+          {/* Sub-admins share this page; their stats are already scoped to assigned FPOs */}
+          {user?.role === "sub_admin" ? (
+            <>
+              <h1 className="font-bold text-2xl">{t.page_title_sub_admin ?? "Sub-Admin Dashboard"}</h1>
+              <p className="text-muted-foreground text-sm">
+                {t.page_description_sub_admin ?? "Overview of your assigned FPOs"}
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 className="font-bold text-2xl">{t.page_title ?? "Admin Dashboard"}</h1>
+              <p className="text-muted-foreground text-sm">{t.page_description ?? "FPO platform overview"}</p>
+            </>
+          )}
         </div>
       </div>
 
