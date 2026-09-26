@@ -271,6 +271,14 @@ function EmailOtpVerifyBlock({
     },
   });
 
+  // Unlock the email field so a wrong address can be corrected
+  const handleEditEmail = () => {
+    setOtpSent(false);
+    setOtp("");
+    sendMutation.reset();
+    confirmMutation.reset();
+  };
+
   const label = t.otp_email_label ?? "Email Address";
 
   if (verified) {
@@ -308,7 +316,17 @@ function EmailOtpVerifyBlock({
             disabled={otpSent}
             className="flex-1"
           />
-          {!otpSent && (
+          {otpSent ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleEditEmail}
+              disabled={confirmMutation.isPending}
+              className="sm:w-auto"
+            >
+              {t.otp_change_email_btn ?? "Change"}
+            </Button>
+          ) : (
             <Button
               type="button"
               onClick={() => sendMutation.mutate()}
@@ -351,6 +369,9 @@ function EmailOtpVerifyBlock({
                 {t.otp_resend_btn ?? "Resend"}
               </Button>
             </div>
+            <p className="text-muted-foreground text-xs">
+              {t.otp_wrong_email_hint ?? "Entered the wrong email? Click “Change” to edit it."}
+            </p>
           </div>
         )}
       </div>
@@ -406,6 +427,14 @@ function PhoneOtpVerifyBlock({
     },
   });
 
+  // Unlock the phone field so a wrong number can be corrected
+  const handleEditPhone = () => {
+    setOtpSent(false);
+    setOtp("");
+    sendMutation.reset();
+    confirmMutation.reset();
+  };
+
   const label = t.otp_phone_label ?? "Phone Number";
 
   if (verified) {
@@ -445,7 +474,17 @@ function PhoneOtpVerifyBlock({
             disabled={otpSent}
             className="flex-1"
           />
-          {!otpSent && (
+          {otpSent ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleEditPhone}
+              disabled={confirmMutation.isPending}
+              className="sm:w-auto"
+            >
+              {t.otp_change_phone_btn ?? "Change"}
+            </Button>
+          ) : (
             <Button
               type="button"
               onClick={() => sendMutation.mutate()}
@@ -488,6 +527,9 @@ function PhoneOtpVerifyBlock({
                 {t.otp_resend_btn ?? "Resend"}
               </Button>
             </div>
+            <p className="text-muted-foreground text-xs">
+              {t.otp_wrong_phone_hint ?? "Entered the wrong number? Click “Change” to edit it."}
+            </p>
           </div>
         )}
       </div>
