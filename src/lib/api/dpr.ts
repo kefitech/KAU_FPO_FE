@@ -330,6 +330,18 @@ export const dprApi = {
       })
       .then((r) => r.data),
 
+  // KAU 2026-09-26 finalisation ask C.3 — editable Word-file counterpart.
+  // python-docx is ~1-2s typical; sharing the 30s ceiling with the PDF path
+  // for simplicity. Returned Blob is content-typed as
+  // `application/vnd.openxmlformats-officedocument.wordprocessingml.document`.
+  downloadDocx: (uuid: string): Promise<Blob> =>
+    api
+      .get<Blob>(`/fpo/dpr/projects/${uuid}/docx/`, {
+        responseType: "blob",
+        timeout: 30_000,
+      })
+      .then((r) => r.data),
+
   // ── Versioned DPR document endpoints (KAU pre-UAT reply §7.1 + §7.2) ──
   // Generate a new versioned DPRDocument (monotonic per-project version, never
   // resets). Returns row metadata — the PDF bytes are fetched separately via

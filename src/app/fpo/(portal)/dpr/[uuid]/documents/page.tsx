@@ -109,6 +109,7 @@ export default function FpoDprDocumentsPage({
 
   const [downloadingVersion, setDownloadingVersion] = useState<number | null>(null);
   const [downloadingExcel, setDownloadingExcel] = useState(false);
+  const [downloadingDocx, setDownloadingDocx] = useState(false);
   // Guard state for the "generate without AI narrative" confirm dialog
   // (Layer 2 of the AI-discoverability defense). Users can still proceed
   // — we only warn, never block.
@@ -194,6 +195,31 @@ export default function FpoDprDocumentsPage({
     }
   }
 
+  // KAU 2026-09-26 finalisation ask C.3: editable Word counterpart of the
+  // PDF. Same content, but rearrangeable + editable in Microsoft Word so
+  // FPOs / consultants can fit the narrative to their own voice before
+  // submission.
+  async function handleDocxDownload() {
+    if (downloadingDocx) return;
+    setDownloadingDocx(true);
+    try {
+      const blob = await dprApi.downloadDocx(uuid);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `DPR_${uuid.slice(0, 8)}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      toast.success("Word file downloaded. Open it to edit + rearrange.");
+    } catch {
+      toast.error("Failed to generate Word file.");
+    } finally {
+      setDownloadingDocx(false);
+    }
+  }
+
   async function handleDownload(doc: DprDocument) {
     if (downloadingVersion !== null) return;
     setDownloadingVersion(doc.version_number);
@@ -253,6 +279,18 @@ export default function FpoDprDocumentsPage({
               <FileSpreadsheet className="mr-1 h-4 w-4" />
             )}
             {downloadingExcel ? "Preparing…" : "Financials (Excel)"}
+          </Button>
+          <Button
+            onClick={handleDocxDownload}
+            disabled={downloadingDocx}
+            title="Download the DPR as an editable Word document — rearrange + rewrite before submission."
+          >
+            {downloadingDocx ? (
+              <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+            ) : (
+              <FileText className="mr-1 h-4 w-4" />
+            )}
+            {downloadingDocx ? "Preparing…" : "Export as Word"}
           </Button>
           <Button
             onClick={() => {

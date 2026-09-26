@@ -300,6 +300,61 @@ function PreviewPdfButton({ uuid }: { uuid: string }) {
   );
 }
 
+// ── Word (.docx) download button ───────────────────────────────────────────
+// KAU 2026-09-26 finalisation ask C.3: fetches
+// /api/fpo/dpr/projects/<uuid>/docx/ and forces a file save so the FPO can
+// rearrange + edit the AI-generated DPR draft in Microsoft Word. Same content
+// as the PDF; presentation is editable.
+
+function DownloadDocxButton({ uuid, title }: { uuid: string; title?: string }) {
+  const [loading, setLoading] = useState(false);
+
+  async function handleClick() {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const blob = await dprApi.downloadDocx(uuid);
+      const url = URL.createObjectURL(blob);
+      // Force download — .docx is not natively viewable in a browser tab.
+      const slug = (title ?? "dpr")
+        .trim()
+        .replace(/[^a-zA-Z0-9]+/g, "_")
+        .slice(0, 40)
+        .replace(/^_+|_+$/g, "") || "dpr";
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${slug}_${uuid.slice(0, 8)}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      toast.success("Word file downloaded. Open it to edit + rearrange.");
+    } catch (err) {
+      toast.error("Failed to generate Word file. Save all sections and try again.");
+      console.warn("[DPR DOCX] download error", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={handleClick}
+      disabled={loading}
+      title="Download the DPR as an editable Word document — rearrange + rewrite before submission."
+    >
+      {loading ? (
+        <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+      ) : (
+        <Download className="mr-1 h-4 w-4" />
+      )}
+      {loading ? "Preparing…" : "Export as Word"}
+    </Button>
+  );
+}
+
 // ── Wizard shell layout ─────────────────────────────────────────────────────
 
 export default function DprWizardLayout({ children }: { children: React.ReactNode }) {
@@ -541,6 +596,7 @@ export default function DprWizardLayout({ children }: { children: React.ReactNod
             </Link>
           </Button>
           <PreviewPdfButton uuid={uuid} />
+          <DownloadDocxButton uuid={uuid} title={project?.title} />
           <WizardRefreshButton />
           <SaveIndicator />
         </div>
