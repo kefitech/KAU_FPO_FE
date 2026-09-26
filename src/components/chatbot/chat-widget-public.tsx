@@ -48,13 +48,45 @@ const PALETTE = {
   muted:     "#6b7280",
 } as const;
 
+// Shared localStorage key with the portal widget so a user who logs in mid-
+// session keeps the same conversation (BE handles the anonymous→auth upgrade).
+const SESSION_STORAGE_KEY = "kau_chatbot_session_id";
+
 export function ChatWidgetPublic() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [sessionId, setSessionId] = useState<string>("");
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Restore session_id + history on first open. Runs at most once per
+  // component mount; subsequent opens reuse in-memory state.
+  useEffect(() => {
+    if (!open) return;
+    if (typeof window === "undefined") return;
+    const stored = window.localStorage.getItem(SESSION_STORAGE_KEY) ?? "";
+    if (!stored || stored === sessionId) return;
+
+    setSessionId(stored);
+    chatbotApi
+      .history(stored)
+      .then((res) => {
+        if (res.messages.length === 0) return;
+        setMessages([
+          WELCOME,
+          ...res.messages.map((m, i) => ({
+            id: `${m.role}-${i}-${m.created_at}`,
+            role: m.role,
+            text: m.content,
+          })),
+        ]);
+      })
+      .catch(() => {
+        // Non-fatal — bad session_id, network hiccup. Widget still works.
+      });
+  }, [open, sessionId]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -71,7 +103,14 @@ export function ChatWidgetPublic() {
     setLoading(true);
 
     try {
-      const res = await chatbotApi.send(text, pathname ?? "/");
+      const res = await chatbotApi.send(text, pathname ?? "/", sessionId);
+      // First send returns a server-minted session_id — persist for future.
+      if (res.session_id && res.session_id !== sessionId) {
+        setSessionId(res.session_id);
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem(SESSION_STORAGE_KEY, res.session_id);
+        }
+      }
       setMessages((prev) => [
         ...prev,
         { id: `a-${Date.now()}`, role: "assistant", text: res.reply, sources: res.sources },
@@ -87,6 +126,25 @@ export function ChatWidgetPublic() {
       ]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const resetConversation = async () => {
+    if (loading) return;
+    try {
+      const res = await chatbotApi.reset();
+      setSessionId(res.session_id);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(SESSION_STORAGE_KEY, res.session_id);
+      }
+      setMessages([WELCOME]);
+    } catch {
+      // Ignore — local reset still useful even if the network call fails.
+      setSessionId("");
+      if (typeof window !== "undefined") {
+        window.localStorage.removeItem(SESSION_STORAGE_KEY);
+      }
+      setMessages([WELCOME]);
     }
   };
 
@@ -264,9 +322,21 @@ export function ChatWidgetPublic() {
               <span style={{ fontSize: 18 }}>🌾</span>
               <span style={{ fontWeight: 600, fontSize: 15 }}>KAU-FPO Assistant</span>
             </div>
-            <button type="button" onClick={() => setOpen(false)} className="kau-chat-close" aria-label="Close assistant">
-              ✕
-            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <button
+                type="button"
+                onClick={resetConversation}
+                disabled={loading}
+                className="kau-chat-close"
+                aria-label="Reset conversation"
+                title="Reset conversation"
+              >
+                ↻
+              </button>
+              <button type="button" onClick={() => setOpen(false)} className="kau-chat-close" aria-label="Close assistant">
+                ✕
+              </button>
+            </div>
           </div>
 
           <div ref={scrollRef} className="kau-chat-body">
