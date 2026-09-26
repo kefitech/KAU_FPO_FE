@@ -129,7 +129,10 @@ export function DataTableToolbar<TData>({
             onChange={(e) => onFilter?.(filter.key, e.target.value)}
             className="h-9 flex-1 min-w-[110px] sm:flex-none sm:min-w-[140px] rounded-md border bg-background px-3 text-foreground text-sm shadow-xs focus:outline-none focus:ring-1 focus:ring-ring"
           >
-            <option value="">{filter.label}</option>
+            {/* Heading shown as the placeholder only — not a pickable item; "Clear" resets filters */}
+            <option value="" disabled hidden>
+              {filter.label}
+            </option>
             {(filter.options ?? []).map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}

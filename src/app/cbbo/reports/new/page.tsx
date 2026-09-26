@@ -73,7 +73,7 @@ export default function NewCBBOReportPage() {
     },
     onError: (error: unknown) => {
       const msg = (error as { data?: { message?: string } })?.data?.message;
-      toast.error(msg ?? (t.toast_save_failed ?? "Failed to save report"));
+      toast.error(msg ?? t.toast_save_failed ?? "Failed to save report");
     },
   });
 
@@ -110,12 +110,19 @@ export default function NewCBBOReportPage() {
                 <FieldLabel htmlFor="fpo-id">
                   {t.field_fpo ?? "FPO"} <span className="text-destructive">*</span>
                 </FieldLabel>
+                {/* Preset FPO (from the FPO detail page) is only a default — it can be cleared/changed.
+                    Remount once options load so the preset's label is picked up. */}
                 <SearchableSelect
+                  key={fpoOptions.length}
                   value={fpoId}
                   onChange={setFpoId}
                   options={fpoOptions}
-                  placeholder={fposLoading ? (t.placeholder_fpo_loading ?? "Loading FPOs...") : (t.placeholder_fpo_search ?? "Search your assigned FPOs...")}
-                  disabled={!!presetFpoId || fposLoading}
+                  placeholder={
+                    fposLoading
+                      ? (t.placeholder_fpo_loading ?? "Loading FPOs...")
+                      : (t.placeholder_fpo_search ?? "Search your assigned FPOs...")
+                  }
+                  disabled={fposLoading}
                 />
                 {fpo && (
                   <p className="mt-1 text-muted-foreground text-xs">

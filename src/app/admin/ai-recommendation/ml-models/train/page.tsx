@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { X } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -28,6 +29,14 @@ export default function TrainMlModelPage() {
   const queryClient = useQueryClient();
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function clearFile() {
+    setFile(null);
+    setFileError(null);
+    // Reset the native input too, so re-picking the same file still fires onChange
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
 
   const {
     control,
@@ -102,16 +111,30 @@ export default function TrainMlModelPage() {
                   <FieldLabel htmlFor="dataset_file">
                     Dataset CSV <span className="text-destructive">*</span>
                   </FieldLabel>
-                  <input
-                    id="dataset_file"
-                    type="file"
-                    accept=".csv"
-                    onChange={(e) => {
-                      setFile(e.target.files?.[0] ?? null);
-                      setFileError(null);
-                    }}
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1.5 text-sm shadow-xs file:mr-3 file:rounded file:border-0 file:bg-muted file:px-2 file:py-1 file:text-sm"
-                  />
+                  <div className="relative">
+                    <input
+                      ref={fileInputRef}
+                      id="dataset_file"
+                      type="file"
+                      accept=".csv"
+                      onChange={(e) => {
+                        setFile(e.target.files?.[0] ?? null);
+                        setFileError(null);
+                      }}
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1.5 pr-9 text-sm shadow-xs file:mr-3 file:rounded file:border-0 file:bg-muted file:px-2 file:py-1 file:text-sm"
+                    />
+                    {file && (
+                      <button
+                        type="button"
+                        onClick={clearFile}
+                        aria-label="Remove selected file"
+                        title="Remove file"
+                        className="absolute top-1/2 right-2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
                   {fileError && <p className="text-destructive text-sm">{fileError}</p>}
                   <p className="text-muted-foreground text-xs">
                     Required columns and known zone values are checked before anything is queued — a missing column is
