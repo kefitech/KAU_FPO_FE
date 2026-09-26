@@ -2,33 +2,23 @@
 
 import { useEffect, useState } from "react";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 
 import { useQuery } from "@tanstack/react-query";
 import { AlertCircle, CheckCircle, FileWarning, LayoutDashboard, ShieldOff, Users } from "lucide-react";
-import {
-  Bar,
-  BarChart,
-  Cell,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { toast } from "sonner";
 
-import dynamic from "next/dynamic";
-
 import { adminDashboardApi } from "@/app/admin/_api/dashboard";
-import { FpoReportCard } from "./_components/fpo-report-card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { translationsApi } from "@/lib/api/translations";
 import { useAuthStore } from "@/stores/auth-store";
 import { useLocaleStore } from "@/stores/locale-store";
+
+import { FpoReportCard } from "./_components/fpo-report-card";
 
 type T = Record<string, string>;
 
@@ -41,24 +31,24 @@ const KeralaDistrictMap = dynamic(
 
 function getStatusConfig(t: T): Record<string, { label: string; color: string }> {
   return {
-    draft:        { label: t.status_draft         ?? "Draft",         color: "#94a3b8" },
-    submitted:    { label: t.status_submitted      ?? "Submitted",     color: "#3b82f6" },
-    under_review: { label: t.status_under_review   ?? "Under Review",  color: "#f97316" },
-    info_required:{ label: t.status_info_required  ?? "Info Required", color: "#eab308" },
-    approved:     { label: t.status_approved       ?? "Approved",      color: "#0ea5e9" },
-    rejected:     { label: t.status_rejected       ?? "Rejected",      color: "#ef4444" },
-    suspended:    { label: t.status_suspended      ?? "Suspended",     color: "#7f1d1d" },
-    claimed:      { label: t.status_claimed        ?? "Claimed",       color: "#6E18D9" },
+    draft: { label: t.status_draft ?? "Draft", color: "#94a3b8" },
+    submitted: { label: t.status_submitted ?? "Submitted", color: "#3b82f6" },
+    under_review: { label: t.status_under_review ?? "Under Review", color: "#f97316" },
+    info_required: { label: t.status_info_required ?? "Info Required", color: "#eab308" },
+    approved: { label: t.status_approved ?? "Approved", color: "#0ea5e9" },
+    rejected: { label: t.status_rejected ?? "Rejected", color: "#ef4444" },
+    suspended: { label: t.status_suspended ?? "Suspended", color: "#7f1d1d" },
+    claimed: { label: t.status_claimed ?? "Claimed", color: "#6E18D9" },
   };
 }
 
 function getTierConfig(t: T): Record<string, { label: string; color: string }> {
   return {
-    A:            { label: t.tier_a            ?? "Tier A",        color: "#0ea5e9" },
-    B:            { label: t.tier_b            ?? "Tier B",        color: "#3b82f6" },
-    C:            { label: t.tier_c            ?? "Tier C",        color: "#eab308" },
-    D:            { label: t.tier_d            ?? "Tier D",        color: "#f97316" },
-    not_assessed: { label: t.tier_not_assessed ?? "Not Assessed",  color: "#94a3b8" },
+    A: { label: t.tier_a ?? "Tier A", color: "#0ea5e9" },
+    B: { label: t.tier_b ?? "Tier B", color: "#3b82f6" },
+    C: { label: t.tier_c ?? "Tier C", color: "#eab308" },
+    D: { label: t.tier_d ?? "Tier D", color: "#f97316" },
+    not_assessed: { label: t.tier_not_assessed ?? "Not Assessed", color: "#94a3b8" },
   };
 }
 
@@ -73,12 +63,12 @@ function formatRole(role: string) {
 type StatCardVariant = "blue" | "purple" | "green" | "amber" | "red" | "gray";
 
 const CARD_VARIANTS: Record<StatCardVariant, string> = {
-  blue:   "from-blue-500 to-indigo-600",
+  blue: "from-blue-500 to-indigo-600",
   purple: "from-violet-500 to-purple-600",
-  green:  "from-emerald-500 to-green-600",
-  amber:  "from-amber-400 to-orange-500",
-  red:    "from-red-500 to-rose-600",
-  gray:   "from-slate-400 to-slate-500",
+  green: "from-emerald-500 to-green-600",
+  amber: "from-amber-400 to-orange-500",
+  red: "from-red-500 to-rose-600",
+  gray: "from-slate-400 to-slate-500",
 };
 
 function StatCard({
@@ -95,7 +85,9 @@ function StatCard({
   description?: string;
 }) {
   return (
-    <div className={`relative overflow-hidden rounded-xl bg-gradient-to-br ${CARD_VARIANTS[variant]} p-5 text-white shadow-sm`}>
+    <div
+      className={`relative overflow-hidden rounded-xl bg-gradient-to-br ${CARD_VARIANTS[variant]} p-5 text-white shadow-sm`}
+    >
       <div className="pointer-events-none absolute -right-5 -top-5 h-24 w-24 rounded-full bg-white/10" />
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -127,7 +119,6 @@ export default function AdminDashboardPage() {
   const [t, setT] = useState<T>({});
   const [translationsLoading, setTranslationsLoading] = useState(true);
 
-
   useEffect(() => {
     setTranslationsLoading(true);
     translationsApi
@@ -138,7 +129,7 @@ export default function AdminDashboardPage() {
           ...(data.common ?? {}),
           ...(data.fpo_report ?? {}),
           ...(data.admin_dashboard ?? {}),
-        })
+        }),
       )
       .catch(() => undefined)
       .finally(() => setTranslationsLoading(false));
@@ -157,19 +148,17 @@ export default function AdminDashboardPage() {
       sessionStorage.removeItem("show_welcome");
       const fullName = user ? `${user.first_name} ${user.last_name}`.trim() : "there";
       const role = user?.role ? formatRole(user.role) : null;
-      const initials = user
-        ? `${user.first_name[0] ?? ""}${user.last_name[0] ?? ""}`.toUpperCase()
-        : "U";
+      const initials = user ? `${user.first_name[0] ?? ""}${user.last_name[0] ?? ""}`.toUpperCase() : "U";
       toast.custom(
         () => (
           <div className="flex w-80 items-center gap-3 rounded-xl border bg-background px-4 py-3 shadow-lg">
             <Avatar className="h-10 w-10 shrink-0">
-              <AvatarFallback className="bg-green-100 font-semibold text-green-700 text-sm">
-                {initials}
-              </AvatarFallback>
+              <AvatarFallback className="bg-green-100 font-semibold text-green-700 text-sm">{initials}</AvatarFallback>
             </Avatar>
             <div className="flex flex-col">
-              <p className="font-semibold text-foreground text-sm">{(t.welcome_msg ?? "Welcome back, {name}!").replace("{name}", fullName)}</p>
+              <p className="font-semibold text-foreground text-sm">
+                {(t.welcome_msg ?? "Welcome back, {name}!").replace("{name}", fullName)}
+              </p>
               {role && <p className="text-muted-foreground text-xs">{role}</p>}
             </div>
           </div>
@@ -177,12 +166,12 @@ export default function AdminDashboardPage() {
         { duration: 4000 },
       );
     }
-  }, [user, translationsLoading]);
+  }, [user, translationsLoading, t.welcome_msg]);
 
   const stats = data;
 
   const STATUS_CONFIG = getStatusConfig(t);
-  const TIER_CONFIG   = getTierConfig(t);
+  const TIER_CONFIG = getTierConfig(t);
 
   // ── Status donut data ──────────────────────────────────────────────────────
   const statusData = stats
@@ -229,7 +218,6 @@ export default function AdminDashboardPage() {
       ].filter((i) => i.count > 0)
     : [];
 
-
   if (translationsLoading) {
     return (
       <div className="flex flex-col gap-6 py-6">
@@ -260,8 +248,20 @@ export default function AdminDashboardPage() {
       <div className="flex items-center gap-2">
         <LayoutDashboard className="h-5 w-5 text-muted-foreground" />
         <div>
-          <h1 className="font-bold text-2xl">{t.page_title ?? "Admin Dashboard"}</h1>
-          <p className="text-muted-foreground text-sm">{t.page_description ?? "FPO platform overview"}</p>
+          {/* Sub-admins share this page; their stats are already scoped to assigned FPOs */}
+          {user?.role === "sub_admin" ? (
+            <>
+              <h1 className="font-bold text-2xl">{t.page_title_sub_admin ?? "Sub-Admin Dashboard"}</h1>
+              <p className="text-muted-foreground text-sm">
+                {t.page_description_sub_admin ?? "Overview of your assigned FPOs"}
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 className="font-bold text-2xl">{t.page_title ?? "Admin Dashboard"}</h1>
+              <p className="text-muted-foreground text-sm">{t.page_description ?? "FPO platform overview"}</p>
+            </>
+          )}
         </div>
       </div>
 
@@ -307,7 +307,9 @@ export default function AdminDashboardPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">{t.chart_reg_trend ?? "Registration Trend"}</CardTitle>
-            <p className="text-muted-foreground text-xs">{t.chart_reg_trend_subtitle ?? "Monthly FPO registrations — last 12 months"}</p>
+            <p className="text-muted-foreground text-xs">
+              {t.chart_reg_trend_subtitle ?? "Monthly FPO registrations — last 12 months"}
+            </p>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -322,13 +324,7 @@ export default function AdminDashboardPage() {
                     axisLine={false}
                     interval="preserveStartEnd"
                   />
-                  <YAxis
-                    tick={{ fontSize: 10 }}
-                    tickLine={false}
-                    axisLine={false}
-                    allowDecimals={false}
-                    width={24}
-                  />
+                  <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} width={24} />
                   <Tooltip
                     contentStyle={{ fontSize: 12, borderRadius: 8 }}
                     formatter={(v) => [v ?? 0, "Registrations"] as [number, string]}
@@ -375,10 +371,7 @@ export default function AdminDashboardPage() {
                 <div className="flex w-full flex-wrap justify-center gap-x-4 gap-y-1.5">
                   {statusData.map((s) => (
                     <div key={s.name} className="flex items-center gap-1.5">
-                      <span
-                        className="h-2.5 w-2.5 shrink-0 rounded-full"
-                        style={{ background: s.color }}
-                      />
+                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: s.color }} />
                       <span className="text-muted-foreground text-xs">
                         {s.name} ({s.value})
                       </span>
@@ -393,14 +386,15 @@ export default function AdminDashboardPage() {
 
       {/* ── Row 3: Left (Tier + Actions) | Right (Map) ───────────────────── */}
       <div className="grid gap-6 lg:grid-cols-2 items-start">
-
         {/* Left column: Tier Distribution + Action Required stacked */}
         <div className="flex flex-col gap-6">
           {/* Tier bar chart */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base">{t.chart_tier_dist ?? "Tier Distribution"}</CardTitle>
-              <p className="text-muted-foreground text-xs">{t.chart_tier_subtitle ?? "Approved FPOs by performance tier"}</p>
+              <p className="text-muted-foreground text-xs">
+                {t.chart_tier_subtitle ?? "Approved FPOs by performance tier"}
+              </p>
             </CardHeader>
             <CardContent>
               {isLoading ? (
@@ -408,19 +402,8 @@ export default function AdminDashboardPage() {
               ) : (
                 <ResponsiveContainer width="100%" height={220}>
                   <BarChart data={tierData} barSize={40}>
-                    <XAxis
-                      dataKey="name"
-                      tick={{ fontSize: 11 }}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis
-                      tick={{ fontSize: 10 }}
-                      tickLine={false}
-                      axisLine={false}
-                      allowDecimals={false}
-                      width={24}
-                    />
+                    <XAxis dataKey="name" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                    <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} width={24} />
                     <Tooltip
                       contentStyle={{ fontSize: 12, borderRadius: 8 }}
                       formatter={(v) => [v ?? 0, "FPOs"] as [number, string]}
@@ -480,13 +463,12 @@ export default function AdminDashboardPage() {
         <Card className="overflow-hidden isolation-isolate">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">{t.chart_district_dist ?? "District Distribution"}</CardTitle>
-            <p className="text-muted-foreground text-xs">{t.chart_district_subtitle ?? "FPOs registered per district — hover for details"}</p>
+            <p className="text-muted-foreground text-xs">
+              {t.chart_district_subtitle ?? "FPOs registered per district — hover for details"}
+            </p>
           </CardHeader>
           <CardContent className="p-0">
-            <KeralaDistrictMap
-              data={stats?.district_distribution ?? []}
-              locale={locale}
-            />
+            <KeralaDistrictMap data={stats?.district_distribution ?? []} locale={locale} />
           </CardContent>
         </Card>
       </div>
