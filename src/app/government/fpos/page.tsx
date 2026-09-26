@@ -1,16 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+
 import { useRouter } from "next/navigation";
+
 import { useQuery } from "@tanstack/react-query";
-import { Search } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
+import { toast } from "sonner";
 
 import { govtFposApi } from "@/app/government/_api/fpos";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { govtReportsApi } from "@/app/government/_api/reports";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 
@@ -34,6 +37,24 @@ export default function GovernmentFPODirectoryPage() {
   const [tDistricts, setTDistricts] = useState<T>({});
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [exporting, setExporting] = useState<"excel" | "pdf" | null>(null);
+
+  async function handleExport(fileFormat: "excel" | "pdf") {
+    if (exporting) return;
+    setExporting(fileFormat);
+    try {
+      await govtReportsApi.downloadFpoSummary({ file_format: fileFormat });
+      toast.success(
+        fileFormat === "excel"
+          ? (t.toast_export_excel_success ?? "Excel exported successfully")
+          : (t.toast_export_pdf_success ?? "PDF exported successfully"),
+      );
+    } catch {
+      toast.error(t.toast_export_error ?? "Export failed. Please try again.");
+    } finally {
+      setExporting(null);
+    }
+  }
 
   useEffect(() => {
     translationsApi
@@ -69,9 +90,7 @@ export default function GovernmentFPODirectoryPage() {
   });
 
   const fpos = data?.data ?? [];
-  const statusOptions = Array.from(
-    new Map(fpos.map((f) => [f.status, f.status_display])).entries(),
-  );
+  const statusOptions = Array.from(new Map(fpos.map((f) => [f.status, f.status_display])).entries());
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -83,10 +102,12 @@ export default function GovernmentFPODirectoryPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={() => govtReportsApi.downloadFpoSummary({ file_format: "excel" })}>
+          <Button size="sm" variant="outline" disabled={exporting !== null} onClick={() => handleExport("excel")}>
+            {exporting === "excel" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {t.btn_export_excel ?? "Export Excel"}
           </Button>
-          <Button size="sm" variant="outline" onClick={() => govtReportsApi.downloadFpoSummary({ file_format: "pdf" })}>
+          <Button size="sm" variant="outline" disabled={exporting !== null} onClick={() => handleExport("pdf")}>
+            {exporting === "pdf" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {t.btn_export_pdf ?? "Export PDF"}
           </Button>
         </div>
@@ -149,7 +170,10 @@ export default function GovernmentFPODirectoryPage() {
                     {getDistrictLabel(f.district ?? undefined, f.district_display ?? undefined)} · {f.application_id}
                   </p>
                 </div>
-                <Badge variant="outline" className={STATUS_BADGE_STYLES[f.status] ?? "border-muted text-muted-foreground"}>
+                <Badge
+                  variant="outline"
+                  className={STATUS_BADGE_STYLES[f.status] ?? "border-muted text-muted-foreground"}
+                >
                   {getStatusLabel(f.status, f.status_display)}
                 </Badge>
               </button>
@@ -160,7 +184,10 @@ export default function GovernmentFPODirectoryPage() {
 
       {data?.meta?.pagination && (
         <p className="text-muted-foreground text-xs">
-          {(t.summary_count ?? "{count} total FPO(s) in your jurisdiction").replace("{count}", String(data.meta.pagination.total_count))}
+          {(t.summary_count ?? "{count} total FPO(s) in your jurisdiction").replace(
+            "{count}",
+            String(data.meta.pagination.total_count),
+          )}
         </p>
       )}
     </div>

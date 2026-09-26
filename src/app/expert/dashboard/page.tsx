@@ -86,7 +86,7 @@ export default function ExpertDashboardStatsPage() {
   return (
     <div className="flex flex-col gap-6 p-6">
       <div>
-        <h1 className="font-bold text-2xl">{t.page_title ?? "Expert Dashboard"}</h1>
+        <h1 className="font-bold text-3xl">{t.dashboard_heading ?? "Dashboard"}</h1>
         <p className="text-muted-foreground">
           {t.page_description ?? "Track your booking requests across every status"}
         </p>
