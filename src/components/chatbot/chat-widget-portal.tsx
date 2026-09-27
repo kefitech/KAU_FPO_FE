@@ -209,11 +209,9 @@ export function ChatWidgetPortal() {
                   )}
                 >
                   <p className="whitespace-pre-wrap">{m.text}</p>
-                  {m.sources && m.sources.length > 0 && (
-                    <p className="mt-1 text-[10px] text-muted-foreground italic">
-                      Source: {m.sources.map((s) => s.topic).join(", ")}
-                    </p>
-                  )}
+                  {/* Source citations intentionally hidden from the UI — internal KB
+                      topic names read as debug output to end users. Sources are still
+                      returned by the API and visible in DevTools. KAU 2026-09-27. */}
                 </div>
                 {m.role === "user" && (
                   <div className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-200 text-slate-700">

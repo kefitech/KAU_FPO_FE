@@ -344,11 +344,11 @@ export function ChatWidgetPublic() {
               <div key={m.id} className={`kau-chat-row ${m.role}`}>
                 <div className={`kau-chat-bubble ${m.role === "user" ? "user" : "bot"}`}>
                   <div>{m.text}</div>
-                  {m.sources && m.sources.length > 0 && (
-                    <div className="kau-chat-source">
-                      Source: {m.sources.map((s) => s.topic).join(", ")}
-                    </div>
-                  )}
+                  {/* Source citations intentionally hidden from the UI — internal KB
+                      topic names ("Public market hub", "How to register an FPO") read
+                      as debug output to end users. Sources are still returned by the
+                      API and visible in DevTools for testers who need to trace the
+                      answer's provenance. KAU 2026-09-27. */}
                 </div>
               </div>
             ))}
