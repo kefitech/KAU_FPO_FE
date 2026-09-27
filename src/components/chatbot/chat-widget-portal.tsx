@@ -207,6 +207,8 @@ export function ChatWidgetPortal() {
                     "max-w-[80%] rounded-lg px-3 py-2 text-sm",
                     m.role === "user" ? "bg-green-600 text-white" : "bg-muted text-foreground",
                   )}
+                  data-role={m.role}
+                  data-testid={`chat-bubble-${m.role}`}
                 >
                   <p className="whitespace-pre-wrap">{m.text}</p>
                   {/* Source citations intentionally hidden from the UI — internal KB

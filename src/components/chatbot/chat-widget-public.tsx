@@ -342,7 +342,11 @@ export function ChatWidgetPublic() {
           <div ref={scrollRef} className="kau-chat-body">
             {messages.map((m) => (
               <div key={m.id} className={`kau-chat-row ${m.role}`}>
-                <div className={`kau-chat-bubble ${m.role === "user" ? "user" : "bot"}`}>
+                <div
+                  className={`kau-chat-bubble ${m.role === "user" ? "user" : "bot"}`}
+                  data-role={m.role}
+                  data-testid={`chat-bubble-${m.role}`}
+                >
                   <div>{m.text}</div>
                   {/* Source citations intentionally hidden from the UI — internal KB
                       topic names ("Public market hub", "How to register an FPO") read
