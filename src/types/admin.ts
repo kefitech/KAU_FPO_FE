@@ -685,6 +685,18 @@ export interface AdminQuickLink {
   created_at: string;
 }
 
+// ─── Site Content — KVK Links (Krishi Vigyan Kendra) ──────────────────────────
+
+export interface AdminKVKLink {
+  id: number;
+  name: string;
+  url: string;
+  logo_url: string | null;
+  order: number;
+  is_active: boolean;
+  created_at: string;
+}
+
 // ─── Site Content — Partners ──────────────────────────────────────────────────
 
 export interface AdminPartner {

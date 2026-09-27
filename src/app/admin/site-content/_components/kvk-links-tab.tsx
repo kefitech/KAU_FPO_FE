@@ -1,0 +1,520 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  ExternalLink,
+  Eye,
+  EyeOff,
+  ImageIcon,
+  Link2,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Trash2,
+  X,
+} from "lucide-react";
+import { toast } from "sonner";
+import { z } from "zod";
+
+import { kvkLinksApi } from "@/app/admin/_api/kvk-links";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useConfirmStore } from "@/stores/confirm-store";
+import type { AdminKVKLink } from "@/types/admin";
+
+type T = Record<string, string>;
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function LogoThumb({ logo_url, name }: { logo_url: string | null; name: string }) {
+  if (logo_url) {
+    return <img src={logo_url} alt={name} className="h-8 w-8 rounded object-contain bg-muted" />;
+  }
+  return (
+    <div className="h-8 w-8 rounded bg-muted flex items-center justify-center">
+      <Link2 className="h-4 w-4 text-muted-foreground" />
+    </div>
+  );
+}
+
+// ─── Link Validation ────────────────────────────────────────────────────────
+
+const urlSchema = z
+  .string()
+  .trim()
+  .min(1, "URL is required")
+  .refine(
+    (value) => {
+      try {
+        const parsed = new URL(value);
+        return ["http:", "https:"].includes(parsed.protocol);
+      } catch {
+        return false;
+      }
+    },
+    { message: "URL must start with http:// or https://" },
+  );
+
+// ─── KVK Link Dialog ────────────────────────────────────────────────────────
+
+function KVKLinkDialog({
+  open,
+  onOpenChange,
+  editing,
+  onSuccess,
+  t,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  editing: AdminKVKLink | null;
+  onSuccess: () => void;
+  t:T;
+}) {
+  const [name, setName] = useState("");
+  const [url, setUrl] = useState("");
+  const [urlError, setUrlError] = useState<string | null>(null);
+  const [logo, setLogo] = useState<File | null>(null);
+  const [logoError, setLogoError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setLogo(null);
+    setLogoError(null);
+    setUrlError(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (editing) {
+      setName(editing.name);
+      setUrl(editing.url);
+    } else {
+      setName("");
+      setUrl("");
+    }
+  }, [open, editing]);
+
+  const validateUrl = (value: string) => {
+    const result = urlSchema.safeParse(value);
+    if (result.success) return null;
+    const issue = result.error.issues[0];
+    if (issue.code === "too_small") return t.err_url_required ?? "URL is required";
+    return t.err_url_protocol ?? "URL must start with http:// or https://";
+  };
+
+  const ALLOWED_LOGO_TYPES = ["image/jpeg", "image/png", "image/webp"];
+  const MAX_LOGO_SIZE = 5 * 1024 * 1024; // 5 MB, matches backend limit
+  const validateLogo = (file: File): string | null => {
+    if (!ALLOWED_LOGO_TYPES.includes(file.type)) {
+      return t.err_logo_type ?? "Only JPG, PNG or WebP files are allowed.";
+    }
+    if (file.size > MAX_LOGO_SIZE) {
+      return t.err_logo_size ?? "Logo must not exceed 5 MB.";
+    }
+    return null;
+  };
+
+  const mutation = useMutation({
+    mutationFn: () => {
+      const formData = new FormData();
+      formData.append("name", name.trim());
+      formData.append("url", url.trim());
+      formData.append("is_active", "true");
+      if (logo) formData.append("logo", logo);
+      return editing ? kvkLinksApi.update(editing.id, formData) : kvkLinksApi.create(formData);
+    },
+    onSuccess: () => {
+      toast.success(editing ? (t.toast_updated ?? "KVK link updated.") : (t.toast_added ?? "KVK link added."));
+      onSuccess();
+      onOpenChange(false);
+    },
+    onError: () => toast.error(t.toast_save_failed ?? "Failed to save KVK link."),
+    });
+
+  const handleSubmit = () => {
+    const error = validateUrl(url);
+    if (error) {
+      setUrlError(error);
+      return;
+    }
+    if (logo) {
+      const logoErr = validateLogo(logo);
+      if (logoErr) {
+        setLogoError(logoErr);
+        return;
+      }
+    }
+    mutation.mutate();
+  };
+
+  const hasLogo = !!logo || !!(editing && editing.logo_url);
+  const canSubmit = !!name.trim() && !!url.trim() && !urlError && hasLogo;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{editing ? (t.dialog_edit_kvk_title ?? "Edit KVK Link") : (t.dialog_add_kvk_title ?? "Add KVK Link")}</DialogTitle>
+        </DialogHeader>
+
+        <div className="flex flex-col gap-4 py-2">
+          {/* Name */}
+          <div className="flex flex-col gap-1.5">
+            <p className="text-sm font-medium">
+              {t.field_name ?? "Name"} <span className="text-destructive">*</span>
+
+            </p>
+            <Input
+              id="kvk-link-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={t.field_link_name_placeholder ?? "e.g. Kerala Agricultural University"}
+
+            />
+          </div>
+
+          {/* URL */}
+          <div className="flex flex-col gap-1.5">
+            <p className="text-sm font-medium">
+              {t.field_url ?? "URL"} <span className="text-destructive">*</span>
+            </p>
+            <Input
+              id="kvk-link-url"
+              value={url}
+              onChange={(e) => {
+                setUrl(e.target.value);
+                if (urlError) setUrlError(null);
+              }}
+              onBlur={() => setUrlError(validateUrl(url))}
+              placeholder="https://example.com"
+              type="url"
+              aria-invalid={!!urlError}
+              className={urlError ? "border-destructive focus-visible:ring-destructive/20" : ""}
+            />
+            {urlError && <p className="text-xs text-destructive">{urlError}</p>}
+          </div>
+
+          {/* Logo */}
+          <div className="flex flex-col gap-1.5">
+            <p className="font-medium text-sm">
+              {t.field_logo ?? "Logo"} <span className="text-destructive">*</span>
+            </p>
+
+            {/* Existing logo (edit, no replacement yet) */}
+            {editing && !logo && (
+              <div className="flex items-center gap-3 rounded-md border bg-muted/40 p-2">
+                {editing.logo_url ? (
+                  <img
+                    src={editing.logo_url}
+                    alt="logo"
+                    className="h-10 w-10 rounded object-contain bg-muted shrink-0"
+                  />
+                ) : (
+                  <div className="h-10 w-10 rounded bg-muted flex items-center justify-center shrink-0">
+                    <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                )}
+                <div className="flex flex-col gap-1 min-w-0 flex-1">
+                  <span className="text-xs text-muted-foreground">
+                    {editing.logo_url ? (t.field_current_logo ?? "Current logo") : (t.field_no_logo ?? "No logo set")}
+                  </span>
+                  <label className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer w-fit">
+                    {editing.logo_url ? (t.action_replace ?? "Replace") : (t.action_upload_logo ?? "Upload logo")}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] ?? null;
+                        if (file) {
+                          const err = validateLogo(file);
+                          setLogoError(err);
+                          setLogo(err ? null : file);
+                        } else {
+                          setLogo(null);
+                          setLogoError(null);
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {/* Newly selected logo */}
+            {logo && (
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-3 rounded-md border bg-muted/40 p-2">
+                  <img
+                    src={URL.createObjectURL(logo)}
+                    alt="preview"
+                    className="h-10 w-10 rounded object-contain bg-muted shrink-0"
+                  />
+                  <div className="flex flex-col gap-1 w-0 flex-1">
+                    <span className="text-sm text-foreground truncate">{logo.name}</span>
+                    <span className="text-xs text-muted-foreground">{formatFileSize(logo.size)}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLogo(null);
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                    className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                  >
+                    {editing ? <span className="text-xs">{t.action_cancel ?? "Cancel"}</span> : <X className="h-4 w-4" />}
+                  </button>
+                </div>
+                {editing && (
+                  <p className="text-xs text-muted-foreground">
+                    {t.logo_replace_hint ?? "This will replace the existing logo. Click Cancel to keep the original."}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* File picker (add mode only) */}
+            {!editing && !logo && (
+              <Input
+                id="kvk-link-logo"
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] ?? null;
+                  if (file) {
+                    const err = validateLogo(file);
+                    setLogoError(err);
+                    setLogo(err ? null : file);
+                  } else {
+                    setLogo(null);
+                    setLogoError(null);
+                  }
+                }}
+              />
+            )}
+            <p className="text-xs text-muted-foreground">{t.file_type_hint_plain ?? "JPG, PNG, or WebP"}</p>
+            {logoError && <p className="text-xs text-destructive">{logoError}</p>}
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={mutation.isPending}>
+            {t.action_cancel ?? "Cancel"}
+          </Button>
+          <Button onClick={handleSubmit} disabled={!canSubmit || mutation.isPending}>
+            {mutation.isPending ? (t.action_saving ?? "Saving…") : editing ? (t.action_save_changes ?? "Save Changes") : (t.action_add_link ?? "Add Link")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── KVK Links Tab ──────────────────────────────────────────────────────────
+
+export function KVKLinksTab({ t = {} }: { t?: T }) {
+  const queryClient = useQueryClient();
+  const confirm = useConfirmStore((s) => s.confirm);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<AdminKVKLink | null>(null);
+
+  const {
+    data: links = [],
+    isLoading,
+    isFetching,
+    refetch,
+  } = useQuery({
+    queryKey: ["admin-kvk-links"],
+    queryFn: kvkLinksApi.getAll,
+    staleTime: 30_000,
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: ({ id, active }: { id: number; active: boolean }) =>
+      active ? kvkLinksApi.activate(id) : kvkLinksApi.deactivate(id),
+    onSuccess: () => {
+      toast.success(t.toast_link_updated ?? "KVK link updated.");
+      queryClient.invalidateQueries({ queryKey: ["admin-kvk-links"] });
+    },
+    onError: () => toast.error(t.toast_link_update_failed ?? "Failed to update KVK link."),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => kvkLinksApi.remove(id),
+    onSuccess: () => {
+      toast.success(t.toast_link_deleted ?? "KVK link deleted.");
+      queryClient.invalidateQueries({ queryKey: ["admin-kvk-links"] });
+    },
+    onError: () => toast.error(t.toast_link_delete_failed ?? "Failed to delete KVK link."),
+  });
+
+  function handleDelete(link: AdminKVKLink) {
+    confirm({
+      title: t.kvk_delete_title ?? "Delete KVK Link",
+      description: (
+        t.link_delete_description ?? 'Are you sure you want to delete "{name}"? This cannot be undone.'
+      ).replace("{name}", link.name),
+      onConfirm: () => deleteMutation.mutateAsync(link.id),
+    });
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-base font-semibold">{t.kvk_section_title ?? "KVK Links"}</h2>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
+            <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => {
+              setEditing(null);
+              setDialogOpen(true);
+            }}
+          >
+            <Plus className="mr-1.5 h-4 w-4" />
+            {t.btn_add_link ?? "Add Link"}
+          </Button>
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className={`rounded-lg border transition-opacity ${isFetching && !isLoading ? "opacity-60" : ""}`}>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-10" />
+              <TableHead>{t.col_name ?? "Name"}</TableHead>
+              <TableHead>{t.col_url ?? "URL"}</TableHead>
+              <TableHead>{t.col_status ?? "Status"}</TableHead>
+              <TableHead className="w-12" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: skeleton
+                <TableRow key={i}>
+                  {Array.from({ length: 5 }).map((_, j) => (
+                    // biome-ignore lint/suspicious/noArrayIndexKey: skeleton
+                    <TableCell key={j}>
+                      <Skeleton className="h-4 w-full" />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : links.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="py-12 text-center text-muted-foreground text-sm">
+                  {t.empty_state_links ?? "No KVK links added yet."}
+                </TableCell>
+              </TableRow>
+            ) : (
+              links.map((link) => (
+                <TableRow key={link.id} className={!link.is_active ? "opacity-50" : ""}>
+                  <TableCell>
+                    <LogoThumb logo_url={link.logo_url} name={link.name} />
+                  </TableCell>
+                  <TableCell className="font-medium text-sm">{link.name}</TableCell>
+                  <TableCell>
+                    <a
+                      href={link.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors max-w-xs truncate"
+                    >
+                      {link.url}
+                      <ExternalLink className="h-3 w-3 shrink-0" />
+                    </a>
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant="secondary"
+                      className={
+                        link.is_active
+                          ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                          : "bg-muted text-muted-foreground"
+                      }
+                    >
+                      {link.is_active ? (t.badge_active ?? "Active") : (t.badge_inactive ?? "Inactive")}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="min-w-[190]">
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setEditing(link);
+                            setDialogOpen(true);
+                          }}
+                        >
+                          <Pencil className="mr-2 h-4 w-4" />
+                          {t.action_edit ?? "Edit"}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => toggleMutation.mutate({ id: link.id, active: !link.is_active })}
+                        >
+                          {link.is_active ? (
+                            <>
+                              <EyeOff className="mr-2 h-4 w-4" />
+                              {t.action_deactivate ?? "Deactivate"}
+                            </>
+                          ) : (
+                            <>
+                              <Eye className="mr-2 h-4 w-4" />
+                              {t.action_activate ?? "Activate"}
+                            </>
+                          )}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(link)}>
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          {t.action_delete ?? "Delete"}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      <KVKLinkDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        editing={editing}
+        onSuccess={() => queryClient.invalidateQueries({ queryKey: ["admin-kvk-links"] })}
+        t={t}
+      />
+    </div>
+  );
+}

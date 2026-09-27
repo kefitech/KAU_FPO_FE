@@ -27,6 +27,7 @@ import { GalleryTab } from "./_components/gallery-tab";
 import { NewsSourcesTab } from "./_components/news-sources-tab";
 import { PartnersTab } from "./_components/partners-tab";
 import { QuickLinksTab } from "./_components/quick-links-tab";
+import { KVKLinksTab } from "./_components/kvk-links-tab";
 import { TeamTab } from "./_components/team-tab";
 import { YoutubeTab } from "./_components/youtube-tab";
 
@@ -459,6 +460,7 @@ const TABS = [
   { key: "gallery", label: "Gallery" },
   { key: "team", label: "Team" },
   { key: "quick-links", label: "Quick Links" },
+  { key: "kvk-links", label: "KVK Links" },
   { key: "partners", label: "Partners" },
   { key: "news-sources", label: "News Sources" },
   { key: "youtube", label: "YouTube" },
@@ -473,6 +475,7 @@ const TAB_LABEL_KEYS: Record<string, string> = {
   gallery: "tab_gallery",
   team: "tab_team",
   "quick-links": "tab_quick_links",
+  "kvk-links": "tab_kvk_links",
   partners: "tab_partners",
   "news-sources": "tab_news_sources",
   youtube: "tab_youtube",
@@ -582,6 +585,7 @@ export default function SiteContentPage() {
           {tab === "gallery" && <GalleryTab t={t} />}
           {tab === "team" && <TeamTab t={t} />}
           {tab === "quick-links" && <QuickLinksTab t={t} />}
+          {tab === "kvk-links" && <KVKLinksTab t={t} />}
           {tab === "partners" && <PartnersTab t={t} />}
           {tab === "news-sources" && <NewsSourcesTab t={t} />}
           {tab === "youtube" && <YoutubeTab t={t} />}
