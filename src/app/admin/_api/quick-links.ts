@@ -23,4 +23,7 @@ export const quickLinksApi = {
 
   deactivate: (id: number): Promise<void> =>
     api.post(`/admin/quick-links/${id}/deactivate/`).then(() => undefined),
+
+  reorder: (items: { id: number; order: number }[]): Promise<void> =>
+    api.post("/admin/quick-links/reorder/", { items }).then(() => undefined),
 };

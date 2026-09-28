@@ -2,11 +2,30 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ExternalLink,
   Eye,
   EyeOff,
+  GripVertical,
   ImageIcon,
   Link2,
   MoreHorizontal,
@@ -330,6 +349,106 @@ function QuickLinkDialog({
   );
 }
 
+// ─── Sortable row ─────────────────────────────────────────────────────────────
+
+function SortableRow({
+  link,
+  t,
+  onEdit,
+  onToggle,
+  onDelete,
+}: {
+  link: AdminQuickLink;
+  t: T;
+  onEdit: (link: AdminQuickLink) => void;
+  onToggle: (link: AdminQuickLink) => void;
+  onDelete: (link: AdminQuickLink) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: link.id });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <TableRow ref={setNodeRef} style={style} className={!link.is_active ? "opacity-50" : ""}>
+      <TableCell className="w-8 p-2">
+        <button
+          type="button"
+          aria-label={t.action_reorder ?? "Drag to reorder"}
+          className="cursor-grab touch-none p-1 text-muted-foreground hover:text-foreground active:cursor-grabbing"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
+      </TableCell>
+      <TableCell>
+        <LogoThumb logo_url={link.logo_url} name={link.name} />
+      </TableCell>
+      <TableCell className="font-medium text-sm">{link.name}</TableCell>
+      <TableCell>
+        <a
+          href={link.url}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors max-w-xs truncate"
+        >
+          {link.url}
+          <ExternalLink className="h-3 w-3 shrink-0" />
+        </a>
+      </TableCell>
+      <TableCell>
+        <Badge
+          variant="secondary"
+          className={
+            link.is_active
+              ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+              : "bg-muted text-muted-foreground"
+          }
+        >
+          {link.is_active ? (t.badge_active ?? "Active") : (t.badge_inactive ?? "Inactive")}
+        </Badge>
+      </TableCell>
+      <TableCell>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-[190]">
+            <DropdownMenuItem onClick={() => onEdit(link)}>
+              <Pencil className="mr-2 h-4 w-4" />
+              {t.action_edit ?? "Edit"}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onToggle(link)}>
+              {link.is_active ? (
+                <>
+                  <EyeOff className="mr-2 h-4 w-4" />
+                  {t.action_deactivate ?? "Deactivate"}
+                </>
+              ) : (
+                <>
+                  <Eye className="mr-2 h-4 w-4" />
+                  {t.action_activate ?? "Activate"}
+                </>
+              )}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="text-destructive" onClick={() => onDelete(link)}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              {t.action_delete ?? "Delete"}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </TableCell>
+    </TableRow>
+  );
+}
+
+
 // ─── Quick Links Tab ──────────────────────────────────────────────────────────
 
 export function QuickLinksTab({ t = {} }: { t?: T }) {
@@ -368,6 +487,38 @@ export function QuickLinksTab({ t = {} }: { t?: T }) {
     onError: () => toast.error(t.toast_link_delete_failed ?? "Failed to delete quick link."),
   });
 
+  const reorderMutation = useMutation({
+    mutationFn: (items: { id: number; order: number }[]) => quickLinksApi.reorder(items),
+    onSuccess: () => {
+      toast.success(t.toast_link_reordered ?? "Order updated.");
+      queryClient.invalidateQueries({ queryKey: ["admin-quick-links"] });
+      queryClient.invalidateQueries({ queryKey: ["public-quick-links"] });
+    },
+    onError: () => {
+      toast.error(t.toast_link_reorder_failed ?? "Failed to save new order.");
+      queryClient.invalidateQueries({ queryKey: ["admin-quick-links"] });
+    },
+  });
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = links.findIndex((l) => l.id === active.id);
+    const newIndex = links.findIndex((l) => l.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reordered = arrayMove(links, oldIndex, newIndex);
+    // Optimistic cache update — repaint immediately, then persist.
+    queryClient.setQueryData<AdminQuickLink[]>(["admin-quick-links"], reordered);
+    reorderMutation.mutate(reordered.map((l, idx) => ({ id: l.id, order: idx })));
+  }
+
   function handleDelete(link: AdminQuickLink) {
     confirm({
       title: t.link_delete_title ?? "Delete Quick Link",
@@ -402,110 +553,62 @@ export function QuickLinksTab({ t = {} }: { t?: T }) {
 
       {/* Table */}
       <div className={`rounded-lg border transition-opacity ${isFetching && !isLoading ? "opacity-60" : ""}`}>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-10" />
-              <TableHead>{t.col_name ?? "Name"}</TableHead>
-              <TableHead>{t.col_url ?? "URL"}</TableHead>
-              <TableHead>{t.col_status ?? "Status"}</TableHead>
-              <TableHead className="w-12" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              Array.from({ length: 4 }).map((_, i) => (
-                // biome-ignore lint/suspicious/noArrayIndexKey: skeleton
-                <TableRow key={i}>
-                  {Array.from({ length: 5 }).map((_, j) => (
-                    // biome-ignore lint/suspicious/noArrayIndexKey: skeleton
-                    <TableCell key={j}>
-                      <Skeleton className="h-4 w-full" />
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : links.length === 0 ? (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+          onDragEnd={handleDragEnd}
+        >
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={5} className="py-12 text-center text-muted-foreground text-sm">
-                  {t.empty_state_links ?? "No quick links added yet."}
-                </TableCell>
+                <TableHead className="w-8" />
+                <TableHead className="w-10" />
+                <TableHead>{t.col_name ?? "Name"}</TableHead>
+                <TableHead>{t.col_url ?? "URL"}</TableHead>
+                <TableHead>{t.col_status ?? "Status"}</TableHead>
+                <TableHead className="w-12" />
               </TableRow>
-            ) : (
-              links.map((link) => (
-                <TableRow key={link.id} className={!link.is_active ? "opacity-50" : ""}>
-                  <TableCell>
-                    <LogoThumb logo_url={link.logo_url} name={link.name} />
-                  </TableCell>
-                  <TableCell className="font-medium text-sm">{link.name}</TableCell>
-                  <TableCell>
-                    <a
-                      href={link.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors max-w-xs truncate"
-                    >
-                      {link.url}
-                      <ExternalLink className="h-3 w-3 shrink-0" />
-                    </a>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="secondary"
-                      className={
-                        link.is_active
-                          ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                          : "bg-muted text-muted-foreground"
-                      }
-                    >
-                      {link.is_active ? (t.badge_active ?? "Active") : (t.badge_inactive ?? "Inactive")}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="min-w-[190]">
-                        <DropdownMenuItem
-                          onClick={() => {
-                            setEditing(link);
-                            setDialogOpen(true);
-                          }}
-                        >
-                          <Pencil className="mr-2 h-4 w-4" />
-                          {t.action_edit ?? "Edit"}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => toggleMutation.mutate({ id: link.id, active: !link.is_active })}
-                        >
-                          {link.is_active ? (
-                            <>
-                              <EyeOff className="mr-2 h-4 w-4" />
-                              {t.action_deactivate ?? "Deactivate"}
-                            </>
-                          ) : (
-                            <>
-                              <Eye className="mr-2 h-4 w-4" />
-                              {t.action_activate ?? "Activate"}
-                            </>
-                          )}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(link)}>
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          {t.action_delete ?? "Delete"}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                Array.from({ length: 4 }).map((_, i) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: skeleton
+                  <TableRow key={i}>
+                    {Array.from({ length: 6 }).map((_, j) => (
+                      // biome-ignore lint/suspicious/noArrayIndexKey: skeleton
+                      <TableCell key={j}>
+                        <Skeleton className="h-4 w-full" />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : links.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="py-12 text-center text-muted-foreground text-sm">
+                    {t.empty_state_links ?? "No quick links added yet."}
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ) : (
+                <SortableContext items={links.map((l) => l.id)} strategy={verticalListSortingStrategy}>
+                  {links.map((link) => (
+                    <SortableRow
+                      key={link.id}
+                      link={link}
+                      t={t}
+                      onEdit={(l) => {
+                        setEditing(l);
+                        setDialogOpen(true);
+                      }}
+                      onToggle={(l) => toggleMutation.mutate({ id: l.id, active: !l.is_active })}
+                      onDelete={handleDelete}
+                    />
+                  ))}
+                </SortableContext>
+              )}
+            </TableBody>
+          </Table>
+        </DndContext>
       </div>
 
       <QuickLinkDialog

@@ -682,6 +682,7 @@ export interface AdminQuickLink {
   url: string;
   logo_url: string | null;
   is_active: boolean;
+  order: number;
   created_at: string;
 }
 
