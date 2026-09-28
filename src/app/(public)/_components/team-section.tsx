@@ -21,15 +21,7 @@ interface TeamMember {
   is_patrons?: boolean;
 }
 
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase();
-}
+const DEFAULT_AVATAR = "/images/default-avatar.png";
 
 function MemberCard({ member }: { member: TeamMember }) {
   return (
@@ -46,40 +38,23 @@ function MemberCard({ member }: { member: TeamMember }) {
           margin: "0 auto",
         }}
       >
-        {member.photo_url ? (
-          // biome-ignore lint/performance/noImgElement: using next/image later
-          <img
-            src={member.photo_url}
-            alt={member.name}
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              objectPosition: "top",
-              borderRadius: "50%",
-              display: "block",
-              border: "5px solid var(--color-primary)",
-            }}
-          />
-        ) : (
-          <div
-            style={{
-              width: "100%",
-              height: "100%",
-              background: "var(--color-primary)",
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 48,
-              fontWeight: 700,
-              color: "#fff",
-              fontFamily: "var(--font-default)",
-            }}
-          >
-            {getInitials(member.name)}
-          </div>
-        )}
+        {/* biome-ignore lint/performance/noImgElement: using next/image later */}
+        <img
+          src={member.photo_url || DEFAULT_AVATAR}
+          alt={member.name}
+          onError={(e) => {
+            if (!e.currentTarget.src.endsWith(DEFAULT_AVATAR)) e.currentTarget.src = DEFAULT_AVATAR;
+          }}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            objectPosition: "top",
+            borderRadius: "50%",
+            display: "block",
+            border: "5px solid var(--color-primary)",
+          }}
+        />
       </div>
       <div
         className="info"
