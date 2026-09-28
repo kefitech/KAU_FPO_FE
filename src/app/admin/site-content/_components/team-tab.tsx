@@ -29,6 +29,8 @@ type T = Record<string, string>;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+const DEFAULT_AVATAR = "/images/default-avatar.png";
+
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -45,22 +47,16 @@ function MemberAvatar({
   size?: "sm" | "lg";
 }) {
   const dim = size === "lg" ? "h-20 w-20" : "h-14 w-14";
-  const text = size === "lg" ? "text-xl" : "text-base";
-  const initials = name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase();
 
-  if (photo_url) {
-    return <img src={photo_url} alt={name} className={`${dim} rounded-full object-cover ring-2 ring-border`} />;
-  }
   return (
-    <div className={`${dim} rounded-full bg-muted flex items-center justify-center ring-2 ring-border`}>
-      <span className={`${text} font-semibold text-muted-foreground`}>{initials || "?"}</span>
-    </div>
+    <img
+      src={photo_url || DEFAULT_AVATAR}
+      alt={name}
+      onError={(e) => {
+        if (!e.currentTarget.src.endsWith(DEFAULT_AVATAR)) e.currentTarget.src = DEFAULT_AVATAR;
+      }}
+      className={`${dim} rounded-full object-cover ring-2 ring-border`}
+    />
   );
 }
 
@@ -125,7 +121,7 @@ function TeamDialog({
     onError: () => toast.error(t.toast_save_failed ?? "Failed to save member."),
   });
 
-  const canSubmit = !!name.trim() && !!designation.trim() && !!section && (editing ? true : !!photo);
+  const canSubmit = !!name.trim() && !!designation.trim() && !!section;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -139,9 +135,7 @@ function TeamDialog({
         <div className="flex flex-col gap-4 py-2">
           {/* Photo */}
           <div className="flex flex-col gap-1.5">
-            <p className="text-sm font-medium">
-              {t.field_photo ?? "Photo"} {!editing && <span className="text-destructive">*</span>}
-            </p>
+            <p className="text-sm font-medium">{t.field_photo ?? "Photo"}</p>
             {/* Existing photo (edit, no replacement yet) */}
             {editing && !photo && (
               <div className="flex items-center gap-3 rounded-md border bg-muted/40 p-2">
