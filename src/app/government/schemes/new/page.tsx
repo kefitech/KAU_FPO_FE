@@ -163,7 +163,13 @@ export default function NewSchemePage() {
               </FieldGroup>
               <Field>
                 <FieldLabel htmlFor="objective">{t.field_objective ?? "Objective"}</FieldLabel>
-                <Textarea id="objective" value={objective} onChange={(e) => setObjective(e.target.value)} rows={2} />
+                <Textarea
+                  id="objective"
+                  value={objective}
+                  onChange={(e) => setObjective(e.target.value)}
+                  rows={2}
+                  className="max-h-32 overflow-y-auto"
+                />
               </Field>
               <Field data-invalid={!!errors.eligibility}>
                 <FieldLabel htmlFor="eligibility">{t.field_eligibility ?? "Eligibility"} *</FieldLabel>
@@ -176,6 +182,7 @@ export default function NewSchemePage() {
                   }}
                   placeholder={t.placeholder_eligibility ?? ""}
                   rows={2}
+                  className="max-h-32 overflow-y-auto"
                   aria-invalid={!!errors.eligibility}
                 />
                 {errors.eligibility && <FieldError errors={[{ message: errors.eligibility }]} />}
@@ -191,6 +198,7 @@ export default function NewSchemePage() {
                   }}
                   placeholder={t.placeholder_benefit_details ?? ""}
                   rows={2}
+                  className="max-h-32 overflow-y-auto"
                   aria-invalid={!!errors.benefit_details}
                 />
                 {errors.benefit_details && <FieldError errors={[{ message: errors.benefit_details }]} />}
@@ -205,6 +213,7 @@ export default function NewSchemePage() {
                     setErrors((p) => ({ ...p, application_process: undefined }));
                   }}
                   rows={2}
+                  className="max-h-32 overflow-y-auto"
                   aria-invalid={!!errors.application_process}
                 />
                 {errors.application_process && <FieldError errors={[{ message: errors.application_process }]} />}

@@ -23,6 +23,22 @@ type T = Record<string, string>;
 const MAX_PARTICIPANTS = 100000;
 const MAX_PARTICIPANTS_DIGITS = String(MAX_PARTICIPANTS).length;
 
+// FPO statuses that can have reports filed against them
+const SELECTABLE_FPO_STATUSES = new Set(["approved", "active"]);
+
+function isSelectableFpo(f: { status?: string | null }) {
+  return SELECTABLE_FPO_STATUSES.has(String(f.status ?? "").toLowerCase());
+}
+
+// Today's date in the user's local timezone, as YYYY-MM-DD
+function getLocalToday(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 // Fixed height with vertical scroll for long text
 const SCROLL_TEXTAREA_CLASS =
   "field-sizing-fixed min-h-24 max-h-48 resize-none overflow-y-auto whitespace-pre-wrap break-words";
@@ -49,6 +65,8 @@ export default function NewCBBOReportPage() {
   const [outcomes, setOutcomes] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const today = getLocalToday();
+
   useEffect(() => {
     translationsApi
       .getPublic(locale, "cbbo_reports_new,common")
@@ -63,7 +81,7 @@ export default function NewCBBOReportPage() {
     queryFn: () => cbboFposApi.getAll({ page: 1, page_size: 200 }),
   });
 
-  const fpoOptions = (assignedFpos?.data ?? []).map((f) => ({
+  const fpoOptions = (assignedFpos?.data ?? []).filter(isSelectableFpo).map((f) => ({
     value: String(f.id),
     label: `${f.name} (${f.district_display ?? f.district})`,
   }));
@@ -73,6 +91,8 @@ export default function NewCBBOReportPage() {
     queryFn: () => cbboFposApi.getById(Number(fpoId)),
     enabled: !!fpoId,
   });
+
+  const fpoNotSelectable = !!fpoId && !!fpo && !isSelectableFpo(fpo);
 
   const mutation = useMutation({
     mutationFn: (payload: {
@@ -116,6 +136,12 @@ export default function NewCBBOReportPage() {
 
     if (!fpoId) {
       newErrors.fpo_id = t.error_select_fpo ?? "Select an FPO";
+    } else if (fpoNotSelectable) {
+      newErrors.fpo_id = t.error_fpo_not_approved ?? "Reports can only be created for approved FPOs";
+    }
+
+    if (date > getLocalToday()) {
+      newErrors.date = t.error_date_future ?? "Date cannot be in the future";
     }
 
     if (activities.trim().length < 10) {
@@ -161,7 +187,7 @@ export default function NewCBBOReportPage() {
               <CardTitle className="text-base">{t.section_title ?? "Report Details"}</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
-              <Field data-invalid={!!errors.fpo_id}>
+              <Field data-invalid={!!errors.fpo_id || fpoNotSelectable}>
                 <FieldLabel htmlFor="fpo-id">
                   {t.field_fpo ?? "FPO"} <span className="text-destructive">*</span>
                 </FieldLabel>
@@ -184,15 +210,30 @@ export default function NewCBBOReportPage() {
                     {t.label_selected ?? "Selected"}: {fpo.name} ({fpo.district_display ?? fpo.district})
                   </p>
                 )}
+                {fpoNotSelectable && !errors.fpo_id && (
+                  <FieldError
+                    errors={[{ message: t.error_fpo_not_approved ?? "Reports can only be created for approved FPOs" }]}
+                  />
+                )}
                 {errors.fpo_id && <FieldError errors={[{ message: errors.fpo_id }]} />}
               </Field>
 
               <FieldGroup className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Field>
+                <Field data-invalid={!!errors.date}>
                   <FieldLabel htmlFor="report-date">
                     {t.field_date ?? "Date"} <span className="text-destructive">*</span>
                   </FieldLabel>
-                  <Input id="report-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+                  <Input
+                    id="report-date"
+                    type="date"
+                    value={date}
+                    max={today}
+                    onChange={(e) => {
+                      setDate(e.target.value);
+                      clearError("date");
+                    }}
+                  />
+                  {errors.date && <FieldError errors={[{ message: errors.date }]} />}
                 </Field>
 
                 <Field data-invalid={!!errors.participants_count}>
@@ -246,7 +287,7 @@ export default function NewCBBOReportPage() {
             <Button type="button" variant="outline" onClick={() => router.push("/cbbo/reports")}>
               {t.btn_cancel ?? "Cancel"}
             </Button>
-            <Button type="submit" disabled={mutation.isPending}>
+            <Button type="submit" disabled={mutation.isPending || fpoNotSelectable}>
               {mutation.isPending ? (t.btn_saving ?? "Saving...") : (t.btn_save ?? "Save Draft")}
             </Button>
           </div>

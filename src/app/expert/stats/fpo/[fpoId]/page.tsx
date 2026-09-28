@@ -1,10 +1,11 @@
 "use client";
+
 import { useState } from "react";
 
-import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
 
 import { type ExpertBooking, expertDashboardApi } from "@/app/expert/_api/dashboard";
@@ -23,6 +24,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function FpoDetailPage() {
+  const router = useRouter();
   const params = useParams();
   const fpoId = Number(params.fpoId);
   const queryClient = useQueryClient();
@@ -50,8 +52,8 @@ export default function FpoDetailPage() {
     onSuccess: () => {
       toast.success("Booking rejected");
       queryClient.invalidateQueries({ queryKey: ["expert-my-bookings"] });
-      setRejectDialog({ open: false, booking: null }); // 👈 add this line
-      setRejectReason(""); // 👈 add this line
+      setRejectDialog({ open: false, booking: null });
+      setRejectReason("");
     },
     onError: () => toast.error("Failed to reject booking"),
   });
@@ -61,8 +63,8 @@ export default function FpoDetailPage() {
     onSuccess: () => {
       toast.success("Booking cancelled");
       queryClient.invalidateQueries({ queryKey: ["expert-my-bookings"] });
-      setCancelDialog({ open: false, booking: null }); // 👈 add this
-      setCancelReason(""); // 👈 add this
+      setCancelDialog({ open: false, booking: null });
+      setCancelReason("");
     },
     onError: () => toast.error("Failed to cancel booking"),
   });
@@ -108,6 +110,19 @@ export default function FpoDetailPage() {
     }
     cancelMutation.mutate({ id: cancelDialog.booking.id, reason: trimmedReason });
   }
+
+  const backButton = (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="-ml-2 gap-1 self-start text-muted-foreground hover:text-foreground"
+      onClick={() => router.push("/expert/stats")}
+    >
+      <ChevronLeft className="h-4 w-4" />
+      Back
+    </Button>
+  );
+
   if (isLoading) {
     return <p className="text-muted-foreground text-sm">Loading...</p>;
   }
@@ -115,9 +130,7 @@ export default function FpoDetailPage() {
   if (fpoBookings.length === 0) {
     return (
       <div className="flex flex-col gap-4">
-        <Link href="/expert/dashboard" className="text-sm text-primary hover:underline">
-          ← Back to Dashboard
-        </Link>
+        {backButton}
         <p className="text-muted-foreground text-sm">No bookings found for this FPO.</p>
       </div>
     );
@@ -127,9 +140,7 @@ export default function FpoDetailPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <Link href="/expert/stats" className="text-sm text-primary hover:underline">
-        ← Back
-      </Link>
+      {backButton}
 
       <Card>
         <CardHeader>

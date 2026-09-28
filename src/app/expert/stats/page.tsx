@@ -231,11 +231,11 @@ export default function ExpertDashboardPage() {
             role="button"
             tabIndex={0}
             className="cursor-pointer transition-colors hover:bg-muted/50"
-            onClick={() => router.push(`/expert/dashboard/fpo/${first.fpo}`)}
+            onClick={() => router.push(`/expert/stats/fpo/${first.fpo}`)}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
-                router.push(`/expert/dashboard/fpo/${first.fpo}`);
+                router.push(`/expert/stats/fpo/${first.fpo}`);
               }
             }}
           >

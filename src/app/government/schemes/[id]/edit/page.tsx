@@ -1,7 +1,9 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
+
 import { useRouter } from "next/navigation";
+
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -134,26 +136,52 @@ export default function EditSchemePage({ params }: { params: Promise<{ id: strin
                     className="h-9 w-full rounded-md border bg-background px-3 text-sm"
                   >
                     {CATEGORIES.map((c) => (
-                      <option key={c.value} value={c.value}>{c.label}</option>
+                      <option key={c.value} value={c.value}>
+                        {c.label}
+                      </option>
                     ))}
                   </select>
                 </Field>
               </FieldGroup>
               <Field>
                 <FieldLabel htmlFor="objective">{t.field_objective ?? "Objective"}</FieldLabel>
-                <Textarea id="objective" value={objective} onChange={(e) => setObjective(e.target.value)} rows={2} />
+                <Textarea
+                  id="objective"
+                  value={objective}
+                  onChange={(e) => setObjective(e.target.value)}
+                  rows={2}
+                  className="max-h-32 overflow-y-auto"
+                />
               </Field>
               <Field>
                 <FieldLabel htmlFor="eligibility">{t.field_eligibility ?? "Eligibility"} *</FieldLabel>
-                <Textarea id="eligibility" value={eligibility} onChange={(e) => setEligibility(e.target.value)} rows={2} />
+                <Textarea
+                  id="eligibility"
+                  value={eligibility}
+                  onChange={(e) => setEligibility(e.target.value)}
+                  rows={2}
+                  className="max-h-32 overflow-y-auto"
+                />
               </Field>
               <Field>
                 <FieldLabel htmlFor="benefits">{t.field_benefit_details ?? "Benefit Details"} *</FieldLabel>
-                <Textarea id="benefits" value={benefitDetails} onChange={(e) => setBenefitDetails(e.target.value)} rows={2} />
+                <Textarea
+                  id="benefits"
+                  value={benefitDetails}
+                  onChange={(e) => setBenefitDetails(e.target.value)}
+                  rows={2}
+                  className="max-h-32 overflow-y-auto"
+                />
               </Field>
               <Field>
                 <FieldLabel htmlFor="process">{t.field_application_process ?? "Application Process"} *</FieldLabel>
-                <Textarea id="process" value={applicationProcess} onChange={(e) => setApplicationProcess(e.target.value)} rows={2} />
+                <Textarea
+                  id="process"
+                  value={applicationProcess}
+                  onChange={(e) => setApplicationProcess(e.target.value)}
+                  rows={2}
+                  className="max-h-32 overflow-y-auto"
+                />
               </Field>
             </CardContent>
           </Card>
