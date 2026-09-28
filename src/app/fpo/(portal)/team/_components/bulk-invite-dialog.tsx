@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2, Upload } from "lucide-react";
+import { Download, Plus, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -28,6 +28,21 @@ type RowErrors = Partial<Record<keyof MemberRow, string>>;
 type T = Record<string, string>;
 
 const emptyRow = (): MemberRow => ({ first_name: "", last_name: "", email: "", phone: "" });
+
+const TEMPLATE_FILENAME = "secondary_user_bulk_invite.csv";
+const TEMPLATE_HEADERS = ["first_name", "last_name", "email"];
+
+function downloadTemplate() {
+  const blob = new Blob([`${TEMPLATE_HEADERS.join(",")}\n`], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = TEMPLATE_FILENAME;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
 
 type Tab = "json" | "file";
 
@@ -295,15 +310,15 @@ export function BulkInviteDialog({ open, onOpenChange }: BulkInviteDialogProps) 
                   <br />
                   Optional: <span className="font-mono">phone</span> — Row 1 must be the header row
                 </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="mt-4"
-                  onClick={() => fileRef.current?.click()}
-                >
-                  Choose File
-                </Button>
+                <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                  <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
+                    Choose File
+                  </Button>
+                  <Button type="button" variant="ghost" size="sm" onClick={downloadTemplate}>
+                    <Download className="mr-1.5 h-3.5 w-3.5" />
+                    {t.bulk_invite_btn_download_template ?? "Download Template"}
+                  </Button>
+                </div>
                 <input
                   ref={fileRef}
                   type="file"

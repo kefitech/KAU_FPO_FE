@@ -1,25 +1,42 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { DetailModal } from "@/components/shared/detail-modal";
+
+import Link from "next/link";
+
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Package, Search } from "lucide-react";
-import Link from "next/link";
 
 import { type BuyerProduct, buyerProductsApi } from "@/app/buyer/_api/products";
 import { masterDataApi } from "@/app/fpo/_api/master-data";
-import { Button } from "@/components/ui/button";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
-import { InquiryDialog } from "@/components/ui/inquiry-dialog";
+import { DetailModal } from "@/components/shared/detail-modal";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { InquiryDialog } from "@/components/ui/inquiry-dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { toMediaUrl } from "@/lib/utils/media-url";
 import { translationsApi } from "@/lib/api/translations";
+import { toMediaUrl } from "@/lib/utils/media-url";
+import type { ProductStatus } from "@/types/fpo";
+import type { DataTableParams, PaginatedResponse } from "@/types/pagination";
 
 type T = Record<string, string>;
+
+/** A catalog product; `status` is only sent by the admin API (buyers only ever see active products). */
+type CatalogProduct = BuyerProduct & { status?: ProductStatus };
+
+type CatalogParams = DataTableParams & { commodity?: string };
+
+const STATUS_CLASSES: Record<ProductStatus, string> = {
+  draft:   "border-slate-200 bg-slate-50 text-slate-700",
+  active:  "border-green-200 bg-green-50 text-green-700",
+  sold:    "border-blue-200 bg-blue-50 text-blue-700",
+  expired: "border-red-200 bg-red-50 text-red-700",
+};
+
 function formatAvailability(from: string, until?: string | null): string {
   if (!from) return "";
   const dateOpts: Intl.DateTimeFormatOptions = { day: "numeric", month: "short" };
@@ -41,7 +58,17 @@ function formatAvailability(from: string, until?: string | null): string {
   return `${fromWithYear} – ${untilWithYear}`;
 }
 
-function ProductCard({ product, locale, t }: { product: BuyerProduct; locale: string; t: T }) {
+function ProductCard({
+  product,
+  locale,
+  t,
+  showInquire,
+}: {
+  product: CatalogProduct;
+  locale: string;
+  t: T;
+  showInquire: boolean;
+}) {
   const name = locale === "ml" ? product.name.ml || product.name.en : product.name.en;
   const description = locale === "ml" ? product.description.ml || product.description.en : product.description.en;
   const [inquiryOpen, setInquiryOpen] = useState(false);
@@ -67,6 +94,11 @@ function ProductCard({ product, locale, t }: { product: BuyerProduct; locale: st
               {product.commodity_name ?? product.commodity_code}
             </Badge>
           </div>
+          {product.status && (
+            <Badge variant="outline" className={`w-fit capitalize ${STATUS_CLASSES[product.status]}`}>
+              {product.status}
+            </Badge>
+          )}
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           {description && (
@@ -115,9 +147,11 @@ function ProductCard({ product, locale, t }: { product: BuyerProduct; locale: st
             <span className="font-medium text-foreground">{t.label_available ?? "Available"}:</span>{" "}
             {formatAvailability(product.available_from, product.available_until)}
           </div>
-          <Button size="sm" className="mt-1" onClick={() => setInquiryOpen(true)}>
-            {t.btn_inquire ?? "Inquire"}
-          </Button>
+          {showInquire && (
+            <Button size="sm" className="mt-1" onClick={() => setInquiryOpen(true)}>
+              {t.btn_inquire ?? "Inquire"}
+            </Button>
+          )}
         </CardContent>
       </Card>
       <DetailModal open={descriptionOpen} onClose={() => setDescriptionOpen(false)} title={t.description_label ?? "Description"}>
@@ -134,14 +168,16 @@ function ProductCard({ product, locale, t }: { product: BuyerProduct; locale: st
           {product.quality_certification}
         </p>
       </DetailModal>
-      <InquiryDialog
-        open={inquiryOpen}
-        onOpenChange={setInquiryOpen}
-        productId={product.id}
-        productName={name}
-        unit={product.unit}
-        availableQuantity={Number(product.quantity)}
-      />
+      {showInquire && (
+        <InquiryDialog
+          open={inquiryOpen}
+          onOpenChange={setInquiryOpen}
+          productId={product.id}
+          productName={name}
+          unit={product.unit}
+          availableQuantity={Number(product.quantity)}
+        />
+      )}
     </>
   );
 }
@@ -150,9 +186,21 @@ interface FpoProductCatalogProps {
   fpoId: number;
   locale: string;
   backHref: string;
+  /** Where products come from; defaults to the buyer catalog (active + public only). */
+  fetchProducts?: (params: CatalogParams) => Promise<PaginatedResponse<CatalogProduct>>;
+  queryKey?: string;
+  /** Buyers can send an inquiry from each card; admins only browse. */
+  showInquire?: boolean;
 }
 
-export function FpoProductCatalog({ fpoId, locale, backHref }: FpoProductCatalogProps) {
+export function FpoProductCatalog({
+  fpoId,
+  locale,
+  backHref,
+  fetchProducts,
+  queryKey = "buyer-products-by-fpo",
+  showInquire = true,
+}: FpoProductCatalogProps) {
   const [t, setT] = useState<T>({});
   const [search, setSearch] = useState("");
   const [commodity, setCommodity] = useState("all");
@@ -174,15 +222,18 @@ export function FpoProductCatalog({ fpoId, locale, backHref }: FpoProductCatalog
   });
 
   const { data, isLoading } = useQuery({
-    queryKey: ["buyer-products-by-fpo", fpoId, search, commodity, page, pageSize, locale],
-    queryFn: () =>
-      buyerProductsApi.getAll({
+    queryKey: [queryKey, fpoId, search, commodity, page, pageSize, locale],
+    queryFn: () => {
+      const params: CatalogParams = {
         page,
         page_size: pageSize,
-        fpo: String(fpoId),
         search: search || undefined,
         commodity: commodity !== "all" ? commodity : undefined,
-      }),
+      };
+      return fetchProducts
+        ? fetchProducts(params)
+        : buyerProductsApi.getAll({ ...params, fpo: String(fpoId) });
+    },
     staleTime: 30_000,
   });
 
@@ -200,8 +251,8 @@ export function FpoProductCatalog({ fpoId, locale, backHref }: FpoProductCatalog
       <div>
         <h1 className="font-bold text-2xl">
           {fpoName
-          ? (t.title_with_fpo ?? "Products from {fpo_name}").replace("{fpo_name}", fpoName)
-          : (t.title_default ?? "Products from this FPO")}
+            ? (t.title_with_fpo ?? "Products from {fpo_name}").replace("{fpo_name}", fpoName)
+            : (t.title_default ?? "Products from this FPO")}
         </h1>
         <p className="mt-0.5 text-muted-foreground text-sm">{t.description ?? "Browse all products listed by this FPO."}</p>
       </div>
@@ -255,7 +306,7 @@ export function FpoProductCatalog({ fpoId, locale, backHref }: FpoProductCatalog
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {products.map((product) => (
-              <ProductCard key={product.id} product={product} locale={locale} t={t} />
+              <ProductCard key={product.id} product={product} locale={locale} t={t} showInquire={showInquire} />
             ))}
           </div>
           <DataTablePagination

@@ -5,6 +5,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { adminBuyersApi } from "@/app/admin/_api/buyers";
 import { DataTable } from "@/components/data-table";
 import { translationsApi } from "@/lib/api/translations";
+import { useAuthStore } from "@/stores/auth-store";
 import { useLocaleStore } from "@/stores/locale-store";
 
 import { getBuyerColumns } from "./_components/columns";
@@ -13,6 +14,8 @@ type T = Record<string, string>;
 
 export default function AdminBuyersPage() {
   const locale = useLocaleStore((s) => s.locale);
+  // Sub-admins only get their assigned FPOs' buyer registrations (no external buyers), so the type filter is super-admin only
+  const isSuperAdmin = useAuthStore((s) => s.user?.role) === "super_admin";
   const [t, setT] = useState<T>({});
   const [buyerType, setBuyerType] = useState<"" | "fpo" | "external">("");
 
@@ -47,17 +50,19 @@ export default function AdminBuyersPage() {
         </p>
       </div>
 
-      <div className="flex justify-end">
-        <select
-          value={buyerType}
-          onChange={(e) => setBuyerType(e.target.value as "" | "fpo" | "external")}
-          className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-        >
-          <option value="">{t.filter_all ?? "All"}</option>
-          <option value="fpo">{t.filter_fpo ?? "FPO Buyers"}</option>
-          <option value="external">{t.filter_external ?? "External Buyers"}</option>
-        </select>
-      </div>
+      {isSuperAdmin && (
+        <div className="flex justify-end">
+          <select
+            value={buyerType}
+            onChange={(e) => setBuyerType(e.target.value as "" | "fpo" | "external")}
+            className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+          >
+            <option value="">{t.filter_all ?? "All"}</option>
+            <option value="fpo">{t.filter_fpo ?? "FPO Buyers"}</option>
+            <option value="external">{t.filter_external ?? "External Buyers"}</option>
+          </select>
+        </div>
+      )}
 
       <Suspense>
         <DataTable
