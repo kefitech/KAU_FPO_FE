@@ -71,8 +71,16 @@ export default function GovernmentSchemesPage() {
           { label: tAdmin.cat_capacity_building ?? "Capacity Building", value: "capacity_building" },
         ],
       },
+      {
+        key: "created_by",
+        label: t.col_created_by ?? "Created By",
+        options: [
+          { label: t.filter_created_by_me ?? "Created by me", value: "me" },
+          { label: t.filter_created_by_others ?? "Created by others", value: "others" },
+        ],
+      },
     ],
-    [tAdmin],
+    [tAdmin, t],
   );
 
   const filters = FILTERS;
