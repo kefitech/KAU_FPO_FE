@@ -46,4 +46,27 @@ export const tierAssessmentApi = {
     api.delete(`${BASE}${id}/upload/${uploadId}/`).then(() => undefined),
 
   reopen: (id: number): Promise<void> => api.post(`${BASE}${id}/reopen/`).then(() => undefined),
+
+  recommendations: (id: number): Promise<TierRecommendationsResponse> =>
+    api.get(`${BASE}${id}/recommendations/`).then((r) => {
+      const d = r.data as Record<string, unknown>;
+      return (d.data ?? d) as TierRecommendationsResponse;
+    }),
+};
+
+export type TierRecommendationItem = {
+  question_no: number | null;
+  criterion_code: string | null;
+  tip: string;
+  priority: number;
+  target_tier: string;
+};
+
+export type TierRecommendationsResponse = {
+  current_tier: string;
+  next_tier: string;
+  score: number;
+  max_score: number;
+  financial_year: string;
+  recommendations: TierRecommendationItem[];
 };

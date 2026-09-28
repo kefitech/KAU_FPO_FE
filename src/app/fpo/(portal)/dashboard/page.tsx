@@ -32,6 +32,8 @@ const LocationMap = dynamic(() => import("./_components/location-map").then((m) 
   loading: () => <div className="h-52 w-full animate-pulse rounded-lg bg-muted" />,
 });
 
+import { TierNextSteps } from "./_components/tier-next-steps";
+
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -321,6 +323,9 @@ export default function FpoDashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Tier upgrade next-steps (only after tier assessment submitted) ── */}
+      <TierNextSteps t={t} />
 
       {/* ── Main grid ── */}
       <div className="grid gap-6 lg:grid-cols-3">

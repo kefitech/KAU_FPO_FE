@@ -17,6 +17,7 @@ import type { TierAssessmentAnswer, TierAssessmentData, TierDomainScore, TierHis
 
 import { FileUploadSection } from "./_components/file-upload-section";
 import { QuestionField } from "./_components/question-field";
+import { UpgradeRecommendations } from "./_components/upgrade-recommendations";
 
 type T = Record<string, string>;
 type AnswerMap = Record<number, string | number | string[]>;
@@ -132,6 +133,8 @@ function SubmittedView({
           </Button>
         )}
       </div>
+
+      <UpgradeRecommendations assessmentId={assessment.id} t={t} />
 
       {domains.length > 0 && (
         <div className="rounded-xl border bg-card shadow-sm">
