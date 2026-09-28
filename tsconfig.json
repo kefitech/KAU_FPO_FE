@@ -23,5 +23,5 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", ".next/dev/types/**/*.ts"],
-  "exclude": ["node_modules", "Homepageui"]
+  "exclude": ["node_modules", "Homepageui", "e2e-chatbot", "e2e-dpr-calc"]
 }
