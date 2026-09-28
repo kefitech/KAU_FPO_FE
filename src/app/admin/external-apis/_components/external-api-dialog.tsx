@@ -24,6 +24,7 @@ const SERVICE_OPTIONS = [
   { value: "gstin_verification", label: "GSTIN Verification" },
   { value: "bank_account_verification", label: "Bank Account Verification" },
   { value: "weather_api", label: "Weather API" },
+  { value: "youtube_api", label: "YouTube Data API" },
 ];
 
 const schema = z.object({
