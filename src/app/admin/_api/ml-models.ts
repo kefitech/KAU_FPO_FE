@@ -1,4 +1,4 @@
-import { api } from "@/lib/api/client";
+import { api, apiClient } from "@/lib/api/client";
 import type { DataTableParams, PaginatedResponse } from "@/types/pagination";
 
 // Lifecycle of a version. Anything registered by direct file upload is
@@ -245,6 +245,25 @@ export const adminMlModelsApi = {
         params: { ...params, model_version: modelVersionId },
       })
       .then((r) => r.data),
+
+  /** Downloads that model version's feedback (every submission, with farm boundary details) as .xlsx. */
+  exportFeedback: async (modelVersionId: number): Promise<void> => {
+    const response = await apiClient.get(`${FEEDBACK_BASE}export/`, {
+      params: { model_version: modelVersionId },
+      responseType: "blob",
+    });
+    const disposition = response.headers["content-disposition"] as string | undefined;
+    const filename = disposition?.match(/filename="?([^"]+)"?/)?.[1] ?? "recommendation-feedback.xlsx";
+    const blob = response.data instanceof Blob ? response.data : new Blob([response.data as BlobPart]);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 150);
+  },
 
   /**
    * Uploads a CSV to POST /api/admin/ml-models/retrain/ (MLModelRetrainView).
