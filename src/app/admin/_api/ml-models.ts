@@ -116,13 +116,24 @@ export interface ModelTestResult {
   };
 }
 
+// One feedback submission -- an FPO that rates several recommendations has one
+// item per submission. location_snapshot is the farm boundary the rated
+// recommendation was generated for (null if none was recorded).
 export interface RecommendationFeedbackItem {
   id: number;
+  recommendation: number;
   fpo_name: string;
+  model_version_code: string;
   financial_year: string;
   feedback_rating: number;
   feedback_comment: string;
   crops: string[];
+  location_snapshot: {
+    lat: number | null;
+    lng: number | null;
+    area_polygon: GeoJSON.Polygon | GeoJSON.MultiPolygon | null;
+    address?: string | null;
+  } | null;
   created_at: string;
 }
 
@@ -220,7 +231,8 @@ export const adminMlModelsApi = {
     api.post<Wrapped<ModelTestLocation>>(`${BASE}test-location/`, query, { timeout: 30_000 }).then(unwrap),
 
   /**
-   * Feedback on recommendations produced by a specific model version.
+   * Every feedback submission on recommendations produced by a specific
+   * model version (one item per submission, not just the latest).
    * Matches GET /api/admin/recommendations/feedback/?model_version=<id>
    * (apps/recommendations/api/recommendations.py RecommendationFeedbackAdminViewSet).
    * modelVersionId is merged into the DataTable's own params (page,

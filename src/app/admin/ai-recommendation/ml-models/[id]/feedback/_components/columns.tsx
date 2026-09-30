@@ -60,10 +60,25 @@ export function getFeedbackColumns(): ColumnDef<RecommendationFeedbackItem>[] {
       },
     },
     {
+      accessorKey: "location_snapshot",
+      header: "Farm boundary",
+      meta: { hideOnMobile: true },
+      cell: ({ row }) => {
+        const loc = row.original.location_snapshot;
+        const label = loc?.area_polygon ? "Boundary" : loc?.lat != null ? "Location only" : "Not recorded";
+        return (
+          <span className="block max-w-xs truncate text-muted-foreground" title={loc?.address ?? undefined}>
+            {loc?.address ? `${label} · ${loc.address}` : label}
+          </span>
+        );
+      },
+    },
+    {
       accessorKey: "created_at",
       header: "Date",
+      // Several submissions can land on the same day, so include the time.
       cell: ({ row }) => (
-        <span className="text-muted-foreground">{new Date(row.original.created_at).toLocaleDateString()}</span>
+        <span className="text-muted-foreground">{new Date(row.original.created_at).toLocaleString()}</span>
       ),
     },
   ];
