@@ -22,6 +22,7 @@ import {
   ArrowLeft,
   Ban,
   Bot,
+  Briefcase,
   KeyRound,
   Loader2,
   RefreshCw,
@@ -165,6 +166,7 @@ function ServiceSummaryCard({
   const iconFor = (svc: string) => {
     if (svc === "dpr_narratives") return <Sparkles className="h-5 w-5" />;
     if (svc === "chatbot") return <Bot className="h-5 w-5" />;
+    if (svc === "business_plan") return <Briefcase className="h-5 w-5" />;
     return <Settings2 className="h-5 w-5" />;
   };
 

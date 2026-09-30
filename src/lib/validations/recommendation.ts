@@ -41,15 +41,6 @@ export const cropRecommendationSchema = z.object({
   existingCrops: z.array(z.string()).optional(),
 });
 
-// Business Plan Guidance Request Schema
-export const businessPlanSchema = z.object({
-  commodity: z.string().min(1, "Commodity is required"),
-  region: z.string().min(1, "Region is required"),
-  fpoSize: z.number().int().positive().optional(),
-  currentRevenue: z.number().positive().optional(),
-  targetMarket: z.string().optional(),
-});
-
 // DPR Generation Request Schema
 export const dprGenerationSchema = z.object({
   fpoId: z.string().min(1, "FPO ID is required"),
@@ -83,6 +74,5 @@ export const recommendationFeedbackSchema = z.object({
 
 // Type exports
 export type CropRecommendationFormData = z.infer<typeof cropRecommendationSchema>;
-export type BusinessPlanFormData = z.infer<typeof businessPlanSchema>;
 export type DprGenerationFormData = z.infer<typeof dprGenerationSchema>;
 export type RecommendationFeedbackFormData = z.infer<typeof recommendationFeedbackSchema>;

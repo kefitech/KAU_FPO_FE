@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
+import { BusinessPlanDisplay } from "./_components/business-plan-display";
 import { CropRecommendationDisplay } from "./_components/crop-recommendation-display";
 
 type T = Record<string, string>;
@@ -105,8 +106,8 @@ export default function FpoRecommendationsPage() {
       )}
 
       {activeTab === "business-plan" && (
-        <div className="flex h-40 items-center justify-center rounded-lg border bg-muted/30">
-          <p className="text-muted-foreground text-sm">{t.business_plan_coming_soon ?? "Business Plan Guidance — coming soon."}</p>
+        <div className="rounded-lg border p-4">
+          <BusinessPlanDisplay />
         </div>
       )}
 
