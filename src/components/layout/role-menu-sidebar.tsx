@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { LogOut, Settings } from "lucide-react";
 
+import { MobileMenuLogo } from "@/app/(public)/_components/header-logos";
 import {
   Sidebar,
   SidebarContent,
@@ -71,11 +72,7 @@ export function RoleMenuSidebar({ title, subtitle, settingsHref }: RoleMenuSideb
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-border/50 border-b pb-3">
         <div className="flex items-center gap-2.5 px-2 pt-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
-          <img
-            src="/assets/img/logo.webp"
-            alt="KAU"
-            className="h-8 w-8 shrink-0 object-contain group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:w-8"
-          />
+          <MobileMenuLogo className="h-8 w-8 shrink-0 object-contain group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:w-8" />
           <div className="flex flex-col group-data-[collapsible=icon]:hidden">
             <span className="font-semibold text-sm leading-tight tracking-tight">{title}</span>
             <span className="text-[11px] text-muted-foreground">{subtitle}</span>

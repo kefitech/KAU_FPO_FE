@@ -8,6 +8,7 @@ import { usePathname } from "next/navigation";
 import useSidebarMenu from "../_hooks/useSidebarMenu";
 import useStickyMenu from "../_hooks/useStickyMenu";
 import useSubMenuToggle from "../_hooks/useSubMenuToggle";
+import HeaderLogos, { MobileMenuLogo } from "./header-logos";
 import HeaderTop, { LangToggle } from "./header-top";
 import MainMenu from "./main-menu";
 
@@ -33,13 +34,9 @@ const Header = () => {
               <button type="button" className="navbar-toggle" onClick={openMenu}>
                 <i className="fa fa-bars" />
               </button>
-
               <Link className="navbar-brand" href="/">
                 <div className="navbar-logos">
-                  {/* <img src="/assets/img/logo.webp" className="logo" alt="Logo" /> */}
-                  <img src="/assets/img/Dir_of_ext.webp" className="logo logo-secondary" alt="Dir_of_extLogo" />
-                  <img src="/assets/img/GOK.webp" className="logo logo-secondary" alt="GOK Logo" />
-                  <img src="/assets/img/SHM_LOGO.webp" className="logo logo-secondary" alt="SHM Logo" />
+                  <HeaderLogos />
                 </div>
               </Link>
             </div>
@@ -50,7 +47,7 @@ const Header = () => {
                 className={`collapse navbar-collapse ${isOpen ? "show collapse-mobile" : "collapse-mobile"}`}
               >
                 <div className="mobile-menu-top-row">
-                  <img src="/assets/img/logo.webp" alt="Logo" />
+                  <MobileMenuLogo />
                   <div className="mobile-menu-top-right">
                     <div className="d-lg-none">
                       <LangToggle variant="dark" />
@@ -70,7 +67,8 @@ const Header = () => {
                       </a>
                     </li>
                     <li>
-                      <i className="fas fa-phone-alt" /> <a href="tel:+91-487-2370086">+91-487-2370086 </a> <br/><a href="tel:+91-487-2370150">+91-487-2370150 </a> 
+                      <i className="fas fa-phone-alt" /> <a href="tel:+91-487-2370086">+91-487-2370086 </a> <br />
+                      <a href="tel:+91-487-2370150">+91-487-2370150 </a>
                     </li>
                   </ul>
                   {/* <div className="sidebar-social">

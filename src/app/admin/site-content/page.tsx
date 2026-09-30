@@ -24,10 +24,11 @@ type T = Record<string, string>;
 import { DocumentsTab } from "./_components/documents-tab";
 import { FeedbackTab } from "./_components/feedback-tab";
 import { GalleryTab } from "./_components/gallery-tab";
+import { HeaderLogosTab } from "./_components/header-logos-tab";
+import { KVKLinksTab } from "./_components/kvk-links-tab";
 import { NewsSourcesTab } from "./_components/news-sources-tab";
 import { PartnersTab } from "./_components/partners-tab";
 import { QuickLinksTab } from "./_components/quick-links-tab";
-import { KVKLinksTab } from "./_components/kvk-links-tab";
 import { TeamTab } from "./_components/team-tab";
 import { YoutubeTab } from "./_components/youtube-tab";
 
@@ -456,6 +457,7 @@ function ContentBlocksTab({ t }: { t: T }) {
 
 const TABS = [
   { key: "content-blocks", label: "Content Blocks" },
+  { key: "header-logos", label: "Header Logos" },
   { key: "documents", label: "Documents" },
   { key: "gallery", label: "Gallery" },
   { key: "team", label: "Team" },
@@ -471,6 +473,7 @@ type TabKey = (typeof TABS)[number]["key"];
 
 const TAB_LABEL_KEYS: Record<string, string> = {
   "content-blocks": "tab_content_blocks",
+  "header-logos": "tab_header_logos",
   documents: "tab_documents",
   gallery: "tab_gallery",
   team: "tab_team",
@@ -581,6 +584,7 @@ export default function SiteContentPage() {
         {/* Right content */}
         <div className="flex-1 min-w-0 sm:pl-8">
           {tab === "content-blocks" && <ContentBlocksTab t={t} />}
+          {tab === "header-logos" && <HeaderLogosTab t={t} />}
           {tab === "documents" && <DocumentsTab t={t} />}
           {tab === "gallery" && <GalleryTab t={t} />}
           {tab === "team" && <TeamTab t={t} />}

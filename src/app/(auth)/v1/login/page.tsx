@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { MobileMenuLogo } from "@/app/(public)/_components/header-logos";
 import { VantaBirds } from "@/components/common/vanta-birds";
 import { LocaleSwitcher } from "@/components/layout/locale-switcher";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
@@ -18,11 +19,13 @@ export default function LoginV1() {
 
   useEffect(() => {
     setTranslationsLoading(true);
-    translationsApi.getPublic(effectiveLocale, "login").then((data) => {
-    setT(data.login ?? {});
-    })
-     .catch(() => undefined)
-     .finally(() => setTranslationsLoading(false));
+    translationsApi
+      .getPublic(effectiveLocale, "login")
+      .then((data) => {
+        setT(data.login ?? {});
+      })
+      .catch(() => undefined)
+      .finally(() => setTranslationsLoading(false));
   }, [effectiveLocale]);
 
   if (translationsLoading) {
@@ -37,11 +40,15 @@ export default function LoginV1() {
       </div>
     );
   }
- 
+
   return (
     <div
       className="relative flex h-svh items-center justify-center overflow-hidden p-4"
-      style={{ backgroundImage: "url('/assets/img/background/background.jpg')", backgroundSize: "cover", backgroundPosition: "center" }}
+      style={{
+        backgroundImage: "url('/assets/img/background/background.jpg')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }}
     >
       {/* Vanta Birds animation background */}
       <VantaBirds />
@@ -55,30 +62,36 @@ export default function LoginV1() {
       {/* Login card */}
       <div className="relative z-10 w-full max-w-md rounded-2xl bg-white/80 dark:bg-neutral-900/90 p-5 sm:p-8 shadow-xl backdrop-blur-md flex flex-col gap-5 sm:gap-6">
         <a href="/" className="flex items-center gap-2 font-medium">
-          <img src="/assets/img/logo.webp" alt="KAU" className="h-12 w-auto" />
+          <MobileMenuLogo className="h-8 w-8 shrink-0 object-contain group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:w-8" />
           KAU-FPO Platform
         </a>
 
         <div className="flex flex-col gap-1">
           <h1 className="font-bold text-2xl">{t.title ?? "Login to your account"}</h1>
-          <p className="text-muted-foreground text-sm">{t.subtitle ?? "Enter your email below to login to your account"}</p>
+          <p className="text-muted-foreground text-sm">
+            {t.subtitle ?? "Enter your email below to login to your account"}
+          </p>
         </div>
 
         <LoginForm t={t} />
-      <div>
-        <p className="text-center text-muted-foreground text-sm">
-          {t.no_account ?? "Don't have an account?"}{" "}
-          <a href="/register" className="underline underline-offset-4 hover:text-foreground">
-            {t.sign_up ?? "Sign up"}
-          </a></p>
-            <p className="text-center text-muted-foreground text-sm">
-          Government or CBBO/NGO official?{" "}
-          <a href="/official-register" className="underline underline-offset-4 hover:text-foreground">
-            Register here
-          </a>
-        </p>
-      </div>
-        <a href="/" className="flex items-center justify-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
+        <div>
+          <p className="text-center text-muted-foreground text-sm">
+            {t.no_account ?? "Don't have an account?"}{" "}
+            <a href="/register" className="underline underline-offset-4 hover:text-foreground">
+              {t.sign_up ?? "Sign up"}
+            </a>
+          </p>
+          <p className="text-center text-muted-foreground text-sm">
+            Government or CBBO/NGO official?{" "}
+            <a href="/official-register" className="underline underline-offset-4 hover:text-foreground">
+              Register here
+            </a>
+          </p>
+        </div>
+        <a
+          href="/"
+          className="flex items-center justify-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
           {t.back_to_home ?? "← Back to Home"}
         </a>
       </div>
