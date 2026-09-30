@@ -107,14 +107,18 @@ export function NotificationBell() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["inbox-list"] });
       queryClient.invalidateQueries({ queryKey: ["inbox-unread-count"] });
+      queryClient.invalidateQueries({ queryKey: ["inbox-full"] });
+      queryClient.invalidateQueries({ queryKey: ["inbox-categories"] });
     },
   });
 
   const markAllMutation = useMutation({
-    mutationFn: inboxApi.markAllRead,
+    mutationFn: () => inboxApi.markAllRead(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["inbox-list"] });
       queryClient.invalidateQueries({ queryKey: ["inbox-unread-count"] });
+      queryClient.invalidateQueries({ queryKey: ["inbox-full"] });
+      queryClient.invalidateQueries({ queryKey: ["inbox-categories"] });
     },
   });
 
