@@ -437,10 +437,22 @@ export function getChangesDisplay(changes: AuditLog["changes"]): string {
 
 // ─── Notification Inbox ───────────────────────────────────────────────────────
 
+/** Keep in sync with KAU_FPO_BE apps/notifications/categories.py */
+export type InboxCategory =
+  | "application"
+  | "claims"
+  | "dpr"
+  | "recommendations"
+  | "expert"
+  | "training"
+  | "marketplace"
+  | "other";
+
 export interface InboxNotification {
   id: number;
   title: string;
   body: string;
+  category: InboxCategory;
   is_read: boolean;
   read_at: string | null;
   created_at: string;
@@ -448,6 +460,17 @@ export interface InboxNotification {
 
 export interface InboxUnreadCount {
   unread_count: number;
+}
+
+export interface InboxCategoryCount {
+  total: number;
+  unread: number;
+}
+
+export interface InboxCategories {
+  all: InboxCategoryCount;
+  /** Only categories the user has notifications in, in display order. */
+  categories: (InboxCategoryCount & { key: InboxCategory })[];
 }
 
 // ─── External APIs ───────────────────────────────────────────────────────────

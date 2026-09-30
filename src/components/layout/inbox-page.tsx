@@ -3,14 +3,31 @@
 import { useEffect, useState } from "react";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Bell, CheckCheck, Inbox, Search } from "lucide-react";
+import {
+  ArrowLeft,
+  Bell,
+  CheckCheck,
+  FileBarChart,
+  FileText,
+  GraduationCap,
+  Inbox,
+  type LucideIcon,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  Store,
+  UserRound,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { inboxApi } from "@/lib/api/inbox";
 import { cn } from "@/lib/utils";
-import type { InboxNotification } from "@/types";
+import type { InboxCategory, InboxNotification } from "@/types";
 import { useLocaleStore } from "@/stores/locale-store";
 import { useTranslations } from "@/hooks/use-translations";
 type T = Record<string, string>;
@@ -35,17 +52,143 @@ function formatFull(dateStr: string): string {
   });
 }
 
+// ─── Categories ───────────────────────────────────────────────────────────────
+// Keys come from the backend (apps/notifications/categories.py).
+
+type CategoryTab = "all" | InboxCategory;
+
+const CATEGORY_FALLBACK_LABELS: Record<InboxCategory, string> = {
+  application: "Applications",
+  claims: "Ownership Claims",
+  dpr: "DPR",
+  recommendations: "AI Recommendations",
+  expert: "Expert Bookings",
+  training: "Training",
+  marketplace: "Marketplace",
+  other: "General",
+};
+
+const CATEGORY_ICONS: Record<CategoryTab, LucideIcon> = {
+  all: Inbox,
+  application: FileText,
+  claims: ShieldCheck,
+  dpr: FileBarChart,
+  recommendations: Sparkles,
+  expert: UserRound,
+  training: GraduationCap,
+  marketplace: Store,
+  other: Bell,
+};
+
+function categoryLabel(category: InboxCategory, t: T): string {
+  return t[`category_${category}`] ?? CATEGORY_FALLBACK_LABELS[category] ?? category;
+}
+
+type CategoryTabItem = { key: CategoryTab; label: string; total: number; unread: number };
+
+function CountBadge({ tab }: { tab: CategoryTabItem }) {
+  return tab.unread > 0 ? (
+    <span className="flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+      {tab.unread}
+    </span>
+  ) : (
+    <span className="text-[11px] text-muted-foreground/70">{tab.total}</span>
+  );
+}
+
+// Vertical = left column of the 3-pane desktop layout (xl+); `collapsed`
+// shrinks it to icons only (label in a tooltip, unread count as a badge).
+// Horizontal = scrollable strip above the list on smaller screens.
+function CategoryTabs({
+  active,
+  onChange,
+  tabs,
+  orientation,
+  collapsed = false,
+  t,
+}: {
+  active: CategoryTab;
+  onChange: (tab: CategoryTab) => void;
+  tabs: CategoryTabItem[];
+  orientation: "vertical" | "horizontal";
+  collapsed?: boolean;
+  t: T;
+}) {
+  const vertical = orientation === "vertical";
+  const iconOnly = vertical && collapsed;
+  return (
+    <div
+      role="tablist"
+      aria-orientation={orientation}
+      aria-label={t.category_tabs_label ?? "Notification categories"}
+      className={cn(vertical ? "flex flex-col gap-0.5 p-2" : "flex gap-1 overflow-x-auto border-b px-4 sm:px-8")}
+    >
+      {tabs.map((tab) => {
+        const Icon = CATEGORY_ICONS[tab.key];
+        const isActive = active === tab.key;
+        const button = (
+          <button
+            key={tab.key}
+            type="button"
+            role="tab"
+            aria-selected={isActive}
+            aria-label={iconOnly ? `${tab.label} (${tab.unread || tab.total})` : undefined}
+            onClick={() => onChange(tab.key)}
+            className={cn(
+              "flex items-center gap-2 text-sm font-medium transition-colors",
+              vertical && !iconOnly && "w-full rounded-md px-3 py-2 text-left",
+              iconOnly && "relative h-10 w-10 justify-center rounded-md",
+              !vertical && "shrink-0 border-b-2 px-3 py-2.5",
+              vertical &&
+                (isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"),
+              !vertical &&
+                (isActive
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"),
+            )}
+          >
+            {vertical && <Icon className="h-4 w-4 shrink-0" />}
+            {iconOnly ? (
+              tab.unread > 0 && (
+                <span className="absolute top-0.5 right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold text-primary-foreground">
+                  {tab.unread}
+                </span>
+              )
+            ) : (
+              <>
+                <span className={cn(vertical && "min-w-0 flex-1 truncate")}>{tab.label}</span>
+                <CountBadge tab={tab} />
+              </>
+            )}
+          </button>
+        );
+        if (!iconOnly) return button;
+        return (
+          <Tooltip key={tab.key}>
+            <TooltipTrigger asChild>{button}</TooltipTrigger>
+            <TooltipContent side="right">
+              {tab.label} · {tab.unread > 0 ? `${tab.unread} ${t.label_unread ?? "unread"}` : tab.total}
+            </TooltipContent>
+          </Tooltip>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── List item ────────────────────────────────────────────────────────────────
 
 function NotifRow({
   item,
   selected,
   onClick,
+  showCategory,
   t,
 }: {
   item: InboxNotification;
   selected: boolean;
   onClick: () => void;
+  showCategory: boolean;
   t:T;
 }) {
   return (
@@ -81,6 +224,11 @@ function NotifRow({
             className="mt-0.5 text-xs text-muted-foreground truncate"
             dangerouslySetInnerHTML={{ __html: item.body }}
           />
+          {showCategory && item.category && (
+            <span className="mt-1 inline-block rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+              {categoryLabel(item.category, t)}
+            </span>
+          )}
         </div>
       </div>
     </button>
@@ -142,11 +290,15 @@ function NotifDetail({
 
 // ─── Empty states ─────────────────────────────────────────────────────────────
 
-function EmptyList({ t }: { t: T }) {
+function EmptyList({ t, category }: { t: T; category: CategoryTab }) {
   return (
     <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground py-16">
       <Inbox className="h-12 w-12 opacity-20" />
-      <p className="text-sm">{t.empty_inbox ?? "Your inbox is empty"}</p>
+      <p className="text-sm">
+        {category === "all"
+          ? (t.empty_inbox ?? "Your inbox is empty")
+          : (t.empty_category ?? "No notifications in {category}").replace("{category}", categoryLabel(category, t))}
+      </p>
     </div>
   );
 }
@@ -160,6 +312,8 @@ function EmptyDetail({ t }: { t: T }) {
   );
 }
 
+const COLLAPSE_STORAGE_KEY = "inbox-categories-collapsed";
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function InboxPage() {
@@ -168,39 +322,93 @@ export function InboxPage() {
   const [showDetail, setShowDetail] = useState(false);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [category, setCategory] = useState<CategoryTab>("all");
+  const [categoriesCollapsed, setCategoriesCollapsed] = useState(false);
   const PAGE_SIZE = 20;
   const locale = useLocaleStore((s) => s.locale);
   const { t } = useTranslations("inbox_page");
 
 
   const { data, isLoading } = useQuery({
-    queryKey: ["inbox-full", page, locale],
-    queryFn: () => inboxApi.getAll({ page, page_size: PAGE_SIZE }),
+    queryKey: ["inbox-full", category, page, locale],
+    queryFn: () =>
+      inboxApi.getAll({ page, page_size: PAGE_SIZE, ...(category !== "all" ? { category } : {}) }),
     staleTime: 30_000,
   });
 
-  const markReadMutation = useMutation({
-    mutationFn: (id: number) => inboxApi.markRead(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["inbox-full"] });
-      queryClient.invalidateQueries({ queryKey: ["inbox-unread-count"] });
-      queryClient.invalidateQueries({ queryKey: ["inbox-list"] });
-    },
+  const { data: categoryData } = useQuery({
+    queryKey: ["inbox-categories"],
+    queryFn: () => inboxApi.categories().then((r) => r.data),
+    staleTime: 30_000,
   });
 
+  const invalidateInbox = () => {
+    queryClient.invalidateQueries({ queryKey: ["inbox-full"] });
+    queryClient.invalidateQueries({ queryKey: ["inbox-categories"] });
+    queryClient.invalidateQueries({ queryKey: ["inbox-unread-count"] });
+    queryClient.invalidateQueries({ queryKey: ["inbox-list"] });
+  };
+
+  const markReadMutation = useMutation({
+    mutationFn: (id: number) => inboxApi.markRead(id),
+    onSuccess: invalidateInbox,
+  });
+
+  // Scoped to the active tab — "All" marks everything read.
   const markAllMutation = useMutation({
-    mutationFn: inboxApi.markAllRead,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["inbox-full"] });
-      queryClient.invalidateQueries({ queryKey: ["inbox-unread-count"] });
-      queryClient.invalidateQueries({ queryKey: ["inbox-list"] });
-    },
+    mutationFn: () => inboxApi.markAllRead(category === "all" ? undefined : category),
+    onSuccess: invalidateInbox,
   });
 
   const notifications: InboxNotification[] = data?.data ?? [];
   const totalCount = data?.meta?.pagination?.total_count ?? 0;
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
+
+  const tabs: CategoryTabItem[] = [
+    {
+      key: "all",
+      label: t.category_all ?? "All",
+      total: categoryData?.all.total ?? 0,
+      unread: categoryData?.all.unread ?? 0,
+    },
+    ...(categoryData?.categories ?? []).map((c) => ({
+      key: c.key,
+      label: categoryLabel(c.key, t),
+      total: c.total,
+      unread: c.unread,
+    })),
+  ];
+  // Header badge: whole-inbox unread count (server-side, not just this page).
+  const unreadCount = categoryData?.all.unread ?? notifications.filter((n) => !n.is_read).length;
+  const activeUnread =
+    category === "all" ? unreadCount : (tabs.find((tab) => tab.key === category)?.unread ?? 0);
+
+  // Remember the collapsed category column per browser (read after mount to
+  // avoid a hydration mismatch; storage may be unavailable, e.g. private mode).
+  useEffect(() => {
+    try {
+      setCategoriesCollapsed(localStorage.getItem(COLLAPSE_STORAGE_KEY) === "1");
+    } catch {
+      // ignore — default to expanded
+    }
+  }, []);
+
+  const toggleCategoriesCollapsed = () => {
+    setCategoriesCollapsed((prev) => {
+      try {
+        localStorage.setItem(COLLAPSE_STORAGE_KEY, prev ? "0" : "1");
+      } catch {
+        // ignore — preference just won't persist
+      }
+      return !prev;
+    });
+  };
+
+  const handleCategoryChange = (tab: CategoryTab) => {
+    setCategory(tab);
+    setPage(1);
+    setSearch("");
+  };
 
   const filtered = search.trim()
     ? notifications.filter(
@@ -222,37 +430,42 @@ export function InboxPage() {
     }
   };
 
-  // Reset selection when page changes
-  useEffect(() => { setSelectedId(null); setShowDetail(false); }, [page]);
+  // Reset selection when page or category changes
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset intentionally triggered by page / category change
+  useEffect(() => { setSelectedId(null); setShowDetail(false); }, [page, category]);
 
   return (
     <div className="flex flex-col gap-0 h-[calc(100vh-120px)]">
       {/* Page header — hidden on mobile when viewing detail */}
-      {!showDetail && (
-        <div className="flex items-center justify-between px-4 sm:px-8 py-4 border-b">
-          <div className="flex items-center gap-3">
-            <h1 className="font-bold text-xl sm:text-2xl">{t.page_title ?? "Inbox"}</h1>
-            {unreadCount > 0 && (
-              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-bold text-primary-foreground">
-                {unreadCount}
-              </span>
-            )}
-          </div>
+      <div className={cn("flex items-center justify-between px-4 sm:px-8 py-4 border-b", showDetail && "hidden sm:flex")}>
+        <div className="flex items-center gap-3">
+          <h1 className="font-bold text-xl sm:text-2xl">{t.page_title ?? "Inbox"}</h1>
           {unreadCount > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => markAllMutation.mutate()}
-              disabled={markAllMutation.isPending}
-              className="gap-1.5"
-            >
-              <CheckCheck className="h-4 w-4" />
-              <span className="hidden sm:inline">{t.action_mark_all_read ?? "Mark all read"}</span>
-              <span className="sm:hidden">{t.action_mark_all_short ?? "Mark all"}</span>
-            </Button>
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-bold text-primary-foreground">
+              {unreadCount}
+            </span>
           )}
         </div>
-      )}
+        {activeUnread > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => markAllMutation.mutate()}
+            disabled={markAllMutation.isPending}
+            className="gap-1.5"
+          >
+            <CheckCheck className="h-4 w-4" />
+            <span className="hidden sm:inline">{t.action_mark_all_read ?? "Mark all read"}</span>
+            <span className="sm:hidden">{t.action_mark_all_short ?? "Mark all"}</span>
+          </Button>
+        )}
+      </div>
+
+      {/* Category tabs, horizontal — below xl only (xl+ uses the vertical column).
+          Hidden on mobile when viewing detail. */}
+      <div className={cn("xl:hidden", showDetail && "hidden sm:block")}>
+        <CategoryTabs active={category} onChange={handleCategoryChange} tabs={tabs} orientation="horizontal" t={t} />
+      </div>
 
       {/* Mobile: detail view */}
       {showDetail && selected && (
@@ -270,6 +483,53 @@ export function InboxPage() {
       {/* Mobile: list (hidden when showing detail) */}
       {/* Desktop: split pane always visible */}
       <div className={`flex flex-1 min-h-0 border-b ${showDetail ? "hidden sm:flex" : "flex"}`}>
+        {/* Far left — vertical category column (xl+) */}
+        <aside
+          className={cn(
+            "hidden shrink-0 flex-col overflow-y-auto border-r bg-muted/20 transition-[width] duration-200 xl:flex",
+            categoriesCollapsed ? "w-14" : "w-52",
+          )}
+        >
+          <div className={cn("flex border-b p-2", categoriesCollapsed ? "justify-center" : "items-center justify-between")}>
+            {!categoriesCollapsed && (
+              <span className="px-1 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                {t.category_heading ?? "Categories"}
+              </span>
+            )}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={toggleCategoriesCollapsed}
+                  aria-expanded={!categoriesCollapsed}
+                  aria-label={
+                    categoriesCollapsed
+                      ? (t.action_expand_categories ?? "Expand categories")
+                      : (t.action_collapse_categories ?? "Collapse categories")
+                  }
+                >
+                  {categoriesCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                {categoriesCollapsed
+                  ? (t.action_expand_categories ?? "Expand categories")
+                  : (t.action_collapse_categories ?? "Collapse categories")}
+              </TooltipContent>
+            </Tooltip>
+          </div>
+          <CategoryTabs
+            active={category}
+            onChange={handleCategoryChange}
+            tabs={tabs}
+            orientation="vertical"
+            collapsed={categoriesCollapsed}
+            t={t}
+          />
+        </aside>
+
         {/* Left — list */}
         <div className="w-full sm:w-[340px] shrink-0 flex flex-col sm:border-r">
           {/* Search */}
@@ -298,7 +558,7 @@ export function InboxPage() {
                 ))}
               </div>
             ) : filtered.length === 0 ? (
-              <EmptyList t={t} />
+              <EmptyList t={t} category={category} />
             ) : (
               filtered.map((n) => (
                 <NotifRow
@@ -306,6 +566,7 @@ export function InboxPage() {
                   item={n}
                   selected={selected?.id === n.id}
                   onClick={() => handleSelect(n)}
+                  showCategory={category === "all"}
                   t={t}
                 />
               ))

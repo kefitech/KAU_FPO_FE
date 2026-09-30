@@ -1,5 +1,5 @@
 import { api } from "@/lib/api/client";
-import type { InboxNotification, InboxUnreadCount } from "@/types";
+import type { InboxCategories, InboxCategory, InboxNotification, InboxUnreadCount } from "@/types";
 import type { DataTableParams, PaginatedResponse } from "@/types/pagination";
 
 const BASE = "/notifications/inbox/";
@@ -18,8 +18,12 @@ export const inboxApi = {
 
   markRead: (id: number) => api.post<InboxNotification>(`${BASE}${id}/read/`).then((r) => r.data),
 
-  markAllRead: () => api.post(`${BASE}read_all/`).then((r) => r.data),
+  /** Omit `category` to mark every notification read. */
+  markAllRead: (category?: InboxCategory) =>
+    api.post(`${BASE}read_all/`, undefined, { params: category ? { category } : undefined }).then((r) => r.data),
 
-  unreadCount: () => api.get<ApiResponse<InboxUnreadCount>>(`${BASE}unread_count/`)
-    .then((r) => r.data),
+  /** Per-category total + unread counts for the inbox tabs. */
+  categories: () => api.get<ApiResponse<InboxCategories>>(`${BASE}categories/`).then((r) => r.data),
+
+  unreadCount: () => api.get<ApiResponse<InboxUnreadCount>>(`${BASE}unread_count/`).then((r) => r.data),
 };
