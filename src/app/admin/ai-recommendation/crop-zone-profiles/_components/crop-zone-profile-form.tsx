@@ -236,8 +236,8 @@ export function CropZoneProfileForm({ mode, id, t = {}, tCommon = {} }: Props) {
               name="kau_zone"
               render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger className="mt-1.5">
-                    <SelectValue />
+                  <SelectTrigger id="kau_zone" className="mt-1.5" aria-invalid={!!errors.kau_zone}>
+                    <SelectValue placeholder={t.placeholder_kau_zone ?? "Select KAU zone…"} />
                   </SelectTrigger>
                   <SelectContent>
                     {KAU_ZONES.map((z) => (
@@ -249,6 +249,7 @@ export function CropZoneProfileForm({ mode, id, t = {}, tCommon = {} }: Props) {
                 </Select>
               )}
             />
+            {errors.kau_zone && <FieldError errors={[errors.kau_zone]} />}
             <p className="mt-1 text-muted-foreground text-xs">
               {t.field_kau_zone_help ??
                 "The book's own zone for this documented profile — it's expanded into the matching service zones automatically (e.g. Foothills → northern, central & southern service zones)."}

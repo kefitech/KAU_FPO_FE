@@ -29,6 +29,19 @@ const STATUS_BADGE_STYLES: Record<string, string> = {
   claimed: "border-blue-500/40 bg-blue-500/10 text-blue-700 dark:text-blue-400",
 };
 
+// Mirrors backend FPOStatus (apps/core/utils/constants.py). Kept static so the
+// filter doesn't shrink to whatever statuses the current result page contains.
+const STATUS_OPTIONS: [string, string][] = [
+  ["draft", "Draft"],
+  ["submitted", "Submitted"],
+  ["under_review", "Under Review"],
+  ["info_required", "Additional Info Required"],
+  ["approved", "Approved"],
+  ["rejected", "Rejected"],
+  ["suspended", "Suspended"],
+  ["claimed", "Claimed (Ownership Transferred)"],
+];
+
 export default function GovernmentFPODirectoryPage() {
   const router = useRouter();
   const locale = useLocaleStore((s) => s.locale);
@@ -90,7 +103,6 @@ export default function GovernmentFPODirectoryPage() {
   });
 
   const fpos = data?.data ?? [];
-  const statusOptions = Array.from(new Map(fpos.map((f) => [f.status, f.status_display])).entries());
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -129,7 +141,7 @@ export default function GovernmentFPODirectoryPage() {
           className="h-9 rounded-md border bg-background px-3 text-sm"
         >
           <option value="">{t.option_all_statuses ?? "All statuses"}</option>
-          {statusOptions.map(([value, label]) => (
+          {STATUS_OPTIONS.map(([value, label]) => (
             <option key={value} value={value}>
               {getStatusLabel(value, label)}
             </option>

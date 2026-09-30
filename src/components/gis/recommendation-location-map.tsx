@@ -8,10 +8,9 @@ import { GeoJSON, MapContainer, Marker, TileLayer, useMap } from "react-leaflet"
 import "leaflet/dist/leaflet.css";
 import "@/lib/gis/leaflet-overrides.css";
 
+import { MapToggleButton } from "@/components/gis/map-toggle-button";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
-
-import { MapToggleButton } from "@/components/gis/map-toggle-button";
 
 type T = Record<string, string>;
 

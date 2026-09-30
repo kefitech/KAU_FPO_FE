@@ -21,13 +21,39 @@ import type { MyCropSuggestion, MyRecommendation } from "@/types/recommendation"
 type T = Record<string, string>;
 
 const RecommendationLocationMap = dynamic(
-  () => import("./recommendation-location-map").then((m) => ({ default: m.RecommendationLocationMap })),
+  () => import("@/components/gis/recommendation-location-map").then((m) => ({ default: m.RecommendationLocationMap })),
   { ssr: false },
 );
 
 const POLL_INTERVAL_MS = 4000;
 
-function StarRating({ value, onChange, t }: { value: number; onChange: (v: number) => void; t: T }) {
+function StarRating({
+  value,
+  onChange,
+  readOnly = false,
+  t,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  readOnly?: boolean;
+  t: T;
+}) {
+  if (readOnly) {
+    return (
+      <div
+        className="flex items-center gap-1"
+        role="img"
+        aria-label={(t.rated_stars_aria ?? "Rated {n} out of 5").replace("{n}", String(value))}
+      >
+        {[1, 2, 3, 4, 5].map((n) => (
+          <Star
+            key={n}
+            className={`h-5 w-5 ${n <= value ? "fill-amber-400 text-amber-400" : "text-muted-foreground"}`}
+          />
+        ))}
+      </div>
+    );
+  }
   return (
     <div className="flex items-center gap-1">
       {[1, 2, 3, 4, 5].map((n) => (
@@ -501,14 +527,8 @@ export function CropRecommendationDisplay({ hasCultivationArea }: CropRecommenda
                 ? (t.feedback_title_submitted ?? "Your feedback")
                 : (t.feedback_title_new ?? "Was this helpful?")}
             </h3>
-            <StarRating
-              value={feedbackRating}
-              onChange={(v) => {
-                setFeedbackRating(v);
-                setFeedbackSubmitted(false);
-              }}
-              t={t}
-            />
+            {/* Feedback is final once submitted -- requesting a fresh recommendation reopens it. */}
+            <StarRating value={feedbackRating} onChange={setFeedbackRating} readOnly={feedbackSubmitted} t={t} />
             {!feedbackSubmitted && feedbackRating > 0 && (
               <>
                 <textarea
@@ -531,7 +551,12 @@ export function CropRecommendationDisplay({ hasCultivationArea }: CropRecommenda
               </>
             )}
             {feedbackSubmitted && (
-              <p className="text-muted-foreground text-xs">{t.feedback_thanks ?? "Thanks for your feedback!"}</p>
+              <>
+                {recommendation.feedback_comment && (
+                  <p className="whitespace-pre-wrap text-sm">{recommendation.feedback_comment}</p>
+                )}
+                <p className="text-muted-foreground text-xs">{t.feedback_thanks ?? "Thanks for your feedback!"}</p>
+              </>
             )}
           </div>
         </div>
