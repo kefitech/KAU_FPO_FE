@@ -743,6 +743,9 @@ export interface AdminKVKLink {
   name: string;
   url: string;
   logo_url: string | null;
+  district: string;
+  contact_email: string;
+  contact_phone: string;
   order: number;
   is_active: boolean;
   created_at: string;

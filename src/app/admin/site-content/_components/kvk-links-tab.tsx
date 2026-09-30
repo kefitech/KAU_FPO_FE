@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 import { kvkLinksApi } from "@/app/admin/_api/kvk-links";
+import { KERALA_DISTRICTS } from "@/lib/kerala-districts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -92,6 +93,9 @@ function KVKLinkDialog({
 }) {
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
+  const [district, setDistrict] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
   const [urlError, setUrlError] = useState<string | null>(null);
   const [logo, setLogo] = useState<File | null>(null);
   const [logoError, setLogoError] = useState<string | null>(null);
@@ -106,9 +110,15 @@ function KVKLinkDialog({
     if (editing) {
       setName(editing.name);
       setUrl(editing.url);
+      setDistrict(editing.district ?? "");
+      setContactEmail(editing.contact_email ?? "");
+      setContactPhone(editing.contact_phone ?? "");
     } else {
       setName("");
       setUrl("");
+      setDistrict("");
+      setContactEmail("");
+      setContactPhone("");
     }
   }, [open, editing]);
 
@@ -137,6 +147,9 @@ function KVKLinkDialog({
       const formData = new FormData();
       formData.append("name", name.trim());
       formData.append("url", url.trim());
+      formData.append("district", district.trim().toUpperCase());
+      formData.append("contact_email", contactEmail.trim());
+      formData.append("contact_phone", contactPhone.trim());
       formData.append("is_active", "true");
       if (logo) formData.append("logo", logo);
       return editing ? kvkLinksApi.update(editing.id, formData) : kvkLinksApi.create(formData);
@@ -210,6 +223,49 @@ function KVKLinkDialog({
               className={urlError ? "border-destructive focus-visible:ring-destructive/20" : ""}
             />
             {urlError && <p className="text-xs text-destructive">{urlError}</p>}
+          </div>
+
+          {/* District (KAU suggestion #2 — chatbot fallback routing) */}
+          <div className="flex flex-col gap-1.5">
+            <p className="text-sm font-medium">{t.field_district ?? "District"}</p>
+            <select
+              id="kvk-link-district"
+              value={district}
+              onChange={(e) => setDistrict(e.target.value)}
+              className="h-9 w-full rounded-md border bg-background px-3 text-foreground text-sm shadow-xs focus:outline-none focus:ring-1 focus:ring-ring"
+            >
+              <option value="">{t.field_district_placeholder ?? "Select district (optional)"}</option>
+              {KERALA_DISTRICTS.map((d) => (
+                <option key={d.code} value={d.code}>{d.name}</option>
+              ))}
+            </select>
+            <p className="text-[11px] text-muted-foreground">
+              {t.field_district_hint ?? "Used by the chatbot to route users to their district's KVK when it can't answer."}
+            </p>
+          </div>
+
+          {/* Contact email + phone */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <p className="text-sm font-medium">{t.field_contact_email ?? "Contact Email"}</p>
+              <Input
+                id="kvk-contact-email"
+                type="email"
+                value={contactEmail}
+                onChange={(e) => setContactEmail(e.target.value)}
+                placeholder="kvk@kau.in"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <p className="text-sm font-medium">{t.field_contact_phone ?? "Contact Phone"}</p>
+              <Input
+                id="kvk-contact-phone"
+                type="tel"
+                value={contactPhone}
+                onChange={(e) => setContactPhone(e.target.value)}
+                placeholder="+91 …"
+              />
+            </div>
           </div>
 
           {/* Logo */}
