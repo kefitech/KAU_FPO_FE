@@ -1,22 +1,22 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+
 import dynamic from "next/dynamic";
 
 import { Loader2, MapPin, RefreshCw, Sparkles, Star, ThumbsUp, TrendingUp, WifiOff } from "lucide-react";
 
+import { CropPopSheet } from "@/components/shared/crop-pop-sheet";
+import { Input } from "@/components/ui/input";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import {
-  getCropPackageOfPractices,
   getMyRecommendation,
   requestFreshRecommendation,
   submitRecommendationFeedback,
 } from "@/lib/api/recommendation";
-import { Input } from "@/components/ui/input";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
-import { ViewSheet, type SheetField } from "@/components/ui/view-sheet";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
-import type { CropPackageOfPractices, MyCropSuggestion, MyRecommendation } from "@/types/recommendation";
+import type { MyCropSuggestion, MyRecommendation } from "@/types/recommendation";
 
 type T = Record<string, string>;
 
@@ -38,82 +38,11 @@ function StarRating({ value, onChange, t }: { value: number; onChange: (v: numbe
           className="transition-transform hover:scale-110"
           aria-label={(t.rate_star_aria ?? "Rate {n} star(s)").replace("{n}", String(n))}
         >
-          <Star
-            className={`h-5 w-5 ${n <= value ? "fill-amber-400 text-amber-400" : "text-muted-foreground"}`}
-          />
+          <Star className={`h-5 w-5 ${n <= value ? "fill-amber-400 text-amber-400" : "text-muted-foreground"}`} />
         </button>
       ))}
     </div>
   );
-}
-
-// ViewSheet renders `title` via dangerouslySetInnerHTML, so escape the crop
-// name rather than trusting it (it originates from the ML service response).
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-// Multi-line PoP text (fertilizer schedules, numbered steps) must keep its
-// line breaks; ViewSheet's plain text rows don't, so wrap in a pre-wrap node.
-function preWrap(text: string) {
-  return <div className="whitespace-pre-wrap text-sm">{text}</div>;
-}
-
-function buildCropPopFields(pop: CropPackageOfPractices, t: T): SheetField[] {
-  const fields: SheetField[] = [];
-
-  if (pop.crop_group) fields.push({ label: t.pop_crop_group ?? "Crop group", type: "text", value: pop.crop_group });
-  if (pop.season) fields.push({ label: t.pop_season ?? "Season", type: "node", node: preWrap(pop.season) });
-  if (pop.spacing) fields.push({ label: t.pop_spacing ?? "Spacing", type: "text", value: pop.spacing });
-  if (pop.expected_yield) {
-    fields.push({ label: t.pop_yield ?? "Expected yield", type: "text", value: pop.expected_yield });
-  }
-
-  if (pop.varieties.length) {
-    fields.push({
-      label: t.pop_varieties ?? "Varieties",
-      type: "node",
-      node: (
-        <ul className="list-disc space-y-1 pl-4 text-sm">
-          {pop.varieties.map((v, i) => (
-            <li key={i}>
-              <span className="font-medium">{v.name}</span>
-              {v.description ? ` — ${v.description}` : ""}
-            </li>
-          ))}
-        </ul>
-      ),
-    });
-  }
-
-  const textBlocks: [string, string, string][] = [
-    [pop.manuring_fertilizer, "pop_manuring", "Manuring / fertilizer"],
-    [pop.plant_protection, "pop_plant_protection", "Plant protection"],
-    [pop.harvesting, "pop_harvesting", "Harvesting"],
-  ];
-  for (const [value, key, fallback] of textBlocks) {
-    if (value) fields.push({ label: t[key] ?? fallback, type: "node", node: preWrap(value) });
-  }
-
-  if (pop.sections.length) {
-    fields.push({ label: t.pop_detail ?? "Package of Practices detail", type: "section" });
-    for (const s of pop.sections) {
-      fields.push({ label: s.heading, type: "node", node: preWrap(s.body) });
-    }
-  }
-
-  fields.push({
-    label: t.pop_source ?? "Source",
-    type: "text",
-    value: pop.source_page_range ? `${pop.source_reference} (p. ${pop.source_page_range})` : pop.source_reference,
-  });
-
-  return fields;
 }
 
 interface CropRecommendationDisplayProps {
@@ -170,31 +99,6 @@ export function CropRecommendationDisplay({ hasCultivationArea }: CropRecommenda
   // PoP content, so each selection triggers a fresh fetch; the cancelled flag
   // stops a slow earlier response from overwriting a newer selection.
   const [selectedCrop, setSelectedCrop] = useState<MyCropSuggestion | null>(null);
-  const [popData, setPopData] = useState<CropPackageOfPractices | null>(null);
-  const [popLoading, setPopLoading] = useState(false);
-
-  useEffect(() => {
-    if (!selectedCrop) {
-      setPopData(null);
-      return;
-    }
-    let cancelled = false;
-    setPopLoading(true);
-    getCropPackageOfPractices(selectedCrop.crop)
-      .then((data) => {
-        if (!cancelled) setPopData(data);
-      })
-      .catch(() => {
-        if (!cancelled) setPopData(null);
-      })
-      .finally(() => {
-        if (!cancelled) setPopLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedCrop]);
-
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   function stopPolling() {
@@ -353,7 +257,8 @@ export function CropRecommendationDisplay({ hasCultivationArea }: CropRecommenda
   // The last refresh could not reach the recommendation service, so what's on screen is the previously
   // saved recommendation (the backend records this in input_snapshot). Only meaningful once the request has
   // settled -- while a new one is pending/processing the flag is from the previous attempt.
-  const showOfflineNotice = recommendation?.status === "completed" && !!recommendation.input_snapshot?.ml_service_offline;
+  const showOfflineNotice =
+    recommendation?.status === "completed" && !!recommendation.input_snapshot?.ml_service_offline;
   const formatDate = (iso?: string) =>
     iso ? new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : null;
   const previousGeneratedOn = formatDate(recommendation?.input_snapshot?.generated_at);
@@ -486,14 +391,16 @@ export function CropRecommendationDisplay({ hasCultivationArea }: CropRecommenda
 
       {showStaleNotice && (
         <p className="rounded-md bg-amber-50 px-3 py-2 text-amber-800 text-xs dark:bg-amber-950/30 dark:text-amber-400">
-          {t.stale_notice ?? "Showing your previous recommendation below — the request above failed, so this hasn't changed."}
+          {t.stale_notice ??
+            "Showing your previous recommendation below — the request above failed, so this hasn't changed."}
         </p>
       )}
 
       {recommendation?.warning && (
         <p className="rounded-md bg-amber-50 px-3 py-2 text-amber-800 text-xs dark:bg-amber-950/30 dark:text-amber-400">
           {recommendation.warning === "recommendations.service_unavailable"
-            ? (t.warning_service_unavailable ?? "Showing your last saved recommendation — the AI service is temporarily unavailable.")
+            ? (t.warning_service_unavailable ??
+              "Showing your last saved recommendation — the AI service is temporarily unavailable.")
             : recommendation.warning}
         </p>
       )}
@@ -532,7 +439,9 @@ export function CropRecommendationDisplay({ hasCultivationArea }: CropRecommenda
 
       {isFailed && !isOutsideKerala && (
         <div className="flex h-32 flex-col items-center justify-center gap-2 rounded-lg border bg-muted/30 text-center">
-          <p className="text-muted-foreground text-sm">{t.failed_title ?? "Couldn't generate a recommendation this time."}</p>
+          <p className="text-muted-foreground text-sm">
+            {t.failed_title ?? "Couldn't generate a recommendation this time."}
+          </p>
           <p className="text-muted-foreground text-xs">{t.failed_description ?? "Try again using the button above."}</p>
         </div>
       )}
@@ -588,7 +497,9 @@ export function CropRecommendationDisplay({ hasCultivationArea }: CropRecommenda
           )}
           <div className="flex flex-col gap-2 rounded-lg border p-3">
             <h3 className="font-medium text-sm">
-              {feedbackSubmitted ? (t.feedback_title_submitted ?? "Your feedback") : (t.feedback_title_new ?? "Was this helpful?")}
+              {feedbackSubmitted
+                ? (t.feedback_title_submitted ?? "Your feedback")
+                : (t.feedback_title_new ?? "Was this helpful?")}
             </h3>
             <StarRating
               value={feedbackRating}
@@ -613,39 +524,20 @@ export function CropRecommendationDisplay({ hasCultivationArea }: CropRecommenda
                   disabled={submittingFeedback}
                   className="self-end rounded-md bg-primary px-3 py-1.5 font-medium text-primary-foreground text-xs disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {submittingFeedback ? (t.feedback_submitting ?? "Submitting…") : (t.feedback_submit ?? "Submit feedback")}
+                  {submittingFeedback
+                    ? (t.feedback_submitting ?? "Submitting…")
+                    : (t.feedback_submit ?? "Submit feedback")}
                 </button>
               </>
             )}
-            {feedbackSubmitted && <p className="text-muted-foreground text-xs">{t.feedback_thanks ?? "Thanks for your feedback!"}</p>}
+            {feedbackSubmitted && (
+              <p className="text-muted-foreground text-xs">{t.feedback_thanks ?? "Thanks for your feedback!"}</p>
+            )}
           </div>
         </div>
       )}
 
-      <ViewSheet
-        open={!!selectedCrop}
-        onOpenChange={(v) => {
-          if (!v) setSelectedCrop(null);
-        }}
-        title={escapeHtml(selectedCrop?.crop ?? "")}
-        fields={
-          popLoading
-            ? [{ label: "", type: "text", value: t.pop_loading ?? "Loading…" }]
-            : popData
-              ? buildCropPopFields(popData, t)
-              : [
-                  {
-                    label: "",
-                    type: "text",
-                    // Expected, not an error: content is transcribed crop by crop.
-                    value: (t.pop_empty ?? "Detailed practices for {crop} haven't been added yet.").replace(
-                      "{crop}",
-                      selectedCrop?.crop ?? "",
-                    ),
-                  },
-                ]
-        }
-      />
+      <CropPopSheet crop={selectedCrop?.crop ?? null} onClose={() => setSelectedCrop(null)} t={t} />
     </div>
   );
 }

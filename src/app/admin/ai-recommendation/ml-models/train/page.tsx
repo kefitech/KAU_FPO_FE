@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Database } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -39,9 +40,12 @@ export default function TrainMlModelPage() {
   });
 
   const mutation = useMutation({
-    mutationFn: (values: FormValues) => {
+    // fromProfiles: no file -- the backend builds the dataset from the current
+    // active crop zone profiles (source=zone_profiles) and trains on that.
+    mutationFn: ({ values, fromProfiles }: { values: FormValues; fromProfiles: boolean }) => {
       const formData = new FormData();
-      if (file) formData.append("dataset_file", file);
+      if (fromProfiles) formData.append("source", "zone_profiles");
+      else if (file) formData.append("dataset_file", file);
       if (values.version_code) formData.append("version_code", values.version_code);
       if (values.description) formData.append("description", values.description);
       return adminMlModelsApi.retrain(formData);
@@ -76,24 +80,48 @@ export default function TrainMlModelPage() {
       return;
     }
     setFileError(null);
-    mutation.mutate(values);
+    mutation.mutate({ values, fromProfiles: false });
   }
+
+  const submitFromProfiles = handleSubmit((values) => {
+    setFileError(null);
+    mutation.mutate({ values, fromProfiles: true });
+  });
 
   return (
     <div className="flex flex-col gap-6 px-8 py-6">
       <div className="mx-auto w-full max-w-3xl">
         <h1 className="font-bold text-2xl">Train Model from Dataset</h1>
         <p className="mt-0.5 text-muted-foreground text-sm">
-          Upload a cleaned CSV in the same shape as the source training dataset. The file is checked immediately;
-          training then runs in the background and the new version appears in the list as Training, then Ready.
-          Activating it is a separate step.
+          Train from the current crop zone profiles (recommended -- the same knowledge base recommendations are filtered
+          with), or upload a dataset CSV. Training runs in the background and the new version appears in the list as
+          Training, then Ready. Activating it is a separate step.
         </p>
       </div>
 
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Dataset</CardTitle>
+            <CardTitle className="text-base">Train from crop zone profiles</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <p className="text-muted-foreground text-sm">
+              Builds the training dataset from every <span className="font-medium">active</span> crop zone profile
+              (temperature and pH ranges, suitable seasons and soils) so the model learns exactly what the knowledge
+              base documents. Version code and description below are used if filled in.
+            </p>
+            <div>
+              <Button type="button" onClick={() => submitFromProfiles()} disabled={mutation.isPending}>
+                <Database className="mr-1.5 h-4 w-4" />
+                {mutation.isPending ? "Starting…" : "Train from current profiles"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Or upload a dataset CSV</CardTitle>
           </CardHeader>
           <CardContent>
             <form id="ml-model-train-form" onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">

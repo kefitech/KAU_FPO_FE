@@ -11,7 +11,7 @@ import "@/lib/gis/leaflet-overrides.css";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 
-import { MapToggleButton } from "./map-toggle-button";
+import { MapToggleButton } from "@/components/gis/map-toggle-button";
 
 type T = Record<string, string>;
 
