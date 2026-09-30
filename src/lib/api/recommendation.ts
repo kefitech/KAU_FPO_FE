@@ -1,6 +1,6 @@
 import type { ApiResponse } from "@/types/api";
 import type {
-  BusinessPlanGuidance,
+  BusinessPlanResponse,
   CropPackageOfPractices,
   DprGenerationRequest,
   GeneratedDpr,
@@ -93,24 +93,39 @@ export async function submitRecommendationFeedback(
   return response.data.data;
 }
 
-// ── Below: speculative functions for features not yet built on the
-// backend (Business Plan Guidance, DPR generation). Left as-is —
-// endpoints don't exist yet, these will need the same real-backend
-// treatment once that work happens. ──
+// ── AI Business Plan — apps/recommendations/api/business_plan.py.
+// The plan is grounded server-side in the FPO's primary/secondary
+// commodities and registered location, and cached per language
+// (X-Language header). ──
+
+const BUSINESS_PLAN_PATH = "/recommendations/business-plan/me/";
+const BUSINESS_PLAN_GENERATE_PATH = "/recommendations/business-plan/me/generate/";
 
 /**
- * Get business plan guidance
+ * Fetch the FPO's saved business plan for the current language (plan is
+ * null until one is generated) plus the profile it is based on.
  */
-export async function getBusinessPlanGuidance(data: {
-  commodity: string;
-  region: string;
-  fpoSize?: number;
-  currentRevenue?: number;
-  targetMarket?: string;
-}): Promise<BusinessPlanGuidance> {
-  const response = await apiClient.post<ApiResponse<BusinessPlanGuidance>>("/v1/recommendations/business-plan", data);
+export async function getMyBusinessPlan(): Promise<BusinessPlanResponse> {
+  const response = await apiClient.get<ApiResponse<BusinessPlanResponse>>(BUSINESS_PLAN_PATH);
   return response.data.data;
 }
+
+/**
+ * Generate (or regenerate) the business plan. Synchronous Gemini call on
+ * the backend — typically 20-60s, so it gets a longer timeout than the
+ * 30s client default.
+ */
+export async function generateBusinessPlan(): Promise<BusinessPlanResponse> {
+  const response = await apiClient.post<ApiResponse<BusinessPlanResponse>>(
+    BUSINESS_PLAN_GENERATE_PATH,
+    {},
+    { timeout: 120_000 },
+  );
+  return response.data.data;
+}
+
+// ── Below: speculative functions for features not yet built on the
+// backend (DPR generation). Left as-is — endpoints don't exist yet. ──
 
 /**
  * Generate DPR (Detailed Project Report)

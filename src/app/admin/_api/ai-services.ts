@@ -15,7 +15,7 @@ import { api } from "@/lib/api/client";
 
 export type AIProvider = "mock" | "anthropic" | "openai" | "google";
 
-export type AIService = "dpr_narratives" | "chatbot" | "marketing" | "translate";
+export type AIService = "dpr_narratives" | "chatbot" | "marketing" | "translate" | "business_plan";
 
 export interface AIServiceConfigRow {
   id: number;

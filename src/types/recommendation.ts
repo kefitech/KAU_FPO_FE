@@ -82,29 +82,60 @@ export interface RecommendationHistory {
 }
 
 /**
- * Business Plan Guidance Types
+ * AI Business Plan — matches apps/recommendations/api/business_plan.py
+ * (GET /recommendations/business-plan/me/, POST .../generate/).
  */
-export interface BusinessPlanGuidance {
+export interface BusinessPlanCommodity {
+  code: string;
+  name: string;
+}
+
+export interface BusinessPlanProfile {
+  fpo_name: string;
+  primary_commodities: BusinessPlanCommodity[];
+  secondary_commodities: BusinessPlanCommodity[];
+  district: string;
+  district_display: string;
+  block_taluk: string;
+  block_display: string;
+  village_town: string;
+  address: string;
+  pincode: string;
+}
+
+export interface BusinessPlanContent {
+  title: string;
+  executive_summary: string;
+  commodity_focus: { commodity: string; role: "primary" | "secondary"; opportunity: string }[];
+  location_advantages: string;
+  business_activities: { name: string; description: string }[];
+  market_strategy: { target_markets?: string[]; channels?: string[]; branding?: string };
+  operations_plan: string;
+  financial_outline: {
+    estimated_investment?: string;
+    working_capital?: string;
+    revenue_streams?: string[];
+    funding_sources?: string[];
+  };
+  risks: { risk: string; mitigation: string }[];
+  action_plan: { period: string; activities: string[] }[];
+  key_recommendations: string[];
+}
+
+export interface BusinessPlan {
   id: string;
-  fpoId: string;
-  commodity: string;
-  region: string;
-  generatedAt: string;
-  summary: string;
-  summaryMl?: string;
-  sections: {
-    marketAnalysis: string;
-    operationalPlan: string;
-    financialProjections: string;
-    riskAnalysis: string;
-    recommendations: string[];
-  };
-  financialMetrics: {
-    estimatedInvestment: number;
-    expectedRevenue: number;
-    breakEvenPeriod: string;
-    roi: number;
-  };
+  language: "en" | "ml";
+  financial_year: string;
+  content: BusinessPlanContent;
+  provider: string;
+  model_used: string;
+  generated_at: string | null;
+}
+
+export interface BusinessPlanResponse {
+  plan: BusinessPlan | null;
+  profile: BusinessPlanProfile;
+  is_outdated: boolean;
 }
 
 /**
