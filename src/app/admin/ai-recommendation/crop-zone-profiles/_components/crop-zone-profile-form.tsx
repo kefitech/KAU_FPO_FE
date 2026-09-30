@@ -10,9 +10,16 @@ import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { KAU_ZONES, adminCropZoneProfilesApi, type CropZoneProfilePayload } from "@/app/admin/_api/crop-zone-profiles";
+import {
+  adminCropZoneProfilesApi,
+  type CropZoneProfilePayload,
+  KAU_ZONES,
+  SERVICE_SEASONS,
+  SOIL_CATEGORIES,
+} from "@/app/admin/_api/crop-zone-profiles";
 import { MasterDataSelect } from "@/components/common/master-data-select";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -32,6 +39,8 @@ const schema = z
     ph_lo: z.number(),
     ph_hi: z.number(),
     seasons_text: z.string().optional(),
+    seasons: z.array(z.string()),
+    suitable_soils: z.array(z.string()),
     temp_is_real: z.boolean(),
     ph_is_real: z.boolean(),
     is_active: z.boolean(),
@@ -50,6 +59,8 @@ const defaultValues: FormValues = {
   ph_lo: 5.0,
   ph_hi: 6.5,
   seasons_text: "",
+  seasons: [],
+  suitable_soils: [],
   temp_is_real: true,
   ph_is_real: true,
   is_active: false,
@@ -93,6 +104,8 @@ export function CropZoneProfileForm({ mode, id, t = {}, tCommon = {} }: Props) {
         ph_lo: existing.ph_lo,
         ph_hi: existing.ph_hi,
         seasons_text: existing.seasons_text,
+        seasons: existing.seasons ?? [],
+        suitable_soils: existing.suitable_soils ?? [],
         temp_is_real: existing.temp_is_real,
         ph_is_real: existing.ph_is_real,
         is_active: existing.is_active,
@@ -103,10 +116,16 @@ export function CropZoneProfileForm({ mode, id, t = {}, tCommon = {} }: Props) {
   const mutation = useMutation({
     mutationFn: (values: FormValues) => {
       const payload: CropZoneProfilePayload = { ...values };
-      return mode === "create" ? adminCropZoneProfilesApi.create(payload) : adminCropZoneProfilesApi.update(id!, payload);
+      return mode === "create"
+        ? adminCropZoneProfilesApi.create(payload)
+        : adminCropZoneProfilesApi.update(id!, payload);
     },
     onSuccess: () => {
-      toast.success(mode === "create" ? (t.toast_created ?? "Crop zone profile created") : (t.toast_updated ?? "Crop zone profile updated"));
+      toast.success(
+        mode === "create"
+          ? (t.toast_created ?? "Crop zone profile created")
+          : (t.toast_updated ?? "Crop zone profile updated"),
+      );
       queryClient.invalidateQueries({ queryKey: ["crop-zone-profiles"] });
       router.push("/admin/ai-recommendation/crop-zone-profiles");
     },
@@ -292,6 +311,64 @@ export function CropZoneProfileForm({ mode, id, t = {}, tCommon = {} }: Props) {
             />
           </Field>
         </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field>
+            <FieldLabel>{t.field_seasons ?? "Suitable seasons"}</FieldLabel>
+            <p className="text-muted-foreground text-xs">
+              {t.field_seasons_help ??
+                "Drives the season part of the fit score. None selected = not specified (all seasons treated as mildly suitable)."}
+            </p>
+            <Controller
+              control={control}
+              name="seasons"
+              render={({ field }) => (
+                <div className="flex flex-col gap-2 pt-1">
+                  {SERVICE_SEASONS.map((s) => (
+                    <label key={s.value} htmlFor={`season-${s.value}`} className="flex items-center gap-2 text-sm">
+                      <Checkbox
+                        id={`season-${s.value}`}
+                        checked={field.value.includes(s.value)}
+                        onCheckedChange={(checked) =>
+                          field.onChange(checked ? [...field.value, s.value] : field.value.filter((v) => v !== s.value))
+                        }
+                      />
+                      {s.label}
+                    </label>
+                  ))}
+                </div>
+              )}
+            />
+          </Field>
+
+          <Field>
+            <FieldLabel>{t.field_suitable_soils ?? "Suitable soils"}</FieldLabel>
+            <p className="text-muted-foreground text-xs">
+              {t.field_suitable_soils_help ??
+                "Drives the soil part of the fit score. None selected = not specified (all soils treated as mildly suitable)."}
+            </p>
+            <Controller
+              control={control}
+              name="suitable_soils"
+              render={({ field }) => (
+                <div className="flex flex-col gap-2 pt-1">
+                  {SOIL_CATEGORIES.map((s) => (
+                    <label key={s} htmlFor={`soil-${s}`} className="flex items-center gap-2 text-sm">
+                      <Checkbox
+                        id={`soil-${s}`}
+                        checked={field.value.includes(s)}
+                        onCheckedChange={(checked) =>
+                          field.onChange(checked ? [...field.value, s] : field.value.filter((v) => v !== s))
+                        }
+                      />
+                      {s}
+                    </label>
+                  ))}
+                </div>
+              )}
+            />
+          </Field>
+        </div>
       </div>
 
       <div className="rounded-lg border p-5 space-y-4">
@@ -308,7 +385,8 @@ export function CropZoneProfileForm({ mode, id, t = {}, tCommon = {} }: Props) {
             <div>
               <FieldLabel>{t.field_temp_is_real ?? "Temperature range is from the book"}</FieldLabel>
               <p className="text-muted-foreground text-xs">
-                {t.field_temp_is_real_help ?? "Off if this is a fallback estimate, not the PoP text's own stated range."}
+                {t.field_temp_is_real_help ??
+                  "Off if this is a fallback estimate, not the PoP text's own stated range."}
               </p>
             </div>
           </div>
@@ -343,7 +421,11 @@ export function CropZoneProfileForm({ mode, id, t = {}, tCommon = {} }: Props) {
       </div>
 
       <div className="flex items-center justify-end gap-3">
-        <Button type="button" variant="outline" onClick={() => router.push("/admin/ai-recommendation/crop-zone-profiles")}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => router.push("/admin/ai-recommendation/crop-zone-profiles")}
+        >
           {tCommon.cancel ?? "Cancel"}
         </Button>
         <Button type="submit" disabled={mutation.isPending}>

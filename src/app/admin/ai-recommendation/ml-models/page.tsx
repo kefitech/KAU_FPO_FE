@@ -5,7 +5,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, Sparkles } from "lucide-react";
+import { AlertTriangle, Loader2, Plus, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 import { adminMlModelsApi, type MLModelVersion } from "@/app/admin/_api/ml-models";
@@ -20,6 +20,7 @@ import { getMlModelColumns } from "./_components/columns";
 import { TrainingMetricsView } from "./_components/training-metrics-view";
 
 const TRAINING_POLL_MS = 5_000;
+const SERVICE_STATUS_POLL_MS = 30_000;
 
 type T = Record<string, string>;
 
@@ -60,6 +61,14 @@ export default function MlModelsPage() {
     },
   });
   const trainingCount = statusData?.data.filter((m) => m.status === "training").length ?? 0;
+
+  // Is the ML service up? Activation is refused while it's down, so say so
+  // up front instead of letting the admin find out from a failed click.
+  const { data: serviceStatus } = useQuery({
+    queryKey: ["ml-service-status"],
+    queryFn: adminMlModelsApi.getServiceStatus,
+    refetchInterval: SERVICE_STATUS_POLL_MS,
+  });
   const statusSignature = useMemo(
     () => (statusData?.data ?? []).map((m) => `${m.id}:${m.status}`).join(","),
     [statusData],
@@ -116,6 +125,20 @@ export default function MlModelsPage() {
             ? (t.training_banner_singular ?? "1 version is training")
             : (t.training_banner_plural ?? "{n} versions are training").replace("{n}", String(trainingCount))}{" "}
           {t.training_banner_suffix ?? "— this list refreshes automatically."}
+        </div>
+      )}
+
+      {serviceStatus?.reachable === false && (
+        <div
+          role="alert"
+          className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-amber-800 text-sm dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300"
+        >
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            <span className="font-medium">{t.service_down_title ?? "AI service is unreachable."}</span>{" "}
+            {t.service_down_body ??
+              "Model versions can't be activated until it's back up. This check refreshes automatically."}
+          </span>
         </div>
       )}
 

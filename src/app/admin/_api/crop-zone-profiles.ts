@@ -13,6 +13,23 @@ export const KAU_ZONES = [
 ] as const;
 export type KauZone = (typeof KAU_ZONES)[number];
 
+// Service seasons + the ML service's 6 canonical soil categories -- must match
+// CropZoneProfileSerializer.VALID_SEASONS / VALID_SOILS on the backend.
+export const SERVICE_SEASONS = [
+  { value: "southwest_monsoon", label: "South-West Monsoon" },
+  { value: "northeast_monsoon", label: "North-East Monsoon" },
+  { value: "dry_season", label: "Dry Season" },
+] as const;
+
+export const SOIL_CATEGORIES = [
+  "Coastal sandy / laterite patches",
+  "Coastal alluvium / sandy, backwater-adjacent",
+  "Laterite",
+  "Lateritic loam (transitional)",
+  "Black soil (Chittoor black soil) / red loam",
+  "Forest loam / hill soil (acidic, high organic matter)",
+] as const;
+
 export interface CropZoneProfile {
   id: number;
   crop_name: string;
@@ -23,6 +40,8 @@ export interface CropZoneProfile {
   ph_lo: number;
   ph_hi: number;
   seasons_text: string;
+  seasons: string[];
+  suitable_soils: string[];
   temp_is_real: boolean;
   ph_is_real: boolean;
   is_active: boolean;
@@ -39,6 +58,8 @@ export interface CropZoneProfilePayload {
   ph_lo: number;
   ph_hi: number;
   seasons_text?: string;
+  seasons?: string[];
+  suitable_soils?: string[];
   temp_is_real?: boolean;
   ph_is_real?: boolean;
   is_active?: boolean;
@@ -63,7 +84,8 @@ export const adminCropZoneProfilesApi = {
 
   delete: (id: number): Promise<void> => api.delete(`${BASE}${id}/`).then(() => undefined),
 
-  activate: (id: number): Promise<CropZoneProfile> => api.post<Wrapped<CropZoneProfile>>(`${BASE}${id}/activate/`).then(unwrap),
+  activate: (id: number): Promise<CropZoneProfile> =>
+    api.post<Wrapped<CropZoneProfile>>(`${BASE}${id}/activate/`).then(unwrap),
 
   deactivate: (id: number): Promise<CropZoneProfile> =>
     api.post<Wrapped<CropZoneProfile>>(`${BASE}${id}/deactivate/`).then(unwrap),

@@ -21,6 +21,101 @@ export interface MLModelVersion {
   training_error: string;
 }
 
+export interface MLServiceStatus {
+  reachable: boolean;
+  // Version the service is actually predicting with; null when unreachable.
+  served_version: string | null;
+}
+
+// Values the ML service accepts for a test prediction (GET test-options/).
+export interface ModelTestOptions {
+  zones: string[];
+  seasons: string[];
+  soil_types: { value: string; ph_lo: number; ph_hi: number }[];
+  tiers: string[];
+}
+
+export interface ModelTestInput {
+  agro_zone: string;
+  season: string;
+  soil_type: string; // "" = not specified: the zone's soil mix is averaged
+  soil_ph: number | null; // null = use the soil type's typical pH
+  commodities: string[];
+  tier: string | null;
+  // Replace the zone's seasonal averages for this test only (e.g. with the
+  // current weather at a map location). null = use the seasonal average.
+  temperature_override: number | null;
+  humidity_override: number | null;
+}
+
+// What the map location resolves to (POST test-location/).
+export interface ModelTestLocation {
+  lat: number;
+  lng: number;
+  address: string | null;
+  // Hectares of a drawn area (same calculation as an FPO cultivation area); null for a pin.
+  area_hectares: number | null;
+  zone: { code: string; name: string } | null; // null = outside the supported zones
+  soil_region: { soil_type: string; name: string } | null;
+  // The model's soil category for that region; null = no match (the zone's
+  // soil mix is averaged, same as for an FPO) or the service was unreachable.
+  soil_category: string | null;
+  soil_category_checked: boolean;
+  season: string;
+  weather: {
+    temperature_c: number;
+    humidity_percent: number;
+    rainfall_mm: number;
+    description: string;
+    season: string;
+    is_simulated: boolean; // no weather API key / API failed: a seasonal estimate
+  };
+}
+
+export type ModelTestLocationQuery = { lat: number; lng: number } | { polygon: GeoJSON.Polygon };
+
+// Per-component breakdown of the rule-fit score (0-1 each). `estimated` marks
+// crops whose documented pH AND temperature ranges are fallback values.
+export interface CropFitBreakdown {
+  fit: number;
+  temperature: number;
+  ph: number;
+  season: number;
+  soil: number;
+  zone_documented: boolean;
+  estimated: boolean;
+}
+
+export interface ModelTestRecommendation {
+  crop: string;
+  confidence: number; // 0-1, relative to the best candidate for these inputs
+  reasoning: string;
+  estimated_yield: string;
+  business_guidance: string;
+  // Only present on responses from the (retired) rule-fit scorer era.
+  fit?: CropFitBreakdown | null;
+}
+
+export interface ModelTestResult {
+  recommendations: ModelTestRecommendation[];
+  model_version: string;
+  // true when the tested version is the one currently serving FPOs;
+  // false when its file was loaded just for this test.
+  used_live_model: boolean;
+  // What the model actually saw after the service resolved the inputs.
+  resolved_inputs: {
+    zone: string;
+    season: string;
+    soil_categories: string[];
+    soil_ph_used: number[];
+    climate: { temperature_avg_C: number; rainfall_mm: number; humidity_pct: number };
+    climate_overridden: string[]; // which climate values came from the overrides
+    matched_commodities: string[];
+    unmatched_commodities: string[];
+    n_candidates: number;
+  };
+}
+
 export interface RecommendationFeedbackItem {
   id: number;
   fpo_name: string;
@@ -96,14 +191,33 @@ export const adminMlModelsApi = {
       })
       .then(unwrap),
 
-  // Returns a `warning` field too — set if activation succeeded in Django
-  // but notifying the FastAPI service failed (graceful degradation, see
-  // apps/recommendations/api/recommendations.py MLModelVersionActivateView)
-  activate: (id: number): Promise<MLModelVersion & { warning?: string }> =>
-    api.post<Wrapped<MLModelVersion>>(`${BASE}${id}/activate/`).then((r) => ({
-      ...r.data.data,
-      warning: r.data.warning,
-    })),
+  // Django asks the ML service to load the version first and only marks it
+  // active once that succeeds (MLModelVersionActivateView). Rejects with the
+  // service's reason (400) if the model can't be loaded, or a 503 if the
+  // service is unreachable -- in both cases nothing changes.
+  activate: (id: number): Promise<MLModelVersion> =>
+    api.post<Wrapped<MLModelVersion>>(`${BASE}${id}/activate/`).then(unwrap),
+
+  // Whether the ML service answers its /health right now (MLServiceStatusView).
+  getServiceStatus: (): Promise<MLServiceStatus> =>
+    api.get<Wrapped<MLServiceStatus>>(`${BASE}service-status/`).then(unwrap),
+
+  // Dropdown values for the test form, straight from the ML service
+  // (MLModelTestOptionsView). 503 while the service is down.
+  getTestOptions: (): Promise<ModelTestOptions> =>
+    api.get<Wrapped<ModelTestOptions>>(`${BASE}test-options/`).then(unwrap),
+
+  // Runs a prediction with this version and hand-picked inputs
+  // (MLModelTestView). Works for any ready version, active or not; the live
+  // model is untouched and nothing is saved. A non-active version's file is
+  // loaded for the request, hence the longer timeout.
+  test: (id: number, input: ModelTestInput): Promise<ModelTestResult> =>
+    api.post<Wrapped<ModelTestResult>>(`${BASE}${id}/test/`, input, { timeout: 90_000 }).then(unwrap),
+
+  // Zone, soil, current weather and address for a dropped pin or drawn
+  // polygon (its centroid), as the FPO flow would derive them (MLModelTestLocationView).
+  lookupTestLocation: (query: ModelTestLocationQuery): Promise<ModelTestLocation> =>
+    api.post<Wrapped<ModelTestLocation>>(`${BASE}test-location/`, query, { timeout: 30_000 }).then(unwrap),
 
   /**
    * Feedback on recommendations produced by a specific model version.

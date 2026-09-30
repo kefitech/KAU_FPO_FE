@@ -59,17 +59,17 @@ function MlModelActions({
 
   const activateMutation = useMutation({
     mutationFn: () => adminMlModelsApi.activate(model.id),
-    onSuccess: (result) => {
-      if (result.warning) {
-        toast.warning(result.warning, { duration: 12_000 });
-      } else {
-        toast.success(t.toast_activated ?? "Model version activated");
-      }
+    onSuccess: () => {
+      toast.success(t.toast_activated ?? "Model version activated");
       queryClient.invalidateQueries({ queryKey: ["ml-models"] });
     },
     onError: (error: unknown) => {
+      // The backend's message says why (model can't be loaded, or the ML
+      // service is down); long, so keep it on screen a while.
       const msg = (error as { message?: string })?.message;
-      toast.error(msg ?? t.toast_activate_failed ?? "Failed to activate model version");
+      toast.error(msg ?? t.toast_activate_failed ?? "Failed to activate model version", { duration: 12_000 });
+      // A failure may mean the service just went down -- refresh the banner.
+      queryClient.invalidateQueries({ queryKey: ["ml-service-status"] });
     },
   });
 
@@ -103,6 +103,12 @@ function MlModelActions({
         {
           label: t.action_view_feedback ?? "View Feedback",
           onClick: () => router.push(`/admin/ai-recommendation/ml-models/${model.id}/feedback`),
+        },
+        {
+          label: t.action_test_model ?? "Test Model",
+          onClick: () => router.push(`/admin/ai-recommendation/ml-models/${model.id}/test`),
+          // Needs a model file: training/failed versions don't have one.
+          hidden: model.status !== "ready",
         },
         {
           label: t.action_activate ?? "Activate",
