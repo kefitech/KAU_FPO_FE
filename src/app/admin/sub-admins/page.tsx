@@ -2,9 +2,11 @@
 
 import { Suspense, useEffect, useState } from "react";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import { Building2, Pencil, Plus } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Building2, FileUp, Pencil, Plus } from "lucide-react";
 
 import { subAdminsApi } from "@/app/admin/_api/sub-admins";
 import { DataTable } from "@/components/data-table";
@@ -15,7 +17,9 @@ import { useLocaleStore } from "@/stores/locale-store";
 import type { SubAdmin } from "@/types/admin";
 
 import { AssignFposDialog } from "./_components/assign-fpos-dialog";
+import { BulkInviteDialog } from "./_components/bulk-invite-dialog";
 import { getSubAdminColumns } from "./_components/columns";
+import { TransferDistrictDialog } from "./_components/transfer-district-dialog";
 
 type T = Record<string, string>;
 
@@ -28,7 +32,16 @@ export default function SubAdminsPage() {
   const [tCommon, setTCommon] = useState<T>({});
   const [subAdminView, setSubAdminView] = useState<{ open: boolean; row: SubAdmin | null }>({ open: false, row: null });
   const [assignFpos, setAssignFpos] = useState<{ open: boolean; row: SubAdmin | null }>({ open: false, row: null });
+  const [transferRow, setTransferRow] = useState<{ open: boolean; row: SubAdmin | null }>({ open: false, row: null });
+  const [bulkOpen, setBulkOpen] = useState(false);
   const openAssignFpos = (row: SubAdmin) => setAssignFpos({ open: true, row });
+  const openTransfer = (row: SubAdmin) => setTransferRow({ open: true, row });
+
+  const { data: capStatus } = useQuery({
+    queryKey: ["sub-admin-district-cap-status"],
+    queryFn: subAdminsApi.getDistrictCapStatus,
+    staleTime: 60_000,
+  });
 
   useEffect(() => {
     translationsApi
@@ -50,17 +63,51 @@ export default function SubAdminsPage() {
             {tTable.page_description ?? "Manage sub-admin accounts and their permissions"}
           </p>
         </div>
-        <Button size="sm" className="self-start sm:self-auto" onClick={() => router.push("/admin/sub-admins/new")}>
-          <Plus className="mr-1.5 h-4 w-4" />
-          {tTable.add_button ?? "Add Sub-Admin"}
-        </Button>
+        <div className="flex flex-wrap gap-2 self-start sm:self-auto">
+          <Button size="sm" variant="outline" onClick={() => setBulkOpen(true)}>
+            <FileUp className="mr-1.5 h-4 w-4" />
+            {tTable.bulk_invite_button ?? "Bulk Invite"}
+          </Button>
+          <Button size="sm" onClick={() => router.push("/admin/sub-admins/new")}>
+            <Plus className="mr-1.5 h-4 w-4" />
+            {tTable.add_button ?? "Add Sub-Admin"}
+          </Button>
+        </div>
       </div>
+
+      {capStatus && (
+        <div className="flex flex-wrap gap-1.5">
+          {Object.entries(capStatus)
+            .filter(([, info]) => info.count > 0)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([code, info]) => {
+              const pct = info.cap > 0 ? info.count / info.cap : 0;
+              const cls =
+                pct >= 1 ? "border-red-500/50 bg-red-500/10 text-red-700 dark:text-red-400"
+                : pct >= 0.8 ? "border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                : "border-muted";
+              return (
+                <span
+                  key={code}
+                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] ${cls}`}
+                  title={info.district_name}
+                >
+                  <span className="font-mono">{code}</span>
+                  <span className="tabular-nums">{info.count} / {info.cap}</span>
+                </span>
+              );
+            })}
+        </div>
+      )}
 
       <Suspense>
         <DataTable
           queryKey="sub-admins"
           queryFn={subAdminsApi.getAll}
-          columns={getSubAdminColumns(tTable, tConfirm, tCommon, { onAssignFpos: openAssignFpos })}
+          columns={getSubAdminColumns(tTable, tConfirm, tCommon, {
+            onAssignFpos: openAssignFpos,
+            onTransferDistrict: openTransfer,
+          })}
           onRowClick={(row) => setSubAdminView({ open: true, row })}
         />
       </Suspense>
@@ -77,15 +124,20 @@ export default function SubAdminsPage() {
                   icon: Pencil,
                   onClick: () => router.push(`/admin/sub-admins/${subAdminView.row?.id}/edit`),
                 },
-                {
-                  label: tTable.assign_fpos ?? "Assign FPOs",
-                  icon: Building2,
-                  onClick: () => {
-                    const row = subAdminView.row;
-                    setSubAdminView((s) => ({ ...s, open: false }));
-                    if (row) openAssignFpos(row);
-                  },
-                },
+                // Legacy per-FPO assign — only for sub-admins with no district yet.
+                ...(subAdminView.row.district
+                  ? []
+                  : [
+                      {
+                        label: tTable.assign_fpos ?? "Assign FPOs",
+                        icon: Building2,
+                        onClick: () => {
+                          const row = subAdminView.row;
+                          setSubAdminView((s) => ({ ...s, open: false }));
+                          if (row) openAssignFpos(row);
+                        },
+                      },
+                    ]),
               ]
             : []
         }
@@ -110,10 +162,31 @@ export default function SubAdminsPage() {
                 { label: tTable.col_date_joined ?? "Date Joined", type: "date", value: subAdminView.row.date_joined },
                 { label: tCommon.section_permissions ?? "Permissions", type: "section" },
                 { label: tTable.col_permissions ?? "Permissions", type: "tags", tags: subAdminView.row.permissions },
-                {
-                  label: tTable.col_assigned_fpos ?? "Assigned FPOs",
-                  value: String(subAdminView.row.assigned_fpos_count ?? 0),
-                },
+                (() => {
+                  const sa = subAdminView.row;
+                  const count = sa.visible_fpos_count ?? sa.assigned_fpos_count ?? 0;
+                  if (count === 0) {
+                    return {
+                      label: tTable.col_visible_fpos ?? "FPOs in Scope",
+                      value: "0",
+                    };
+                  }
+                  const query = sa.district
+                    ? `district=${sa.district}`
+                    : `assigned_subadmin=${sa.id}`;
+                  return {
+                    label: tTable.col_visible_fpos ?? "FPOs in Scope",
+                    type: "node" as const,
+                    node: (
+                      <Link
+                        href={`/admin/applications?${query}`}
+                        className="font-medium text-primary hover:underline"
+                      >
+                        {count} — {tTable.view_all ?? "View list →"}
+                      </Link>
+                    ),
+                  };
+                })(),
               ]
             : []
         }
@@ -123,6 +196,15 @@ export default function SubAdminsPage() {
         subAdmin={assignFpos.row}
         open={assignFpos.open}
         onOpenChange={(open) => setAssignFpos((s) => ({ ...s, open }))}
+        t={tTable}
+      />
+
+      <BulkInviteDialog open={bulkOpen} onOpenChange={setBulkOpen} t={tTable} />
+
+      <TransferDistrictDialog
+        subAdmin={transferRow.row}
+        open={transferRow.open}
+        onOpenChange={(open) => setTransferRow((s) => ({ ...s, open }))}
         t={tTable}
       />
     </div>

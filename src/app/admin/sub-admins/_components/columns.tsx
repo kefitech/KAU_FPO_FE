@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -19,6 +20,8 @@ type T = Record<string, string>;
 export interface SubAdminColumnHandlers {
   /** opens the Assign FPOs dialog (rendered at page level, outside the clickable row) */
   onAssignFpos?: (subAdmin: SubAdmin) => void;
+  /** opens the Transfer District dialog (rendered at page level) */
+  onTransferDistrict?: (subAdmin: SubAdmin) => void;
 }
 
 function SubAdminActions({
@@ -114,9 +117,17 @@ function SubAdminActions({
       actions={[
         { label: tCommon.edit ?? "Edit", onClick: () => router.push(`/admin/sub-admins/${subAdmin.id}/edit`) },
         {
+          // Legacy per-FPO assignment — only meaningful for sub-admins
+          // that don't have a district yet. Once they have one, district
+          // scoping takes over and this menu action is irrelevant.
           label: t.assign_fpos ?? "Assign FPOs",
           onClick: () => handlers.onAssignFpos?.(subAdmin),
-          hidden: !handlers.onAssignFpos,
+          hidden: !handlers.onAssignFpos || !!subAdmin.district,
+        },
+        {
+          label: t.transfer_district ?? "Transfer District",
+          onClick: () => handlers.onTransferDistrict?.(subAdmin),
+          hidden: !handlers.onTransferDistrict,
         },
         {
           label: subAdmin.is_active ? (t.deactivate ?? "Deactivate") : (t.activate ?? "Activate"),
@@ -190,18 +201,48 @@ export function getSubAdminColumns(
       },
     },
     {
-      accessorKey: "assigned_fpos_count",
-      header: t.col_assigned_fpos ?? "Assigned FPOs",
+      accessorKey: "district",
+      header: t.col_district ?? "District",
+      cell: ({ row }) => {
+        const code = row.original.district;
+        if (!code) return <span className="text-muted-foreground text-xs">{t.no_district ?? "—"}</span>;
+        return (
+          <Badge variant="outline" className="font-mono text-[11px]">
+            {code}
+          </Badge>
+        );
+      },
+    },
+    {
+      accessorKey: "visible_fpos_count",
+      header: t.col_visible_fpos ?? "FPOs in Scope",
       meta: { hideOnMobile: true },
       enableSorting: false,
       cell: ({ row }) => {
-        const count = row.original.assigned_fpos_count ?? 0;
-        return count > 0 ? (
-          <Badge variant="secondary" className="text-[11px]">
-            {count}
-          </Badge>
-        ) : (
-          <span className="text-muted-foreground text-xs">{t.no_assigned_fpos_short ?? "None"}</span>
+        const sa = row.original;
+        const count = sa.visible_fpos_count ?? sa.assigned_fpos_count ?? 0;
+        if (count === 0) {
+          return <span className="text-muted-foreground text-xs">{t.no_assigned_fpos_short ?? "None"}</span>;
+        }
+        // Clickable — jump to the applications list pre-filtered so the admin
+        // can drill into each FPO for tier / products / documents / etc.
+        const query = sa.district
+          ? `district=${sa.district}`
+          : `assigned_subadmin=${sa.id}`;
+        return (
+          <Link
+            href={`/admin/applications?${query}`}
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex"
+          >
+            <Badge
+              variant="secondary"
+              className="cursor-pointer text-[11px] hover:bg-primary hover:text-primary-foreground"
+              title={t.view_fpos_hint ?? "View FPOs in scope"}
+            >
+              {count}
+            </Badge>
+          </Link>
         );
       },
     },

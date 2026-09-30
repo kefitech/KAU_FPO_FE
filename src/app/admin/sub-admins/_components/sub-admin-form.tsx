@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { KERALA_DISTRICTS } from "@/lib/kerala-districts";
 import type { NotificationChannelType, SubAdmin, SubAdminUpdatePayload } from "@/types/admin";
 
 type T = Record<string, string>;
@@ -26,6 +27,8 @@ const NOTIFICATION_CHANNELS: { value: NotificationChannelType; label: string }[]
   // { value: "in_app", label: "In-App" },
 ];
 
+const DISTRICT_CODES = KERALA_DISTRICTS.map((d) => d.code) as [string, ...string[]];
+
 const createSchema = z.object({
   email: z
     .string()
@@ -34,6 +37,7 @@ const createSchema = z.object({
   first_name: z.string().min(1, { message: "First name is required" }).max(50, { message: "Max 50 characters" }),
   last_name: z.string().min(1, { message: "Last name is required" }).max(50, { message: "Max 50 characters" }),
   phone: z.string().regex(/^[6-9]\d{9}$/, { message: "Enter a valid 10-digit mobile number" }),
+  district: z.enum(DISTRICT_CODES, { message: "Pick a district" }),
   notification_channel: z.enum(["email", "sms", "in_app"]),
   permissions: z.array(z.string()),
 });
@@ -54,6 +58,7 @@ type FormValues = {
   first_name: string;
   last_name: string;
   phone: string;
+  district: string;
   notification_channel: NotificationChannelType;
   permissions: string[];
 };
@@ -70,6 +75,7 @@ const defaultValues: FormValues = {
   first_name: "",
   last_name: "",
   phone: "",
+  district: "",
   notification_channel: "email",
   permissions: [],
 };
@@ -80,6 +86,7 @@ function toFormValues(item: SubAdmin): FormValues {
     first_name: item.first_name ?? "",
     last_name: item.last_name ?? "",
     phone: item.phone ?? "",
+    district: item.district ?? "",
     notification_channel: "email",
     permissions: item.permissions ?? [],
   };
@@ -133,6 +140,7 @@ export function SubAdminForm({ mode, subAdmin, t = {}, tCommon = {} }: SubAdminF
           first_name: values.first_name,
           last_name: values.last_name,
           phone: values.phone,
+          district: values.district,
           notification_channel: values.notification_channel,
           permissions: values.permissions,
         });
@@ -295,6 +303,38 @@ export function SubAdminForm({ mode, subAdmin, t = {}, tCommon = {} }: SubAdminF
                 />
                 {errors.phone && <FieldError errors={[errors.phone]} />}
               </Field>
+
+              {!isEdit && (
+                <Field>
+                  <FieldLabel htmlFor="sa-district">
+                    {t.district_label ?? "District"} <span className="text-destructive">*</span>
+                  </FieldLabel>
+                  <Controller
+                    control={control}
+                    name="district"
+                    render={({ field }) => (
+                      <select
+                        id="sa-district"
+                        className="h-9 w-full rounded-md border bg-background px-3 text-foreground text-sm shadow-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                        {...field}
+                      >
+                        <option value="">
+                          {t.district_placeholder ?? "Select a district"}
+                        </option>
+                        {KERALA_DISTRICTS.map((d) => (
+                          <option key={d.code} value={d.code}>
+                            {d.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  />
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    {t.district_hint ?? "The sub-admin will see every FPO in this district. Transfer them later from the detail page."}
+                  </p>
+                  {errors.district && <FieldError errors={[errors.district]} />}
+                </Field>
+              )}
             </FieldGroup>
 
             {!isEdit && (
