@@ -306,3 +306,91 @@ input:-webkit-autofill {
   animation: dpr-flash 2.4s ease-in-out !important;
   border-radius: 0.75rem;
 }
+
+/* Login split-card — slow drift on the oversized logo watermark */
+@keyframes login-watermark-drift {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  50%      { transform: translate(-12px, -10px) rotate(-6deg); }
+}
+.login-watermark-drift {
+  animation: login-watermark-drift 14s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .login-watermark-drift { animation: none; }
+}
+
+/* Login split-card — accent bar grows down the sign-up panel's edge on entrance */
+@keyframes login-accent-grow {
+  from { transform: scaleY(0); }
+  to   { transform: scaleY(1); }
+}
+.login-accent-grow {
+  transform-origin: top;
+  animation: login-accent-grow 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.5s both;
+}
+
+/* Login split-card — light sheen sweeping across the "Create a new account" button */
+@keyframes login-cta-sheen {
+  0%, 70% { transform: translateX(-120%) skewX(-20deg); }
+  100%    { transform: translateX(320%) skewX(-20deg); }
+}
+.login-cta-sheen {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 35%;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+  animation: login-cta-sheen 4.5s ease-in-out 1.2s infinite;
+}
+
+/* Login split-card — gentle sway on the sprout icon */
+@keyframes login-sprout-sway {
+  0%, 100% { transform: rotate(-8deg); }
+  50%      { transform: rotate(8deg); }
+}
+.login-sprout-sway {
+  transform-origin: bottom center;
+  animation: login-sprout-sway 3s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-accent-grow,
+  .login-sprout-sway { animation: none; }
+  .login-cta-sheen { display: none; }
+}
+
+/* Login form — shake on failed sign-in */
+@keyframes login-shake {
+  0%, 100%      { transform: translateX(0); }
+  15%, 55%      { transform: translateX(-8px); }
+  35%, 75%      { transform: translateX(8px); }
+  90%           { transform: translateX(-3px); }
+}
+.login-shake {
+  animation: login-shake 0.45s ease-in-out;
+}
+
+/* Login form — checkmark draws itself on successful sign-in */
+@keyframes login-check-draw {
+  from { stroke-dashoffset: 24; }
+  to   { stroke-dashoffset: 0; }
+}
+.login-check-draw {
+  stroke-dasharray: 24;
+  animation: login-check-draw 0.45s ease-out 0.1s both;
+}
+
+/* Login form — emerald ring expanding out of the button on success */
+@keyframes login-success-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.55); }
+  100% { box-shadow: 0 0 0 14px rgba(16, 185, 129, 0); }
+}
+.login-success-pulse {
+  animation: login-success-pulse 0.9s ease-out 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-shake,
+  .login-check-draw,
+  .login-success-pulse { animation: none; }
+}
