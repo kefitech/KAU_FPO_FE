@@ -26,6 +26,9 @@ const FALLBACK: HeaderLogo[] = [
   { id: "f3", name: "SHM Logo", logo_url: "/assets/img/SHM_LOGO.webp", is_platform: false },
 ];
 
+// Mobile menu / sidebar / login logo shown until the admin sets one, or if the API is down.
+const MOBILE_FALLBACK_LOGO = "/assets/img/logo.webp";
+
 // Header logos + mobile logo share one request while it is loading; a new request is made on each page load
 let request: Promise<HeaderLogo[]> | null = null;
 const loadLogos = () => {
@@ -89,8 +92,11 @@ export const MobileMenuLogo = ({ className }: { className?: string }) => {
     loaded?.find((l) => l.order === 0) ??
     loaded?.find((l) => l.is_platform);
 
-  // while loading (or if nothing is set) keep the space so the layout doesn't jump
-  if (!mobile?.logo_url) return className ? <span className={className} aria-hidden /> : null;
+  // while loading keep the space so the layout doesn't jump
+  if (loaded === null) return className ? <span className={className} aria-hidden /> : null;
+
+  // API down or no logo set — show the original KAU logo
+  if (!mobile?.logo_url) return <img src={MOBILE_FALLBACK_LOGO} alt="KAU" className={className} />;
 
   return <img src={mobile.logo_url} alt={mobile.name} className={className} />;
 };
