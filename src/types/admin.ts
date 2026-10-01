@@ -234,7 +234,12 @@ export interface SubAdmin {
   is_active: boolean;
   date_joined: string;
   permissions: string[];
+  /** Legacy per-FPO manual list count. Kept for backward compat. */
   assigned_fpos_count: number;
+  /** Total FPOs the sub-admin can see now (district FPOs when district set, else legacy list). */
+  visible_fpos_count: number;
+  district: string | null;
+  district_transfer_count: number;
 }
 
 /** FPO assigned to a sub-admin (P2-01 row-level security). */
@@ -254,8 +259,53 @@ export interface SubAdminPayload {
   first_name: string;
   last_name: string;
   phone: string;
+  district: string;
   notification_channel: NotificationChannelType;
   permissions: string[];
+}
+
+export interface DistrictTransferRow {
+  id: number;
+  from_district: string;
+  to_district: string;
+  reason: string;
+  transferred_by_email: string | null;
+  created_at: string;
+}
+
+export interface DistrictCapEntry {
+  district_name: string;
+  count: number;
+  cap: number;
+}
+export type DistrictCapStatus = Record<string, DistrictCapEntry>;
+
+export interface BulkInviteResult {
+  success: number;
+  failed: number;
+  results: { row: number; email: string; district: string }[];
+  errors: {
+    row: number;
+    email: string;
+    first_name: string;
+    last_name: string;
+    district: string;
+    reason: string;
+  }[];
+}
+
+export interface SubAdminConfig {
+  global_cap: number;
+  scheme_expiry_days: number;
+  training_expiry_days: number;
+  district_caps: Record<string, number>;
+}
+export interface SubAdminConfigPayload {
+  global_cap?: number;
+  scheme_expiry_days?: number;
+  training_expiry_days?: number;
+  /** Send null for a district code to delete the override */
+  district_caps?: Record<string, number | null>;
 }
 
 export interface SubAdminUpdatePayload {
@@ -716,6 +766,9 @@ export interface AdminKVKLink {
   name: string;
   url: string;
   logo_url: string | null;
+  district: string;
+  contact_email: string;
+  contact_phone: string;
   order: number;
   is_active: boolean;
   created_at: string;

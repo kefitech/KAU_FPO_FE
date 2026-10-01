@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Autoplay, Navigation } from "swiper/modules";
 import { Swiper, SwiperSlide } from "swiper/react";
 
+import { FooterLogo } from "@/app/(public)/_components/header-logos";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 
@@ -236,7 +237,7 @@ const Footer = () => {
           <div className="row">
             <div className="col-12 col-lg-3 item">
               <div className="footer-item about">
-                <img className="logo" src="/assets/img/logo1.png" alt="Logo" />
+                <FooterLogo className="logo" />
               </div>
             </div>
             <div className="col-12 col-sm-6 col-lg-3 item">
