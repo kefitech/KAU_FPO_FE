@@ -14,6 +14,7 @@ import {
   requestFreshRecommendation,
   submitRecommendationFeedback,
 } from "@/lib/api/recommendation";
+import { useFpoPermissions } from "@/hooks/use-fpo-permissions";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 import type { MyCropSuggestion, MyRecommendation } from "@/types/recommendation";
@@ -82,6 +83,8 @@ interface CropRecommendationDisplayProps {
 
 export function CropRecommendationDisplay({ hasCultivationArea }: CropRecommendationDisplayProps) {
   const locale = useLocaleStore((s) => s.locale);
+  // Team members without can_generate_recommendations only see existing results
+  const canGenerate = useFpoPermissions().can("can_generate_recommendations");
   const [t, setT] = useState<T>({});
 
   useEffect(() => {
@@ -319,49 +322,51 @@ export function CropRecommendationDisplay({ hasCultivationArea }: CropRecommenda
             </p>
           )}
         </div>
-        <div className="flex flex-col items-end gap-1">
-          <div className="flex items-center gap-2">
-            <NativeSelect
-              size="sm"
-              value={selectedSeason}
-              onChange={(e) => setSelectedSeason(e.target.value)}
-              disabled={requesting || isWorking}
-              aria-label={t.season_aria_label ?? "Season"}
-            >
-              {SEASON_OPTIONS.map((opt) => (
-                <NativeSelectOption key={opt.value} value={opt.value}>
-                  {opt.label}
-                </NativeSelectOption>
-              ))}
-            </NativeSelect>
-            <Input
-              type="number"
-              inputMode="decimal"
-              step="0.1"
-              min={3}
-              max={10}
-              value={soilPhInput}
-              onChange={(e) => {
-                setSoilPhInput(e.target.value);
-                if (phError) setPhError("");
-              }}
-              disabled={requesting || isWorking}
-              placeholder={t.ph_placeholder ?? "Soil pH"}
-              aria-label={t.ph_aria_label ?? "Soil pH"}
-              className="h-8 w-24 text-sm"
-            />
-            <button
-              type="button"
-              onClick={handleRequest}
-              disabled={requesting || isWorking}
-              className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 font-medium text-primary-foreground text-xs disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {requesting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-              {recommendation ? (t.btn_refresh ?? "Generate recommendations") : (t.btn_get ?? "Get recommendations")}
-            </button>
+        {canGenerate && (
+          <div className="flex flex-col items-end gap-1">
+            <div className="flex items-center gap-2">
+              <NativeSelect
+                size="sm"
+                value={selectedSeason}
+                onChange={(e) => setSelectedSeason(e.target.value)}
+                disabled={requesting || isWorking}
+                aria-label={t.season_aria_label ?? "Season"}
+              >
+                {SEASON_OPTIONS.map((opt) => (
+                  <NativeSelectOption key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </NativeSelectOption>
+                ))}
+              </NativeSelect>
+              <Input
+                type="number"
+                inputMode="decimal"
+                step="0.1"
+                min={3}
+                max={10}
+                value={soilPhInput}
+                onChange={(e) => {
+                  setSoilPhInput(e.target.value);
+                  if (phError) setPhError("");
+                }}
+                disabled={requesting || isWorking}
+                placeholder={t.ph_placeholder ?? "Soil pH"}
+                aria-label={t.ph_aria_label ?? "Soil pH"}
+                className="h-8 w-24 text-sm"
+              />
+              <button
+                type="button"
+                onClick={handleRequest}
+                disabled={requesting || isWorking}
+                className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 font-medium text-primary-foreground text-xs disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {requesting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                {recommendation ? (t.btn_refresh ?? "Generate recommendations") : (t.btn_get ?? "Get recommendations")}
+              </button>
+            </div>
+            {phError && <p className="text-destructive text-xs">{phError}</p>}
           </div>
-          {phError && <p className="text-destructive text-xs">{phError}</p>}
-        </div>
+        )}
       </div>
 
       {showOfflineNotice && (

@@ -98,7 +98,8 @@ function ProductActions({ product, t, tCommon }: { product: Product; t: T; tComm
   );
 }
 
-export function getProductColumns(t: T = {}, tCommon: T = {}): ColumnDef<Product>[] {
+/** `canManage` (can_manage_products) — without it the actions column is empty (view-only). */
+export function getProductColumns(t: T = {}, tCommon: T = {}, canManage = true): ColumnDef<Product>[] {
   return [
     {
       accessorKey: "name",
@@ -160,7 +161,7 @@ export function getProductColumns(t: T = {}, tCommon: T = {}): ColumnDef<Product
         // individual action below is already gated to hide for these
         // statuses) — so skip rendering the "..." trigger entirely rather
         // than showing an empty menu.
-        if (row.original.status === "sold" || row.original.status === "expired") {
+        if (!canManage || row.original.status === "sold" || row.original.status === "expired") {
           return null;
         }
         return <ProductActions product={row.original} t={t} tCommon={tCommon} />;

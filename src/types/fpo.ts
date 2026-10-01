@@ -261,6 +261,8 @@ export interface FpoTeamMember {
   role: string;
   is_active: boolean;
   joined_at: string;
+  /** Granted action codes — only sent to the primary user (who manages them). */
+  permissions?: string[];
 }
 
 export interface FpoTeamInvitePayload {
@@ -268,6 +270,18 @@ export interface FpoTeamInvitePayload {
   last_name: string;
   email: string;
   phone?: string;
+  /** Action codes to grant; omit for the role defaults. */
+  permissions?: string[];
+}
+
+/** One action the primary user can grant a team member (within the super admin's role ceiling). */
+export interface FpoMemberPermission {
+  code: string;
+  label: string;
+  description: string;
+  page: string | null;
+  /** Current value for a member, or the role default in available-permissions. */
+  is_allowed: boolean;
 }
 
 export interface FpoBulkInvitePayload {

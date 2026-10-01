@@ -67,7 +67,8 @@ function InquiryActions({ inquiry, t }: { inquiry: Inquiry; t: T }) {
   );
 }
 
-export function getInquiryColumns(t: T): ColumnDef<Inquiry>[] {
+/** `canManage` (can_manage_products) — without it the status actions are hidden (view-only). */
+export function getInquiryColumns(t: T, canManage = true): ColumnDef<Inquiry>[] {
   const statusLabels: Record<Inquiry["status"], string> = {
     pending: t.status_pending ?? "Pending",
     contacted: t.status_contacted ?? "Contacted",
@@ -129,7 +130,7 @@ export function getInquiryColumns(t: T): ColumnDef<Inquiry>[] {
     {
       id: "actions",
       header: "",
-      cell: ({ row }) => <InquiryActions inquiry={row.original} t={t} />,
+      cell: ({ row }) => (canManage ? <InquiryActions inquiry={row.original} t={t} /> : null),
       enableSorting: false,
       enableHiding: false,
     },
