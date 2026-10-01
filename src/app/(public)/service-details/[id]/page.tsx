@@ -8,6 +8,7 @@ import AgrulLayout from "../../_components/agrul-layout";
 import BreadCrumb from "../../_components/bread-crumb";
 import { serviceData } from "../../_data/services";
 import { schemesApi } from "@/lib/api/schemes";
+import { formatSchemeDate, schemeValidity } from "@/lib/scheme-validity";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 import {
@@ -121,6 +122,7 @@ function ServiceSchemes() {
                     <strong>Administered by:</strong> {scheme.administering_body}
                   </p>
                 )}
+                <ValidTill deadline={scheme.deadline} />
                 {scheme.eligibility && (
                   <p className="small mb-1">
                     <strong>Eligibility:</strong> {scheme.eligibility}
@@ -179,6 +181,18 @@ function ServiceSchemes() {
     </div>
   );
 }
+/** "Valid till: 15 Nov 2026" — amber within a week of the end date, red once it has passed. */
+function ValidTill({ deadline }: { deadline: string | null }) {
+  const validity = schemeValidity(deadline);
+  if (!validity || !deadline) return null;
+  const tone = validity === "expired" ? "text-danger" : validity === "closing_soon" ? "text-warning-emphasis" : "text-muted";
+  return (
+    <p className={`small mb-1 ${tone}`}>
+      <strong>{validity === "expired" ? "Expired on:" : "Valid till:"}</strong> {formatSchemeDate(deadline)}
+    </p>
+  );
+}
+
 export default function ServiceDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const service = serviceData.find((s) => s.id === parseInt(id as string));

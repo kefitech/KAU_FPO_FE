@@ -4,8 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { SheetField } from "@/components/ui/view-sheet";
+import { formatSchemeDate, schemeValidity } from "@/lib/scheme-validity";
 import type { FpoScheme } from "@/types/fpo";
-import { ExternalLink } from "lucide-react";
+import { CalendarClock, ExternalLink } from "lucide-react";
 
 export type T = Record<string, string>;
 
@@ -42,6 +43,28 @@ export function SchemeSkeleton() {
   );
 }
 
+const VALIDITY_CLASSES = {
+  open: "text-muted-foreground",
+  closing_soon: "text-amber-700 dark:text-amber-400",
+  expired: "text-destructive",
+} as const;
+
+/** "Valid till 15 Nov 2026" — amber when it ends within a week, red once it has ended. */
+export function SchemeValidTill({ scheme, t }: { scheme: FpoScheme; t: T }) {
+  const validity = schemeValidity(scheme.deadline);
+  if (!validity || !scheme.deadline) return null;
+  const date = formatSchemeDate(scheme.deadline);
+  return (
+    <p className={`flex items-center gap-1.5 text-xs font-medium ${VALIDITY_CLASSES[validity]}`}>
+      <CalendarClock className="h-3.5 w-3.5 shrink-0" />
+      {validity === "expired"
+        ? (t.card_expired_on ?? "Expired on {date}").replace("{date}", date)
+        : (t.card_valid_till ?? "Valid till {date}").replace("{date}", date)}
+      {validity === "closing_soon" && ` · ${t.card_closing_soon ?? "Closing soon"}`}
+    </p>
+  );
+}
+
 export function buildSchemeFields(scheme: FpoScheme, t: T): SheetField[] {
   const fields: SheetField[] = [];
 
@@ -53,6 +76,9 @@ export function buildSchemeFields(scheme: FpoScheme, t: T): SheetField[] {
 
   if (scheme.administering_body) {
     fields.push({ label: t.card_administered_by ?? "Administered By", type: "text", value: scheme.administering_body });
+  }
+  if (scheme.deadline) {
+    fields.push({ label: t.detail_valid_till ?? "Valid Till", type: "node", node: <SchemeValidTill scheme={scheme} t={t} /> });
   }
   if (scheme.objective) {
     fields.push({ label: t.detail_objective ?? "Objective", type: "text", value: scheme.objective });
@@ -87,6 +113,7 @@ export function SchemeCard({ scheme, t, onViewDetails }: { scheme: FpoScheme; t:
           <span className="font-medium">{t.card_administered_by ?? "Administered by:"}</span> {scheme.administering_body}
         </p>
       )}
+      <SchemeValidTill scheme={scheme} t={t} />
       {scheme.eligibility && (
         <div>
           <p className="text-xs font-medium text-foreground mb-0.5">{t.card_eligibility ?? "Eligibility"}</p>

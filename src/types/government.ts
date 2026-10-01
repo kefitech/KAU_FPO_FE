@@ -331,6 +331,8 @@ export interface GovtScheme {
   application_process: string;
   official_link: string;
   last_updated: string | null;
+  /** "Valid till" date (YYYY-MM-DD); null when the scheme has no end date. */
+  deadline: string | null;
   is_active: boolean;
   order: number;
   created_by: number | null;
@@ -350,6 +352,8 @@ export interface GovtSchemePayload {
   application_process: string;
   official_link?: string;
   last_updated?: string | null;
+  /** null clears the date */
+  deadline?: string | null;
   is_active?: boolean;
   order?: number;
 }

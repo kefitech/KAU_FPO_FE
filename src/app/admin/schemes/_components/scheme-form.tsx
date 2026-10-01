@@ -18,6 +18,7 @@ import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Textarea } from "@/components/ui/textarea";
+import { todayIso } from "@/lib/scheme-validity";
 import type { AdminScheme } from "@/types/admin";
 
 type T = Record<string, string>;
@@ -84,6 +85,9 @@ const schema = z.object({
     .optional()
     .or(z.literal(""))
     .refine((v) => !v || /^https?:\/\/.+/.test(v), { message: "Must be a valid URL" }),
+  // "Valid till" (YYYY-MM-DD); "" = no end date. Past dates are checked on submit,
+  // where the saved value is known (an unchanged past date is allowed).
+  deadline: z.string().optional(),
   order: z.number().min(0, { message: "Order must be 0 or greater" }).optional(),
   is_active: z.boolean().optional(),
 });
@@ -107,6 +111,7 @@ const defaultValues: FormValues = {
   benefit_details: "",
   application_process: "",
   official_link: "",
+  deadline: "",
   order: 0,
   is_active: true,
 };
@@ -122,6 +127,7 @@ function schemeToForm(s: AdminScheme): FormValues {
     benefit_details: s.benefit_details ?? "",
     application_process: s.application_process ?? "",
     official_link: s.official_link ?? "",
+    deadline: s.deadline ?? "",
     order: s.order ?? 0,
     is_active: s.is_active ?? true,
   };
@@ -136,6 +142,7 @@ export function SchemeForm({ mode, scheme, t = {}, tCommon = {} }: SchemeFormPro
     control,
     handleSubmit,
     reset,
+    setError,
     formState: { errors },
   } = useForm<FormValues, unknown, FormValues>({
     resolver: zodResolver(schema),
@@ -153,6 +160,7 @@ export function SchemeForm({ mode, scheme, t = {}, tCommon = {} }: SchemeFormPro
         name_ml: values.name_ml || undefined,
         objective: values.objective || undefined,
         official_link: values.official_link || undefined,
+        deadline: values.deadline || null, // null clears it
       };
       return isEdit ? adminSchemesApi.update(scheme!.id, payload) : adminSchemesApi.create(payload);
     },
@@ -167,6 +175,14 @@ export function SchemeForm({ mode, scheme, t = {}, tCommon = {} }: SchemeFormPro
     },
   });
 
+  function onSubmit(values: FormValues) {
+    if (values.deadline && values.deadline !== (scheme?.deadline ?? "") && values.deadline < todayIso()) {
+      setError("deadline", { message: t.validation_valid_till_past ?? "Valid till date cannot be in the past." });
+      return;
+    }
+    mutation.mutate(values);
+  }
+
   return (
     <div className="mx-auto w-full max-w-3xl flex flex-col gap-4">
       <Card>
@@ -174,7 +190,7 @@ export function SchemeForm({ mode, scheme, t = {}, tCommon = {} }: SchemeFormPro
           <CardTitle className="text-base">{t.card_title ?? "Scheme Details"}</CardTitle>
         </CardHeader>
         <CardContent>
-          <form id="scheme-form" onSubmit={handleSubmit((v) => mutation.mutate(v))} className="flex flex-col gap-5">
+          <form id="scheme-form" onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
             <FieldGroup>
               <Field>
                 <FieldLabel htmlFor="name_en">
@@ -327,6 +343,29 @@ export function SchemeForm({ mode, scheme, t = {}, tCommon = {} }: SchemeFormPro
                     )}
                   />
                   {errors.official_link && <FieldError errors={[errors.official_link]} />}
+                </Field>
+
+                <Field>
+                  <FieldLabel htmlFor="deadline">{t.field_valid_till ?? "Valid Till"}</FieldLabel>
+                  <Controller
+                    control={control}
+                    name="deadline"
+                    render={({ field }) => (
+                      <Input
+                        id="deadline"
+                        type="date"
+                        // Keep an already-past saved date selectable so the scheme can still be edited
+                        min={scheme?.deadline && scheme.deadline < todayIso() ? undefined : todayIso()}
+                        className="w-fit"
+                        {...field}
+                      />
+                    )}
+                  />
+                  <p className="text-muted-foreground text-xs">
+                    {t.field_valid_till_hint ??
+                      "Last date to apply. Leave empty if the scheme has no end date. It is hidden from FPOs a few days after this date."}
+                  </p>
+                  {errors.deadline && <FieldError errors={[errors.deadline]} />}
                 </Field>
 
                 <div className="flex items-center gap-2 pt-1">

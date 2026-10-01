@@ -439,6 +439,8 @@ export interface FpoScheme {
   application_process: string;
   official_link: string;
   last_updated: string | null;
+  /** "Valid till" date (YYYY-MM-DD); null when the scheme has no end date. */
+  deadline: string | null;
 }
 
 // ─── Experts ─────────────────────────────────────────────────────────────────

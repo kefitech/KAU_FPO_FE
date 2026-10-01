@@ -76,7 +76,25 @@ const CATEGORY_BADGE_COLORS: Record<string, string> = {
   capacity_building: "bg-yellow-100 text-yellow-700",
 };
 
-export function getSchemeColumns(t: T = {}, tCommon: T = {}, locale: string = "en"): ColumnDef<AdminScheme>[] {
+/** "You" for the logged-in admin's own schemes, else the creator's name — same badge as the government table. */
+export function CreatedByBadge({ scheme, currentUserId, t }: { scheme: AdminScheme; currentUserId: number | null; t: T }) {
+  const isOwner = scheme.created_by !== null && scheme.created_by === currentUserId;
+  return (
+    <Badge
+      variant="outline"
+      className={isOwner ? "border-blue-500/40 bg-blue-500/10 text-blue-700 dark:text-blue-400" : "text-muted-foreground"}
+    >
+      {isOwner ? (t.badge_you ?? "You") : (scheme.created_by_name ?? t.badge_unknown ?? "Unknown")}
+    </Badge>
+  );
+}
+
+export function getSchemeColumns(
+  t: T = {},
+  tCommon: T = {},
+  locale: string = "en",
+  currentUserId: number | null = null,
+): ColumnDef<AdminScheme>[] {
   return [
     {
       accessorKey: "name_en",
@@ -106,6 +124,13 @@ export function getSchemeColumns(t: T = {}, tCommon: T = {}, locale: string = "e
           </Badge>
         );
       },
+    },
+    {
+      accessorKey: "created_by_name",
+      header: t.col_created_by ?? "Created By",
+      enableSorting: false,
+      meta: { hideOnMobile: true },
+      cell: ({ row }) => <CreatedByBadge scheme={row.original} currentUserId={currentUserId} t={t} />,
     },
     {
       accessorKey: "is_active",
