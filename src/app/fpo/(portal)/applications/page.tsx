@@ -12,10 +12,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useFpoPermissions } from "@/hooks/use-fpo-permissions";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 import type { FpoApplicationStatus, FpoProfile, FpoStatus } from "@/types/fpo";
-import { setTraceSigInt } from "util";
 
 type T = Record<string, string>;
 
@@ -132,11 +132,14 @@ function StatusTab({
   data,
   refetch,
   isFetching,
+  canEdit,
   t,
 }: {
   data: FpoApplicationStatus;
   refetch: () => void;
   isFetching: boolean;
+  /** Only the FPO's primary user can edit the application (backend enforces it too). null = still loading. */
+  canEdit: boolean | null;
   t: T;
 }) {
   const STATUS_CONFIG = getStatusConfig(t);
@@ -197,11 +200,18 @@ function StatusTab({
             {t.info_banner_title ?? "What KAU Admin needs:"}
           </p>
           <p className="mt-1 text-orange-700 text-sm dark:text-orange-400">{infoNote}</p>
-          <Link href="/fpo/register">
-            <Button size="sm" className="mt-3 gap-1.5 bg-orange-600 hover:bg-orange-700">
-              {t.info_banner_btn ?? "Update My Application"} <ArrowRight className="h-4 w-4" />
-            </Button>
-          </Link>
+          {canEdit === true && (
+            <Link href="/fpo/register">
+              <Button size="sm" className="mt-3 gap-1.5 bg-orange-600 hover:bg-orange-700">
+                {t.info_banner_btn ?? "Update My Application"} <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          )}
+          {canEdit === false && (
+            <p className="mt-3 text-orange-700 text-xs dark:text-orange-400">
+              {t.info_banner_member_note ?? "Only your FPO's primary user can update the application."}
+            </p>
+          )}
         </div>
       )}
 
@@ -380,6 +390,8 @@ function ApplicationTab({ profile, t }: { profile: FpoProfile; t: T }) {
 
 export default function FpoApplicationsPage() {
   const locale = useLocaleStore((s) => s.locale);
+  // Team members (secondary users) can view the application but not edit it.
+  const { isPrimary, isLoading: permissionsLoading } = useFpoPermissions();
   const [t, setT] = useState<T>({});
   const [translationsLoading, setTranslationsLoading] = useState(true);
 
@@ -440,7 +452,13 @@ export default function FpoApplicationsPage() {
         </TabsList>
 
         <TabsContent value="status" className="mt-6">
-          <StatusTab data={statusData} refetch={refetch} isFetching={isFetching} t={t} />
+          <StatusTab
+            data={statusData}
+            refetch={refetch}
+            isFetching={isFetching}
+            canEdit={permissionsLoading ? null : isPrimary}
+            t={t}
+          />
         </TabsContent>
 
         <TabsContent value="details" className="mt-6">

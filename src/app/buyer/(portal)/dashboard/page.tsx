@@ -27,6 +27,8 @@ import { translationsApi } from "@/lib/api/translations";
 import { useAuthStore } from "@/stores/auth-store";
 import { useLocaleStore } from "@/stores/locale-store";
 
+import { BuyerStats } from "./_components/buyer-stats";
+
 type T = Record<string, string>;
 
 export default function BuyerDashboardPage() {
@@ -289,11 +291,21 @@ export default function BuyerDashboardPage() {
         </Card>
       )}
 
-      {/* ── Profile summary (Buyer Profile + Commodities Interested, merged) ── */}
+      {/* ── Metrics: catalogue supply + the buyer's own inquiries ── */}
+      {data.stats && (
+        <BuyerStats
+          stats={data.stats}
+          t={t}
+          locale={locale}
+          hasInterests={data.commodities_interested.length > 0}
+        />
+      )}
+
+      {/* ── Your Details (profile + Commodities Interested, merged) ── */}
       {!editingProfile && (
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-2">
-          <CardTitle className="text-base">{t.card_profile_title ?? "Buyer Profile"}</CardTitle>
+          <CardTitle className="text-base">{t.card_profile_title ?? "Your Details"}</CardTitle>
           {!profileIncomplete && (
             <Button size="sm" variant="outline" onClick={() => setEditingProfile(true)}>
               {t.edit_btn ?? "Edit"}
@@ -327,7 +339,7 @@ export default function BuyerDashboardPage() {
               <span className="text-muted-foreground text-xs">{t.label_location ?? "Location"}</span>
               <span className="flex items-center gap-1.5 font-medium text-sm">
                 <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
-                {data.location || "—"}
+                {districts.find((d) => d.code === data.location)?.name ?? (data.location || "—")}
               </span>
             </div>
           </div>
@@ -339,7 +351,7 @@ export default function BuyerDashboardPage() {
                 {data.commodities_interested.length > 0 ? (
                   data.commodities_interested.map((c) => (
                     <Badge key={c} variant="secondary" className="font-normal">
-                      {c}
+                      {data.stats?.supply_by_commodity.find((s) => s.code === c)?.name ?? c}
                     </Badge>
                   ))
                 ) : (

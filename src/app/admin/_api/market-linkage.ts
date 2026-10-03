@@ -9,6 +9,10 @@ export interface LinkageFPO {
   id: number;
   name: string;
   name_ml: string;
+  district: string;
+  district_display: string;
+  /** Number of listed stock batches. */
+  product_count: number;
 }
 
 /** Same shape as the buyer catalog product, plus fields only admins see. */

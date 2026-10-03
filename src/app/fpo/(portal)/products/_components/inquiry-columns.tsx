@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 
 type T = Record<string, string>;
 
-function statusClasses(status: Inquiry["status"]): string {
+export function statusClasses(status: Inquiry["status"]): string {
   switch (status) {
     case "pending":
       return "border-amber-200 bg-amber-50 text-amber-700";
@@ -21,27 +21,50 @@ function statusClasses(status: Inquiry["status"]): string {
   }
 }
 
-function InquiryActions({ inquiry, t }: { inquiry: Inquiry; t: T }) {
+export function inquiryStatusLabel(status: Inquiry["status"], t: T): string {
+  return {
+    pending: t.status_pending ?? "Pending",
+    contacted: t.status_contacted ?? "Contacted",
+    resolved: t.status_resolved ?? "Resolved",
+  }[status];
+}
+
+/**
+ * Mark-contacted / mark-resolved for one inquiry — shared by the row "…" menu
+ * and the inquiry detail dialog. `onDone` receives the new status.
+ */
+export function useInquiryStatusActions(inquiryId: number, t: T, onDone?: (status: Inquiry["status"]) => void) {
   const queryClient = useQueryClient();
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["inquiries"] });
 
-  const markContactedMutation = useMutation({
-    mutationFn: () => inquiriesApi.markContacted(inquiry.id),
+  const markContacted = useMutation({
+    mutationFn: () => inquiriesApi.markContacted(inquiryId),
     onSuccess: () => {
       toast.success(t.toast_marked_contacted ?? "Inquiry marked as contacted");
       invalidate();
+      onDone?.("contacted");
     },
     onError: () => toast.error(t.toast_error_contact ?? "Only pending inquiries can be marked as contacted"),
   });
 
-  const markResolvedMutation = useMutation({
-    mutationFn: () => inquiriesApi.markResolved(inquiry.id),
+  const markResolved = useMutation({
+    mutationFn: () => inquiriesApi.markResolved(inquiryId),
     onSuccess: () => {
       toast.success(t.toast_marked_resolved ?? "Inquiry marked as resolved");
       invalidate();
+      onDone?.("resolved");
     },
     onError: () => toast.error(t.toast_error_resolve ?? "Only contacted inquiries can be marked as resolved"),
   });
+
+  return { markContacted, markResolved };
+}
+
+function InquiryActions({ inquiry, t }: { inquiry: Inquiry; t: T }) {
+  const { markContacted: markContactedMutation, markResolved: markResolvedMutation } = useInquiryStatusActions(
+    inquiry.id,
+    t,
+  );
 
   if (inquiry.status === "resolved") {
     return null;
