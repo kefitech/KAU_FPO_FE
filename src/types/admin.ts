@@ -483,7 +483,7 @@ export interface ExternalApi {
   service: ExternalApiService;
   service_display: string;
   api_url: string;
-  config: string;
+  config: Record<string, string>;
   is_active: boolean;
   created_at: string;
   updated_at: string;

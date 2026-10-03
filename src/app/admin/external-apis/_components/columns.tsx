@@ -11,8 +11,9 @@ import { Badge } from "@/components/ui/badge";
 import { useConfirmStore } from "@/stores/confirm-store";
 import type { ExternalApi } from "@/types/admin";
 
-type T = Record<string, string>;
+import { defaultUrlFor } from "./external-api-dialog";
 
+type T = Record<string, string>;
 
 function ExternalApiActions({
   item,
@@ -34,7 +35,11 @@ function ExternalApiActions({
       toast.success(t.toast_activated ?? "External API activated");
       queryClient.invalidateQueries({ queryKey: ["external-apis"] });
     },
-    onError: () => toast.error(tCommon.update_failed ?? "Failed to activate"),
+    onError: (error: unknown) => {
+      // Backend explains what is missing (e.g. "Set api_url before activating.")
+      const msg = (error as { message?: unknown })?.message;
+      toast.error(typeof msg === "string" && msg ? msg : (tCommon.update_failed ?? "Failed to activate"));
+    },
   });
 
   const deactivateMutation = useMutation({
@@ -51,8 +56,7 @@ function ExternalApiActions({
       confirm({
         title: t.deactivate_title ?? "Deactivate API",
         description: (
-          t.deactivate_description ??
-          'Deactivate "{name}"? Live verification will fall back to format-only validation.'
+          t.deactivate_description ?? 'Deactivate "{name}"? Live verification will fall back to format-only validation.'
         ).replace("{name}", item.service_display),
         onConfirm: () => deactivateMutation.mutateAsync(),
       });
@@ -78,11 +82,7 @@ function ExternalApiActions({
   );
 }
 
-export function getExternalApiColumns(
-  t: T,
-  tCommon: T,
-  onEdit: (item: ExternalApi) => void,
-): ColumnDef<ExternalApi>[] {
+export function getExternalApiColumns(t: T, tCommon: T, onEdit: (item: ExternalApi) => void): ColumnDef<ExternalApi>[] {
   return [
     {
       accessorKey: "service_display",
@@ -98,21 +98,21 @@ export function getExternalApiColumns(
       accessorKey: "api_url",
       header: t.col_api_url ?? "API URL",
       meta: { hideOnMobile: true },
-      cell: ({ row }) => (
-        <TextCell
-          value={row.original.api_url || (t.no_url ?? "Not set")}
-          maxWidth="max-w-[260px]"
-          muted
-          mono={!!row.original.api_url}
-        />
-      ),
+      cell: ({ row }) => {
+        // A blank URL means the backend uses the service's default, so show that
+        const url = row.original.api_url || defaultUrlFor(row.original.service);
+        return <TextCell value={url || (t.no_url ?? "Not set")} maxWidth="max-w-[260px]" muted mono={!!url} />;
+      },
     },
     {
       accessorKey: "is_active",
       header: t.col_status ?? "Status",
       cell: ({ row }) =>
         row.original.is_active ? (
-          <Badge variant="outline" className="border-green-500/40 bg-green-500/10 text-[11px] text-green-700 dark:text-green-400">
+          <Badge
+            variant="outline"
+            className="border-green-500/40 bg-green-500/10 text-[11px] text-green-700 dark:text-green-400"
+          >
             {tCommon.badge_active ?? "Active"}
           </Badge>
         ) : (

@@ -40,11 +40,17 @@ type T = Record<string, string>;
 /** The landing page layout is designed for this many playlists. */
 const RECOMMENDED_MAX_PLAYLISTS = 3;
 
+// The API client rejects with { message, data: { errors } }. Field errors carry the
+// useful detail; the top-level message is often just "Validation failed."
 // biome-ignore lint/suspicious/noExplicitAny: API client rejects with the backend's error payload
 function firstBackendError(error: any): string | null {
-  const payload = error?.message;
-  if (payload && typeof payload === "object") return (Object.values(payload).flat()[0] as string) ?? null;
-  return typeof payload === "string" ? payload : null;
+  for (const payload of [error?.data?.errors, error?.message]) {
+    if (payload && typeof payload === "object") {
+      const first = Object.values(payload).flat()[0];
+      if (typeof first === "string") return first;
+    }
+  }
+  return typeof error?.message === "string" ? error.message : null;
 }
 
 function playlistTitle(playlist: AdminYoutubePlaylist): string {
