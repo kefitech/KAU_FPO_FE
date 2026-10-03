@@ -1,7 +1,16 @@
 import { publicApiClient } from "./client";
 
+/**
+ * One card per **stock batch** — matches PublicProductListView on the
+ * backend (apps/marketplace/api/public.py). A product with two live
+ * batches appears as two cards with different quantities and prices.
+ *
+ * `id` is the ProductStock id (pass to inquire()). `product_id` is the
+ * parent Product id — kept for "view all batches of this product" nav.
+ */
 export interface MarketHubProduct {
-  id: number;
+  id: number; // ProductStock id
+  product_id: number;
   name: { en: string; ml: string };
   description: { en: string; ml: string };
   commodity_code: string;
@@ -13,6 +22,10 @@ export interface MarketHubProduct {
   available_from: string;
   available_until: string | null;
   image: string | null;
+  /** KAU #3 — true when the batch's validity ended within the past 3
+   *  days but it's still shown with the grace_message banner. */
+  in_grace_period: boolean;
+  grace_message: string | null;
 }
 
 export interface MarketHubCommodity {
@@ -93,19 +106,27 @@ export const marketHubApi = {
     return response.data;
   },
 
-  getProductById: async (id: number): Promise<MarketHubDetailResponse<MarketHubProduct>> => {
+  /**
+   * `stockId` is the id surfaced by getProducts() (a ProductStock id).
+   * Returns the detail for that specific batch.
+   */
+  getProductById: async (stockId: number): Promise<MarketHubDetailResponse<MarketHubProduct>> => {
     const response = await publicApiClient.get<MarketHubDetailResponse<MarketHubProduct>>(
-      `/public/market/products/${id}/`,
+      `/public/market/products/${stockId}/`,
     );
     return response.data;
   },
 
+  /**
+   * `stockId` is the id on MarketHubProduct (a ProductStock id). The
+   * inquiry locks onto the specific batch the visitor saw.
+   */
   inquire: async (
-    productId: number,
+    stockId: number,
     payload: InquiryPayload,
   ): Promise<MarketHubDetailResponse<{ inquiry_id: number }>> => {
     const response = await publicApiClient.post<MarketHubDetailResponse<{ inquiry_id: number }>>(
-      `/public/market/products/${productId}/inquire/`,
+      `/public/market/products/${stockId}/inquire/`,
       payload,
     );
     return response.data;

@@ -501,21 +501,22 @@ export type ProductStatus = "draft" | "active" | "sold" | "expired";
 
 export type ProductUnit = "kg" | "quintal" | "mt" | "litre" | "piece";
 
-// ─── Marketplace: Product ───────────────────────────────────────────────────────
-// Matches ProductSerializer fields exactly (apps/marketplace/serializers.py).
+// ─── Marketplace: Product + ProductStock ────────────────────────────────────────
+// A Product is the master identity (name, commodity, image, description).
+// Its sellable batches live on ProductStock — one Product can have many
+// batches live simultaneously (e.g. 100 kg @ ₹85 + 500 kg @ ₹82). This
+// matches ProductSerializer + ProductStockSerializer on the backend
+// (apps/marketplace/serializers.py).
 
 export interface LocalizedText {
   en: string;
   ml: string;
 }
 
-export interface Product {
+export interface ProductStock {
   id: number;
-  fpo: number;
-  name: LocalizedText;
-  commodity: number; // MasterLookup id (category='commodity')
-  description: LocalizedText;
-  quantity: string; // DecimalField -> serialized as string, e.g. "10.00"
+  product: number;
+  quantity: string; // DecimalField -> serialized as string
   unit: ProductUnit;
   price_per_unit: string;
   quality_certification: string;
@@ -525,31 +526,84 @@ export interface Product {
   ondc_product_id: string | null;
   is_public: boolean;
   status: ProductStatus;
-  /** Product photo URL — nullable when no image was uploaded (backend migration 0095). */
-  image: string | null;
   created_at: string;
   updated_at: string;
 }
 
-// ─── Marketplace: Payloads ───────────────────────────────────────────────────────
-// fpo, is_ondc_listed, ondc_product_id, status are server-set — never sent by the client.
+export interface Product {
+  id: number;
+  fpo: number;
+  name: LocalizedText;
+  commodity: number; // MasterLookup id (category='commodity')
+  /** MasterLookup code (e.g. "banana", "rice_paddy") — stable id for logic. */
+  commodity_code: string;
+  /** Human-readable name resolved via Translation; already language-aware. */
+  commodity_name: string;
+  description: LocalizedText;
+  /** Product photo URL — nullable when no image was uploaded. */
+  image: string | null;
+  /** Every batch on this product, including draft/sold/expired. */
+  stocks: ProductStock[];
+  /** The batch to surface in single-batch UI — most recent ACTIVE batch,
+   *  or most recent of any status if none are active. Null when the
+   *  product has no batches yet (freshly created or all batches removed). */
+  latest_stock: ProductStock | null;
+  /** True when the product has any batch at all. */
+  has_stock: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// ─── Marketplace: Payloads ──────────────────────────────────────────────────────
+// Server-set fields (fpo, is_ondc_listed, ondc_product_id, is_public, status)
+// are never sent by the client. For CreateProductPayload the backend accepts
+// the first batch's flat fields alongside the product master in a single POST
+// — those seed the initial ProductStock row. On PATCH these flat fields are
+// silently ignored by the backend; batch edits go through productStocksApi.
 
 export interface CreateProductPayload {
+  // Product master
   name: LocalizedText;
   commodity: number;
   description?: LocalizedText;
+  image?: File | null;
+  // Optional first-batch seed (omit to create a product with no stock yet).
+  // `status` and `is_public` let the FPO publish + make public in one shot.
+  quantity?: string;
+  unit?: ProductUnit;
+  price_per_unit?: string;
+  quality_certification?: string;
+  available_from?: string;
+  available_until?: string | null;
+  status?: Extract<ProductStatus, "draft" | "active">;
+  is_public?: boolean;
+}
+
+// PATCH on a Product — product master only. Stock edits use the nested
+// endpoint and have their own payload type below.
+export interface UpdateProductPayload {
+  name?: LocalizedText;
+  commodity?: number;
+  description?: LocalizedText;
+  image?: File | null;
+}
+
+// Nested stock CRUD payloads — one Product can have N batches.
+// `status` and `is_public` let the FPO publish + make the batch public
+// in the same request (status is validated to `draft`|`active` on the
+// backend). On edit, sold/expired batches reject raw PATCH entirely.
+export interface CreateStockPayload {
   quantity: string;
   unit: ProductUnit;
   price_per_unit: string;
   quality_certification?: string;
   available_from: string;
   available_until?: string | null;
+  status?: Extract<ProductStatus, "draft" | "active">;
   is_public?: boolean;
-  image?: File | null;
 }
 
-// PATCH — all fields optional, send only what changed
-export type UpdateProductPayload = Partial<CreateProductPayload>;
+export type UpdateStockPayload = Partial<CreateStockPayload>;
 
 // ─── Marketplace: Pagination envelope ───────────────────────────────────────────
 // Matches StandardPagination's meta.pagination block, confirmed via testing.
