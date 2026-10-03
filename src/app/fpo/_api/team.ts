@@ -42,6 +42,16 @@ export const fpoTeamApi = {
       .then((r) => r.data as BulkInviteFileResponse);
   },
 
+  /**
+   * Downloads the styled .xlsx bulk-invite template (3 sheets: Instructions,
+   * Members, Role Codes). Returns a Blob so the caller can trigger a download
+   * via an anchor + ObjectURL.
+   */
+  getBulkInviteTemplate: (): Promise<Blob> =>
+    api
+      .get(`${BASE}bulk-invite-template/`, { responseType: "blob" })
+      .then((r) => r.data as Blob),
+
   deactivate: (userId: number): Promise<void> => api.post(`${BASE}${userId}/deactivate/`).then(() => undefined),
 
   resetPassword: (userId: number): Promise<void> => api.post(`${BASE}${userId}/reset-password/`).then(() => undefined),

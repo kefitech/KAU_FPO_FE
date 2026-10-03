@@ -29,19 +29,30 @@ type T = Record<string, string>;
 
 const emptyRow = (): MemberRow => ({ first_name: "", last_name: "", email: "", phone: "" });
 
-const TEMPLATE_FILENAME = "secondary_user_bulk_invite.csv";
-const TEMPLATE_HEADERS = ["first_name", "last_name", "email"];
+const TEMPLATE_FILENAME = "fpo_team_bulk_invite_template.xlsx";
 
-function downloadTemplate() {
-  const blob = new Blob([`${TEMPLATE_HEADERS.join(",")}\n`], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = TEMPLATE_FILENAME;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
+/**
+ * Fetches the styled .xlsx template from the backend (Instructions / Members
+ * / Role Codes sheets) and triggers a browser download. The old client-side
+ * CSV fallback is kept inside a catch block in case the server endpoint is
+ * briefly unavailable (hot-deploy, outage) so the FPO still gets a usable
+ * header-only file.
+ */
+async function downloadTemplate(onError?: (message: string) => void) {
+  try {
+    const blob = await fpoTeamApi.getBulkInviteTemplate();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = TEMPLATE_FILENAME;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    const message = (err as { message?: string })?.message ?? "Failed to download template";
+    onError?.(message);
+  }
 }
 
 type Tab = "json" | "file";
@@ -314,7 +325,12 @@ export function BulkInviteDialog({ open, onOpenChange }: BulkInviteDialogProps) 
                   <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
                     Choose File
                   </Button>
-                  <Button type="button" variant="ghost" size="sm" onClick={downloadTemplate}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => downloadTemplate((msg) => toast.error(msg))}
+                  >
                     <Download className="mr-1.5 h-3.5 w-3.5" />
                     {t.bulk_invite_btn_download_template ?? "Download Template"}
                   </Button>
