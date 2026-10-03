@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
+  BadgePercent,
   Bell,
   CheckCheck,
   FileBarChart,
@@ -65,6 +66,7 @@ const CATEGORY_FALLBACK_LABELS: Record<InboxCategory, string> = {
   expert: "Expert Bookings",
   training: "Training",
   marketplace: "Marketplace",
+  schemes: "Schemes & Subsidies",
   other: "General",
 };
 
@@ -77,6 +79,7 @@ const CATEGORY_ICONS: Record<CategoryTab, LucideIcon> = {
   expert: UserRound,
   training: GraduationCap,
   marketplace: Store,
+  schemes: BadgePercent,
   other: Bell,
 };
 

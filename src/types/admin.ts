@@ -446,6 +446,7 @@ export type InboxCategory =
   | "expert"
   | "training"
   | "marketplace"
+  | "schemes"
   | "other";
 
 export interface InboxNotification {
@@ -761,6 +762,8 @@ export interface AdminQuickLink {
   name: string;
   url: string;
   logo_url: string | null;
+  /** Optional expiry — once passed, Celery flips is_active=False. */
+  end_date: string | null;
   is_active: boolean;
   order: number;
   created_at: string;
@@ -819,6 +822,8 @@ export interface AdminNewsSource {
   url: string;
   logo_url: string | null;
   category: string;
+  /** Optional expiry — once passed, Celery flips is_active=False. */
+  end_date: string | null;
   is_active: boolean;
   created_at: string;
 }
