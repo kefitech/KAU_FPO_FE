@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { DetailModal } from "@/components/shared/detail-modal";
+
 import Link from "next/link";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -12,6 +12,7 @@ import { type BuyerProduct, buyerProductsApi } from "@/app/buyer/_api/products";
 import { buyerDirectoryApi } from "@/app/fpo/_api/buyer-directory";
 import { masterDataApi } from "@/app/fpo/_api/master-data";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
+import { DetailModal } from "@/components/shared/detail-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -22,6 +23,7 @@ import { InquiryDialog } from "@/components/ui/inquiry-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useFpoPermissions } from "@/hooks/use-fpo-permissions";
 import { translationsApi } from "@/lib/api/translations";
 import { toMediaUrl } from "@/lib/utils/media-url";
 import { useLocaleStore } from "@/stores/locale-store";
@@ -56,20 +58,20 @@ function ProductCard({ product, locale, t }: { product: BuyerProduct; locale: st
           </div>
         </CardHeader>
         <CardContent className="flex flex-1 flex-col gap-3">
-        {description && (
-          <div className="flex flex-col gap-1">
-            <p className="line-clamp-2 text-muted-foreground text-sm">{description}</p>
-            {description.length > 120 && (
-              <button
-                type="button"
-                onClick={() => setDescriptionOpen(true)}
-                className="w-fit text-primary text-xs font-medium hover:underline"
-              >
-                {t.read_more ?? "Read more"}
-              </button>
-            )}
-          </div>
-        )}
+          {description && (
+            <div className="flex flex-col gap-1">
+              <p className="line-clamp-2 text-muted-foreground text-sm">{description}</p>
+              {description.length > 120 && (
+                <button
+                  type="button"
+                  onClick={() => setDescriptionOpen(true)}
+                  className="w-fit text-primary text-xs font-medium hover:underline"
+                >
+                  {t.read_more ?? "Read more"}
+                </button>
+              )}
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div className="flex flex-col gap-0.5">
               <span className="text-muted-foreground text-xs">{t.label_quantity ?? "Quantity"}</span>
@@ -98,16 +100,13 @@ function ProductCard({ product, locale, t }: { product: BuyerProduct; locale: st
               )}
             </div>
           )}
-        <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
-          <Building2 className="h-3.5 w-3.5" />
-          {product.fpo_name}
-        </div>
-        <Link
-          href={`/fpo/buyer-directory/fpo/${product.fpo}`}
-          className="text-primary text-xs hover:underline"
-        >
-          {t.view_all_products ?? "View all products from this FPO"}
-        </Link>
+          <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
+            <Building2 className="h-3.5 w-3.5" />
+            {product.fpo_name}
+          </div>
+          <Link href={`/fpo/buyer-directory/fpo/${product.fpo}`} className="text-primary text-xs hover:underline">
+            {t.view_all_products ?? "View all products from this FPO"}
+          </Link>
           <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
             <CalendarIcon className="h-3.5 w-3.5" />
             {product.available_from}
@@ -118,10 +117,12 @@ function ProductCard({ product, locale, t }: { product: BuyerProduct; locale: st
           </Button>
         </CardContent>
       </Card>
-      <DetailModal open={descriptionOpen} onClose={() => setDescriptionOpen(false)} title={t.description_label ?? "Description"}>
-        <p style={{ color: "#666", fontSize: 14, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-          {description}
-        </p>
+      <DetailModal
+        open={descriptionOpen}
+        onClose={() => setDescriptionOpen(false)}
+        title={t.description_label ?? "Description"}
+      >
+        <p style={{ color: "#666", fontSize: 14, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{description}</p>
       </DetailModal>
       <DetailModal
         open={qualityOpen}
@@ -345,6 +346,9 @@ export default function BuyerDirectoryPage() {
   const locale = useLocaleStore((s) => s.locale);
   const [t, setT] = useState<T>({});
   const queryClient = useQueryClient();
+  // Only the FPO's primary user can register it as a buyer (backend enforces
+  // this too); team members can still browse + inquire once it's verified.
+  const { isPrimary, isLoading: permissionsLoading } = useFpoPermissions();
 
   useEffect(() => {
     translationsApi.getPublic(locale, "fpo_buyer_directory,common").then((data) => {
@@ -415,15 +419,23 @@ export default function BuyerDirectoryPage() {
                   "Register your FPO as a buyer to purchase products listed by other FPOs on the marketplace."}
               </p>
             </div>
-            <Button
-              className="bg-green-600 hover:bg-green-700"
-              onClick={() => registerMutation.mutate()}
-              disabled={registerMutation.isPending}
-            >
-              {registerMutation.isPending
-                ? (t.btn_registering ?? "Registering…")
-                : (t.btn_register ?? "Register as a Buyer")}
-            </Button>
+            {isPrimary ? (
+              <Button
+                className="bg-green-600 hover:bg-green-700"
+                onClick={() => registerMutation.mutate()}
+                disabled={registerMutation.isPending}
+              >
+                {registerMutation.isPending
+                  ? (t.btn_registering ?? "Registering…")
+                  : (t.btn_register ?? "Register as a Buyer")}
+              </Button>
+            ) : (
+              !permissionsLoading && (
+                <p className="rounded-md bg-muted px-3 py-2 text-muted-foreground text-sm">
+                  {t.member_register_note ?? "Only your FPO's primary user can register the FPO as a buyer."}
+                </p>
+              )
+            )}
           </div>
         )}
 
