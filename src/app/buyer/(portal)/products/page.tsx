@@ -398,6 +398,27 @@ export default function BuyerProductsPage() {
         <div className="flex flex-col items-center gap-2 py-16 text-center">
           <Package className="h-10 w-10 text-muted-foreground/40" />
           <p className="text-muted-foreground text-sm">{t.empty_state ?? "No products found."}</p>
+          {/* The commodity filter defaults to the buyer's interests — when that
+              (or their own selection) matches nothing, offer a one-click way out
+              instead of making the catalogue look empty. */}
+          {selectedCommodities.length > 0 && (
+            <>
+              <p className="text-muted-foreground text-xs">
+                {t.empty_filtered_hint ?? "Nothing is listed in the selected commodities right now."}
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-2"
+                onClick={() => {
+                  setSelectedCommodities([]);
+                  resetPage();
+                }}
+              >
+                {t.btn_view_all_products ?? "View all products"}
+              </Button>
+            </>
+          )}
         </div>
       ) : (
         <>

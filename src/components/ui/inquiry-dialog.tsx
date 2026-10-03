@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { buyerProductsApi } from "@/app/buyer/_api/products";
@@ -32,6 +32,27 @@ export function InquiryDialog({
   const [quantity, setQuantity] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+
+  // Mouse-wheel stepping, like the app's other number fields (e.g. annual
+  // turnover). Browsers do this natively for a focused number input, but the
+  // Radix Dialog's scroll lock (react-remove-scroll) cancels wheel events, which
+  // cancels that too — so step it here. Native listener because React's onWheel
+  // is passive and can't preventDefault (needed so the value never moves twice).
+  const quantityInputRef = useCallback((input: HTMLInputElement | null) => {
+    if (!input) return;
+    const onWheel = (e: WheelEvent) => {
+      if (document.activeElement !== input || e.deltaY === 0) return;
+      e.preventDefault();
+      // 25 × step (0.01) = 0.25 per notch. The input's own step stays 0.01 so
+      // any 2-decimal quantity (e.g. 12.3) still passes native validation.
+      if (e.deltaY < 0) input.stepUp(25);
+      else input.stepDown(25);
+      setQuantity(input.value);
+    };
+    input.addEventListener("wheel", onWheel, { passive: false });
+    return () => input.removeEventListener("wheel", onWheel);
+  }, []);
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -41,6 +62,8 @@ export function InquiryDialog({
       }),
     onSuccess: () => {
       toast.success("Inquiry submitted successfully.");
+      // Buyer dashboard shows inquiry counts — refresh them.
+      queryClient.invalidateQueries({ queryKey: ["buyer-dashboard"] });
       reset();
       onOpenChange(false);
     },
@@ -93,8 +116,11 @@ export function InquiryDialog({
               Quantity required ({unit}) <span className="text-destructive">*</span>
             </FieldLabel>
             <Input
+              ref={quantityInputRef}
               id="inquiry-quantity"
-              inputMode="decimal"
+              type="number"
+              min={0}
+              step="0.01"
               placeholder={`e.g. 500`}
               value={quantity}
               onChange={(e) => setQuantity(e.target.value)}

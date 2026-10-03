@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { Layers, Pencil, Plus, Upload } from "lucide-react";
 
-import { inquiriesApi } from "@/app/fpo/_api/inquiries";
+import { type Inquiry, inquiriesApi } from "@/app/fpo/_api/inquiries";
 import { marketHubInquiriesApi } from "@/app/fpo/_api/market-hub-inquiries";
 import { productsApi } from "@/app/fpo/_api/products";
 import { DataTable } from "@/components/data-table";
@@ -22,6 +22,7 @@ import { PRODUCT_STATUS_LABEL } from "@/types/fpo";
 import { BulkImportDialog } from "./_components/bulk-import-dialog";
 import { getProductColumns } from "./_components/columns";
 import { getInquiryColumns } from "./_components/inquiry-columns";
+import { InquiryDetailDialog } from "./_components/inquiry-detail-dialog";
 import { ManageBatchesSheet } from "./_components/manage-batches-sheet";
 import { getMarketHubInquiryColumns } from "./_components/market-hub-inquiry-columns";
 
@@ -53,6 +54,11 @@ export default function FpoProductsPage() {
     row: null,
   });
 
+  const [inquiryView, setInquiryView] = useState<{ open: boolean; row: Inquiry | null }>({
+    open: false,
+    row: null,
+  });
+
   const [batchesSheet, setBatchesSheet] = useState<{ open: boolean; product: Product | null }>({
     open: false,
     product: null,
@@ -61,6 +67,14 @@ export default function FpoProductsPage() {
   const [bulkImportOpen, setBulkImportOpen] = useState(false);
 
   const [viewMode, setViewMode] = useState<ViewMode>("products");
+
+  // Deep link: ?view=inquiries / ?view=market-hub-inquiries (used by the
+  // dashboard's inquiry notifications) opens straight on that tab. Read once on
+  // mount from window.location so the page needs no Suspense boundary.
+  useEffect(() => {
+    const view = new URLSearchParams(window.location.search).get("view");
+    if (view === "inquiries" || view === "market-hub-inquiries") setViewMode(view);
+  }, []);
 
   const STATUS_FILTERS = useMemo(
     () => [
@@ -184,6 +198,7 @@ export default function FpoProductsPage() {
             queryKey="inquiries"
             queryFn={inquiriesApi.getAll}
             columns={getInquiryColumns(tPage, canManage)}
+            onRowClick={(row) => setInquiryView({ open: true, row })}
             filters={INQUIRY_STATUS_FILTERS}
             columnsLabel={tCommon.columns_header}
             toggleColumnsLabel={tCommon.columns_toggle_columns}
@@ -207,6 +222,16 @@ export default function FpoProductsPage() {
           />
         </Suspense>
       )}
+
+      <InquiryDetailDialog
+        key={inquiryView.row?.id ?? "none"}
+        open={inquiryView.open}
+        onOpenChange={(open) => setInquiryView((s) => ({ ...s, open }))}
+        inquiry={inquiryView.row}
+        canManage={canManage}
+        t={tPage}
+        tCommon={tCommon}
+      />
 
       <ViewSheet
         open={productView.open}

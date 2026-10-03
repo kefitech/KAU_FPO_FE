@@ -296,6 +296,8 @@ export interface FpoDashboardNotification {
   body: string;
   created_at: string;
   is_read: boolean;
+  /** In-app path to open when clicked (e.g. "/fpo/products?view=inquiries"), or null. */
+  link?: string | null;
 }
 
 export interface FpoDashboard {
