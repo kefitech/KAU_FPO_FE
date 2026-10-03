@@ -14,11 +14,12 @@
  *   - Off-white bg     #fafafa
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { usePathname } from "next/navigation";
 
 import { chatbotApi } from "@/lib/api/chatbot";
+import { useLocaleStore } from "@/stores/locale-store";
 
 
 interface ChatMessage {
@@ -28,12 +29,31 @@ interface ChatMessage {
   sources?: { topic: string }[];
 }
 
-const WELCOME: ChatMessage = {
-  id: "welcome",
-  role: "assistant",
-  text:
-    "Hi! I'm the KAU-FPO assistant. Ask me anything about the platform — how to register, browse products, or contact support.",
-};
+// BUG-13 — widget UI strings per language. Fallbacks to English.
+const UI_STRINGS = {
+  en: {
+    welcome:
+      "Hi! I'm the KAU-FPO assistant. Ask me anything about the platform — how to register, browse products, or contact support.",
+    title: "KAU-FPO Assistant",
+    placeholder: "Ask a question...",
+    send: "Send",
+    reset: "Reset conversation",
+    close: "Close assistant",
+    open: "Open help assistant",
+    typeAria: "Type your question",
+  },
+  ml: {
+    welcome:
+      "ഹായ്! ഞാൻ KAU-FPO സഹായിയാണ്. പ്ലാറ്റ്‌ഫോമിനെക്കുറിച്ച് എന്തും ചോദിക്കൂ — രജിസ്റ്റർ ചെയ്യുന്നതെങ്ങനെ, ഉൽപ്പന്നങ്ങൾ കാണുന്നതെങ്ങനെ, അല്ലെങ്കിൽ സപ്പോർട്ടുമായി ബന്ധപ്പെടുന്നതെങ്ങനെ.",
+    title: "KAU-FPO സഹായി",
+    placeholder: "ഒരു ചോദ്യം ചോദിക്കൂ...",
+    send: "അയയ്ക്കുക",
+    reset: "സംഭാഷണം റീസെറ്റ് ചെയ്യുക",
+    close: "സഹായി അടയ്ക്കുക",
+    open: "സഹായി തുറക്കുക",
+    typeAria: "നിങ്ങളുടെ ചോദ്യം ടൈപ്പ് ചെയ്യുക",
+  },
+} as const;
 
 const PALETTE = {
   primary:   "#1f4d2b",   // KAU dark green
@@ -54,12 +74,27 @@ const SESSION_STORAGE_KEY = "kau_chatbot_session_id";
 
 export function ChatWidgetPublic() {
   const pathname = usePathname();
+  const locale = useLocaleStore((s) => s.locale);
+  const strings = useMemo(() => (locale === "ml" ? UI_STRINGS.ml : UI_STRINGS.en), [locale]);
+  const welcomeMsg = useMemo<ChatMessage>(
+    () => ({ id: "welcome", role: "assistant", text: strings.welcome }),
+    [strings],
+  );
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([WELCOME]);
+  const [messages, setMessages] = useState<ChatMessage[]>([welcomeMsg]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string>("");
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // When locale changes mid-session, swap the welcome bubble so the thread
+  // stays in the user's chosen language (BUG-13).
+  useEffect(() => {
+    setMessages((prev) => {
+      if (prev.length === 0 || prev[0].id !== "welcome") return prev;
+      return [welcomeMsg, ...prev.slice(1)];
+    });
+  }, [welcomeMsg]);
 
   // Restore session_id + history on first open. Runs at most once per
   // component mount; subsequent opens reuse in-memory state.
@@ -70,22 +105,38 @@ export function ChatWidgetPublic() {
     if (!stored || stored === sessionId) return;
 
     setSessionId(stored);
-    chatbotApi
-      .history(stored)
-      .then((res) => {
-        if (res.messages.length === 0) return;
-        setMessages([
-          WELCOME,
-          ...res.messages.map((m, i) => ({
-            id: `${m.role}-${i}-${m.created_at}`,
-            role: m.role,
-            text: m.content,
-          })),
-        ]);
-      })
-      .catch(() => {
-        // Non-fatal — bad session_id, network hiccup. Widget still works.
-      });
+    // BUG-06 — history occasionally returned status 0 (canceled) on first
+    // widget open, leaving the user with an empty thread. Retry once after
+    // 500ms before giving up so a transient cancel/race doesn't eat the
+    // whole scrollback.
+    const loadHistory = (attempt = 0): Promise<void> =>
+      chatbotApi
+        .history(stored)
+        .then((res) => {
+          if (res.messages.length === 0) return;
+          setMessages([
+            welcomeMsg,
+            ...res.messages.map((m, i) => ({
+              id: `${m.role}-${i}-${m.created_at}`,
+              role: m.role as "user" | "assistant",
+              text: m.content,
+            })),
+          ]);
+        })
+        .catch((err: { message?: string; code?: string }) => {
+          // Canceled fetches surface as status 0 or an Axios "ERR_CANCELED"
+          // on the first open — retry once before giving up. Any other
+          // failure is non-fatal (widget still works with an empty thread).
+          const canceled =
+            err?.code === "ERR_CANCELED" ||
+            /canceled|aborted|status code 0/i.test(err?.message ?? "");
+          if (canceled && attempt === 0) {
+            return new Promise<void>((resolve) => setTimeout(resolve, 500)).then(() =>
+              loadHistory(attempt + 1),
+            );
+          }
+        });
+    loadHistory();
   }, [open, sessionId]);
 
   useEffect(() => {
@@ -115,13 +166,33 @@ export function ChatWidgetPublic() {
         ...prev,
         { id: `a-${Date.now()}`, role: "assistant", text: res.reply, sources: res.sources },
       ]);
-    } catch {
+    } catch (err) {
+      // Distinguish a 400 "message too long" validation error from a true
+      // reachability failure. The server enforces max 500 chars on the
+      // message field — until then the FE just showed a generic "couldn't
+      // reach the assistant" which confused testers (BUG-05).
+      const anyErr = err as {
+        response?: { status?: number; data?: { errors?: Record<string, string[]> } };
+        status?: number;
+        data?: { errors?: Record<string, string[]> };
+      };
+      const status = anyErr?.response?.status ?? anyErr?.status;
+      const errors = anyErr?.response?.data?.errors ?? anyErr?.data?.errors;
+      const messageTooLong =
+        status === 400 && errors && Array.isArray(errors.message)
+          ? errors.message.join(" ")
+          : null;
+      const fallbackText =
+        messageTooLong ||
+        (text.length > 500
+          ? "Your message is too long. Please keep it under 500 characters."
+          : "Sorry, I couldn't reach the assistant right now. Please try again in a moment.");
       setMessages((prev) => [
         ...prev,
         {
           id: `err-${Date.now()}`,
           role: "assistant",
-          text: "Sorry, I couldn't reach the assistant right now. Please try again in a moment.",
+          text: fallbackText,
         },
       ]);
     } finally {
@@ -137,14 +208,14 @@ export function ChatWidgetPublic() {
       if (typeof window !== "undefined") {
         window.localStorage.setItem(SESSION_STORAGE_KEY, res.session_id);
       }
-      setMessages([WELCOME]);
+      setMessages([welcomeMsg]);
     } catch {
       // Ignore — local reset still useful even if the network call fails.
       setSessionId("");
       if (typeof window !== "undefined") {
         window.localStorage.removeItem(SESSION_STORAGE_KEY);
       }
-      setMessages([WELCOME]);
+      setMessages([welcomeMsg]);
     }
   };
 
@@ -164,7 +235,11 @@ export function ChatWidgetPublic() {
           position: fixed !important;
           right: 20px !important;
           bottom: 20px !important;
-          z-index: 99999 !important;
+          /* Must be above the agrul theme's .se-pre-con preloader (999999).
+             BUG-19 — first click on the FAB was being swallowed by the
+             preloader overlay before it faded out. 2147483000 is still
+             comfortably under int32 max so nothing explodes. */
+          z-index: 2147483000 !important;
           width: 58px !important;
           height: 58px !important;
           border-radius: 50% !important;
@@ -185,7 +260,11 @@ export function ChatWidgetPublic() {
           position: fixed !important;
           right: 20px !important;
           bottom: 20px !important;
-          z-index: 99999 !important;
+          /* Must be above the agrul theme's .se-pre-con preloader (999999).
+             BUG-19 — first click on the FAB was being swallowed by the
+             preloader overlay before it faded out. 2147483000 is still
+             comfortably under int32 max so nothing explodes. */
+          z-index: 2147483000 !important;
           width: min(400px, calc(100vw - 32px)) !important;
           height: min(600px, 80vh) !important;
           background: ${PALETTE.bg} !important;
@@ -308,7 +387,7 @@ export function ChatWidgetPublic() {
           type="button"
           onClick={() => setOpen(true)}
           className="kau-chat-fab"
-          aria-label="Open help assistant"
+          aria-label={strings.open}
           data-testid="chat-fab"
         >
           💬
@@ -320,7 +399,7 @@ export function ChatWidgetPublic() {
           <div className="kau-chat-header">
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ fontSize: 18 }}>🌾</span>
-              <span style={{ fontWeight: 600, fontSize: 15 }}>KAU-FPO Assistant</span>
+              <span style={{ fontWeight: 600, fontSize: 15 }}>{strings.title}</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
               <button
@@ -328,12 +407,12 @@ export function ChatWidgetPublic() {
                 onClick={resetConversation}
                 disabled={loading}
                 className="kau-chat-close"
-                aria-label="Reset conversation"
-                title="Reset conversation"
+                aria-label={strings.reset}
+                title={strings.reset}
               >
                 ↻
               </button>
-              <button type="button" onClick={() => setOpen(false)} className="kau-chat-close" aria-label="Close assistant">
+              <button type="button" onClick={() => setOpen(false)} className="kau-chat-close" aria-label={strings.close}>
                 ✕
               </button>
             </div>
@@ -372,9 +451,9 @@ export function ChatWidgetPublic() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={onKeyDown}
-              placeholder="Ask a question..."
+              placeholder={strings.placeholder}
               disabled={loading}
-              aria-label="Type your question"
+              aria-label={strings.typeAria}
               className="kau-chat-input"
             />
             <button
@@ -382,9 +461,9 @@ export function ChatWidgetPublic() {
               onClick={send}
               disabled={loading || !input.trim()}
               className="kau-chat-send"
-              aria-label="Send"
+              aria-label={strings.send}
             >
-              Send
+              {strings.send}
             </button>
           </div>
         </div>

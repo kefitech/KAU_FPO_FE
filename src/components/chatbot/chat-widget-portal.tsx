@@ -9,7 +9,7 @@
  * with pure inline styles to survive the agrul Bootstrap CSS.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { usePathname } from "next/navigation";
 
@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { chatbotApi } from "@/lib/api/chatbot";
 import { cn } from "@/lib/utils";
+import { useLocaleStore } from "@/stores/locale-store";
 
 interface ChatMessage {
   id: string;
@@ -27,12 +28,31 @@ interface ChatMessage {
   sources?: { topic: string }[];
 }
 
-const WELCOME_MSG: ChatMessage = {
-  id: "welcome",
-  role: "assistant",
-  text:
-    "Hi! I'm the KAU-FPO assistant. Ask me anything about the platform — how to register, submit an application, browse products, or contact support.",
-};
+// BUG-13 — widget UI strings per language. Fallbacks to English.
+const UI_STRINGS = {
+  en: {
+    welcome:
+      "Hi! I'm the KAU-FPO assistant. Ask me anything about the platform — how to register, submit an application, browse products, or contact support.",
+    title: "KAU-FPO Assistant",
+    placeholder: "Ask a question...",
+    send: "Send",
+    reset: "Reset conversation",
+    close: "Close assistant",
+    open: "Open help assistant",
+    typeAria: "Type your question",
+  },
+  ml: {
+    welcome:
+      "ഹായ്! ഞാൻ KAU-FPO സഹായിയാണ്. പ്ലാറ്റ്‌ഫോമിനെക്കുറിച്ച് എന്തും ചോദിക്കൂ — രജിസ്റ്റർ ചെയ്യുന്നതെങ്ങനെ, അപേക്ഷ സമർപ്പിക്കുന്നതെങ്ങനെ, ഉൽപ്പന്നങ്ങൾ കാണുന്നതെങ്ങനെ, അല്ലെങ്കിൽ സപ്പോർട്ടുമായി ബന്ധപ്പെടുന്നതെങ്ങനെ.",
+    title: "KAU-FPO സഹായി",
+    placeholder: "ഒരു ചോദ്യം ചോദിക്കൂ...",
+    send: "അയയ്ക്കുക",
+    reset: "സംഭാഷണം റീസെറ്റ് ചെയ്യുക",
+    close: "സഹായി അടയ്ക്കുക",
+    open: "സഹായി തുറക്കുക",
+    typeAria: "നിങ്ങളുടെ ചോദ്യം ടൈപ്പ് ചെയ്യുക",
+  },
+} as const;
 
 // localStorage key for the widget's session_id — same key on public + portal
 // variants so a user who logs in mid-session keeps the same conversation
@@ -41,12 +61,29 @@ const SESSION_STORAGE_KEY = "kau_chatbot_session_id";
 
 export function ChatWidgetPortal() {
   const pathname = usePathname();
+  const locale = useLocaleStore((s) => s.locale);
+  // Pick the UI strings bundle — Malayalam when locale is 'ml',
+  // English otherwise (including when the user hasn't picked yet).
+  const strings = useMemo(() => (locale === "ml" ? UI_STRINGS.ml : UI_STRINGS.en), [locale]);
+  const welcomeMsg = useMemo<ChatMessage>(
+    () => ({ id: "welcome", role: "assistant", text: strings.welcome }),
+    [strings],
+  );
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([WELCOME_MSG]);
+  const [messages, setMessages] = useState<ChatMessage[]>([welcomeMsg]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string>("");
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // When locale changes mid-session, update the welcome bubble so the
+  // thread stays in the user's chosen language.
+  useEffect(() => {
+    setMessages((prev) => {
+      if (prev.length === 0 || prev[0].id !== "welcome") return prev;
+      return [welcomeMsg, ...prev.slice(1)];
+    });
+  }, [welcomeMsg]);
 
   // Restore session_id + history on first open. Runs at most once per
   // component mount; subsequent opens reuse in-memory state.
@@ -62,7 +99,7 @@ export function ChatWidgetPortal() {
       .then((res) => {
         if (res.messages.length === 0) return;
         setMessages([
-          WELCOME_MSG,
+          welcomeMsg,
           ...res.messages.map((m, i) => ({
             id: `${m.role}-${i}-${m.created_at}`,
             role: m.role,
@@ -103,13 +140,32 @@ export function ChatWidgetPortal() {
         ...prev,
         { id: `a-${Date.now()}`, role: "assistant", text: res.reply, sources: res.sources },
       ]);
-    } catch {
+    } catch (err) {
+      // Surface the 400 "message too long" validation error so testers
+      // see the real cause (BUG-05) instead of the generic reachability
+      // fallback.
+      const anyErr = err as {
+        response?: { status?: number; data?: { errors?: Record<string, string[]> } };
+        status?: number;
+        data?: { errors?: Record<string, string[]> };
+      };
+      const status = anyErr?.response?.status ?? anyErr?.status;
+      const errors = anyErr?.response?.data?.errors ?? anyErr?.data?.errors;
+      const messageTooLong =
+        status === 400 && errors && Array.isArray(errors.message)
+          ? errors.message.join(" ")
+          : null;
+      const fallbackText =
+        messageTooLong ||
+        (text.length > 500
+          ? "Your message is too long. Please keep it under 500 characters."
+          : "Sorry, I couldn't reach the assistant right now. Please try again in a moment.");
       setMessages((prev) => [
         ...prev,
         {
           id: `err-${Date.now()}`,
           role: "assistant",
-          text: "Sorry, I couldn't reach the assistant right now. Please try again in a moment.",
+          text: fallbackText,
         },
       ]);
     } finally {
@@ -125,14 +181,14 @@ export function ChatWidgetPortal() {
       if (typeof window !== "undefined") {
         window.localStorage.setItem(SESSION_STORAGE_KEY, res.session_id);
       }
-      setMessages([WELCOME_MSG]);
+      setMessages([welcomeMsg]);
     } catch {
       // Ignore — local reset still useful even if the network call fails.
       setSessionId("");
       if (typeof window !== "undefined") {
         window.localStorage.removeItem(SESSION_STORAGE_KEY);
       }
-      setMessages([WELCOME_MSG]);
+      setMessages([welcomeMsg]);
     }
   };
 
@@ -150,11 +206,11 @@ export function ChatWidgetPortal() {
           type="button"
           onClick={() => setOpen(true)}
           className={cn(
-            "fixed right-4 bottom-4 z-40 flex h-12 w-12 items-center justify-center rounded-full",
+            "fixed right-4 bottom-4 z-[1000] flex h-12 w-12 items-center justify-center rounded-full",
             "bg-green-600 text-white shadow-lg transition-transform hover:scale-105 hover:bg-green-700",
             "focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2",
           )}
-          aria-label="Open help assistant"
+          aria-label={strings.open}
         >
           <MessageCircle className="h-6 w-6" />
         </button>
@@ -163,14 +219,14 @@ export function ChatWidgetPortal() {
       {open && (
         <div
           className={cn(
-            "fixed right-4 bottom-4 z-40 flex flex-col overflow-hidden rounded-lg border bg-background shadow-2xl",
+            "fixed right-4 bottom-4 z-[1000] flex flex-col overflow-hidden rounded-lg border bg-background shadow-2xl",
             "h-[min(600px,80vh)] w-[min(400px,calc(100vw-2rem))]",
           )}
         >
           <div className="flex items-center justify-between border-b bg-green-600 px-3 py-2 text-white">
             <div className="flex items-center gap-2">
               <Bot className="h-5 w-5" />
-              <span className="font-semibold text-sm">KAU-FPO Assistant</span>
+              <span className="font-semibold text-sm">{strings.title}</span>
             </div>
             <div className="flex items-center gap-1">
               <button
@@ -178,8 +234,8 @@ export function ChatWidgetPortal() {
                 onClick={resetConversation}
                 disabled={loading}
                 className="rounded p-1 hover:bg-white/10 disabled:opacity-50"
-                aria-label="Reset conversation"
-                title="Reset conversation"
+                aria-label={strings.reset}
+                title={strings.reset}
               >
                 <RotateCcw className="h-4 w-4" />
               </button>
@@ -187,7 +243,7 @@ export function ChatWidgetPortal() {
                 type="button"
                 onClick={() => setOpen(false)}
                 className="rounded p-1 hover:bg-white/10"
-                aria-label="Close assistant"
+                aria-label={strings.close}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -245,11 +301,11 @@ export function ChatWidgetPortal() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={onKeyDown}
-                placeholder="Ask a question..."
+                placeholder={strings.placeholder}
                 disabled={loading}
-                aria-label="Type your question"
+                aria-label={strings.typeAria}
               />
-              <Button type="button" size="icon" onClick={send} disabled={loading || !input.trim()} aria-label="Send">
+              <Button type="button" size="icon" onClick={send} disabled={loading || !input.trim()} aria-label={strings.send}>
                 <Send className="h-4 w-4" />
               </Button>
             </div>
