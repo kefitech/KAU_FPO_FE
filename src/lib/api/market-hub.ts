@@ -22,6 +22,8 @@ export interface MarketHubProduct {
   available_from: string;
   available_until: string | null;
   image: string | null;
+  /** Direct seller phone for this batch (blank = no direct line published). */
+  contact_phone: string;
   /** KAU #3 — true when the batch's validity ended within the past 3
    *  days but it's still shown with the grace_message banner. */
   in_grace_period: boolean;

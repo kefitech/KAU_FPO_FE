@@ -26,6 +26,8 @@ export interface BuyerProduct {
   fpo: number;
   fpo_name: string;
   image: string | null;
+  /** Direct seller phone for this batch (blank = no direct line published). */
+  contact_phone: string;
   /** KAU #3 — true when the batch is in the 3-day grace window after its
    *  validity ended. Buyer UI should show the grace_message banner. */
   in_grace_period: boolean;
