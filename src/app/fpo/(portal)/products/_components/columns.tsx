@@ -106,11 +106,17 @@ function ProductActions({
   );
 }
 
+/**
+ * `canManage` gates write actions (edit, manage batches, delete) on the row
+ * — set it from the parent via use-fpo-permissions so a secondary user
+ * without `can_manage_products` sees a view-only table.
+ */
 export function getProductColumns(
   t: T = {},
   tCommon: T = {},
-  callbacks: { onManageBatches: (product: Product) => void },
+  callbacks: { onManageBatches: (product: Product) => void; canManage?: boolean },
 ): ColumnDef<Product>[] {
+  const canManage = callbacks.canManage ?? true;
   return [
     {
       accessorKey: "name",
@@ -197,14 +203,17 @@ export function getProductColumns(
     {
       id: "actions",
       header: "",
-      cell: ({ row }) => (
-        <ProductActions
-          product={row.original}
-          t={t}
-          tCommon={tCommon}
-          onManageBatches={callbacks.onManageBatches}
-        />
-      ),
+      cell: ({ row }) => {
+        if (!canManage) return null;
+        return (
+          <ProductActions
+            product={row.original}
+            t={t}
+            tCommon={tCommon}
+            onManageBatches={callbacks.onManageBatches}
+          />
+        );
+      },
     },
   ];
 }

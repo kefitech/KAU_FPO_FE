@@ -572,6 +572,11 @@ export interface AdminScheme {
   updated_at: string | null;
   is_active: boolean;
   order: number;
+  /** "Valid till" date (YYYY-MM-DD); null when the scheme has no end date. */
+  deadline: string | null;
+  /** Creator's user id, and their name (email when they have no name); null for seeded schemes. */
+  created_by: number | null;
+  created_by_name: string | null;
 }
 
 export interface AdminSchemePayload {
@@ -584,6 +589,8 @@ export interface AdminSchemePayload {
   benefit_details: string;
   application_process: string;
   official_link?: string;
+  /** null clears the date */
+  deadline?: string | null;
   order?: number;
   is_active?: boolean;
 }

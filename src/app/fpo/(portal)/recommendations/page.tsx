@@ -22,7 +22,7 @@ const CultivationAreaMap = dynamic(
   },
 );
 
-type TabKey = "crop" | "business-plan" | "dpr";
+type TabKey = "crop" | "business-plan";
 
 export default function FpoRecommendationsPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("crop");
@@ -48,7 +48,6 @@ export default function FpoRecommendationsPage() {
   const TABS: { key: TabKey; label: string }[] = [
     { key: "crop", label: t.tab_crop_recommendation ?? "Crop Recommendation" },
     { key: "business-plan", label: t.tab_business_plan ?? "Business Plan Guidance" },
-    { key: "dpr", label: t.tab_dpr_generation ?? "DPR Generation" },
   ];
 
   if (translationsLoading) {
@@ -65,7 +64,7 @@ export default function FpoRecommendationsPage() {
       <div>
         <h1 className="font-semibold text-2xl">{t.page_title ?? "AI Recommendations"}</h1>
         <p className="text-muted-foreground text-sm">
-          {t.page_description ?? "Get AI-powered crop recommendations, business plan guidance, and DPR generation."}
+          {t.page_description ?? "Get AI-powered crop recommendations and business plan guidance."}
         </p>
       </div>
 
@@ -108,12 +107,6 @@ export default function FpoRecommendationsPage() {
       {activeTab === "business-plan" && (
         <div className="rounded-lg border p-4">
           <BusinessPlanDisplay />
-        </div>
-      )}
-
-      {activeTab === "dpr" && (
-        <div className="flex h-40 items-center justify-center rounded-lg border bg-muted/30">
-          <p className="text-muted-foreground text-sm">{t.dpr_coming_soon ?? "DPR Generation — coming soon."}</p>
         </div>
       )}
     </div>

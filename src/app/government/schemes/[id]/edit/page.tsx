@@ -8,9 +8,10 @@ import { toast } from "sonner";
 import { govtSchemesApi } from "@/app/government/_api/schemes";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { todayIso } from "@/lib/scheme-validity";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 
@@ -51,6 +52,8 @@ export default function EditSchemePage({ params }: { params: Promise<{ id: strin
   const [eligibility, setEligibility] = useState("");
   const [benefitDetails, setBenefitDetails] = useState("");
   const [applicationProcess, setApplicationProcess] = useState("");
+  const [deadline, setDeadline] = useState(""); // "Valid till" — "" = no end date
+  const [deadlineError, setDeadlineError] = useState<string>();
 
   useEffect(() => {
     if (scheme) {
@@ -61,6 +64,7 @@ export default function EditSchemePage({ params }: { params: Promise<{ id: strin
       setEligibility(scheme.eligibility);
       setBenefitDetails(scheme.benefit_details);
       setApplicationProcess(scheme.application_process);
+      setDeadline(scheme.deadline ?? "");
     }
   }, [scheme]);
 
@@ -74,6 +78,7 @@ export default function EditSchemePage({ params }: { params: Promise<{ id: strin
         eligibility,
         benefit_details: benefitDetails,
         application_process: applicationProcess,
+        deadline: deadline || null,
       }),
     onSuccess: () => {
       toast.success(t.toast_updated ?? "Scheme updated");
@@ -84,6 +89,9 @@ export default function EditSchemePage({ params }: { params: Promise<{ id: strin
       toast.error(msg ?? "Failed to update scheme");
     },
   });
+
+  // Keep an already-past saved date selectable so an expired scheme can still be edited
+  const MIN_DATE = scheme?.deadline && scheme.deadline < todayIso() ? undefined : todayIso();
 
   if (isLoading || !scheme) {
     return (
@@ -105,6 +113,11 @@ export default function EditSchemePage({ params }: { params: Promise<{ id: strin
           e.preventDefault();
           if (!nameEn || !administeringBody || !eligibility || !benefitDetails || !applicationProcess) {
             toast.error(t.validation_name_required ?? "Fill in all required fields");
+            return;
+          }
+          // An unchanged past date is fine (the scheme has already expired); a new one isn't
+          if (deadline && deadline !== (scheme?.deadline ?? "") && deadline < todayIso()) {
+            setDeadlineError(t.validation_valid_till_past ?? "Valid till date cannot be in the past.");
             return;
           }
           mutation.mutate();
@@ -154,6 +167,26 @@ export default function EditSchemePage({ params }: { params: Promise<{ id: strin
               <Field>
                 <FieldLabel htmlFor="process">{t.field_application_process ?? "Application Process"} *</FieldLabel>
                 <Textarea id="process" value={applicationProcess} onChange={(e) => setApplicationProcess(e.target.value)} rows={2} />
+              </Field>
+              <Field data-invalid={!!deadlineError}>
+                <FieldLabel htmlFor="deadline">{t.field_valid_till ?? "Valid Till"}</FieldLabel>
+                <Input
+                  id="deadline"
+                  type="date"
+                  min={MIN_DATE}
+                  className="w-fit"
+                  value={deadline}
+                  onChange={(e) => {
+                    setDeadline(e.target.value);
+                    setDeadlineError(undefined);
+                  }}
+                  aria-invalid={!!deadlineError}
+                />
+                <p className="text-muted-foreground text-xs">
+                  {t.field_valid_till_hint ??
+                    "Last date to apply. Leave empty if the scheme has no end date. It is hidden from FPOs a few days after this date."}
+                </p>
+                {deadlineError && <FieldError errors={[{ message: deadlineError }]} />}
               </Field>
             </CardContent>
           </Card>

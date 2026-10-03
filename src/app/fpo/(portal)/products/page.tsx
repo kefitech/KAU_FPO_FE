@@ -13,6 +13,7 @@ import { DataTable } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ViewSheet } from "@/components/ui/view-sheet";
+import { useFpoPermissions } from "@/hooks/use-fpo-permissions";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 import type { Product } from "@/types/fpo";
@@ -30,6 +31,10 @@ type ViewMode = "products" | "inquiries" | "market-hub-inquiries";
 export default function FpoProductsPage() {
   const router = useRouter();
   const locale = useLocaleStore((s) => s.locale);
+  // Team members without `can_manage_products` get a view-only page —
+  // Add/Edit/Manage Batches/Delete are all hidden, inquiry status
+  // transitions are hidden too.
+  const canManage = useFpoPermissions().can("can_manage_products");
 
   const [tPage, setTPage] = useState<T>({});
   const [tTable, setTTable] = useState<T>({});
@@ -139,7 +144,7 @@ export default function FpoProductsPage() {
               </SelectItem>
             </SelectContent>
           </Select>
-          {viewMode === "products" && (
+          {viewMode === "products" && canManage && (
             <>
               <Button size="sm" variant="outline" onClick={() => setBulkImportOpen(true)}>
                 <Upload className="mr-1.5 h-4 w-4" />
@@ -161,6 +166,7 @@ export default function FpoProductsPage() {
             queryFn={productsApi.getAll}
             columns={getProductColumns(tTable, tCommon, {
               onManageBatches: (product) => setBatchesSheet({ open: true, product }),
+              canManage,
             })}
             filters={STATUS_FILTERS}
             onRowClick={(row) => setProductView({ open: true, row })}
@@ -177,7 +183,7 @@ export default function FpoProductsPage() {
           <DataTable
             queryKey="inquiries"
             queryFn={inquiriesApi.getAll}
-            columns={getInquiryColumns(tPage)}
+            columns={getInquiryColumns(tPage, canManage)}
             filters={INQUIRY_STATUS_FILTERS}
             columnsLabel={tCommon.columns_header}
             toggleColumnsLabel={tCommon.columns_toggle_columns}
@@ -192,7 +198,7 @@ export default function FpoProductsPage() {
           <DataTable
             queryKey="market-hub-inquiries"
             queryFn={marketHubInquiriesApi.getAll}
-            columns={getMarketHubInquiryColumns(tPage)}
+            columns={getMarketHubInquiryColumns(tPage, canManage)}
             filters={MARKET_HUB_STATUS_FILTERS}
             columnsLabel={tCommon.columns_header}
             toggleColumnsLabel={tCommon.columns_toggle_columns}
@@ -207,7 +213,7 @@ export default function FpoProductsPage() {
         onOpenChange={(open) => setProductView((s) => ({ ...s, open }))}
         title={tTable.view_title ?? "Product Details"}
         actions={
-          productView.row
+          productView.row && canManage
             ? [
                 {
                   label: tTable.action_manage_batches ?? "Manage Batches",

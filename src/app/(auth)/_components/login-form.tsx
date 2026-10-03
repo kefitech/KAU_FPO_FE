@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -15,8 +15,9 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { authApi } from "@/lib/api/auth";
-import { resolvePostLoginPath } from "@/lib/fpo-redirect";
 import { translationsApi } from "@/lib/api/translations";
+import { resolvePostLoginPath } from "@/lib/fpo-redirect";
+import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
 import { useLocaleStore } from "@/stores/locale-store";
 
@@ -26,6 +27,9 @@ const formSchema = z.object({
 });
 
 type FormValues = z.infer<typeof formSchema>;
+
+// How long the success state shows before the hard redirect
+const SUCCESS_REDIRECT_DELAY_MS = 900;
 
 /**
  * Sanitise the ?next= param. Only relative in-app paths are honoured; anything
@@ -44,6 +48,8 @@ export function LoginForm({ t: tProp }: { t?: Record<string, string> }) {
   const nextPath = safeNextPath(searchParams?.get("next") ?? null);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [shake, setShake] = useState(false);
   const setUser = useAuthStore((state) => state.setUser);
 
   const locale = useLocaleStore((s) => s.locale);
@@ -56,6 +62,18 @@ export function LoginForm({ t: tProp }: { t?: Record<string, string> }) {
       setTLocal(data.login ?? {});
     });
   }, [locale, tProp]);
+
+  // Browser Back after login restores this page from the bfcache with state frozen
+  // mid-redirect — reset the button so it doesn't stay stuck in the success state.
+  useEffect(() => {
+    const resetOnRestore = (e: PageTransitionEvent) => {
+      if (!e.persisted) return;
+      setIsSuccess(false);
+      setIsLoading(false);
+    };
+    window.addEventListener("pageshow", resetOnRestore);
+    return () => window.removeEventListener("pageshow", resetOnRestore);
+  }, []);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -81,8 +99,11 @@ export function LoginForm({ t: tProp }: { t?: Record<string, string> }) {
         // resolvePostLoginPath's role-specific redirects (wizard / status /
         // fpo-dashboard) override next, since those exist for stateful reasons.
         const defaultPath = resolvePostLoginPath(meData.redirect, meData.menu?.[0]?.path);
-        const useNext =
-          nextPath && !meData.redirect;  // redirect from BE takes priority
+        const useNext = nextPath && !meData.redirect; // redirect from BE takes priority
+        // Hold on the success state briefly so the user sees it (skipped for reduced motion)
+        setIsSuccess(true);
+        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        if (!reduceMotion) await new Promise((r) => setTimeout(r, SUCCESS_REDIRECT_DELAY_MS));
         // Hard navigation intentionally — Next.js keeps route segments in a
         // client cache. If we soft-navigate here, the Back button after a
         // previous logout can render the PREVIOUS user's pages from cache
@@ -94,13 +115,19 @@ export function LoginForm({ t: tProp }: { t?: Record<string, string> }) {
       const axiosErr = error as { response?: { data?: { message?: string } }; message?: string } | undefined;
       const msg = axiosErr?.response?.data?.message ?? axiosErr?.message ?? "Invalid username or password.";
       toast.error(msg);
+      setShake(true);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <form noValidate onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
+    <form
+      noValidate
+      onSubmit={form.handleSubmit(onSubmit)}
+      onAnimationEnd={(e) => e.target === e.currentTarget && setShake(false)}
+      className={cn("flex flex-col gap-4", shake && "login-shake")}
+    >
       <FieldGroup className="gap-4">
         <Controller
           control={form.control}
@@ -158,8 +185,36 @@ export function LoginForm({ t: tProp }: { t?: Record<string, string> }) {
           )}
         />
       </FieldGroup>
-      <Button className="w-full" type="submit" disabled={isLoading}>
-        {isLoading ? (t.signing_in ?? "Signing in...") : (t.submit_btn ?? "Sign In")}
+      <Button
+        className={cn(
+          "w-full transition-colors duration-300",
+          isSuccess && "login-success-pulse bg-emerald-600 text-white hover:bg-emerald-600 disabled:opacity-100",
+        )}
+        type="submit"
+        disabled={isLoading || isSuccess}
+      >
+        {isSuccess ? (
+          <>
+            <svg viewBox="0 0 24 24" className="mr-2 h-5 w-5" fill="none" aria-hidden="true">
+              <path
+                d="M5 12.5l4.5 4.5L19 7.5"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="login-check-draw"
+              />
+            </svg>
+            {t.signing_in ?? "Signing in..."}
+          </>
+        ) : isLoading ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            {t.signing_in ?? "Signing in..."}
+          </>
+        ) : (
+          (t.submit_btn ?? "Sign In")
+        )}
       </Button>
     </form>
   );

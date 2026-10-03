@@ -7,6 +7,7 @@ import { CheckSquare, Columns3, Search, UploadCloud, UserPlus, X } from "lucide-
 import { toast } from "sonner";
 
 import { fpoTeamApi } from "@/app/fpo/_api/team";
+import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { RowActions } from "@/components/data-table/row-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,8 +32,14 @@ import type { FpoTeamMember } from "@/types/fpo";
 
 type T = Record<string, string>;
 
+// Same table look as the admin data tables (components/data-table/data-table.tsx)
+const HEAD_CLASS = "text-xs font-semibold uppercase tracking-wider text-slate-300";
+const stripe = (i: number) => (i % 2 === 1 ? "bg-slate-50 dark:bg-slate-900/40" : "bg-white dark:bg-background");
+
 import { BulkInviteDialog } from "./_components/bulk-invite-dialog";
+import { BulkPermissionsDialog } from "./_components/bulk-permissions-dialog";
 import { InviteDialog } from "./_components/invite-dialog";
+import { PermissionsDialog } from "./_components/permissions-dialog";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-IN", {
@@ -84,9 +91,13 @@ export default function FpoTeamPage() {
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [bulkInviteOpen, setBulkInviteOpen] = useState(false);
+  const [permissionsMember, setPermissionsMember] = useState<FpoTeamMember | null>(null);
+  const [bulkPermissionsOpen, setBulkPermissionsOpen] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [visibleColumns, setVisibleColumns] = useState<Record<ColumnKey, boolean>>(DEFAULT_VISIBLE_COLUMNS);
   const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   function toggleColumn(key: ColumnKey) {
     setVisibleColumns((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -97,6 +108,18 @@ export default function FpoTeamPage() {
     queryFn: fpoTeamApi.list,
     staleTime: 30_000,
   });
+
+  // Labels for the Permissions column (primary only — they manage permissions)
+  const { data: permissionOptions = [] } = useQuery({
+    queryKey: ["fpo-team-available-permissions", locale],
+    queryFn: fpoTeamApi.availablePermissions,
+    enabled: isPrimary,
+    staleTime: 5 * 60 * 1000,
+  });
+  const permissionLabel = (code: string) => permissionOptions.find((p) => p.code === code)?.label ?? code;
+
+  // Memoised so the bulk dialog doesn't reset its state on every render
+  const selectedMembers = useMemo(() => members.filter((m) => selected.has(m.id)), [members, selected]);
 
   // ── Search filtering ────────────────────────────────────────────────────
   // Matches against name, email, phone, and role only (status excluded).
@@ -110,15 +133,27 @@ export default function FpoTeamPage() {
       return haystack.includes(q);
     });
   }, [members, searchQuery]);
- 
+
+  // ── Pagination (client-side — the whole team is loaded at once) ─────────
+  const totalPages = Math.max(1, Math.ceil(filteredMembers.length / pageSize));
+  const currentPage = Math.min(page, totalPages); // stay in range when the list shrinks
+  const pagedMembers = filteredMembers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   // ── Selection helpers ──────────────────────────────────────────────────────
-  const allIds = filteredMembers.map((m) => m.id);
-  const allSelected = allIds.length > 0 && allIds.every((id) => selected.has(id));
+  // "Select all" covers the rows on the current page; picks on other pages are kept.
+  const pageIds = pagedMembers.map((m) => m.id);
+  const allSelected = pageIds.length > 0 && pageIds.every((id) => selected.has(id));
   const someSelected = selected.size > 0;
 
   function toggleAll() {
-    setSelected(allSelected ? new Set() : new Set(allIds));
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const id of pageIds) {
+        if (allSelected) next.delete(id);
+        else next.add(id);
+      }
+      return next;
+    });
   }
 
   function toggleOne(id: number) {
@@ -219,14 +254,20 @@ export default function FpoTeamPage() {
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setPage(1);
+            }}
             placeholder={t.search_placehldr ?? "Search by name, email, phone, or role…"}
             className="pl-8 pr-8"
           />
           {isSearching && (
             <button
               type="button"
-              onClick={() => setSearchQuery("")}
+              onClick={() => {
+                setSearchQuery("");
+                setPage(1);
+              }}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               aria-label="Clear search"
             >
@@ -270,6 +311,9 @@ export default function FpoTeamPage() {
           <CheckSquare className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm font-medium">{selected.size} selected</span>
           <div className="ml-auto flex gap-2">
+            <Button size="sm" variant="outline" disabled={isBulkPending} onClick={() => setBulkPermissionsOpen(true)}>
+              {t.btn_bulk_permissions ?? "Permissions"}
+            </Button>
             <Button size="sm" variant="outline" disabled={isBulkPending} onClick={() => bulkActivateMutation.mutate()}>
               {bulkActivateMutation.isPending ? "Activating…" : "Activate"}
             </Button>
@@ -287,29 +331,36 @@ export default function FpoTeamPage() {
       )}
 
       {/* Table */}
-      <div className="rounded-lg border overflow-x-auto">
+      <div className="relative overflow-x-auto border border-border shadow-sm">
         <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow className="border-b border-slate-700 bg-slate-800 hover:bg-slate-800 dark:border-slate-700 dark:bg-slate-900">
               {isPrimary && (
                 <TableHead className="w-10">
-                  <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Select all" />
+                  <Checkbox
+                    checked={allSelected}
+                    onCheckedChange={toggleAll}
+                    aria-label="Select all"
+                    className="border-slate-400"
+                  />
                 </TableHead>
               )}
-              <TableHead>{t.col_name ?? "Name"}</TableHead>
-              {visibleColumns.email && <TableHead>{t.col_email ?? "Email"}</TableHead>}
-              {visibleColumns.phone && <TableHead>{t.col_phone ?? "Phone"}</TableHead>}
-              {visibleColumns.role && <TableHead>{t.col_role ?? "Role"}</TableHead>}
-              <TableHead>{t.col_status ?? "Status"}</TableHead>
-              {visibleColumns.joined && <TableHead>{t.col_joined ?? "Joined"}</TableHead>}
-              {/* {isPrimary && <TableHead className="w-28 text-right">Action</TableHead>} */}
+              <TableHead className={HEAD_CLASS}>{t.col_name ?? "Name"}</TableHead>
+              {visibleColumns.email && <TableHead className={HEAD_CLASS}>{t.col_email ?? "Email"}</TableHead>}
+              {visibleColumns.phone && <TableHead className={HEAD_CLASS}>{t.col_phone ?? "Phone"}</TableHead>}
+              {visibleColumns.role && <TableHead className={HEAD_CLASS}>{t.col_role ?? "Role"}</TableHead>}
+              <TableHead className={HEAD_CLASS}>{t.col_status ?? "Status"}</TableHead>
+              {visibleColumns.joined && <TableHead className={HEAD_CLASS}>{t.col_joined ?? "Joined"}</TableHead>}
+              {isPrimary && <TableHead className={HEAD_CLASS}>{t.col_permissions ?? "Permissions"}</TableHead>}
+              {/* Empty header over the row actions, so the dark header spans the full width */}
+              {isPrimary && <TableHead className="w-14" />}
             </TableRow>
           </TableHeader>
 
           <TableBody>
             {isLoading ? (
               Array.from({ length: 4 }).map((_, i) => (
-                <TableRow key={i}>
+                <TableRow key={i} className={stripe(i)}>
                   {isPrimary && (
                     <TableCell>
                       <Skeleton className="h-4 w-4" />
@@ -341,13 +392,18 @@ export default function FpoTeamPage() {
                       <Skeleton className="h-4 w-24" />
                     </TableCell>
                   )}
+                  {isPrimary && (
+                    <TableCell>
+                      <Skeleton className="h-4 w-16" />
+                    </TableCell>
+                  )}
                   {isPrimary && <TableCell />}
                 </TableRow>
               ))
             ) : filteredMembers.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={2 + visibleColumnCount + (isPrimary ? 2 : 0)}
+                  colSpan={2 + visibleColumnCount + (isPrimary ? 3 : 0)}
                   className="py-12 text-center text-muted-foreground text-sm"
                 >
                   {isSearching ? (
@@ -361,8 +417,14 @@ export default function FpoTeamPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredMembers.map((member) => (
-                <TableRow key={member.id} className={selected.has(member.id) ? "bg-muted/40" : ""}>
+              pagedMembers.map((member, i) => (
+                <TableRow
+                  key={member.id}
+                  className={[
+                    "border-b border-border/50 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800/40",
+                    selected.has(member.id) ? "bg-violet-50 dark:bg-violet-950/20" : stripe(i),
+                  ].join(" ")}
+                >
                   {isPrimary && (
                     <TableCell>
                       <Checkbox
@@ -405,10 +467,31 @@ export default function FpoTeamPage() {
                     <TableCell className="text-muted-foreground">{formatDate(member.joined_at)}</TableCell>
                   )}
                   {isPrimary && (
+                    <TableCell>
+                      <button
+                        type="button"
+                        onClick={() => setPermissionsMember(member)}
+                        title={(member.permissions ?? []).map(permissionLabel).join("\n") || undefined}
+                        className="text-left text-sm hover:underline"
+                      >
+                        {member.permissions?.length
+                          ? (t.permissions_count ?? "{count} of {total}")
+                              .replace("{count}", String(member.permissions.length))
+                              .replace("{total}", String(permissionOptions.length || member.permissions.length))
+                          : (t.permissions_none_short ?? "None")}
+                      </button>
+                    </TableCell>
+                  )}
+                  {isPrimary && (
                     <TableCell className="text-right">
                       <RowActions
                         actions={[
                           {
+                            label: t.action_permissions ?? "Permissions",
+                            onClick: () => setPermissionsMember(member),
+                          },
+                          {
+                            separator: true,
                             label: member.is_active
                               ? (t.action_deactivate ?? "Deactivate")
                               : (t.action_reactivate ?? "Activate"),
@@ -460,8 +543,30 @@ export default function FpoTeamPage() {
         </Table>
       </div>
 
+      {filteredMembers.length > 0 && (
+        <DataTablePagination
+          page={currentPage}
+          pageSize={pageSize}
+          total={filteredMembers.length}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(1);
+          }}
+          isLoading={isLoading}
+        />
+      )}
+
       <InviteDialog open={inviteOpen} onOpenChange={setInviteOpen} />
       <BulkInviteDialog open={bulkInviteOpen} onOpenChange={setBulkInviteOpen} />
+      <PermissionsDialog member={permissionsMember} onOpenChange={(open) => !open && setPermissionsMember(null)} t={t} />
+      <BulkPermissionsDialog
+        open={bulkPermissionsOpen}
+        onOpenChange={setBulkPermissionsOpen}
+        members={selectedMembers}
+        onDone={() => setSelected(new Set())}
+        t={t}
+      />
     </div>
   );
 }

@@ -15,6 +15,7 @@ import { ExpertEnquiryDialog } from "@/components/ui/expert-enquiry-dialog";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useFpoPermissions } from "@/hooks/use-fpo-permissions";
 import { type ExpertBooking, expertsApi } from "@/lib/api/experts";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
@@ -83,7 +84,8 @@ function ExpertCard({
   isApprovedFpo: boolean;
   bookings: ExpertBooking[];
   onContact: (expert: FpoExpert) => void;
-  onBook: (expert: FpoExpert) => void;
+  /** Omitted when the user lacks can_book_experts — the Book button is hidden. */
+  onBook?: (expert: FpoExpert) => void;
   onViewBookings: (expert: FpoExpert) => void;
   t: T;
   locale: string;
@@ -131,12 +133,19 @@ function ExpertCard({
       <div className="mt-auto pt-2 grid grid-cols-2 gap-2">
         {isApprovedFpo ? (
           <>
-            <Button size="sm" variant="default" onClick={() => onContact(expert)}>
+            <Button
+              size="sm"
+              variant="default"
+              className={onBook ? undefined : "col-span-2"}
+              onClick={() => onContact(expert)}
+            >
               {t.btn_contact ?? "Contact Expert"}
             </Button>
-            <Button size="sm" variant="outline" className="h-8.5 px-2 text-xs" onClick={() => onBook(expert)}>
-              Book Appointment
-            </Button>
+            {onBook && (
+              <Button size="sm" variant="outline" className="h-8.5 px-2 text-xs" onClick={() => onBook(expert)}>
+                Book Appointment
+              </Button>
+            )}
             {hasBookings && (
               <Button
                 size="sm"
@@ -247,6 +256,7 @@ export default function FpoExpertsPage() {
 
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
+  const canBook = useFpoPermissions().can("can_book_experts");
   const [enquiryDialog, setEnquiryDialog] = useState<{ open: boolean; expert: FpoExpert | null }>({
     open: false,
     expert: null,
@@ -470,7 +480,7 @@ export default function FpoExpertsPage() {
                 isApprovedFpo={!!isApprovedFpo}
                 bookings={bookingsByExpertId.get(expert.id) ?? []}
                 onContact={handleContact}
-                onBook={handleBook}
+                onBook={canBook ? handleBook : undefined}
                 onViewBookings={handleViewBookings}
                 t={t}
                 locale={locale}

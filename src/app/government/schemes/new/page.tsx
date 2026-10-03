@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { todayIso } from "@/lib/scheme-validity";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 
@@ -55,7 +56,10 @@ export default function NewSchemePage() {
   const [eligibility, setEligibility] = useState("");
   const [benefitDetails, setBenefitDetails] = useState("");
   const [applicationProcess, setApplicationProcess] = useState("");
+  const [deadline, setDeadline] = useState(""); // "Valid till" — "" = no end date
+  const [deadlineError, setDeadlineError] = useState<string>();
   const [errors, setErrors] = useState<FormErrors>({});
+  const MIN_DATE = todayIso();
 
   const validate = (): FormErrors => {
     const next: FormErrors = {};
@@ -80,6 +84,7 @@ export default function NewSchemePage() {
         eligibility,
         benefit_details: benefitDetails,
         application_process: applicationProcess,
+        deadline: deadline || null,
         is_active: true,
       }),
     onSuccess: () => {
@@ -106,7 +111,9 @@ export default function NewSchemePage() {
           e.preventDefault();
           const nextErrors = validate();
           setErrors(nextErrors);
-          if (Object.keys(nextErrors).length > 0) return;
+          const pastDate = !!deadline && deadline < todayIso();
+          if (pastDate) setDeadlineError(t.validation_valid_till_past ?? "Valid till date cannot be in the past.");
+          if (Object.keys(nextErrors).length > 0 || pastDate) return;
           mutation.mutate();
         }}
       >
@@ -208,6 +215,26 @@ export default function NewSchemePage() {
                   aria-invalid={!!errors.application_process}
                 />
                 {errors.application_process && <FieldError errors={[{ message: errors.application_process }]} />}
+              </Field>
+              <Field data-invalid={!!deadlineError}>
+                <FieldLabel htmlFor="deadline">{t.field_valid_till ?? "Valid Till"}</FieldLabel>
+                <Input
+                  id="deadline"
+                  type="date"
+                  min={MIN_DATE}
+                  className="w-fit"
+                  value={deadline}
+                  onChange={(e) => {
+                    setDeadline(e.target.value);
+                    setDeadlineError(undefined);
+                  }}
+                  aria-invalid={!!deadlineError}
+                />
+                <p className="text-muted-foreground text-xs">
+                  {t.field_valid_till_hint ??
+                    "Last date to apply. Leave empty if the scheme has no end date. It is hidden from FPOs a few days after this date."}
+                </p>
+                {deadlineError && <FieldError errors={[{ message: deadlineError }]} />}
               </Field>
             </CardContent>
           </Card>

@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 
 import { ExternalLink, Pencil, Plus } from "lucide-react";
 
@@ -11,11 +12,12 @@ import { DataTable } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ViewSheet } from "@/components/ui/view-sheet";
+import { authApi } from "@/lib/api/auth";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 import type { AdminScheme } from "@/types/admin";
 
-import { getSchemeColumns } from "./_components/columns";
+import { CreatedByBadge, getSchemeColumns } from "./_components/columns";
 
 type T = Record<string, string>;
 
@@ -51,6 +53,10 @@ export default function SchemesPage() {
     scheme: null,
   });
   const [translationsLoading, setTranslationsLoading] = useState(true);
+
+  // Shares the sidebar's /auth/me query — used to show "You" on the admin's own schemes
+  const { data: me } = useQuery({ queryKey: ["auth-me", locale], queryFn: authApi.me, staleTime: 5 * 60 * 1000 });
+  const currentUserId = me?.user?.id ?? null;
 
   useEffect(() => {
     setTranslationsLoading(true)
@@ -111,7 +117,7 @@ export default function SchemesPage() {
         <DataTable
           queryKey="schemes"
           queryFn={adminSchemesApi.getAll}
-          columns={getSchemeColumns(t, tCommon, locale)}
+          columns={getSchemeColumns(t, tCommon, locale, currentUserId)}
           // filters={FILTERS}
           filters={filters}
           onRowClick={(row) => setSheet({ open: true, scheme: row })}
@@ -158,6 +164,11 @@ export default function SchemesPage() {
               ),
             },
             { label: "Administering Body", value: s.administering_body },
+            {
+              label: t.col_created_by ?? "Created By",
+              type: "node",
+              node: <CreatedByBadge scheme={s} currentUserId={currentUserId} t={t} />,
+            },
             {
               label: "Status",
               type: "status",

@@ -74,7 +74,11 @@ function MarketHubInquiryActions({ inquiry, t }: { inquiry: MarketHubInquiry; t:
   );
 }
 
-export function getMarketHubInquiryColumns(t: Record<string, string> = {}): ColumnDef<MarketHubInquiry>[] {
+/** `canManage` (can_manage_products) — without it the accept/reject actions are hidden (view-only). */
+export function getMarketHubInquiryColumns(
+  t: Record<string, string> = {},
+  canManage = true,
+): ColumnDef<MarketHubInquiry>[] {
   const statusLabel = getStatusLabel(t);
 
   return [
@@ -126,7 +130,7 @@ export function getMarketHubInquiryColumns(t: Record<string, string> = {}): Colu
     {
       id: "actions",
       header: "",
-      cell: ({ row }) => <MarketHubInquiryActions inquiry={row.original} t={t} />,
+      cell: ({ row }) => (canManage ? <MarketHubInquiryActions inquiry={row.original} t={t} /> : null),
       enableSorting: false,
       enableHiding: false,
     },

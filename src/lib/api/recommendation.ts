@@ -82,10 +82,7 @@ export async function requestFreshRecommendation(season?: string, soilPh?: numbe
  * recommendation. No recommendation ID needed — always applies to the
  * FPO's current financial year's cached result.
  */
-export async function submitRecommendationFeedback(
-  rating: number,
-  comment?: string,
-): Promise<MyRecommendation> {
+export async function submitRecommendationFeedback(rating: number, comment?: string): Promise<MyRecommendation> {
   const response = await apiClient.post<ApiResponse<MyRecommendation>>(RECOMMENDATION_FEEDBACK_PATH, {
     rating,
     comment: comment ?? "",
@@ -122,6 +119,18 @@ export async function generateBusinessPlan(): Promise<BusinessPlanResponse> {
     { timeout: 120_000 },
   );
   return response.data.data;
+}
+
+/**
+ * Download the saved business plan as a PDF or editable Word file (DPR report look).
+ * `responseType: "blob"` keeps the binary intact.
+ */
+export async function downloadBusinessPlan(format: "pdf" | "docx"): Promise<Blob> {
+  const response = await apiClient.get<Blob>(`${BUSINESS_PLAN_PATH}${format}/`, {
+    responseType: "blob",
+    timeout: 60_000,
+  });
+  return response.data;
 }
 
 // ── Below: speculative functions for features not yet built on the

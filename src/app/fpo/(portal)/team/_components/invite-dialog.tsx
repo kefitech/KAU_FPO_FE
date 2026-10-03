@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { file, z } from "zod";
@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+
+import { NO_PERMISSIONS, PermissionChecklist } from "./permission-checklist";
 
 const schema = z.object({
   first_name: z.string().min(1, { message: "First name is required" }),
@@ -37,6 +39,15 @@ export function InviteDialog({ open, onOpenChange }: InviteDialogProps) {
   const queryClient = useQueryClient();
   const locale = useLocaleStore((s) => s.locale);
   const [t, setT] = useState<T>({});
+  const [permissions, setPermissions] = useState<string[]>([]);
+
+  // Grantable actions, pre-ticked with the role defaults
+  const { data: permissionOptions = NO_PERMISSIONS, isLoading: permissionsLoading } = useQuery({
+    queryKey: ["fpo-team-available-permissions", locale],
+    queryFn: fpoTeamApi.availablePermissions,
+    enabled: open,
+    staleTime: 5 * 60 * 1000,
+  });
 
   useEffect(() => {
     translationsApi.getPublic(locale, "fpo_team,common")
@@ -60,6 +71,10 @@ export function InviteDialog({ open, onOpenChange }: InviteDialogProps) {
     if (open) reset();
   }, [open, reset]);
 
+  useEffect(() => {
+    if (open) setPermissions(permissionOptions.filter((p) => p.is_allowed).map((p) => p.code));
+  }, [open, permissionOptions]);
+
   const mutation = useMutation({
     mutationFn: (values: FormValues) =>
       fpoTeamApi.invite({
@@ -67,6 +82,7 @@ export function InviteDialog({ open, onOpenChange }: InviteDialogProps) {
         last_name: values.last_name,
         email: values.email,
         phone: values.phone || undefined,
+        permissions,
       }),
     onSuccess: () => {
       toast.success(t.invite_toast_sent ?? "Invitation sent successfully");
@@ -85,6 +101,11 @@ export function InviteDialog({ open, onOpenChange }: InviteDialogProps) {
 
       if (error.data?.errors && Object.keys(error.data.errors).length > 0) {
         Object.entries(error.data.errors).forEach(([field, messages]) => {
+          // Not a form field — show it as a toast
+          if (field === "permissions") {
+            toast.error(messages[0]);
+            return;
+          }
           setError(field as keyof FormValues, {
             type: "server",
             message: messages[0],
@@ -98,7 +119,7 @@ export function InviteDialog({ open, onOpenChange }: InviteDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{t.invite_dialog_title ?? "Invite Team Member"}</DialogTitle>
           <DialogDescription className="sr-only">
@@ -137,6 +158,17 @@ export function InviteDialog({ open, onOpenChange }: InviteDialogProps) {
             <FieldLabel htmlFor="phone">{t.invite_field_phone ?? "Phone"}</FieldLabel>
             <Input id="phone" placeholder={t.invite_placeholder_phone ?? "10-digit mobile (optional)"} maxLength={10} {...register("phone")} />
             {errors.phone && <FieldError errors={[errors.phone]} />}
+          </Field>
+
+          <Field>
+            <FieldLabel>{t.invite_field_permissions ?? "Permissions"}</FieldLabel>
+            <PermissionChecklist
+              options={permissionOptions}
+              value={permissions}
+              onChange={setPermissions}
+              isLoading={permissionsLoading}
+              t={t}
+            />
           </Field>
 
           <p className="text-muted-foreground text-xs">

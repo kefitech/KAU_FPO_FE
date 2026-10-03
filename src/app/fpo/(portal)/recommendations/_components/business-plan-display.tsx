@@ -6,6 +6,8 @@ import {
   AlertTriangle,
   Briefcase,
   CalendarClock,
+  FileDown,
+  FileText,
   IndianRupee,
   Lightbulb,
   Loader2,
@@ -18,7 +20,10 @@ import {
   Sprout,
 } from "lucide-react";
 
-import { generateBusinessPlan, getMyBusinessPlan } from "@/lib/api/recommendation";
+import { toast } from "sonner";
+
+import { downloadBusinessPlan, generateBusinessPlan, getMyBusinessPlan } from "@/lib/api/recommendation";
+import { useFpoPermissions } from "@/hooks/use-fpo-permissions";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 import type { BusinessPlanCommodity, BusinessPlanResponse } from "@/types/recommendation";
@@ -67,6 +72,8 @@ function CommodityChips({ items, primary }: { items: BusinessPlanCommodity[]; pr
 
 export function BusinessPlanDisplay() {
   const locale = useLocaleStore((s) => s.locale);
+  // Team members without can_generate_business_plan only see the saved plan
+  const canGenerate = useFpoPermissions().can("can_generate_business_plan");
   const [t, setT] = useState<T>({});
   const [data, setData] = useState<BusinessPlanResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -103,6 +110,33 @@ export function BusinessPlanDisplay() {
       cancelled = true;
     };
   }, [locale]);
+
+  const [downloading, setDownloading] = useState<"pdf" | "docx" | null>(null);
+
+  async function handleDownload(format: "pdf" | "docx") {
+    setDownloading(format);
+    try {
+      const blob = await downloadBusinessPlan(format);
+      const slug =
+        (data?.profile?.fpo_name ?? "fpo")
+          .trim()
+          .replace(/[^a-zA-Z0-9]+/g, "_")
+          .replace(/^_+|_+$/g, "")
+          .slice(0, 40) || "fpo";
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Business_Plan_${slug}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+      toast.error(t.bp_download_failed ?? "Could not download the business plan. Please try again.");
+    } finally {
+      setDownloading(null);
+    }
+  }
 
   async function handleGenerate() {
     setGenerating(true);
@@ -155,15 +189,49 @@ export function BusinessPlanDisplay() {
             {t.bp_description ?? "A short business plan based on your FPO's commodities and location."}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={handleGenerate}
-          disabled={generating || !hasPrimary}
-          className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 font-medium text-primary-foreground text-xs disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-          {plan ? (t.bp_btn_regenerate ?? "Regenerate plan") : (t.bp_btn_generate ?? "Generate business plan")}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {plan && !generating && (
+            <>
+              <button
+                type="button"
+                onClick={() => handleDownload("pdf")}
+                disabled={!!downloading}
+                className="flex items-center gap-1.5 rounded-md border px-3 py-1.5 font-medium text-xs hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {downloading === "pdf" ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <FileDown className="h-3.5 w-3.5" />
+                )}
+                {t.bp_download_pdf ?? "Download PDF"}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDownload("docx")}
+                disabled={!!downloading}
+                className="flex items-center gap-1.5 rounded-md border px-3 py-1.5 font-medium text-xs hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {downloading === "docx" ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <FileText className="h-3.5 w-3.5" />
+                )}
+                {t.bp_download_word ?? "Download Word"}
+              </button>
+            </>
+          )}
+          {canGenerate && (
+            <button
+              type="button"
+              onClick={handleGenerate}
+              disabled={generating || !hasPrimary}
+              className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 font-medium text-primary-foreground text-xs disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+              {plan ? (t.bp_btn_regenerate ?? "Regenerate plan") : (t.bp_btn_generate ?? "Generate business plan")}
+            </button>
+          )}
+        </div>
       </div>
 
       {profile && (
@@ -235,7 +303,9 @@ export function BusinessPlanDisplay() {
         <div className="flex h-32 flex-col items-center justify-center gap-2 rounded-lg border bg-muted/30 text-center">
           <p className="text-muted-foreground text-sm">{t.bp_empty_title ?? "No business plan yet."}</p>
           <p className="text-muted-foreground text-xs">
-            {t.bp_empty_description ?? 'Click "Generate business plan" to create one with AI.'}
+            {canGenerate
+              ? (t.bp_empty_description ?? 'Click "Generate business plan" to create one with AI.')
+              : (t.bp_empty_description_view_only ?? "Your FPO's primary user can generate one.")}
           </p>
         </div>
       )}

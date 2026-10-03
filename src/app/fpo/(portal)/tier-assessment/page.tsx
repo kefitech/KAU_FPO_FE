@@ -7,7 +7,7 @@ import { CheckCircle2, ChevronDown, ChevronUp, ClipboardList, Edit2, Loader2 } f
 import { toast } from "sonner";
 
 import { tierAssessmentApi } from "@/app/fpo/_api/tier-assessment";
-import { authApi } from "@/lib/api/auth";
+import { useFpoPermissions } from "@/hooks/use-fpo-permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -419,10 +419,8 @@ export default function TierAssessmentPage() {
     staleTime: 60_000,
   });
 
-  // Edit rights come from the permission matrix (fpo_access on /auth/me/).
-  // Read-only until loaded, so a secondary user never sees edit controls flash up.
-  const { data: me } = useQuery({ queryKey: ["auth-me", locale], queryFn: authApi.me, staleTime: 60_000 });
-  const canEdit = me ? (me.fpo_access?.pages?.["/fpo/tier-assessment"]?.can_edit ?? true) : false;
+  // Edit rights come from the FPO permission matrix; read-only until /auth/me has loaded.
+  const canEdit = useFpoPermissions().can("can_edit_tier_assessment");
 
   const { data: history = [] } = useQuery({
     queryKey: ["fpo-tier-history"],
