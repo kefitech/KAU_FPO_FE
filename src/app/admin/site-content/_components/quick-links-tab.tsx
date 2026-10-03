@@ -114,6 +114,7 @@ function QuickLinkDialog({
   const [urlError, setUrlError] = useState<string | null>(null);
   const [logo, setLogo] = useState<File | null>(null);
   const [logoError, setLogoError] = useState<string | null>(null);
+  const [endDate, setEndDate] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -125,9 +126,11 @@ function QuickLinkDialog({
     if (editing) {
       setName(editing.name);
       setUrl(editing.url);
+      setEndDate(editing.end_date ?? "");
     } else {
       setName("");
       setUrl("");
+      setEndDate("");
     }
   }, [open, editing]);
 
@@ -157,6 +160,8 @@ function QuickLinkDialog({
       formData.append("name", name.trim());
       formData.append("url", url.trim());
       formData.append("is_active", "true");
+      if (endDate) formData.append("end_date", endDate);
+      else if (editing && editing.end_date) formData.append("end_date", ""); // clear existing
       if (logo) formData.append("logo", logo);
       return editing ? quickLinksApi.update(editing.id, formData) : quickLinksApi.create(formData);
     },
@@ -333,6 +338,21 @@ function QuickLinkDialog({
             )}
             <p className="text-xs text-muted-foreground">{t.file_type_hint_plain ?? "JPG, PNG, or WebP"}</p>
             {logoError && <p className="text-xs text-destructive">{logoError}</p>}
+          </div>
+
+          {/* End date — optional expiry. Celery sweeps daily and flips
+              is_active=False once this passes, so the link vanishes from
+              the public pages automatically. */}
+          <div className="flex flex-col gap-1.5">
+            <p className="font-medium text-sm">{t.field_end_date ?? "Expires on"}</p>
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              {t.field_end_date_hint ?? "Leave blank for no expiry."}
+            </p>
           </div>
         </div>
 

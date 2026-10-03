@@ -31,12 +31,20 @@ function isBodyEmpty(html: string | undefined): boolean {
     .trim();
   return text.length === 0;
 }
-const settingsSchema = z.object({
-  category: z.enum(ANNOUNCEMENT_CATEGORIES),
-  published_date: z.string().optional(),
-  is_active: z.boolean(),
-  order: z.number().min(0).optional(),
-});
+const settingsSchema = z
+  .object({
+    category: z.enum(ANNOUNCEMENT_CATEGORIES),
+    published_date: z.string().optional(),
+    // KAU auto-expiry — Celery sweeps daily and flips is_active=False
+    // once end_date passes. Blank = no expiry.
+    end_date: z.string().optional(),
+    is_active: z.boolean(),
+    order: z.number().min(0).optional(),
+  })
+  .refine(
+    (d) => !d.end_date || !d.published_date || new Date(d.end_date) >= new Date(d.published_date),
+    { message: "Expiry date must be on or after the published date", path: ["end_date"] },
+  );
 type SettingsValues = z.infer<typeof settingsSchema>;
 
 type T = Record<string, string>;
@@ -84,7 +92,7 @@ export function AnnouncementForm({ mode, id, t = {}, tCommon = {} }: Props) {
 
   const { control, handleSubmit, reset } = useForm<SettingsValues, unknown, SettingsValues>({
     resolver: zodResolver(settingsSchema),
-    defaultValues: { category: "announcement", published_date: "", is_active: true, order: 0 },
+    defaultValues: { category: "announcement", published_date: "", end_date: "", is_active: true, order: 0 },
   });
 
   useEffect(() => {
@@ -94,6 +102,7 @@ export function AnnouncementForm({ mode, id, t = {}, tCommon = {} }: Props) {
       reset({
         category: existing.category,
         published_date: existing.published_date ?? "",
+        end_date: existing.end_date ?? "",
         is_active: existing.is_active,
         order: existing.order ?? 0,
       });
@@ -116,6 +125,7 @@ export function AnnouncementForm({ mode, id, t = {}, tCommon = {} }: Props) {
         body,
         category: settings.category,
         published_date: settings.published_date || new Date().toLocaleDateString("en-CA"),
+        end_date: settings.end_date || null,
         is_active: settings.is_active,
         order: settings.order ?? 0,
       };
@@ -290,6 +300,29 @@ export function AnnouncementForm({ mode, id, t = {}, tCommon = {} }: Props) {
                   onChange={(e) => field.onChange(e.target.value)}
                   className="mt-1.5"
                 />
+              )}
+            />
+          </div>
+          <div>
+            <Label>{t.field_end_date ?? "Expires on"}</Label>
+            <Controller
+              name="end_date"
+              control={control}
+              render={({ field, fieldState }) => (
+                <>
+                  <Input
+                    type="date"
+                    value={field.value ?? ""}
+                    onChange={(e) => field.onChange(e.target.value)}
+                    className="mt-1.5"
+                  />
+                  <p className="mt-1 text-muted-foreground text-xs">
+                    {t.field_end_date_hint ?? "Leave blank for no expiry."}
+                  </p>
+                  {fieldState.error && (
+                    <p className="mt-1 text-destructive text-xs">{fieldState.error.message}</p>
+                  )}
+                </>
               )}
             />
           </div>

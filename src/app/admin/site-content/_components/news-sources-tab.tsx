@@ -117,6 +117,7 @@ function NewsSourceDialog({
   const NAME_MAX = 200;
   const [category, setCategory] = useState<CategoryValue>("newspaper");
   const [logo, setLogo] = useState<File | null>(null);
+  const [endDate, setEndDate] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -129,10 +130,12 @@ function NewsSourceDialog({
       setName(editing.name);
       setUrl(editing.url);
       setCategory((editing.category as CategoryValue) ?? "newspaper");
+      setEndDate(editing.end_date ?? "");
     } else {
       setName("");
       setUrl("");
       setCategory("newspaper");
+      setEndDate("");
     }
   }, [open, editing]);
 
@@ -151,6 +154,8 @@ function NewsSourceDialog({
       formData.append("url", url.trim());
       formData.append("category", category);
       formData.append("is_active", "true");
+      // Send end_date (blank = clear) so unsetting it in edit mode works.
+      formData.append("end_date", endDate);
       if (logo) formData.append("logo", logo);
       return editing ? newsSourcesApi.update(editing.id, formData) : newsSourcesApi.create(formData);
     },
@@ -349,6 +354,20 @@ function NewsSourceDialog({
               />
             )}
             <p className="text-xs text-muted-foreground">{t.file_type_hint_svg ?? "JPG, PNG, WebP or SVG"}</p>
+          </div>
+
+          {/* End date — optional expiry. Celery sweeps daily and flips
+              is_active=False once this passes. */}
+          <div className="flex flex-col gap-1.5">
+            <p className="font-medium text-sm">{t.field_end_date ?? "Expires on"}</p>
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              {t.field_end_date_hint ?? "Leave blank for no expiry."}
+            </p>
           </div>
         </div>
 

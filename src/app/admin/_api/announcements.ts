@@ -10,6 +10,8 @@ export interface AdminAnnouncement {
   category: AnnouncementCategory;
   category_display: string;
   published_date: string | null;
+  /** Optional expiry — once passed, Celery flips is_active=False. */
+  end_date: string | null;
   is_active: boolean;
   order: number;
   created_at: string;
@@ -20,6 +22,7 @@ export interface AnnouncementPayload {
   body: Record<string, string>;
   category: AnnouncementCategory;
   published_date?: string | null;
+  end_date?: string | null;
   is_active?: boolean;
   order?: number;
 }
