@@ -16,6 +16,8 @@ import { usePathname } from "next/navigation";
 import { Bot, MessageCircle, RotateCcw, Send, User, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ChatMessageText } from "@/components/chatbot/chat-message-text";
+import { useDraggablePanel } from "@/components/chatbot/use-draggable-panel";
 import { Input } from "@/components/ui/input";
 import { chatbotApi } from "@/lib/api/chatbot";
 import { cn } from "@/lib/utils";
@@ -40,6 +42,8 @@ const UI_STRINGS = {
     close: "Close assistant",
     open: "Open help assistant",
     typeAria: "Type your question",
+    tooLong: "Your message is too long. Please keep it under 500 characters.",
+    unreachable: "Sorry, I couldn't reach the assistant right now. Please try again in a moment.",
   },
   ml: {
     welcome:
@@ -51,6 +55,8 @@ const UI_STRINGS = {
     close: "സഹായി അടയ്ക്കുക",
     open: "സഹായി തുറക്കുക",
     typeAria: "നിങ്ങളുടെ ചോദ്യം ടൈപ്പ് ചെയ്യുക",
+    tooLong: "നിങ്ങളുടെ സന്ദേശം വളരെ നീളമുള്ളതാണ്. ദയവായി 500 അക്ഷരങ്ങളിൽ താഴെ നിലനിർത്തുക.",
+    unreachable: "ക്ഷമിക്കണം, സഹായിയെ ബന്ധപ്പെടാൻ ഇപ്പോൾ കഴിയുന്നില്ല. ഒരു നിമിഷത്തിനു ശേഷം വീണ്ടും ശ്രമിക്കുക.",
   },
 } as const;
 
@@ -75,6 +81,10 @@ export function ChatWidgetPortal() {
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string>("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { panelRef, positionStyle, dragHandleProps } = useDraggablePanel(
+    "kau_chatbot_portal_pos",
+    { panelWidth: 400, panelHeight: 600 },
+  );
 
   // When locale changes mid-session, update the welcome bubble so the
   // thread stays in the user's chosen language.
@@ -141,9 +151,11 @@ export function ChatWidgetPortal() {
         { id: `a-${Date.now()}`, role: "assistant", text: res.reply, sources: res.sources },
       ]);
     } catch (err) {
-      // Surface the 400 "message too long" validation error so testers
-      // see the real cause (BUG-05) instead of the generic reachability
-      // fallback.
+      // BUG-05 — a 400 with field-level `errors.message` means we tripped
+      // the serializer's max-500-char validator. Show the localized
+      // bundle string instead of DRF's raw "Ensure this field has no more
+      // than 500 characters." so the UI stays in the user's language and
+      // reads like a friendly notice.
       const anyErr = err as {
         response?: { status?: number; data?: { errors?: Record<string, string[]> } };
         status?: number;
@@ -151,15 +163,9 @@ export function ChatWidgetPortal() {
       };
       const status = anyErr?.response?.status ?? anyErr?.status;
       const errors = anyErr?.response?.data?.errors ?? anyErr?.data?.errors;
-      const messageTooLong =
-        status === 400 && errors && Array.isArray(errors.message)
-          ? errors.message.join(" ")
-          : null;
-      const fallbackText =
-        messageTooLong ||
-        (text.length > 500
-          ? "Your message is too long. Please keep it under 500 characters."
-          : "Sorry, I couldn't reach the assistant right now. Please try again in a moment.");
+      const isTooLong =
+        text.length > 500 || (status === 400 && errors && Array.isArray(errors.message));
+      const fallbackText = isTooLong ? strings.tooLong : strings.unreachable;
       setMessages((prev) => [
         ...prev,
         {
@@ -218,12 +224,17 @@ export function ChatWidgetPortal() {
 
       {open && (
         <div
+          ref={panelRef}
+          style={positionStyle}
           className={cn(
-            "fixed right-4 bottom-4 z-[1000] flex flex-col overflow-hidden rounded-lg border bg-background shadow-2xl",
+            "fixed z-[1000] flex flex-col overflow-hidden rounded-lg border bg-background shadow-2xl",
             "h-[min(600px,80vh)] w-[min(400px,calc(100vw-2rem))]",
           )}
         >
-          <div className="flex items-center justify-between border-b bg-green-600 px-3 py-2 text-white">
+          <div
+            {...dragHandleProps}
+            className="flex items-center justify-between border-b bg-green-600 px-3 py-2 text-white"
+          >
             <div className="flex items-center gap-2">
               <Bot className="h-5 w-5" />
               <span className="font-semibold text-sm">{strings.title}</span>
@@ -266,7 +277,17 @@ export function ChatWidgetPortal() {
                   data-role={m.role}
                   data-testid={`chat-bubble-${m.role}`}
                 >
-                  <p className="whitespace-pre-wrap">{m.text}</p>
+                  <p className="whitespace-pre-wrap">
+                    <ChatMessageText
+                      text={m.text}
+                      linkClassName={cn(
+                        "font-medium underline underline-offset-2 hover:no-underline",
+                        m.role === "user"
+                          ? "text-white decoration-white/70"
+                          : "text-green-700 hover:text-green-800",
+                      )}
+                    />
+                  </p>
                   {/* Source citations intentionally hidden from the UI — internal KB
                       topic names read as debug output to end users. Sources are still
                       returned by the API and visible in DevTools. KAU 2026-09-27. */}
@@ -304,6 +325,7 @@ export function ChatWidgetPortal() {
                 placeholder={strings.placeholder}
                 disabled={loading}
                 aria-label={strings.typeAria}
+                maxLength={500}
               />
               <Button type="button" size="icon" onClick={send} disabled={loading || !input.trim()} aria-label={strings.send}>
                 <Send className="h-4 w-4" />

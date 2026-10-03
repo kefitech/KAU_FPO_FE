@@ -18,6 +18,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { usePathname } from "next/navigation";
 
+import { ChatMessageText } from "@/components/chatbot/chat-message-text";
+import { useDraggablePanel } from "@/components/chatbot/use-draggable-panel";
 import { chatbotApi } from "@/lib/api/chatbot";
 import { useLocaleStore } from "@/stores/locale-store";
 
@@ -41,6 +43,8 @@ const UI_STRINGS = {
     close: "Close assistant",
     open: "Open help assistant",
     typeAria: "Type your question",
+    tooLong: "Your message is too long. Please keep it under 500 characters.",
+    unreachable: "Sorry, I couldn't reach the assistant right now. Please try again in a moment.",
   },
   ml: {
     welcome:
@@ -52,6 +56,8 @@ const UI_STRINGS = {
     close: "സഹായി അടയ്ക്കുക",
     open: "സഹായി തുറക്കുക",
     typeAria: "നിങ്ങളുടെ ചോദ്യം ടൈപ്പ് ചെയ്യുക",
+    tooLong: "നിങ്ങളുടെ സന്ദേശം വളരെ നീളമുള്ളതാണ്. ദയവായി 500 അക്ഷരങ്ങളിൽ താഴെ നിലനിർത്തുക.",
+    unreachable: "ക്ഷമിക്കണം, സഹായിയെ ബന്ധപ്പെടാൻ ഇപ്പോൾ കഴിയുന്നില്ല. ഒരു നിമിഷത്തിനു ശേഷം വീണ്ടും ശ്രമിക്കുക.",
   },
 } as const;
 
@@ -86,6 +92,10 @@ export function ChatWidgetPublic() {
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string>("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { panelRef, positionStyle, dragHandleProps } = useDraggablePanel(
+    "kau_chatbot_public_pos",
+    { defaultRight: 20, defaultBottom: 20, panelWidth: 400, panelHeight: 600 },
+  );
 
   // When locale changes mid-session, swap the welcome bubble so the thread
   // stays in the user's chosen language (BUG-13).
@@ -167,10 +177,11 @@ export function ChatWidgetPublic() {
         { id: `a-${Date.now()}`, role: "assistant", text: res.reply, sources: res.sources },
       ]);
     } catch (err) {
-      // Distinguish a 400 "message too long" validation error from a true
-      // reachability failure. The server enforces max 500 chars on the
-      // message field — until then the FE just showed a generic "couldn't
-      // reach the assistant" which confused testers (BUG-05).
+      // BUG-05 — a 400 with field-level `errors.message` means we tripped
+      // the serializer's max-500-char validator. Show the localized
+      // bundle string instead of DRF's raw "Ensure this field has no more
+      // than 500 characters." so the UI stays in the user's language and
+      // reads like a friendly notice.
       const anyErr = err as {
         response?: { status?: number; data?: { errors?: Record<string, string[]> } };
         status?: number;
@@ -178,15 +189,9 @@ export function ChatWidgetPublic() {
       };
       const status = anyErr?.response?.status ?? anyErr?.status;
       const errors = anyErr?.response?.data?.errors ?? anyErr?.data?.errors;
-      const messageTooLong =
-        status === 400 && errors && Array.isArray(errors.message)
-          ? errors.message.join(" ")
-          : null;
-      const fallbackText =
-        messageTooLong ||
-        (text.length > 500
-          ? "Your message is too long. Please keep it under 500 characters."
-          : "Sorry, I couldn't reach the assistant right now. Please try again in a moment.");
+      const isTooLong =
+        text.length > 500 || (status === 400 && errors && Array.isArray(errors.message));
+      const fallbackText = isTooLong ? strings.tooLong : strings.unreachable;
       setMessages((prev) => [
         ...prev,
         {
@@ -258,8 +263,9 @@ export function ChatWidgetPublic() {
         .kau-chat-fab:hover { transform: scale(1.06) !important; background: ${PALETTE.primaryHi} !important; }
         .kau-chat-panel {
           position: fixed !important;
-          right: 20px !important;
-          bottom: 20px !important;
+          /* Position is set inline (right/bottom by default, left/top once
+             the user drags the panel). No !important here so the inline
+             style always wins. */
           /* Must be above the agrul theme's .se-pre-con preloader (999999).
              BUG-19 — first click on the FAB was being swallowed by the
              preloader overlay before it faded out. 2147483000 is still
@@ -395,8 +401,14 @@ export function ChatWidgetPublic() {
       )}
 
       {open && (
-        <div className="kau-chat-panel" role="dialog" aria-label="KAU-FPO help assistant">
-          <div className="kau-chat-header">
+        <div
+          ref={panelRef}
+          style={positionStyle}
+          className="kau-chat-panel"
+          role="dialog"
+          aria-label="KAU-FPO help assistant"
+        >
+          <div {...dragHandleProps} className="kau-chat-header">
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ fontSize: 18 }}>🌾</span>
               <span style={{ fontWeight: 600, fontSize: 15 }}>{strings.title}</span>
@@ -426,7 +438,17 @@ export function ChatWidgetPublic() {
                   data-role={m.role}
                   data-testid={`chat-bubble-${m.role}`}
                 >
-                  <div>{m.text}</div>
+                  <div>
+                    <ChatMessageText
+                      text={m.text}
+                      linkStyle={{
+                        color: m.role === "user" ? "#ffffff" : PALETTE.primary,
+                        textDecoration: "underline",
+                        textUnderlineOffset: "2px",
+                        fontWeight: 600,
+                      }}
+                    />
+                  </div>
                   {/* Source citations intentionally hidden from the UI — internal KB
                       topic names ("Public market hub", "How to register an FPO") read
                       as debug output to end users. Sources are still returned by the
@@ -454,6 +476,7 @@ export function ChatWidgetPublic() {
               placeholder={strings.placeholder}
               disabled={loading}
               aria-label={strings.typeAria}
+              maxLength={500}
               className="kau-chat-input"
             />
             <button
