@@ -362,6 +362,23 @@ export default function MarketHubPage() {
                         <div style={{ fontSize: 13, color: "#888", marginTop: 10 }}>
                           {t.label_available ?? "Available"}: {formatAvailability(product.available_from, product.available_until)}
                         </div>
+                        {product.contact_phone && (
+                          <a
+                            href={`tel:${product.contact_phone}`}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 6,
+                              marginTop: 8,
+                              color: "var(--color-primary)",
+                              fontSize: 14,
+                              fontWeight: 600,
+                              textDecoration: "none",
+                            }}
+                          >
+                            📞 {product.contact_phone}
+                          </a>
+                        )}
                         <button
                           type="button"
                           className="btn btn-theme secondary btn-sm radius animation mt-15"

@@ -542,6 +542,9 @@ export interface ProductStock {
   ondc_product_id: string | null;
   is_public: boolean;
   status: ProductStatus;
+  /** Direct seller phone for this batch — buyers see a tel: link.
+   *  Blank means "no direct line, route inquiries via the Market Hub form". */
+  contact_phone: string;
   created_at: string;
   updated_at: string;
 }
@@ -617,6 +620,8 @@ export interface CreateStockPayload {
   available_until?: string | null;
   status?: Extract<ProductStatus, "draft" | "active">;
   is_public?: boolean;
+  /** Optional 10-digit phone. Omit or send blank to hide the tel: link. */
+  contact_phone?: string;
 }
 
 export type UpdateStockPayload = Partial<CreateStockPayload>;

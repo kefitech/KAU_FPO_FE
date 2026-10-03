@@ -60,6 +60,12 @@ export const batchSchema = z
     available_until: z.string().optional(),
     publish_immediately: z.boolean(),
     is_public: z.boolean(),
+    contact_phone: z
+      .string()
+      .optional()
+      .refine((val) => !val || /^\d{10}$/.test(val), {
+        message: "Enter a valid 10-digit phone number, or leave blank",
+      }),
   })
   .refine(
     (data) => {
@@ -93,6 +99,7 @@ export const emptyBatch: BatchFormValues = {
   // state from the stock via batchFromStock() instead.
   publish_immediately: true,
   is_public: true,
+  contact_phone: "",
 };
 
 export function batchFromStock(stock: ProductStock): BatchFormValues {
@@ -105,6 +112,7 @@ export function batchFromStock(stock: ProductStock): BatchFormValues {
     available_until: stock.available_until ?? "",
     publish_immediately: stock.status === "active",
     is_public: stock.is_public,
+    contact_phone: stock.contact_phone ?? "",
   };
 }
 
@@ -118,6 +126,7 @@ export function toCreatePayload(values: BatchFormValues): CreateStockPayload {
     available_until: values.available_until || null,
     status: values.publish_immediately ? "active" : "draft",
     is_public: values.is_public,
+    contact_phone: values.contact_phone ?? "",
   };
 }
 
@@ -246,6 +255,32 @@ export function BatchForm({
               />
               <p className="text-xs text-muted-foreground">{(field.value?.length ?? 0)}/200</p>
               {errors.quality_certification && <FieldError errors={[errors.quality_certification]} />}
+            </Field>
+          )}
+        />
+
+        <Controller
+          control={control}
+          name="contact_phone"
+          render={({ field }) => (
+            <Field>
+              <FieldLabel htmlFor="batch-phone">
+                {t.contact_phone_label ?? "Seller contact phone"}
+              </FieldLabel>
+              <Input
+                id="batch-phone"
+                inputMode="numeric"
+                maxLength={10}
+                placeholder={t.contact_phone_placeholder ?? "10-digit mobile (optional)"}
+                {...field}
+                value={field.value ?? ""}
+                onChange={(e) => field.onChange(e.target.value.replace(/\D/g, ""))}
+              />
+              <p className="text-xs text-muted-foreground">
+                {t.contact_phone_hint ??
+                  "Shown to buyers as a tap-to-call link on the product card. Leave blank to route inquiries only through the Market Hub form."}
+              </p>
+              {errors.contact_phone && <FieldError errors={[errors.contact_phone]} />}
             </Field>
           )}
         />

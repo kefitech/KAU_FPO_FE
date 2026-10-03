@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Package, Search } from "lucide-react";
+import { ArrowLeft, Package, Phone, Search } from "lucide-react";
 
 import { type BuyerProduct, buyerProductsApi } from "@/app/buyer/_api/products";
 import { masterDataApi } from "@/app/fpo/_api/master-data";
@@ -147,6 +147,15 @@ function ProductCard({
             <span className="font-medium text-foreground">{t.label_available ?? "Available"}:</span>{" "}
             {formatAvailability(product.available_from, product.available_until)}
           </div>
+          {product.contact_phone && (
+            <a
+              href={`tel:${product.contact_phone}`}
+              className="inline-flex items-center gap-1.5 text-primary text-sm font-medium hover:underline"
+            >
+              <Phone className="h-3.5 w-3.5" />
+              {product.contact_phone}
+            </a>
+          )}
           {showInquire && (
             <Button size="sm" className="mt-1" onClick={() => setInquiryOpen(true)}>
               {t.btn_inquire ?? "Inquire"}
