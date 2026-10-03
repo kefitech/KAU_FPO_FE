@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+
 import { useRouter } from "next/navigation";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Layers, X } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -20,8 +21,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useLocaleStore } from "@/stores/locale-store";
-import type { Product, ProductUnit } from "@/types/fpo";
+import type { CreateProductPayload, Product, ProductUnit } from "@/types/fpo";
 import { UNIT_OPTIONS } from "@/types/fpo";
+
+import { ManageBatchesSheet } from "./manage-batches-sheet";
 
 type T = Record<string, string>;
 
@@ -49,11 +52,23 @@ function digitLimitRefinement(maxIntDigits: number, maxDecimalDigits: number, la
   };
 }
 
+/**
+ * Zod schema for the Product form. Product-master fields (name, commodity,
+ * description, image) are always required. The initial-batch fields are
+ * conditionally required when `include_initial_batch` is true — the FPO can
+ * tick the "Add initial batch now" switch on create to seed the first
+ * ProductStock in the same request. On edit mode the switch is hidden and
+ * batches are managed through the Manage Batches sheet.
+ */
 const schema = z
   .object({
-    name_en: z.string().min(1, { message: "Product name is required" }).regex(NAME_PATTERN, {
-      message: "Name must start with a letter and contain only letters, spaces, apostrophes, or hyphens",
-    }),
+    // Product master
+    name_en: z
+      .string()
+      .min(1, { message: "Product name is required" })
+      .regex(NAME_PATTERN, {
+        message: "Name must start with a letter and contain only letters, spaces, apostrophes, or hyphens",
+      }),
     name_ml: z.string().optional(),
     commodity: z.string().min(1, { message: "Commodity is required" }),
     description_en: z
@@ -66,27 +81,6 @@ const schema = z
       .refine((val) => !val || val.length <= 2000, {
         message: "Description must be 2000 characters or fewer",
       }),
-    quantity: z
-      .string()
-      .min(1, { message: "Quantity is required" })
-      .refine((val) => !Number.isNaN(Number(val)) && Number(val) > 0, {
-        message: "Quantity must be greater than 0",
-      })
-      .superRefine(digitLimitRefinement(10, 2, "Quantity")),
-    unit: z.enum(["kg", "quintal", "mt", "litre", "piece"]),
-    price_per_unit: z
-      .string()
-      .min(1, { message: "Price per unit is required" })
-      .superRefine(digitLimitRefinement(8, 2, "Price per unit")),
-    quality_certification: z
-      .string()
-      .optional()
-      .refine((val) => !val || val.length <= 200, {
-        message: "Quality certification must be 200 characters or fewer",
-      }),
-    available_from: z.string().min(1, { message: "Available from date is required" }),
-    available_until: z.string().optional(),
-    is_public: z.boolean(),
     image: z
       .instanceof(File)
       .optional()
@@ -97,17 +91,80 @@ const schema = z
       .refine((file) => !file || file.type.startsWith("image/"), {
         message: "File must be an image",
       }),
+    // First-batch seed — only required when include_initial_batch is true
+    include_initial_batch: z.boolean(),
+    quantity: z.string().optional(),
+    unit: z.enum(["kg", "quintal", "mt", "litre", "piece"]).optional(),
+    price_per_unit: z.string().optional(),
+    quality_certification: z
+      .string()
+      .optional()
+      .refine((val) => !val || val.length <= 200, {
+        message: "Quality certification must be 200 characters or fewer",
+      }),
+    available_from: z.string().optional(),
+    available_until: z.string().optional(),
+    publish_immediately: z.boolean(),
+    is_public: z.boolean(),
   })
-  .refine(
-    (data) => {
-      if (!data.available_until) return true;
-      return new Date(data.available_until) >= new Date(data.available_from);
-    },
-    {
-      message: "Available until date must be the same as or after the Available from date",
-      path: ["available_until"],
-    },
-  );
+  .superRefine((data, ctx) => {
+    if (!data.include_initial_batch) return;
+    // Batch fields become required
+    if (!data.quantity) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["quantity"], message: "Quantity is required" });
+    } else {
+      const n = Number(data.quantity);
+      if (Number.isNaN(n) || n <= 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["quantity"],
+          message: "Quantity must be greater than 0",
+        });
+      }
+      digitLimitRefinement(10, 2, "Quantity")(data.quantity, { ...ctx, path: ["quantity"] } as z.RefinementCtx);
+    }
+    if (!data.unit) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["unit"], message: "Unit is required" });
+    }
+    if (!data.price_per_unit) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["price_per_unit"],
+        message: "Price per unit is required",
+      });
+    } else {
+      digitLimitRefinement(8, 2, "Price per unit")(data.price_per_unit, {
+        ...ctx,
+        path: ["price_per_unit"],
+      } as z.RefinementCtx);
+    }
+    if (!data.available_from) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["available_from"],
+        message: "Available from date is required",
+      });
+    }
+    if (
+      data.available_from &&
+      data.available_until &&
+      new Date(data.available_until) < new Date(data.available_from)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["available_until"],
+        message: "Available until date must be the same as or after the Available from date",
+      });
+    }
+    // Public requires published — same rule the BE enforces.
+    if (data.is_public && !data.publish_immediately) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["is_public"],
+        message: "A batch has to be published before it can go on the public Market Hub.",
+      });
+    }
+  });
 
 type FormValues = z.infer<typeof schema>;
 
@@ -124,31 +181,40 @@ const defaultValues: FormValues = {
   commodity: "",
   description_en: "",
   description_ml: "",
+  image: null,
+  include_initial_batch: false,
   quantity: "",
   unit: "kg",
   price_per_unit: "",
   quality_certification: "",
   available_from: "",
   available_until: "",
-  is_public: false,
-  image: null,
+  // Default the initial batch to publish + public — the common case is
+  // the FPO wants their first batch live right away. The toggles are
+  // still visible so they can opt out before saving.
+  publish_immediately: true,
+  is_public: true,
 };
 
 function toFormValues(p: Product): FormValues {
+  // Edit mode never seeds the initial-batch fields — they're read-only in
+  // this form and managed through the Manage Batches sheet.
   return {
     name_en: p.name?.en ?? "",
     name_ml: p.name?.ml ?? "",
     commodity: String(p.commodity ?? ""),
     description_en: p.description?.en ?? "",
     description_ml: p.description?.ml ?? "",
-    quantity: p.quantity ?? "",
-    unit: p.unit,
-    price_per_unit: p.price_per_unit ?? "",
-    quality_certification: p.quality_certification ?? "",
-    available_from: p.available_from ?? "",
-    available_until: p.available_until ?? "",
-    is_public: p.is_public ?? false,
     image: null,
+    include_initial_batch: false,
+    quantity: "",
+    unit: "kg",
+    price_per_unit: "",
+    quality_certification: "",
+    available_from: "",
+    available_until: "",
+    publish_immediately: false,
+    is_public: false,
   };
 }
 
@@ -157,8 +223,9 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
   const queryClient = useQueryClient();
   const isEdit = mode === "edit";
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
-  const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
+  const [existingImageUrl, setExistingImageUrl] = useState<string | null>(product?.image ?? null);
   const [imageRemoved, setImageRemoved] = useState(false);
+  const [batchesOpen, setBatchesOpen] = useState(false);
 
   const locale = useLocaleStore((s) => s.locale);
 
@@ -173,11 +240,15 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
     handleSubmit,
     reset,
     setError,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: product ? toFormValues(product) : defaultValues,
   });
+
+  const includeInitialBatch = watch("include_initial_batch");
 
   useEffect(() => {
     if (product) {
@@ -190,24 +261,35 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
 
   const mutation = useMutation({
     mutationFn: (values: FormValues) => {
-      const payload = {
+      const payload: CreateProductPayload = {
         name: { en: values.name_en, ml: values.name_ml || "" },
         commodity: Number(values.commodity),
         description: {
           en: values.description_en ?? "",
           ml: values.description_ml || "",
         },
-        quantity: values.quantity,
-        unit: values.unit as ProductUnit,
-        price_per_unit: values.price_per_unit,
-        quality_certification: values.quality_certification ?? "",
-        available_from: values.available_from,
-        available_until: values.available_until || null,
-        is_public: values.is_public,
         image: values.image ?? (imageRemoved ? null : undefined),
       };
+      // First-batch seed is only sent on create when the FPO opted in.
+      if (!isEdit && values.include_initial_batch) {
+        payload.quantity = values.quantity;
+        payload.unit = values.unit as ProductUnit;
+        payload.price_per_unit = values.price_per_unit;
+        payload.quality_certification = values.quality_certification ?? "";
+        payload.available_from = values.available_from;
+        payload.available_until = values.available_until || null;
+        payload.status = values.publish_immediately ? "active" : "draft";
+        payload.is_public = values.is_public;
+      }
       if (isEdit && product) {
-        return productsApi.update(product.id, payload);
+        // Stock fields are intentionally omitted on PATCH — the backend
+        // ignores them anyway; batch edits go through productStocksApi.
+        return productsApi.update(product.id, {
+          name: payload.name,
+          commodity: payload.commodity,
+          description: payload.description,
+          image: payload.image,
+        });
       }
       return productsApi.create(payload);
     },
@@ -397,7 +479,7 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
                         className="max-h-40 resize-none overflow-y-auto"
                         {...field}
                       />
-                      <p className="text-xs text-muted-foreground">{(field.value?.length ?? 0)}/2000</p>
+                      <p className="text-xs text-muted-foreground">{field.value?.length ?? 0}/2000</p>
                       {errors.description_en && <FieldError errors={[errors.description_en]} />}
                     </Field>
                   )}
@@ -417,139 +499,257 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
                         className="max-h-40 resize-none overflow-y-auto"
                         {...field}
                       />
-                      <p className="text-xs text-muted-foreground">{(field.value?.length ?? 0)}/2000</p>
+                      <p className="text-xs text-muted-foreground">{field.value?.length ?? 0}/2000</p>
                       {errors.description_ml && <FieldError errors={[errors.description_ml]} />}
-                    </Field>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <Controller
-                  control={control}
-                  name="quantity"
-                  render={({ field }) => (
-                    <Field>
-                      <FieldLabel htmlFor="product-quantity">
-                        {t.quantity_label ?? "Quantity"} <span className="text-destructive">*</span>
-                      </FieldLabel>
-                      <Input
-                        id="product-quantity"
-                        inputMode="decimal"
-                        {...field}
-                        onChange={(e) => {
-                          const cleaned = e.target.value.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1");
-                          field.onChange(cleaned);
-                        }}
-                      />
-                      {errors.quantity && <FieldError errors={[errors.quantity]} />}
-                    </Field>
-                  )}
-                />
-                <Controller
-                  control={control}
-                  name="unit"
-                  render={({ field }) => (
-                    <Field>
-                      <FieldLabel htmlFor="product-unit">{t.unit_label ?? "Unit"}</FieldLabel>
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger id="product-unit">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {UNIT_OPTIONS.map((u) => (
-                            <SelectItem key={u.value} value={u.value}>
-                              {t[`unit_${u.value}`] ?? u.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </Field>
-                  )}
-                />
-                <Controller
-                  control={control}
-                  name="price_per_unit"
-                  render={({ field }) => (
-                    <Field>
-                      <FieldLabel htmlFor="product-price">
-                        {t.price_label ?? "Price per unit (₹)"} <span className="text-destructive">*</span>
-                      </FieldLabel>
-                      <Input
-                        id="product-price"
-                        inputMode="decimal"
-                        {...field}
-                        onChange={(e) => {
-                          const cleaned = e.target.value.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1");
-                          field.onChange(cleaned);
-                        }}
-                      />
-                      {errors.price_per_unit && <FieldError errors={[errors.price_per_unit]} />}
-                    </Field>
-                  )}
-                />
-              </div>
-
-              <Controller
-                control={control}
-                name="quality_certification"
-                render={({ field }) => (
-                  <Field>
-                    <FieldLabel htmlFor="product-quality">{t.quality_label ?? "Quality certification"}</FieldLabel>
-                    <Input
-                      id="product-quality"
-                      maxLength={200}
-                      placeholder={t.quality_placeholder ?? "e.g. FSSAI, NPOP Organic, ISO 22000"}
-                      {...field}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      {(field.value?.length ?? 0)}/200
-                    </p>
-                    {errors.quality_certification && <FieldError errors={[errors.quality_certification]} />}
-                  </Field>
-                )}
-              />
-
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Controller
-                  control={control}
-                  name="available_from"
-                  render={({ field }) => (
-                    <Field>
-                      <FieldLabel htmlFor="product-from">
-                        {t.available_from_label ?? "Available from"} <span className="text-destructive">*</span>
-                      </FieldLabel>
-                      <Input id="product-from" type="date" {...field} />
-                      {errors.available_from && <FieldError errors={[errors.available_from]} />}
-                    </Field>
-                  )}
-                />
-                <Controller
-                  control={control}
-                  name="available_until"
-                  render={({ field }) => (
-                    <Field>
-                      <FieldLabel htmlFor="product-until">{t.available_until_label ?? "Available until"}</FieldLabel>
-                      <Input id="product-until" type="date" {...field} />
-                      {errors.available_until && <FieldError errors={[errors.available_until]} />}
                     </Field>
                   )}
                 />
               </div>
             </FieldGroup>
 
-            <div className="border-t pt-5">
-              <Controller
-                control={control}
-                name="is_public"
-                render={({ field }) => (
-                  <div className="flex max-w-sm items-center justify-between rounded-lg border p-3">
-                    <FieldLabel className="mb-0 text-sm">{t.public_label ?? "Visible on public Market Hub"}</FieldLabel>
-                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+            {/* Initial-batch section — create mode only. Edit mode gets a
+                "Manage Batches" button instead, since stock edits don't
+                flow through the product endpoint anymore. */}
+            {isEdit ? (
+              <div className="rounded-lg border border-dashed p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="flex flex-col gap-1">
+                    <p className="font-medium text-sm">{t.batches_card_title ?? "Stock Batches"}</p>
+                    <p className="text-muted-foreground text-sm">
+                      {t.batches_card_description ??
+                        "A product can have multiple stock batches live at once. Add, edit, publish, or mark batches sold from the Manage Batches panel."}
+                    </p>
+                    {product && (
+                      <p className="text-muted-foreground text-xs">
+                        {product.stocks.length === 0
+                          ? (t.no_batches ?? "No batches yet")
+                          : `${product.stocks.length} ${product.stocks.length === 1 ? (t.batch_singular ?? "batch") : (t.batch_plural ?? "batches")}`}
+                      </p>
+                    )}
                   </div>
+                  {product && (
+                    <Button type="button" variant="outline" size="sm" onClick={() => setBatchesOpen(true)}>
+                      <Layers className="mr-1.5 h-4 w-4" />
+                      {t.manage_batches_btn ?? "Manage Batches"}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-4 rounded-lg border p-4">
+                <Controller
+                  control={control}
+                  name="include_initial_batch"
+                  render={({ field }) => (
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex flex-col gap-0.5">
+                        <FieldLabel className="mb-0 text-sm">
+                          {t.initial_batch_toggle ?? "Add an initial stock batch now"}
+                        </FieldLabel>
+                        <p className="text-muted-foreground text-xs">
+                          {t.initial_batch_hint ??
+                            "You can also create the product first and add batches later from Manage Batches."}
+                        </p>
+                      </div>
+                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    </div>
+                  )}
+                />
+
+                {includeInitialBatch && (
+                  <FieldGroup>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                      <Controller
+                        control={control}
+                        name="quantity"
+                        render={({ field }) => (
+                          <Field>
+                            <FieldLabel htmlFor="product-quantity">
+                              {t.quantity_label ?? "Quantity"} <span className="text-destructive">*</span>
+                            </FieldLabel>
+                            <Input
+                              id="product-quantity"
+                              inputMode="decimal"
+                              {...field}
+                              onChange={(e) => {
+                                const cleaned = e.target.value.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1");
+                                field.onChange(cleaned);
+                              }}
+                            />
+                            {errors.quantity && <FieldError errors={[errors.quantity]} />}
+                          </Field>
+                        )}
+                      />
+                      <Controller
+                        control={control}
+                        name="unit"
+                        render={({ field }) => (
+                          <Field>
+                            <FieldLabel htmlFor="product-unit">{t.unit_label ?? "Unit"}</FieldLabel>
+                            <Select value={field.value} onValueChange={field.onChange}>
+                              <SelectTrigger id="product-unit">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {UNIT_OPTIONS.map((u) => (
+                                  <SelectItem key={u.value} value={u.value}>
+                                    {t[`unit_${u.value}`] ?? u.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </Field>
+                        )}
+                      />
+                      <Controller
+                        control={control}
+                        name="price_per_unit"
+                        render={({ field }) => (
+                          <Field>
+                            <FieldLabel htmlFor="product-price">
+                              {t.price_label ?? "Price per unit (₹)"} <span className="text-destructive">*</span>
+                            </FieldLabel>
+                            <Input
+                              id="product-price"
+                              inputMode="decimal"
+                              {...field}
+                              onChange={(e) => {
+                                const cleaned = e.target.value.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1");
+                                field.onChange(cleaned);
+                              }}
+                            />
+                            {errors.price_per_unit && <FieldError errors={[errors.price_per_unit]} />}
+                          </Field>
+                        )}
+                      />
+                    </div>
+
+                    <Controller
+                      control={control}
+                      name="quality_certification"
+                      render={({ field }) => (
+                        <Field>
+                          <FieldLabel htmlFor="product-quality">
+                            {t.quality_label ?? "Quality certification"}
+                          </FieldLabel>
+                          <Input
+                            id="product-quality"
+                            maxLength={200}
+                            placeholder={t.quality_placeholder ?? "e.g. FSSAI, NPOP Organic, ISO 22000"}
+                            {...field}
+                          />
+                          <p className="text-xs text-muted-foreground">{field.value?.length ?? 0}/200</p>
+                          {errors.quality_certification && <FieldError errors={[errors.quality_certification]} />}
+                        </Field>
+                      )}
+                    />
+
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <Controller
+                        control={control}
+                        name="available_from"
+                        render={({ field }) => (
+                          <Field>
+                            <FieldLabel htmlFor="product-from">
+                              {t.available_from_label ?? "Available from"} <span className="text-destructive">*</span>
+                            </FieldLabel>
+                            <Input
+                              id="product-from"
+                              type="date"
+                              {...field}
+                              value={field.value ?? ""}
+                              onChange={(e) => {
+                                const next = e.target.value;
+                                field.onChange(next);
+                                // Keep 'until' consistent with the new 'from'.
+                                const until = watch("available_until");
+                                if (next && until && new Date(until) < new Date(next)) {
+                                  setValue("available_until", "", { shouldValidate: true });
+                                }
+                              }}
+                            />
+                            {errors.available_from && <FieldError errors={[errors.available_from]} />}
+                          </Field>
+                        )}
+                      />
+                      <Controller
+                        control={control}
+                        name="available_until"
+                        render={({ field }) => (
+                          <Field>
+                            <FieldLabel htmlFor="product-until">
+                              {t.available_until_label ?? "Available until"}
+                            </FieldLabel>
+                            <Input
+                              id="product-until"
+                              type="date"
+                              {...field}
+                              value={field.value ?? ""}
+                              min={watch("available_from") || undefined}
+                            />
+                            {errors.available_until && <FieldError errors={[errors.available_until]} />}
+                          </Field>
+                        )}
+                      />
+                    </div>
+
+                    {/* Publish + public toggles — same shape as the BatchForm
+                        shown inside the Manage Batches sheet, so the create
+                        flow is consistent whether the FPO ticks "Add initial
+                        batch" here or adds it later. */}
+                    <div className="flex flex-col gap-3 rounded-lg border bg-muted/30 p-4">
+                      <Controller
+                        control={control}
+                        name="publish_immediately"
+                        render={({ field }) => (
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex flex-col gap-0.5">
+                              <FieldLabel className="mb-0 text-sm">
+                                {t.publish_now_label ?? "Publish immediately"}
+                              </FieldLabel>
+                              <p className="text-muted-foreground text-xs">
+                                {t.publish_now_hint ??
+                                  "Make this batch Active right away. Leave off to save as a draft and publish later."}
+                              </p>
+                            </div>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={(checked) => {
+                                field.onChange(checked);
+                                if (!checked) setValue("is_public", false);
+                              }}
+                            />
+                          </div>
+                        )}
+                      />
+                      <Controller
+                        control={control}
+                        name="is_public"
+                        render={({ field }) => (
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex flex-col gap-0.5">
+                              <FieldLabel className="mb-0 text-sm">
+                                {t.public_label ?? "Visible on public Market Hub"}
+                              </FieldLabel>
+                              <p className="text-muted-foreground text-xs">
+                                {t.public_hint ??
+                                  "Show this batch to anonymous visitors on the public Market Hub (requires publish)."}
+                              </p>
+                            </div>
+                            <Switch
+                              checked={field.value}
+                              disabled={!watch("publish_immediately")}
+                              onCheckedChange={field.onChange}
+                            />
+                          </div>
+                        )}
+                      />
+                      {errors.is_public && <FieldError errors={[errors.is_public]} />}
+                    </div>
+                  </FieldGroup>
                 )}
-              />
-            </div>
+              </div>
+            )}
 
             <div className="flex flex-wrap items-center justify-end gap-3">
               <Button type="button" variant="outline" onClick={() => router.push("/fpo/products")}>
@@ -575,6 +775,16 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
           </form>
         </CardContent>
       </Card>
+
+      {product && (
+        <ManageBatchesSheet
+          product={product}
+          open={batchesOpen}
+          onOpenChange={setBatchesOpen}
+          t={t}
+          tCommon={tCommon}
+        />
+      )}
     </div>
   );
 }

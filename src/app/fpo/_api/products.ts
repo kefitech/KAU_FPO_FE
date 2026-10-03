@@ -29,6 +29,16 @@ function toProductFormData(
   return form;
 }
 
+/**
+ * Product-master CRUD only (name, commodity, description, image). Stock
+ * batches live on productStocksApi — a Product can now have many batches
+ * live at once (apps/marketplace/api/stocks.py).
+ *
+ * On create, the backend still accepts flat first-batch fields
+ * (quantity/unit/price_per_unit/available_from/...) and seeds the initial
+ * stock row. On PATCH those flat fields are silently ignored — batch
+ * edits must go through productStocksApi.update().
+ */
 export const productsApi = {
   // DataTable's queryFn contract: takes DataTableParams, returns the raw
   // PaginatedResponse — no manual unwrapping here, DataTable reads
@@ -68,15 +78,50 @@ export const productsApi = {
 
   delete: (id: number): Promise<void> => api.delete(`${BASE}${id}/`).then(() => undefined),
 
-  publish: (id: number): Promise<Product> =>
-    api.post(`${BASE}${id}/publish/`).then((r) => {
-      const d = r.data as Record<string, unknown>;
-      return (d.data ?? d) as Product;
-    }),
+  /**
+   * Downloads the bulk-import Excel template. Returns a Blob so the caller
+   * can hand it to a download link / FileSaver without touching the raw
+   * axios response headers.
+   */
+  getBulkTemplate: (): Promise<Blob> =>
+    api
+      .get(`${BASE}bulk-template/`, { responseType: "blob" })
+      .then((r) => r.data as Blob),
 
-  markSold: (id: number): Promise<Product> =>
-    api.post(`${BASE}${id}/mark-sold/`).then((r) => {
-      const d = r.data as Record<string, unknown>;
-      return (d.data ?? d) as Product;
-    }),
+  /**
+   * Uploads a filled bulk-import .xlsx / .csv. The backend creates one
+   * Product + ACTIVE ProductStock per valid row and returns per-row
+   * success / failure info (see `BulkImportResult` below).
+   */
+  bulkImport: (file: File): Promise<BulkImportResult> => {
+    const form = new FormData();
+    form.append("file", file);
+    return api
+      .post(`${BASE}bulk-import/`, form, {
+        headers: { "Content-Type": "multipart/form-data" },
+      })
+      .then((r) => {
+        const d = r.data as Record<string, unknown>;
+        return (d.data ?? d) as BulkImportResult;
+      });
+  },
 };
+
+export interface BulkImportRowSuccess {
+  row: number;
+  product_id: number;
+  name: string;
+}
+
+export interface BulkImportRowError {
+  row: number;
+  name_en: string;
+  reason: string;
+}
+
+export interface BulkImportResult {
+  success: number;
+  failed: number;
+  results: BulkImportRowSuccess[];
+  errors: BulkImportRowError[];
+}

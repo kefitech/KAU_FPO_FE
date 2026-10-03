@@ -2,11 +2,14 @@
 
 import { useEffect, useState } from "react";
 
+import Link from "next/link";
 import { useParams } from "next/navigation";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft } from "lucide-react";
 
 import { productsApi } from "@/app/fpo/_api/products";
+import { Button } from "@/components/ui/button";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 import type { Product } from "@/types/fpo";
@@ -59,9 +62,17 @@ const {
 
   return (
     <div className="flex flex-col gap-6 px-3 sm:px-8 py-6">
-      <div className="mx-auto w-full max-w-3xl">
-        <h1 className="font-bold text-2xl">{tForm.edit_title ?? "Edit Product"}</h1>
-        <p className="mt-0.5 text-muted-foreground text-sm">{product.name.en}</p>
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-3">
+        <Button asChild variant="ghost" size="sm" className="w-fit text-muted-foreground">
+          <Link href="/fpo/products">
+            <ArrowLeft className="mr-1.5 h-4 w-4" />
+            {tCommon.back_btn ?? tForm.back_btn ?? "Back to Products"}
+          </Link>
+        </Button>
+        <div>
+          <h1 className="font-bold text-2xl">{tForm.edit_title ?? "Edit Product"}</h1>
+          <p className="mt-0.5 text-muted-foreground text-sm">{product.name.en}</p>
+        </div>
       </div>
       <ProductForm mode="edit" product={product} t={tForm} tCommon={tCommon} />
     </div>
