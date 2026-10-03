@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
-import { FileBarChart, Plus } from "lucide-react";
+import { ArrowRight, BarChart2, FileBarChart, Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -140,7 +140,21 @@ export default function DprProjectsListPage() {
     queryKey: ["dpr-projects"],
     queryFn: dprApi.listProjects,
     staleTime: 30_000,
+    // KAU §8.1 — DPR is gated on a submitted tier assessment. Retrying a 403
+    // with code=tier_assessment_required is pointless until the user finishes
+    // the tier form, so skip the automatic retry for that case.
+    retry: (_count, err) => {
+      const code = (err as { data?: { code?: string }; response?: { data?: { code?: string } } })
+        ?.data?.code ?? (err as { response?: { data?: { code?: string } } })?.response?.data?.code;
+      return code !== "tier_assessment_required";
+    },
   });
+
+  // Detect the tier-gate denial so we can render a focused banner instead
+  // of the generic "Failed to load" fallback.
+  const tierGated =
+    (error as { data?: { code?: string }; response?: { data?: { code?: string } } })?.data?.code === "tier_assessment_required" ||
+    (error as { response?: { data?: { code?: string } } })?.response?.data?.code === "tier_assessment_required";
 
   return (
     <div className="flex flex-col gap-6 px-3 sm:px-6 py-4 sm:py-6">
@@ -151,13 +165,32 @@ export default function DprProjectsListPage() {
             Detailed Project Reports — create, edit, and generate reports for your FPO enterprises.
           </p>
         </div>
-        <Button onClick={() => setNewDialogOpen(true)}>
-          <Plus className="mr-1.5 h-4 w-4" />
-          New DPR
-        </Button>
+        {!tierGated && (
+          <Button onClick={() => setNewDialogOpen(true)}>
+            <Plus className="mr-1.5 h-4 w-4" />
+            New DPR
+          </Button>
+        )}
       </div>
 
-      {isLoading ? (
+      {tierGated ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center gap-4">
+          <BarChart2 className="h-12 w-12 text-muted-foreground" />
+          <div className="max-w-md">
+            <p className="font-semibold text-base">Complete your Tier Assessment first</p>
+            <p className="mt-1 text-muted-foreground text-sm">
+              DPR generation unlocks after you submit your Tier Classification Assessment for the current financial year.
+              Go to the Tier Assessment page, answer the 28 questions, and submit to get your tier assigned.
+            </p>
+          </div>
+          <Button asChild size="sm">
+            <Link href="/fpo/tier-assessment">
+              Go to Tier Assessment
+              <ArrowRight className="ml-1.5 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+      ) : isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: skeleton
