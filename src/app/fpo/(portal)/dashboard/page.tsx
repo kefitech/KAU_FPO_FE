@@ -157,7 +157,9 @@ export default function FpoDashboardPage() {
   });
 
   const { data: appStatus } = useQuery({
-    queryKey: ["fpo-status"],
+    // Include locale so switching language invalidates the cache and the
+    // status timeline notes come back in the new language without a reload.
+    queryKey: ["fpo-status", locale],
     queryFn: fpoRegistrationApi.getStatus,
     staleTime: 60_000,
   });

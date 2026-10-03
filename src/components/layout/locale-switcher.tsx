@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Languages } from "lucide-react";
 
 import {
@@ -19,12 +19,26 @@ export function LocaleSwitcher() {
   const locale = useLocaleStore((s) => s.locale);
   const setLocale = useLocaleStore((s) => s.setLocale);
   const setDefaultLocale = useLocaleStore((s) => s.setDefaultLocale);
+  const queryClient = useQueryClient();
+  const prevLocaleRef = useRef<string>(locale);
 
   const { data: languages = [] } = useQuery({
     queryKey: ["public-languages"],
     queryFn: siteContentApi.getLanguages,
     staleTime: 60 * 1000, // 1 min — reflects admin activate/deactivate quickly
   });
+
+  // When the user picks a new language, invalidate every React Query cache
+  // so language-sensitive data (status timelines, dashboards, master data,
+  // tier tips, etc.) refetches without a hard refresh. Covers every page
+  // whose queryKey doesn't already include `locale` — cheaper than auditing
+  // every call site.
+  useEffect(() => {
+    if (prevLocaleRef.current && prevLocaleRef.current !== locale && locale) {
+      queryClient.invalidateQueries();
+    }
+    prevLocaleRef.current = locale;
+  }, [locale, queryClient]);
 
   // On every page load: sync to API default if user hasn't explicitly chosen,
   // or reset to default if the stored locale is no longer active.
