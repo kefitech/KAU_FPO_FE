@@ -277,11 +277,11 @@ export function ChatWidgetPortal() {
                   data-role={m.role}
                   data-testid={`chat-bubble-${m.role}`}
                 >
-                  <p className="whitespace-pre-wrap">
+                  <p className="whitespace-pre-wrap [overflow-wrap:anywhere]">
                     <ChatMessageText
                       text={m.text}
                       linkClassName={cn(
-                        "font-medium underline underline-offset-2 hover:no-underline",
+                        "font-medium underline-offset-2 hover:underline",
                         m.role === "user"
                           ? "text-white decoration-white/70"
                           : "text-green-700 hover:text-green-800",

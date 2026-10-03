@@ -319,7 +319,14 @@ export function ChatWidgetPublic() {
           font-size: 14px !important;
           line-height: 1.45 !important;
           white-space: pre-wrap !important;
+          /* Long unbroken strings (611-char payloads, big URLs) must wrap
+             inside the bubble, not force a horizontal scrollbar on the
+             panel. Reported in retest round 2 as a low-sev regression. */
+          overflow-wrap: anywhere !important;
+          word-break: break-word !important;
         }
+        .kau-chat-link { text-decoration: none !important; font-weight: 600 !important; }
+        .kau-chat-link:hover { text-decoration: underline !important; }
         .kau-chat-bubble.user {
           background: ${PALETTE.msgUser} !important;
           color: ${PALETTE.msgUserFg} !important;
@@ -441,11 +448,10 @@ export function ChatWidgetPublic() {
                   <div>
                     <ChatMessageText
                       text={m.text}
+                      linkClassName="kau-chat-link"
                       linkStyle={{
                         color: m.role === "user" ? "#ffffff" : PALETTE.primary,
-                        textDecoration: "underline",
                         textUnderlineOffset: "2px",
-                        fontWeight: 600,
                       }}
                     />
                   </div>

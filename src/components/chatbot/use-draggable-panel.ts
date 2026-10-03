@@ -36,7 +36,12 @@ export function useDraggablePanel(storageKey: string, opts: Options = {}) {
   const { defaultRight = 16, defaultBottom = 16, panelWidth = 400, panelHeight = 600 } = opts;
 
   const panelRef = useRef<HTMLDivElement | null>(null);
-  const dragRef = useRef<{ offsetX: number; offsetY: number } | null>(null);
+  const dragRef = useRef<{ offsetX: number; offsetY: number; moved: boolean } | null>(null);
+  // Flag read by a capturing click handler so the SYNTHETIC click that
+  // fires right after a drag-and-release doesn't navigate the page the
+  // panel happens to overlap (retest round 2 reported one occurrence of
+  // this on CBBO reports).
+  const suppressNextClick = useRef(false);
   const [pos, setPos] = useState<Position | null>(null);
 
   const clamp = useCallback(
@@ -86,14 +91,25 @@ export function useDraggablePanel(storageKey: string, opts: Options = {}) {
     if (e.pointerType === "mouse" && e.button !== 0) return;
 
     const rect = panel.getBoundingClientRect();
-    dragRef.current = { offsetX: e.clientX - rect.left, offsetY: e.clientY - rect.top };
+    dragRef.current = {
+      offsetX: e.clientX - rect.left,
+      offsetY: e.clientY - rect.top,
+      moved: false,
+    };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    // Freeze text selection on the whole document for the duration of the
+    // drag — otherwise sweeping across the header selects any copy that
+    // happens to be behind the panel on the page (retest round 2 noted).
+    if (typeof document !== "undefined") {
+      document.body.style.userSelect = "none";
+    }
     e.preventDefault();
   }, []);
 
   const onPointerMove = useCallback(
     (e: ReactPointerEvent<HTMLElement>) => {
       if (!dragRef.current) return;
+      dragRef.current.moved = true;
       setPos(
         clamp({
           x: e.clientX - dragRef.current.offsetX,
@@ -108,9 +124,18 @@ export function useDraggablePanel(storageKey: string, opts: Options = {}) {
     (e: ReactPointerEvent<HTMLElement>) => {
       const target = e.currentTarget as HTMLElement;
       if (target.hasPointerCapture(e.pointerId)) target.releasePointerCapture(e.pointerId);
-      const wasDragging = dragRef.current !== null;
+      const state = dragRef.current;
       dragRef.current = null;
-      if (!wasDragging) return;
+      if (typeof document !== "undefined") {
+        document.body.style.userSelect = "";
+      }
+      if (!state) return;
+      // If the user actually dragged (not just a click), swallow the next
+      // click that would otherwise fire on whatever element happens to
+      // be under the release point.
+      if (state.moved) {
+        suppressNextClick.current = true;
+      }
       setPos((current) => {
         if (current && typeof window !== "undefined") {
           try {
@@ -124,6 +149,21 @@ export function useDraggablePanel(storageKey: string, opts: Options = {}) {
     },
     [storageKey],
   );
+
+  // Global capture-phase click handler — kills the first click after a
+  // drag end so the browser's synthetic click doesn't trigger a link under
+  // the release point. Resets itself after one event.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const onClick = (e: MouseEvent) => {
+      if (!suppressNextClick.current) return;
+      suppressNextClick.current = false;
+      e.stopPropagation();
+      e.preventDefault();
+    };
+    document.addEventListener("click", onClick, true);
+    return () => document.removeEventListener("click", onClick, true);
+  }, []);
 
   const positionStyle: CSSProperties = pos
     ? { left: pos.x, top: pos.y, right: "auto", bottom: "auto" }
