@@ -65,10 +65,8 @@ export function TransferDistrictDialog({
       onOpenChange(false);
     },
     onError: (err: unknown) => {
-      const message =
-        (err as { response?: { data?: { message?: string | { to_district?: string } } } })?.response?.data?.message;
-      const flat = typeof message === "string" ? message : message?.to_district ?? "Transfer failed.";
-      toast.error(flat);
+      const message = (err as { data?: { message?: unknown } })?.data?.message;
+      toast.error(typeof message === "string" ? message : "Transfer failed.");
     },
   });
 
@@ -127,9 +125,7 @@ export function TransferDistrictDialog({
                     <span className="font-mono">
                       {h.from_district || "—"} → {h.to_district}
                     </span>
-                    <span className="text-muted-foreground">
-                      {new Date(h.created_at).toLocaleDateString()}
-                    </span>
+                    <span className="text-muted-foreground">{new Date(h.created_at).toLocaleDateString()}</span>
                     {h.reason && <span className="truncate text-muted-foreground">· {h.reason}</span>}
                   </li>
                 ))}
@@ -142,10 +138,7 @@ export function TransferDistrictDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             {t.cancel ?? "Cancel"}
           </Button>
-          <Button
-            disabled={!toDistrict || mutation.isPending}
-            onClick={() => mutation.mutate()}
-          >
+          <Button disabled={!toDistrict || mutation.isPending} onClick={() => mutation.mutate()}>
             {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {t.transfer_btn ?? "Transfer"}
           </Button>

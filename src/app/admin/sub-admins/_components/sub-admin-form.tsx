@@ -29,13 +29,24 @@ const NOTIFICATION_CHANNELS: { value: NotificationChannelType; label: string }[]
 
 const DISTRICT_CODES = KERALA_DISTRICTS.map((d) => d.code) as [string, ...string[]];
 
+// Mirrors the backend's validate_person_name: letters, spaces, dots, apostrophes, hyphens.
+const NAME_PATTERN = /^[A-Za-z][A-Za-z .'-]*$/;
+
+const nameSchema = (label: string) =>
+  z
+    .string()
+    .trim()
+    .min(1, { message: `${label} is required` })
+    .max(50, { message: "Max 50 characters" })
+    .regex(NAME_PATTERN, { message: `${label} can only contain letters, spaces, dots, apostrophes and hyphens` });
+
 const createSchema = z.object({
   email: z
     .string()
     .email({ message: "Enter a valid email address" })
     .max(50, { message: "Email must be at most 50 characters" }),
-  first_name: z.string().min(1, { message: "First name is required" }).max(50, { message: "Max 50 characters" }),
-  last_name: z.string().min(1, { message: "Last name is required" }).max(50, { message: "Max 50 characters" }),
+  first_name: nameSchema("First name"),
+  last_name: nameSchema("Last name"),
   phone: z.string().regex(/^[6-9]\d{9}$/, { message: "Enter a valid 10-digit mobile number" }),
   district: z.enum(DISTRICT_CODES, { message: "Pick a district" }),
   notification_channel: z.enum(["email", "sms", "in_app"]),
@@ -43,12 +54,10 @@ const createSchema = z.object({
 });
 
 const editSchema = z.object({
-  email: z
-    .string()
-    .email({ message: "Enter a valid email address" })
-    .max(35, { message: "Email must be at most 35 characters" }),
-  first_name: z.string().min(1, { message: "First name is required" }).max(50, { message: "Max 50 characters" }),
-  last_name: z.string().min(1, { message: "Last name is required" }).max(50, { message: "Max 50 characters" }),
+  // Email is read-only on edit and not part of the update payload, so don't validate it.
+  email: z.string(),
+  first_name: nameSchema("First name"),
+  last_name: nameSchema("Last name"),
   phone: z.string().regex(/^[6-9]\d{9}$/, { message: "Enter a valid 10-digit mobile number" }),
   permissions: z.array(z.string()),
 });
@@ -124,6 +133,13 @@ export function SubAdminForm({ mode, subAdmin, t = {}, tCommon = {} }: SubAdminF
 
   const availablePerms = availablePermsData?.data ?? [];
 
+  const { data: capStatus } = useQuery({
+    queryKey: ["sub-admin-district-cap-status"],
+    queryFn: subAdminsApi.getDistrictCapStatus,
+    staleTime: 60_000,
+    enabled: !isEdit,
+  });
+
   const mutation = useMutation({
     mutationFn: async (values: FormValues) => {
       if (isEdit && subAdmin) {
@@ -156,11 +172,12 @@ export function SubAdminForm({ mode, subAdmin, t = {}, tCommon = {} }: SubAdminF
       if (isEdit && subAdmin) {
         queryClient.invalidateQueries({ queryKey: ["sub-admin", String(subAdmin.id)] });
       } else {
+        queryClient.invalidateQueries({ queryKey: ["sub-admin-district-cap-status"] });
         router.push("/admin/sub-admins");
       }
     },
     onError: (error: unknown) => {
-      const response = (error as { data?: { message?: string; errors?: Record<string, string[]> } })?.data;
+      const response = (error as { data?: { message?: unknown; errors?: Record<string, string[]> } })?.data;
 
       const fieldErrors = response?.errors;
 
@@ -181,7 +198,14 @@ export function SubAdminForm({ mode, subAdmin, t = {}, tCommon = {} }: SubAdminF
           setFocus(firstField as keyof FormValues);
         }
       } else {
-        toast.error(response?.message ?? (isEdit ? "Failed to update sub-admin" : "Failed to create sub-admin"));
+        // Only a string can be rendered in a toast — anything else would crash the page.
+        toast.error(
+          typeof response?.message === "string"
+            ? response.message
+            : isEdit
+              ? "Failed to update sub-admin"
+              : "Failed to create sub-admin",
+        );
       }
     },
   });
@@ -318,19 +342,24 @@ export function SubAdminForm({ mode, subAdmin, t = {}, tCommon = {} }: SubAdminF
                         className="h-9 w-full rounded-md border bg-background px-3 text-foreground text-sm shadow-xs focus:outline-none focus:ring-1 focus:ring-ring"
                         {...field}
                       >
-                        <option value="">
-                          {t.district_placeholder ?? "Select a district"}
-                        </option>
-                        {KERALA_DISTRICTS.map((d) => (
-                          <option key={d.code} value={d.code}>
-                            {d.name}
-                          </option>
-                        ))}
+                        <option value="">{t.district_placeholder ?? "Select a district"}</option>
+                        {KERALA_DISTRICTS.map((d) => {
+                          const cap = capStatus?.[d.code];
+                          const isFull = !!cap && cap.count >= cap.cap;
+                          return (
+                            <option key={d.code} value={d.code} disabled={isFull}>
+                              {isFull
+                                ? `${d.name} (${t.district_full ?? "limit reached"}: ${cap.count}/${cap.cap})`
+                                : d.name}
+                            </option>
+                          );
+                        })}
                       </select>
                     )}
                   />
                   <p className="mt-1 text-[11px] text-muted-foreground">
-                    {t.district_hint ?? "The sub-admin will see every FPO in this district. Transfer them later from the detail page."}
+                    {t.district_hint ??
+                      "The sub-admin will see every FPO in this district. Transfer them later from the detail page."}
                   </p>
                   {errors.district && <FieldError errors={[errors.district]} />}
                 </Field>

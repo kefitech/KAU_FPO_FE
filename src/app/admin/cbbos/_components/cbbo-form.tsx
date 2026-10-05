@@ -49,10 +49,8 @@ const createSchema = z
 
 const editSchema = z
   .object({
-    email: z
-      .string()
-      .email({ message: "Enter a valid email address" })
-      .max(35, { message: "Email must be at most 35 characters" }),
+    // Email is read-only on edit and not part of the update payload, so don't validate it.
+    email: z.string(),
     first_name: z.string().min(1, { message: "First name is required" }).max(50, { message: "Max 50 characters" }),
     last_name: z.string().min(1, { message: "Last name is required" }).max(50, { message: "Max 50 characters" }),
     phone: z.string().regex(/^[6-9]\d{9}$/, { message: "Enter a valid 10-digit mobile number" }),
