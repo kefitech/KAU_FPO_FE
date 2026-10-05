@@ -1,16 +1,14 @@
 "use client";
 
-import { Suspense, useEffect, useState,useMemo } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 
 import { useRouter, useSearchParams } from "next/navigation";
 
-import { useQuery } from "@tanstack/react-query";
-import { ExternalLink, FileSpreadsheet, FileText, Loader2, UserCog } from "lucide-react";
+import { ExternalLink, FileSpreadsheet, FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { type ApplicationListItem, adminApplicationsApi } from "@/app/admin/_api/applications";
 import { reportsApi } from "@/app/admin/_api/reports";
-import { subAdminsApi } from "@/app/admin/_api/sub-admins";
 import { DataTable } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,10 +22,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ViewSheet } from "@/components/ui/view-sheet";
 import { translationsApi } from "@/lib/api/translations";
-import { useAuthStore } from "@/stores/auth-store";
 import { useLocaleStore } from "@/stores/locale-store";
 
-import { AssignSubAdminDialog } from "./_components/assign-subadmin-dialog";
 import { getApplicationColumns } from "./_components/columns";
 
 type T = Record<string, string>;
@@ -98,19 +94,6 @@ export default function ApplicationsPage() {
   const [tCommon, setTCommon] = useState<T>({});
   const [downloading, setDownloading] = useState(false);
   const [translationsLoading, setTranslationsLoading] = useState(true);
-  const isSuperAdmin = useAuthStore((s) => s.user?.role) === "super_admin";
-  const [assignFor, setAssignFor] = useState<{ open: boolean; app: ApplicationListItem | null }>({
-    open: false,
-    app: null,
-  });
-  const openAssign = (app: ApplicationListItem) => setAssignFor({ open: true, app });
-
-  // "Sub-Admin" filter options — only super admins can see other sub-admins' FPOs
-  const { data: subAdmins } = useQuery({
-    queryKey: ["sub-admins", "assign-options"],
-    queryFn: () => subAdminsApi.getAll({ page: 1, page_size: 100 }),
-    enabled: isSuperAdmin,
-  });
 
   const filters = useMemo(
     () => [
@@ -158,23 +141,8 @@ export default function ApplicationsPage() {
           { label: t.tier_d ?? "Tier D", value: "D" },
         ],
       },
-      ...(isSuperAdmin
-        ? [
-            {
-              key: "assigned_subadmin",
-              label: t.filter_all_subadmin ?? "All Sub-Admins",
-              options: [
-                { label: t.unassigned ?? "Unassigned", value: "unassigned" },
-                ...(subAdmins?.data ?? []).map((sa) => ({
-                  label: `${sa.first_name} ${sa.last_name}`.trim() || sa.email,
-                  value: String(sa.id),
-                })),
-              ],
-            },
-          ]
-        : []),
     ],
-    [t, isSuperAdmin, subAdmins]
+    [t],
   );
   async function handleDownload(format: "excel" | "pdf") {
     setDownloading(true);
@@ -227,7 +195,6 @@ export default function ApplicationsPage() {
     );
   }
 
-
   return (
     <div className="flex flex-col gap-6 py-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -269,13 +236,10 @@ export default function ApplicationsPage() {
       </div>
 
       <Suspense>
-        
         <DataTable
           queryKey="applications"
           queryFn={adminApplicationsApi.getAll}
-          columns={getApplicationColumns(t, tCommon, locale, {
-            onAssignSubAdmin: isSuperAdmin ? openAssign : undefined,
-          })}
+          columns={getApplicationColumns(t, tCommon, locale)}
           filters={filters}
           onRowClick={(row) => setSheet({ open: true, app: row })}
           columnsLabel={tCommon.col_header ?? "Columns"}
@@ -296,18 +260,6 @@ export default function ApplicationsPage() {
               icon: ExternalLink,
               onClick: () => router.push(`/admin/applications/${a.id}`),
             },
-            ...(isSuperAdmin
-              ? [
-                  {
-                    label: t.action_assign_subadmin ?? "Assign Sub-Admin",
-                    icon: UserCog,
-                    onClick: () => {
-                      setSheet((prev) => ({ ...prev, open: false }));
-                      openAssign(a);
-                    },
-                  },
-                ]
-              : []),
           ]}
           fields={[
             { type: "section", label: t.section_application ?? "Application" },
@@ -333,7 +285,10 @@ export default function ApplicationsPage() {
                   ? (t[`tier_${a.current_tier.toLowerCase()}`] ?? a.current_tier)
                   : (t.tier_not_assessed ?? "—"),
             },
-            { label: t.field_total_members ?? "Total Members", value: a.total_members != null ? String(a.total_members) : "—" },
+            {
+              label: t.field_total_members ?? "Total Members",
+              value: a.total_members != null ? String(a.total_members) : "—",
+            },
             { label: t.field_submitted ?? "Submitted", type: "date", value: a.created_at },
             { label: t.field_last_updated ?? "Last Updated", type: "date", value: a.updated_at },
             { type: "section", label: t.section_contact ?? "Contact" },
@@ -343,27 +298,9 @@ export default function ApplicationsPage() {
             { label: tCommon.field_name ?? "Name", value: a.primary_user_name },
             { label: tCommon.field_email ?? "Email", value: a.primary_user_email },
             { label: tCommon.field_phone ?? "Phone", value: a.primary_user_phone },
-            { type: "section", label: t.section_assignment ?? "Assignment" },
-            { label: t.col_assigned_subadmin ?? "Sub-Admin", value: a.assigned_subadmin_name ?? (t.unassigned ?? "Unassigned") },
           ]}
         />
       )}
-
-      <AssignSubAdminDialog
-        fpo={
-          assignFor.app
-            ? {
-                id: assignFor.app.id,
-                name: assignFor.app.name,
-                assignedSubAdminId: assignFor.app.assigned_subadmin_id,
-                assignedSubAdminName: assignFor.app.assigned_subadmin_name,
-              }
-            : null
-        }
-        open={assignFor.open}
-        onOpenChange={(open) => setAssignFor((prev) => ({ ...prev, open }))}
-        t={t}
-      />
     </div>
   );
 }

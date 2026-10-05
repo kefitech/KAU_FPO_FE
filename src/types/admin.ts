@@ -234,22 +234,10 @@ export interface SubAdmin {
   is_active: boolean;
   date_joined: string;
   permissions: string[];
-  /** Legacy per-FPO manual list count. Kept for backward compat. */
-  assigned_fpos_count: number;
-  /** Total FPOs the sub-admin can see now (district FPOs when district set, else legacy list). */
+  /** FPOs in the sub-admin's district — 0 when they have no district yet. */
   visible_fpos_count: number;
   district: string | null;
   district_transfer_count: number;
-}
-
-/** FPO assigned to a sub-admin (P2-01 row-level security). */
-export interface AssignedFpo {
-  id: number;
-  application_id: string;
-  name: string;
-  district: string;
-  status: string;
-  tier: string | null;
 }
 
 export type NotificationChannelType = "email" | "sms" | "in_app";
