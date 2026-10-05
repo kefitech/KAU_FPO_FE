@@ -3,6 +3,8 @@
  * Based on SRS Section 3.2.2
  */
 
+import type { TrainingSessionComment } from "@/types/training";
+
 export interface GovtDashboardStats {
   total: number;
   by_status: Record<string, number>;
@@ -298,6 +300,10 @@ export interface GovtTrainingSession {
   attendance_total: number;
   created_by_name: string;
   can_edit: boolean;
+  /** KAU admin / sub-admin remarks, oldest first */
+  comments: TrainingSessionComment[];
+  /** true when a KAU comment arrived after this user last opened the session */
+  has_unread_comments: boolean;
 }
 
 export interface GovtTrainingSessionDetail {
@@ -316,6 +322,7 @@ export interface GovtTrainingSessionDetail {
   updated_at: string;
   created_by_name: string;
   can_edit: boolean;
+  comments: TrainingSessionComment[];
 }
 
 export interface GovtScheme {

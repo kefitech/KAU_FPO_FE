@@ -16,12 +16,15 @@ import {
   Clock,
   ExternalLink,
   FileText,
+  GraduationCap,
   Landmark,
   MapPin,
+  MessageSquarePlus,
   Pencil,
   RefreshCw,
   ShieldCheck,
   Star,
+  Trash2,
   Users,
   XCircle,
 } from "lucide-react";
@@ -30,18 +33,22 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 import {
+  type AdminTrainingSessionComment,
   type ApplicationStatus,
+  type ApplicationTrainingSession,
   type AssessmentAnswerData,
   type AssessmentUploadData,
   type AssignTierPayload,
   adminApplicationsApi,
   type TierAssessmentData,
   type TierAuditLogEntry,
+  type TrainingSessionSource,
 } from "@/app/admin/_api/applications";
 import { auditLogsApi } from "@/app/admin/_api/audit-logs";
 import { fpoUsersApi } from "@/app/admin/_api/fpo-users";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { RowActions } from "@/components/data-table/row-actions";
+import { TrainingCommentHeader } from "@/components/shared/training-comment-list";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -49,6 +56,7 @@ import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useAdminPermissions } from "@/hooks/use-admin-permissions";
 import { masterDataApi } from "@/lib/api/master-data";
 import { translationsApi } from "@/lib/api/translations";
@@ -1070,6 +1078,336 @@ function AuditLogTab({ fpoId }: { fpoId: number }) {
   );
 }
 
+// ─── Training tab ─────────────────────────────────────────────────────────────
+
+// One comment in the Training tab. The author can edit it; the author or any
+// super admin can delete it (the API enforces the same rules).
+function AdminTrainingCommentItem({
+  fpoId,
+  sessionId,
+  comment,
+  t,
+  tCommon,
+}: {
+  fpoId: number;
+  sessionId: number;
+  comment: AdminTrainingSessionComment;
+  t: T;
+  tCommon: T;
+}) {
+  const queryClient = useQueryClient();
+  const confirm = useConfirmStore((s) => s.confirm);
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(comment.comment);
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ["fpo-training-sessions", fpoId] });
+
+  const updateMutation = useMutation({
+    mutationFn: () => adminApplicationsApi.updateTrainingComment(fpoId, sessionId, comment.id, text.trim()),
+    onSuccess: () => {
+      toast.success(t.training_comment_updated ?? "Comment updated");
+      setEditing(false);
+      refresh();
+    },
+    onError: (err) => toast.error(getErrorMessage(err, t.training_comment_update_failed ?? "Could not update comment")),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => adminApplicationsApi.deleteTrainingComment(fpoId, sessionId, comment.id),
+    onSuccess: () => {
+      toast.success(t.training_comment_deleted ?? "Comment deleted");
+      refresh();
+    },
+    onError: (err) => toast.error(getErrorMessage(err, t.training_comment_delete_failed ?? "Could not delete comment")),
+  });
+
+  const editLabel = t.training_edit_comment ?? "Edit comment";
+  const deleteLabel = t.training_delete_comment ?? "Delete comment";
+
+  return (
+    <li className="wrap-anywhere rounded-md border bg-muted/40 px-3 py-2">
+      <div className="flex items-start justify-between gap-2">
+        <TrainingCommentHeader
+          comment={comment}
+          commentByLabel={t.training_comment_by ?? "Comment by"}
+          editedLabel={t.training_comment_edited ?? "edited"}
+        />
+        {!editing && (comment.can_edit || comment.can_delete) && (
+          <div className="flex shrink-0 gap-0.5">
+            {comment.can_edit && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                aria-label={editLabel}
+                title={editLabel}
+                onClick={() => {
+                  setText(comment.comment);
+                  setEditing(true);
+                }}
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+            )}
+            {comment.can_delete && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-destructive hover:text-destructive"
+                aria-label={deleteLabel}
+                title={deleteLabel}
+                disabled={deleteMutation.isPending}
+                onClick={() =>
+                  confirm({
+                    title: t.training_delete_comment_title ?? "Delete comment?",
+                    description:
+                      t.training_delete_comment_desc ??
+                      "The CBBO officer / government official will no longer see this comment.",
+                    confirmLabel: tCommon.delete_btn ?? "Delete",
+                    confirmingLabel: t.training_deleting ?? "Deleting…",
+                    onConfirm: () => deleteMutation.mutateAsync(),
+                  })
+                }
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {editing ? (
+        <div className="mt-2 flex flex-col gap-2">
+          <Textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            maxLength={2000}
+            rows={3}
+            className="resize-none text-sm"
+            autoFocus
+          />
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setEditing(false)} disabled={updateMutation.isPending}>
+              {tCommon.cancel ?? "Cancel"}
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => updateMutation.mutate()}
+              disabled={!text.trim() || text.trim() === comment.comment || updateMutation.isPending}
+            >
+              {t.training_save_comment ?? "Save"}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <p className="mt-1 whitespace-pre-wrap text-sm">{comment.comment}</p>
+      )}
+    </li>
+  );
+}
+
+// Collapsed "Add comment" button that expands into a textarea. The comment is
+// shown to the CBBO officer / government official who recorded the session.
+function TrainingCommentForm({ fpoId, sessionId, t, tCommon }: { fpoId: number; sessionId: number; t: T; tCommon: T }) {
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [comment, setComment] = useState("");
+
+  const mutation = useMutation({
+    mutationFn: () => adminApplicationsApi.addTrainingComment(fpoId, sessionId, comment.trim()),
+    onSuccess: () => {
+      toast.success(t.training_comment_posted ?? "Comment added");
+      queryClient.invalidateQueries({ queryKey: ["fpo-training-sessions", fpoId] });
+      setComment("");
+      setOpen(false);
+    },
+    onError: (err) => toast.error(getErrorMessage(err, t.training_comment_failed ?? "Could not add comment")),
+  });
+
+  if (!open) {
+    return (
+      <Button variant="ghost" size="sm" className="h-7 self-start px-2 text-xs" onClick={() => setOpen(true)}>
+        <MessageSquarePlus className="mr-1.5 h-3.5 w-3.5" />
+        {t.training_add_comment ?? "Add comment"}
+      </Button>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <Textarea
+        value={comment}
+        onChange={(e) => setComment(e.target.value)}
+        placeholder={t.training_comment_placeholder ?? "Write a comment for the official who recorded this session…"}
+        maxLength={2000}
+        rows={3}
+        className="resize-none text-sm"
+        autoFocus
+      />
+      <div className="flex justify-end gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            setOpen(false);
+            setComment("");
+          }}
+          disabled={mutation.isPending}
+        >
+          {tCommon.cancel ?? "Cancel"}
+        </Button>
+        <Button size="sm" onClick={() => mutation.mutate()} disabled={!comment.trim() || mutation.isPending}>
+          {t.training_post_comment ?? "Post comment"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// Sessions CBBO officers and government officials recorded for this FPO.
+// Shown to super admins and sub-admins with can_manage_trainings, who can also comment.
+function TrainingTab({ fpoId, t, tCommon }: { fpoId: number; t: T; tCommon: T }) {
+  const [source, setSource] = useState<"all" | TrainingSessionSource>("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  const { data, isLoading, refetch, isFetching } = useQuery({
+    queryKey: ["fpo-training-sessions", fpoId, source, page, pageSize],
+    queryFn: () =>
+      adminApplicationsApi.getTrainingSessions(fpoId, {
+        page,
+        page_size: pageSize,
+        source: source === "all" ? undefined : source,
+      }),
+    enabled: !!fpoId,
+    staleTime: 30_000,
+    placeholderData: (prev) => prev,
+  });
+
+  const sessions = data?.data ?? [];
+  const totalCount = data?.meta?.pagination?.total_count ?? 0;
+  const sourceLabel = (s: TrainingSessionSource) =>
+    s === "government" ? (t.training_filter_government ?? "Government") : (t.training_filter_cbbo ?? "CBBO");
+
+  function handleSourceChange(value: string) {
+    if (!value) return; // single-select toggle sends "" when the active item is clicked again
+    setSource(value as "all" | TrainingSessionSource);
+    setPage(1);
+  }
+
+  function handlePageSizeChange(size: number) {
+    setPageSize(size);
+    setPage(1);
+  }
+
+  return (
+    <SectionCard
+      icon={GraduationCap}
+      title={t.tab_training ?? "Training"}
+      headerAction={
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => refetch()} disabled={isFetching}>
+          <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
+        </Button>
+      }
+    >
+      <ToggleGroup
+        type="single"
+        variant="outline"
+        size="sm"
+        value={source}
+        onValueChange={handleSourceChange}
+        className="self-start"
+      >
+        <ToggleGroupItem value="all">{t.training_filter_all ?? "All sources"}</ToggleGroupItem>
+        <ToggleGroupItem value="cbbo">{sourceLabel("cbbo")}</ToggleGroupItem>
+        <ToggleGroupItem value="government">{sourceLabel("government")}</ToggleGroupItem>
+      </ToggleGroup>
+
+      {isLoading ? (
+        <div className="flex flex-col gap-3">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-16 w-full" />
+          ))}
+        </div>
+      ) : sessions.length === 0 ? (
+        <p className="py-4 text-center text-muted-foreground text-sm">
+          {t.training_empty ?? "No training sessions recorded for this FPO."}
+        </p>
+      ) : (
+        <div className={`flex flex-col divide-y transition-opacity ${isFetching ? "opacity-50" : ""}`}>
+          {sessions.map((s: ApplicationTrainingSession) => (
+            // wrap-anywhere lets long unbroken topics / venues / names break instead of overflowing the card
+            <div key={s.id} className="wrap-anywhere flex min-w-0 flex-col gap-1.5 py-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="min-w-0 font-medium text-sm">{s.topic}</span>
+                <Badge
+                  variant={s.conducted_by_source === "government" ? "secondary" : "outline"}
+                  className="text-[11px]"
+                >
+                  {sourceLabel(s.conducted_by_source)}
+                </Badge>
+              </div>
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-muted-foreground text-xs">
+                <span>
+                  {new Date(s.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                  {s.time ? ` · ${s.time}` : ""} · {Number(s.duration_hours)} {t.training_hours ?? "hrs"}
+                </span>
+                <span>
+                  {t.training_conducted_by ?? "Conducted by"}: {s.conducted_by_name}
+                </span>
+                {s.trainer_name && (
+                  <span>
+                    {t.training_trainer ?? "Trainer"}: {s.trainer_name}
+                  </span>
+                )}
+                {s.venue && (
+                  <span>
+                    {t.training_venue ?? "Venue"}: {s.venue}
+                  </span>
+                )}
+                <span>
+                  {t.training_participants ?? "Participants"}: {s.participants_count}
+                </span>
+                <span>
+                  {t.training_attendance ?? "Attendance"}:{" "}
+                  {s.attendance_total > 0
+                    ? `${s.attendance_count} / ${s.attendance_total}`
+                    : (t.training_not_recorded ?? "Not recorded")}
+                </span>
+              </div>
+              {s.comments.length > 0 && (
+                <ul className="flex flex-col gap-2">
+                  {s.comments.map((c) => (
+                    <AdminTrainingCommentItem
+                      key={c.id}
+                      fpoId={fpoId}
+                      sessionId={s.id}
+                      comment={c}
+                      t={t}
+                      tCommon={tCommon}
+                    />
+                  ))}
+                </ul>
+              )}
+              <TrainingCommentForm fpoId={fpoId} sessionId={s.id} t={t} tCommon={tCommon} />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {sessions.length > 0 && (
+        <DataTablePagination
+          page={page}
+          pageSize={pageSize}
+          total={totalCount}
+          onPageChange={setPage}
+          onPageSizeChange={handlePageSizeChange}
+          pageSizeOptions={[10, 20, 50]}
+        />
+      )}
+    </SectionCard>
+  );
+}
+
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
 
 // ─── Tier Assessment tab ──────────────────────────────────────────────────────
@@ -1267,6 +1605,7 @@ const TABS = [
   { key: "overview", label: "Overview", labelKey: "tab_overview", icon: Building2 },
   { key: "documents", label: "Documents", labelKey: "tab_documents", icon: FileText },
   { key: "team", label: "Team", labelKey: "section_team", icon: Users },
+  { key: "training", label: "Training", labelKey: "tab_training", icon: GraduationCap },
   { key: "audit-log", label: "Audit Log", labelKey: "tab_audit_log", icon: Clock },
   { key: "tier-assessment", label: "Tier Assessment", labelKey: "section_tier_assessment", icon: Star },
 ] as const;
@@ -1289,6 +1628,8 @@ function ApplicationDetailContent() {
   const canApprove = can("can_approve_fpo");
   const canRequestInfo = can("can_request_info");
   const canVerifyDocs = can("can_verify_documents");
+  const canManageTrainings = can("can_manage_trainings");
+  const visibleTabs = TABS.filter((tab) => tab.key !== "training" || canManageTrainings);
   const activeTab = (searchParams.get("tab") ?? "overview") as TabKey;
 
   const confirm = useConfirmStore((s) => s.confirm);
@@ -1561,7 +1902,7 @@ function ApplicationDetailContent() {
       <div className="flex flex-col gap-0 sm:flex-row">
         {/* Mobile: horizontal scrollable pill tab bar */}
         <div className="flex sm:hidden overflow-x-auto border-b gap-1 pb-1 scrollbar-none">
-          {TABS.map(({ key, label, labelKey, icon: Icon }) => {
+          {visibleTabs.map(({ key, label, labelKey, icon: Icon }) => {
             const isActive = activeTab === key;
             return (
               <button
@@ -1583,7 +1924,7 @@ function ApplicationDetailContent() {
 
         {/* Desktop: existing underline tab bar */}
         <div className="hidden sm:flex border-b gap-0">
-          {TABS.map(({ key, label, labelKey, icon: Icon }) => (
+          {visibleTabs.map(({ key, label, labelKey, icon: Icon }) => (
             <button
               key={key}
               type="button"
@@ -1939,6 +2280,9 @@ function ApplicationDetailContent() {
           <TeamTab fpoId={fpoId} />
         </SectionCard>
       )}
+
+      {/* Training — super admins, and sub-admins with can_manage_trainings */}
+      {activeTab === "training" && canManageTrainings && <TrainingTab fpoId={fpoId} t={t} tCommon={tCommon} />}
 
       {/* Audit Log */}
       {activeTab === "audit-log" && <AuditLogTab fpoId={fpoId} />}

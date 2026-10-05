@@ -9,7 +9,8 @@ export type SubAdminPermission =
   | "can_view_all_fpos"
   | "can_request_info"
   | "can_verify_documents"
-  | "can_generate_reports";
+  | "can_generate_reports"
+  | "can_manage_trainings";
 
 /**
  * What the logged-in admin may do. Super admins can do everything; sub-admins only

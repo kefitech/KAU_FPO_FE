@@ -1,5 +1,6 @@
 import { api } from "@/lib/api/client";
 import type { DataTableParams, PaginatedResponse } from "@/types/pagination";
+import type { TrainingSessionComment } from "@/types/training";
 
 const BASE = "/cbbo/training/";
 
@@ -19,11 +20,18 @@ export type CbboTrainingSession = {
   attendance_total: number;
   created_by_name: string;
   can_edit: boolean;
+  /** KAU admin / sub-admin remarks, oldest first */
+  comments: TrainingSessionComment[];
+  /** true when a KAU comment arrived after this user last opened the session */
+  has_unread_comments: boolean;
 };
 
 export type CbboAttendanceRow = { id?: number; member_name: string; attended: boolean };
 
-export type CbboTrainingSessionDetail = Omit<CbboTrainingSession, "attendance_count" | "attendance_total"> & {
+export type CbboTrainingSessionDetail = Omit<
+  CbboTrainingSession,
+  "attendance_count" | "attendance_total" | "has_unread_comments"
+> & {
   attendance: CbboAttendanceRow[];
   created_at: string;
   updated_at: string;
@@ -54,6 +62,8 @@ export const cbboTrainingApi = {
   update: (id: number, payload: Partial<Omit<CbboTrainingSessionPayload, "fpo_application_ids">>) =>
     api.patch<Wrapped<CbboTrainingSessionDetail>>(`${BASE}${id}/`, payload).then(unwrap),
   remove: (id: number) => api.delete<Wrapped<null>>(`${BASE}${id}/`).then((r) => r.data),
+  /** clears the unread KAU-comment marker for the current user */
+  markCommentsRead: (id: number) => api.post(`${BASE}${id}/comments/read/`).then(() => undefined),
   setAttendance: (id: number, attendance: { member_name: string; attended: boolean }[]) =>
     api
       .post<Wrapped<{ session_id: number; attendance_count: number }>>(`${BASE}${id}/attendance/`, { attendance })

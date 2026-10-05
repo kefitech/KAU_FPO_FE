@@ -4,13 +4,16 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 
 import { govtTrainingApi } from "@/app/government/_api/training";
 import { DataTable } from "@/components/data-table";
+import { TrainingCommentList } from "@/components/shared/training-comment-list";
 import { Button } from "@/components/ui/button";
 import { ViewSheet } from "@/components/ui/view-sheet";
 import { translationsApi } from "@/lib/api/translations";
+import { escapeHtml } from "@/lib/escape-html";
 import { useLocaleStore } from "@/stores/locale-store";
 import type { GovtTrainingSession } from "@/types/government";
 
@@ -41,6 +44,7 @@ export default function GovernmentTrainingPage() {
   const [t, setT] = useState<T>({});
   const [tCommon, setTCommon] = useState<T>({});
   const [translationsLoading, setTranslationsLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [sheet, setSheet] = useState<{ open: boolean; session: GovtTrainingSession | null }>({
     open: false,
     session: null,
@@ -71,6 +75,17 @@ export default function GovernmentTrainingPage() {
     ],
     [t],
   );
+
+  // Opening a session clears its unread KAU-comment marker for this user.
+  function openSession(row: GovtTrainingSession) {
+    setSheet({ open: true, session: row });
+    if (row.has_unread_comments) {
+      govtTrainingApi
+        .markCommentsRead(row.id)
+        .then(() => queryClient.invalidateQueries({ queryKey: ["government-training-sessions"] }))
+        .catch(() => undefined); // marker just stays until the next open
+    }
+  }
 
   const s = sheet.session;
 
@@ -106,8 +121,9 @@ export default function GovernmentTrainingPage() {
         <DataTable
           queryKey="government-training-sessions"
           queryFn={govtTrainingApi.getAll}
-          columns={getTrainingColumns(t, tCommon, (row) => setSheet({ open: true, session: row }))}
+          columns={getTrainingColumns(t, tCommon, openSession)}
           filters={filters}
+          onRowClick={openSession}
           columnsLabel={tCommon.col_header ?? "Columns"}
           toggleColumnsLabel={tCommon.col_toggle_columns ?? "Toggle columns"}
           searchPlaceholder={t.search_placeholder ?? "Search by topic or FPO..."}
@@ -119,7 +135,7 @@ export default function GovernmentTrainingPage() {
         <ViewSheet
           open={sheet.open}
           onOpenChange={(open) => setSheet((prev) => ({ ...prev, open }))}
-          title={s.topic}
+          title={escapeHtml(s.topic)}
           actions={
             s.can_edit
               ? [
@@ -141,6 +157,19 @@ export default function GovernmentTrainingPage() {
             { label: t.field_participants ?? "Participants", value: String(s.participants_count) },
             { type: "section", label: t.section_created ?? "Created By" },
             { label: t.field_created_by ?? "Official", value: s.created_by_name },
+            { type: "section", label: t.section_comments ?? "KAU Comments" },
+            {
+              label: t.col_comments ?? "Comments",
+              type: "node",
+              node: (
+                <TrainingCommentList
+                  comments={s.comments ?? []}
+                  commentByLabel={t.comment_by ?? "Comment by"}
+                  editedLabel={t.comment_edited ?? "edited"}
+                  emptyLabel={t.comments_empty ?? "No comments from KAU yet."}
+                />
+              ),
+            },
           ]}
         />
       )}

@@ -1,5 +1,6 @@
 import { api } from "@/lib/api/client";
 import type { PaginatedResponse } from "@/types/pagination";
+import type { TrainingSessionComment } from "@/types/training";
 
 // ─── Tier Assessment (Admin) ──────────────────────────────────────────────────
 
@@ -203,6 +204,41 @@ export interface ApplicationListParams {
   ordering?: string;
 }
 
+/** Who recorded the session — a CBBO officer or a government official. */
+export type TrainingSessionSource = "cbbo" | "government";
+
+export interface ApplicationTrainingSession {
+  id: number;
+  topic: string;
+  trainer_name: string;
+  date: string;
+  time: string;
+  duration_hours: string;
+  participants_count: number;
+  venue: string;
+  conducted_by_name: string;
+  conducted_by_source: TrainingSessionSource;
+  /** members marked as attended — compare with attendance_total; 0 total = not recorded yet */
+  attendance_count: number;
+  attendance_total: number;
+  /** KAU admin / sub-admin remarks, oldest first */
+  comments: AdminTrainingSessionComment[];
+}
+
+/** A comment as the admin Training tab sees it — plus what the current admin may do with it. */
+export interface AdminTrainingSessionComment extends TrainingSessionComment {
+  /** author only */
+  can_edit: boolean;
+  /** author, or any super admin */
+  can_delete: boolean;
+}
+
+export interface ApplicationTrainingSessionParams {
+  page?: number;
+  page_size?: number;
+  source?: TrainingSessionSource;
+}
+
 type Wrapped<T> = { status: string; message: string; data: T };
 const unwrap = <T>(r: { data: Wrapped<T> }) => r.data.data;
 
@@ -248,4 +284,31 @@ export const adminApplicationsApi = {
 
   approve: (fpoId: number, notes?: string) =>
     api.post(`/admin/applications/${fpoId}/approve/`, { notes }).then((r) => r.data),
+
+  // Super admin, or sub-admin with can_manage_trainings
+  getTrainingSessions: (fpoId: number, params?: ApplicationTrainingSessionParams) =>
+    api
+      .get<PaginatedResponse<ApplicationTrainingSession>>(`/admin/applications/${fpoId}/training-sessions/`, { params })
+      .then((r) => r.data),
+
+  addTrainingComment: (fpoId: number, sessionId: number, comment: string) =>
+    api
+      .post<Wrapped<AdminTrainingSessionComment>>(
+        `/admin/applications/${fpoId}/training-sessions/${sessionId}/comments/`,
+        { comment },
+      )
+      .then(unwrap),
+
+  updateTrainingComment: (fpoId: number, sessionId: number, commentId: number, comment: string) =>
+    api
+      .patch<Wrapped<AdminTrainingSessionComment>>(
+        `/admin/applications/${fpoId}/training-sessions/${sessionId}/comments/${commentId}/`,
+        { comment },
+      )
+      .then(unwrap),
+
+  deleteTrainingComment: (fpoId: number, sessionId: number, commentId: number): Promise<void> =>
+    api
+      .delete(`/admin/applications/${fpoId}/training-sessions/${sessionId}/comments/${commentId}/`)
+      .then(() => undefined),
 };

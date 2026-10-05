@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
+import { BellDot, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 
 import { govtTrainingApi } from "@/app/government/_api/training";
@@ -88,7 +89,19 @@ export function getTrainingColumns(
     {
       accessorKey: "topic",
       header: t.col_topic ?? "Topic",
-      cell: ({ row }) => <TextCell value={row.original.topic} maxWidth="max-w-[220px]" />,
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2">
+          {row.original.has_unread_comments && (
+            <span
+              role="img"
+              className="h-2 w-2 shrink-0 rounded-full bg-blue-500"
+              title={t.new_comment ?? "New comment from KAU"}
+              aria-label={t.new_comment ?? "New comment from KAU"}
+            />
+          )}
+          <TextCell value={row.original.topic} maxWidth="max-w-[220px]" />
+        </div>
+      ),
     },
     {
       accessorKey: "trainer_name",
@@ -142,6 +155,34 @@ export function getTrainingColumns(
       meta: { hideOnMobile: true },
       enableSorting: false,
       cell: ({ row }) => <TextCell value={row.original.created_by_name} maxWidth="max-w-[160px]" muted />,
+    },
+    {
+      // KAU admin / sub-admin remarks — the text itself shows in the view sheet
+      id: "comments",
+      header: t.col_comments ?? "Comments",
+      enableSorting: false,
+      cell: ({ row }) => {
+        const count = row.original.comments?.length ?? 0;
+        if (count === 0) return <span className="text-muted-foreground text-xs">—</span>;
+        // unread → blue bell, cleared once the user opens the session
+        if (row.original.has_unread_comments) {
+          return (
+            <Badge
+              className="gap-1 bg-blue-100 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/40 dark:text-blue-300"
+              title={t.new_comment ?? "New comment from KAU"}
+            >
+              <BellDot className="h-3 w-3" />
+              {count}
+            </Badge>
+          );
+        }
+        return (
+          <Badge variant="secondary" className="gap-1">
+            <MessageSquare className="h-3 w-3" />
+            {count}
+          </Badge>
+        );
+      },
     },
     {
       id: "actions",
