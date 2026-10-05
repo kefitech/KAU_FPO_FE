@@ -1,6 +1,5 @@
 import { api } from "@/lib/api/client";
 import type {
-  AssignedFpo,
   AvailablePermission,
   BulkInviteResult,
   DistrictCapStatus,
@@ -44,12 +43,6 @@ export const subAdminsApi = {
   getAvailablePermissions: (params?: DataTableParams) =>
     api.get<PaginatedResponse<AvailablePermission>>(`${BASE}available-permissions/`, { params }).then((r) => r.data),
 
-  getAssignedFpos: (id: number) => api.get<Wrapped<AssignedFpo[]>>(`${BASE}${id}/assigned-fpos/`).then(unwrap),
-
-  /** add — assign (moves an FPO off any other sub-admin); remove — unassign; replace — exact list */
-  setAssignedFpos: (id: number, action: "add" | "remove" | "replace", fpo_ids: number[]) =>
-    api.post<Wrapped<AssignedFpo[]>>(`${BASE}${id}/assigned-fpos/`, { action, fpo_ids }).then(unwrap),
-
   // ─── District management (KAU suggestion #1) ────────────────────────────
   transferDistrict: (id: number, to_district: string, reason: string) =>
     api.post<Wrapped<SubAdmin>>(`${BASE}${id}/transfer-district/`, { to_district, reason }).then(unwrap),
@@ -57,8 +50,7 @@ export const subAdminsApi = {
   getDistrictTransfers: (id: number) =>
     api.get<Wrapped<DistrictTransferRow[]>>(`${BASE}${id}/district-transfers/`).then(unwrap),
 
-  getDistrictCapStatus: () =>
-    api.get<Wrapped<DistrictCapStatus>>(`${BASE}district-cap-status/`).then(unwrap),
+  getDistrictCapStatus: () => api.get<Wrapped<DistrictCapStatus>>(`${BASE}district-cap-status/`).then(unwrap),
 
   bulkInviteTemplate: () =>
     api.get(`${BASE}bulk-invite-template/`, { responseType: "blob" }).then((r) => r.data as Blob),
@@ -80,6 +72,5 @@ const CONFIG_BASE = "/admin/sub-admin-config/";
 export const subAdminConfigApi = {
   get: () => api.get<Wrapped<SubAdminConfig>>(CONFIG_BASE).then(unwrap),
 
-  patch: (payload: SubAdminConfigPayload) =>
-    api.patch<Wrapped<SubAdminConfig>>(CONFIG_BASE, payload).then(unwrap),
+  patch: (payload: SubAdminConfigPayload) => api.patch<Wrapped<SubAdminConfig>>(CONFIG_BASE, payload).then(unwrap),
 };

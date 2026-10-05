@@ -25,7 +25,7 @@ export interface AssessmentUploadData {
 export interface TierAssessmentData {
   id: string;
   financial_year: string;
-  status: 'draft' | 'submitted';
+  status: "draft" | "submitted";
   total_score: number | null;
   tier_assigned: string;
   domain_scores: Record<string, number>;
@@ -87,18 +87,8 @@ export interface ApplicationListItem {
   primary_user_name: string | null;
   primary_user_email: string | null;
   primary_user_phone: string | null;
-  assigned_subadmin_id: number | null;
-  assigned_subadmin_name: string | null;
   created_at: string;
   updated_at: string;
-}
-
-export interface ApplicationAssignedSubAdmin {
-  id: number;
-  name: string;
-  email: string;
-  assigned_by: string | null;
-  assigned_at: string;
 }
 
 export interface ApplicationDocument {
@@ -143,7 +133,6 @@ export interface ApplicationDetail {
     claimed_at: string;
   } | null;
   primary_user: ApplicationPrimaryUser | null;
-  assigned_subadmin: ApplicationAssignedSubAdmin | null;
   // Step 1
   name: string;
   name_ml: string;
@@ -211,8 +200,6 @@ export interface ApplicationListParams {
   status?: string;
   district?: string;
   tier?: string;
-  /** sub-admin user ID, "me", or "unassigned" */
-  assigned_subadmin?: string;
   ordering?: string;
 }
 
@@ -244,28 +231,21 @@ export const adminApplicationsApi = {
     }),
 
   getTierHistory: (fpoId: number): Promise<TierAuditLogEntry[]> =>
-    api
-      .get("/admin/audit-logs/", { params: { action: "tier_recalculation", fpo_id: fpoId } })
-      .then((r) => {
-        const d = r.data as Record<string, unknown>;
-        return (d.data ?? d.results ?? []) as TierAuditLogEntry[];
-      }),
+    api.get("/admin/audit-logs/", { params: { action: "tier_recalculation", fpo_id: fpoId } }).then((r) => {
+      const d = r.data as Record<string, unknown>;
+      return (d.data ?? d.results ?? []) as TierAuditLogEntry[];
+    }),
 
   assignTier: (fpoId: number, payload: AssignTierPayload): Promise<void> =>
     api.post(`/admin/applications/${fpoId}/assign-tier/`, payload).then(() => undefined),
 
   getTierAssessment: (fpoId: number) =>
-    api.get<{ status: string; data: { fpo_id: number; assessments: TierAssessmentData[] } }>(
-      `/admin/applications/${fpoId}/tier-assessment/`
-    ).then((r) => r.data.data.assessments),
+    api
+      .get<{ status: string; data: { fpo_id: number; assessments: TierAssessmentData[] } }>(
+        `/admin/applications/${fpoId}/tier-assessment/`,
+      )
+      .then((r) => r.data.data.assessments),
 
   approve: (fpoId: number, notes?: string) =>
     api.post(`/admin/applications/${fpoId}/approve/`, { notes }).then((r) => r.data),
-
-  // Super admin only — one sub-admin per FPO; assigning replaces the previous one
-  assignSubAdmin: (fpoId: number, subadminId: number): Promise<void> =>
-    api.post(`/admin/applications/${fpoId}/assign-subadmin/`, { subadmin_id: subadminId }).then(() => undefined),
-
-  unassignSubAdmin: (fpoId: number): Promise<void> =>
-    api.post(`/admin/applications/${fpoId}/unassign-subadmin/`).then(() => undefined),
 };

@@ -18,8 +18,6 @@ import type { SubAdmin } from "@/types/admin";
 type T = Record<string, string>;
 
 export interface SubAdminColumnHandlers {
-  /** opens the Assign FPOs dialog (rendered at page level, outside the clickable row) */
-  onAssignFpos?: (subAdmin: SubAdmin) => void;
   /** opens the Transfer District dialog (rendered at page level) */
   onTransferDistrict?: (subAdmin: SubAdmin) => void;
 }
@@ -117,14 +115,6 @@ function SubAdminActions({
       actions={[
         { label: tCommon.edit ?? "Edit", onClick: () => router.push(`/admin/sub-admins/${subAdmin.id}/edit`) },
         {
-          // Legacy per-FPO assignment — only meaningful for sub-admins
-          // that don't have a district yet. Once they have one, district
-          // scoping takes over and this menu action is irrelevant.
-          label: t.assign_fpos ?? "Assign FPOs",
-          onClick: () => handlers.onAssignFpos?.(subAdmin),
-          hidden: !handlers.onAssignFpos || !!subAdmin.district,
-        },
-        {
           label: t.transfer_district ?? "Transfer District",
           onClick: () => handlers.onTransferDistrict?.(subAdmin),
           hidden: !handlers.onTransferDistrict,
@@ -205,7 +195,18 @@ export function getSubAdminColumns(
       header: t.col_district ?? "District",
       cell: ({ row }) => {
         const code = row.original.district;
-        if (!code) return <span className="text-muted-foreground text-xs">{t.no_district ?? "—"}</span>;
+        // No district → sees no FPOs; the super admin fixes it with Transfer District.
+        if (!code) {
+          return (
+            <Badge
+              variant="outline"
+              className="border-amber-500/50 bg-amber-500/10 text-[11px] text-amber-700 dark:text-amber-400"
+              title={t.no_district_hint ?? "Sees no FPOs until transferred to a district"}
+            >
+              {t.no_district ?? "No district"}
+            </Badge>
+          );
+        }
         return (
           <Badge variant="outline" className="font-mono text-[11px]">
             {code}
@@ -220,18 +221,15 @@ export function getSubAdminColumns(
       enableSorting: false,
       cell: ({ row }) => {
         const sa = row.original;
-        const count = sa.visible_fpos_count ?? sa.assigned_fpos_count ?? 0;
-        if (count === 0) {
+        const count = sa.visible_fpos_count ?? 0;
+        if (!sa.district || count === 0) {
           return <span className="text-muted-foreground text-xs">{t.no_assigned_fpos_short ?? "None"}</span>;
         }
         // Clickable — jump to the applications list pre-filtered so the admin
         // can drill into each FPO for tier / products / documents / etc.
-        const query = sa.district
-          ? `district=${sa.district}`
-          : `assigned_subadmin=${sa.id}`;
         return (
           <Link
-            href={`/admin/applications?${query}`}
+            href={`/admin/applications?district=${sa.district}`}
             onClick={(e) => e.stopPropagation()}
             className="inline-flex"
           >
