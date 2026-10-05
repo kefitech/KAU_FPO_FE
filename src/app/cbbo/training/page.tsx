@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 
-import { govtTrainingApi } from "@/app/government/_api/training";
+import { type CbboTrainingSession, cbboTrainingApi } from "@/app/cbbo/_api/training";
 import { DataTable } from "@/components/data-table";
 import { TrainingCommentList } from "@/components/shared/training-comment-list";
 import { Button } from "@/components/ui/button";
@@ -15,11 +15,14 @@ import { ViewSheet } from "@/components/ui/view-sheet";
 import { translationsApi } from "@/lib/api/translations";
 import { escapeHtml } from "@/lib/escape-html";
 import { useLocaleStore } from "@/stores/locale-store";
-import type { GovtTrainingSession } from "@/types/government";
 
 import { getTrainingColumns } from "./_components/columns";
 
 type T = Record<string, string>;
+
+// The labels are shared with the government training page, so the Malayalam
+// already seeded for it applies here too.
+const TRANSLATION_NS = "government_training";
 
 const DISTRICT_CODES = [
   "TVM",
@@ -38,14 +41,14 @@ const DISTRICT_CODES = [
   "KSD",
 ];
 
-export default function GovernmentTrainingPage() {
+export default function CbboTrainingPage() {
   const router = useRouter();
   const locale = useLocaleStore((s) => s.locale);
   const [t, setT] = useState<T>({});
   const [tCommon, setTCommon] = useState<T>({});
   const [translationsLoading, setTranslationsLoading] = useState(true);
   const queryClient = useQueryClient();
-  const [sheet, setSheet] = useState<{ open: boolean; session: GovtTrainingSession | null }>({
+  const [sheet, setSheet] = useState<{ open: boolean; session: CbboTrainingSession | null }>({
     open: false,
     session: null,
   });
@@ -53,9 +56,9 @@ export default function GovernmentTrainingPage() {
   useEffect(() => {
     setTranslationsLoading(true);
     translationsApi
-      .getPublic(locale, "government_training,districts,common")
+      .getPublic(locale, `${TRANSLATION_NS},districts,common`)
       .then((data) => {
-        setT({ ...(data.districts ?? {}), ...(data.government_training ?? {}) });
+        setT({ ...(data.districts ?? {}), ...(data[TRANSLATION_NS] ?? {}) });
         setTCommon(data.common ?? {});
       })
       .catch(() => undefined)
@@ -77,12 +80,12 @@ export default function GovernmentTrainingPage() {
   );
 
   // Opening a session clears its unread KAU-comment marker for this user.
-  function openSession(row: GovtTrainingSession) {
+  function openSession(row: CbboTrainingSession) {
     setSheet({ open: true, session: row });
     if (row.has_unread_comments) {
-      govtTrainingApi
+      cbboTrainingApi
         .markCommentsRead(row.id)
-        .then(() => queryClient.invalidateQueries({ queryKey: ["government-training-sessions"] }))
+        .then(() => queryClient.invalidateQueries({ queryKey: ["cbbo-training-sessions"] }))
         .catch(() => undefined); // marker just stays until the next open
     }
   }
@@ -111,7 +114,7 @@ export default function GovernmentTrainingPage() {
             {t.page_description ?? "Sessions conducted for FPOs in your jurisdiction"}
           </p>
         </div>
-        <Button size="sm" onClick={() => router.push("/government/training/new")}>
+        <Button size="sm" onClick={() => router.push("/cbbo/training/new")}>
           <Plus className="mr-1.5 h-4 w-4" />
           {t.btn_new_session ?? "New Session"}
         </Button>
@@ -119,8 +122,8 @@ export default function GovernmentTrainingPage() {
 
       <Suspense>
         <DataTable
-          queryKey="government-training-sessions"
-          queryFn={govtTrainingApi.getAll}
+          queryKey="cbbo-training-sessions"
+          queryFn={cbboTrainingApi.getAll}
           columns={getTrainingColumns(t, tCommon, openSession)}
           filters={filters}
           onRowClick={openSession}
@@ -141,7 +144,7 @@ export default function GovernmentTrainingPage() {
               ? [
                   {
                     label: t.btn_edit_session ?? "Edit Session",
-                    onClick: () => router.push(`/government/training/${s.id}`),
+                    onClick: () => router.push(`/cbbo/training/${s.id}`),
                   },
                 ]
               : []

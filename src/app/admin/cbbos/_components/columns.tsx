@@ -7,6 +7,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
 
 import { cbbosApi } from "@/app/admin/_api/cbbos";
+import { TextCell } from "@/components/data-table/cell-helpers";
 import { RowActions } from "@/components/data-table/row-actions";
 import { Badge } from "@/components/ui/badge";
 import { useConfirmStore } from "@/stores/confirm-store";
@@ -184,7 +185,12 @@ export function getCBBOColumns(t: T = {}, tConfirm: T = {}, tCommon: T = {}): Co
       header: t.col_name ?? "Name",
       cell: ({ row }) => {
         const name = `${row.original.first_name} ${row.original.last_name}`.trim();
-        return <span className="font-medium">{name || "—"}</span>;
+        // capped like the other tables' name columns — full name shows on hover
+        return (
+          <span className="font-medium">
+            <TextCell value={name} maxWidth="max-w-[180px]" />
+          </span>
+        );
       },
     },
     {

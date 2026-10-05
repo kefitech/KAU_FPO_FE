@@ -7,12 +7,11 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { BellDot, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 
-import { govtTrainingApi } from "@/app/government/_api/training";
+import { apiErrorMessage, type CbboTrainingSession, cbboTrainingApi } from "@/app/cbbo/_api/training";
 import { TextCell } from "@/components/data-table/cell-helpers";
 import { RowActions } from "@/components/data-table/row-actions";
 import { Badge } from "@/components/ui/badge";
 import { useConfirmStore } from "@/stores/confirm-store";
-import type { GovtTrainingSession } from "@/types/government";
 
 type T = Record<string, string>;
 
@@ -22,24 +21,23 @@ function TrainingActions({
   tCommon,
   onView,
 }: {
-  session: GovtTrainingSession;
+  session: CbboTrainingSession;
   t: T;
   tCommon: T;
-  onView: (row: GovtTrainingSession) => void;
+  onView: (row: CbboTrainingSession) => void;
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const confirm = useConfirmStore((s) => s.confirm);
 
   const deleteMutation = useMutation({
-    mutationFn: () => govtTrainingApi.remove(session.id),
+    mutationFn: () => cbboTrainingApi.remove(session.id),
     onSuccess: () => {
       toast.success(t.toast_deleted ?? "Training session deleted");
-      queryClient.invalidateQueries({ queryKey: ["government-training-sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["cbbo-training-sessions"] });
     },
     onError: (error: unknown) => {
-      const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      toast.error(msg ?? tCommon.delete_failed ?? "Failed to delete session");
+      toast.error(apiErrorMessage(error, tCommon.delete_failed ?? "Failed to delete session"));
     },
   });
 
@@ -64,7 +62,7 @@ function TrainingActions({
           ? [
               {
                 label: t.action_edit ?? tCommon.edit ?? "Edit",
-                onClick: () => router.push(`/government/training/${session.id}`),
+                onClick: () => router.push(`/cbbo/training/${session.id}`),
                 separator: true,
               },
               {
@@ -83,8 +81,8 @@ function TrainingActions({
 export function getTrainingColumns(
   t: T,
   tCommon: T,
-  onView: (row: GovtTrainingSession) => void,
-): ColumnDef<GovtTrainingSession>[] {
+  onView: (row: CbboTrainingSession) => void,
+): ColumnDef<CbboTrainingSession>[] {
   return [
     {
       accessorKey: "topic",
@@ -120,7 +118,7 @@ export function getTrainingColumns(
       header: t.col_district ?? "District",
       meta: { hideOnMobile: true },
       cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">
+        <span className="text-muted-foreground text-sm">
           {t[`district_${row.original.district}`] ?? row.original.district}
         </span>
       ),

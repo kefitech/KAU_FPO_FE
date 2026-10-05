@@ -11,11 +11,14 @@ export const govtTrainingApi = {
   getAll: (params?: DataTableParams) =>
     api.get<PaginatedResponse<GovtTrainingSession>>(BASE, { params }).then((r) => r.data),
   getById: (id: number) => api.get<Wrapped<GovtTrainingSessionDetail>>(`${BASE}${id}/`).then(unwrap),
-  create: (payload: GovtTrainingSessionPayload) =>
-    api.post<Wrapped<{ id: number }>>(BASE, payload).then(unwrap),
+  create: (payload: GovtTrainingSessionPayload) => api.post<Wrapped<{ id: number }>>(BASE, payload).then(unwrap),
   setAttendance: (id: number, attendance: { member_name: string; attended: boolean }[]) =>
-    api.post<Wrapped<{ session_id: number; attendance_count: number }>>(`${BASE}${id}/attendance/`, { attendance }).then(unwrap),
+    api
+      .post<Wrapped<{ session_id: number; attendance_count: number }>>(`${BASE}${id}/attendance/`, { attendance })
+      .then(unwrap),
   update: (id: number, payload: Partial<GovtTrainingSessionPayload>) =>
-  api.patch<Wrapped<GovtTrainingSessionDetail>>(`${BASE}${id}/`, payload).then(unwrap),
+    api.patch<Wrapped<GovtTrainingSessionDetail>>(`${BASE}${id}/`, payload).then(unwrap),
   remove: (id: number) => api.delete<Wrapped<null>>(`${BASE}${id}/`).then((r) => r.data),
+  /** clears the unread KAU-comment marker for the current user */
+  markCommentsRead: (id: number) => api.post(`${BASE}${id}/comments/read/`).then(() => undefined),
 };
