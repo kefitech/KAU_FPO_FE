@@ -4,11 +4,12 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 
 import { govtTrainingApi } from "@/app/government/_api/training";
 import { DataTable } from "@/components/data-table";
+import type { FilterConfig } from "@/components/data-table/data-table-toolbar";
 import { TrainingCommentList } from "@/components/shared/training-comment-list";
 import { Button } from "@/components/ui/button";
 import { ViewSheet } from "@/components/ui/view-sheet";
@@ -20,23 +21,6 @@ import type { GovtTrainingSession } from "@/types/government";
 import { getTrainingColumns } from "./_components/columns";
 
 type T = Record<string, string>;
-
-const DISTRICT_CODES = [
-  "TVM",
-  "KLM",
-  "PTA",
-  "ALP",
-  "KTM",
-  "IDK",
-  "EKM",
-  "TSR",
-  "PKD",
-  "MLP",
-  "KZD",
-  "WYD",
-  "KNR",
-  "KSD",
-];
 
 export default function GovernmentTrainingPage() {
   const router = useRouter();
@@ -62,18 +46,29 @@ export default function GovernmentTrainingPage() {
       .finally(() => setTranslationsLoading(false));
   }, [locale]);
 
-  const filters = useMemo(
+  // Sessions are already limited to the official's jurisdiction, so no district filter.
+  // Keyed under the list's key so invalidating the list refreshes these choices too.
+  const { data: filterOptions } = useQuery({
+    queryKey: ["government-training-sessions", "filter-options"],
+    queryFn: govtTrainingApi.getFilterOptions,
+  });
+
+  const filters: FilterConfig[] = useMemo(
     () => [
       {
-        key: "district",
-        label: t.filter_all_district ?? "All District",
-        options: DISTRICT_CODES.map((code) => ({
-          value: code,
-          label: t[`district_${code}`] ?? code,
-        })),
+        key: "fpo",
+        label: t.filter_all_fpo ?? "All FPOs",
+        options: (filterOptions?.fpos ?? []).map((f) => ({ value: String(f.id), label: f.name })),
       },
+      {
+        key: "created_by",
+        label: t.filter_all_created_by ?? "Created By: All",
+        options: (filterOptions?.created_by ?? []).map((u) => ({ value: String(u.id), label: u.name })),
+      },
+      { key: "from_date", label: t.filter_from_date ?? "From", type: "date" },
+      { key: "to_date", label: t.filter_to_date ?? "To", type: "date" },
     ],
-    [t],
+    [t, filterOptions],
   );
 
   // Opening a session clears its unread KAU-comment marker for this user.
