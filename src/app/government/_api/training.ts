@@ -1,5 +1,10 @@
 import { api } from "@/lib/api/client";
-import type { GovtTrainingSession, GovtTrainingSessionDetail, GovtTrainingSessionPayload } from "@/types/government";
+import type {
+  GovtTrainingFilterOptions,
+  GovtTrainingSession,
+  GovtTrainingSessionDetail,
+  GovtTrainingSessionPayload,
+} from "@/types/government";
 import type { DataTableParams, PaginatedResponse } from "@/types/pagination";
 
 const BASE = "/government/training-sessions/";
@@ -10,6 +15,7 @@ const unwrap = <T>(r: { data: Wrapped<T> }) => r.data.data;
 export const govtTrainingApi = {
   getAll: (params?: DataTableParams) =>
     api.get<PaginatedResponse<GovtTrainingSession>>(BASE, { params }).then((r) => r.data),
+  getFilterOptions: () => api.get<Wrapped<GovtTrainingFilterOptions>>(`${BASE}filter-options/`).then(unwrap),
   getById: (id: number) => api.get<Wrapped<GovtTrainingSessionDetail>>(`${BASE}${id}/`).then(unwrap),
   create: (payload: GovtTrainingSessionPayload) => api.post<Wrapped<{ id: number }>>(BASE, payload).then(unwrap),
   setAttendance: (id: number, attendance: { member_name: string; attended: boolean }[]) =>

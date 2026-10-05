@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Building2, CheckCircle2, Mail, MapPin, Phone, X } from "lucide-react";
+import { Building2, CheckCircle2, LayoutDashboard, Mail, MapPin, Phone, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { buyerDashboardApi } from "@/app/buyer/_api/dashboard";
@@ -68,6 +68,15 @@ export default function BuyerDashboardPage() {
   const [commoditiesDraft, setCommoditiesDraft] = useState<string[]>([]);
   const [organisationDraft, setOrganisationDraft] = useState("");
   const [editingProfile, setEditingProfile] = useState(false);
+  const profileFormRef = useRef<HTMLDivElement>(null);
+
+  // The edit form renders above the stats while "Your Details" (where Edit is
+  // clicked) sits at the bottom, so bring the form into view when editing starts.
+  useEffect(() => {
+    if (!editingProfile) return;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    profileFormRef.current?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+  }, [editingProfile]);
 
   const { data: commodities } = useQuery({
     queryKey: ["master-data", "commodity", locale],
@@ -83,6 +92,38 @@ export default function BuyerDashboardPage() {
       setOrganisationDraft(data.organisation || "");
     }
   }, [data]);
+
+  // Welcome toast on first login
+  useEffect(() => {
+    if (translationsLoading || !data) return;
+    if (sessionStorage.getItem("show_welcome") === "1") {
+      sessionStorage.removeItem("show_welcome");
+      const fullName = user ? `${user.first_name} ${user.last_name}`.trim() : data.name;
+      const initials = user
+        ? `${user.first_name[0] ?? ""}${user.last_name[0] ?? ""}`.toUpperCase()
+        : data.name.slice(0, 2).toUpperCase();
+      const buyerType =
+        data.buyer_type === "fpo"
+          ? (t.buyer_type_fpo ?? "FPO Buyer")
+          : (t.buyer_type_external ?? "External Buyer");
+      toast.custom(
+        () => (
+          <div className="flex w-72 items-center gap-3 rounded-xl border bg-background px-4 py-3 shadow-lg sm:w-80">
+            <Avatar className="h-10 w-10 shrink-0">
+              <AvatarFallback className="bg-green-100 font-semibold text-green-700 text-sm">{initials}</AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col">
+              <p className="font-semibold text-foreground text-sm">
+                {(t.welcome_msg ?? "Welcome, {name}").replace("{name}", fullName)}
+              </p>
+              <p className="text-muted-foreground text-xs">{buyerType}</p>
+            </div>
+          </div>
+        ),
+        { duration: 4000 },
+      );
+    }
+  }, [user, t, translationsLoading, data]);
 
   const saveMutation = useMutation({
     mutationFn: () =>
@@ -129,23 +170,14 @@ export default function BuyerDashboardPage() {
     saveMutation.mutate();
   };
 
-  const fullName = user ? `${user.first_name} ${user.last_name}`.trim() : data.name;
-  const initials = user
-    ? `${user.first_name[0] ?? ""}${user.last_name[0] ?? ""}`.toUpperCase()
-    : data.name.slice(0, 2).toUpperCase();
-
   return (
     <div className="flex flex-col gap-6 px-3 py-4 sm:px-6 sm:py-6">
       {/* ── Header ── */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <Avatar className="h-12 w-12">
-            <AvatarFallback className="bg-green-100 font-semibold text-green-700">{initials}</AvatarFallback>
-          </Avatar>
+        <div className="flex items-center gap-2">
+          <LayoutDashboard className="h-5 w-5 text-muted-foreground" />
           <div>
-            <h1 className="font-bold text-xl leading-tight sm:text-2xl">
-              {(t.welcome_msg ?? "Welcome, {name}").replace("{name}", fullName)}
-            </h1>
+            <h1 className="font-bold text-2xl">{t.page_title ?? "Buyer Dashboard"}</h1>
             <p className="text-muted-foreground text-sm">
               {data.buyer_type === "fpo"
                 ? (t.buyer_type_fpo ?? "FPO Buyer")
@@ -161,7 +193,7 @@ export default function BuyerDashboardPage() {
 
       {/* ── Complete your profile ── (shows when incomplete, OR when the buyer clicked Edit) */}
       {(profileIncomplete || editingProfile) && (
-        <Card className="border-amber-300 bg-amber-50/40 dark:bg-amber-950/20">
+        <Card ref={profileFormRef} className="scroll-mt-4 border-amber-300 bg-amber-50/40 dark:bg-amber-950/20">
           <CardHeader>
             <CardTitle className="text-base">
               {profileIncomplete

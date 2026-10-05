@@ -306,6 +306,12 @@ export interface GovtTrainingSession {
   has_unread_comments: boolean;
 }
 
+/** Choices for the training list's FPO / Created By filters, limited to sessions in the official's scope */
+export interface GovtTrainingFilterOptions {
+  fpos: { id: number; name: string }[];
+  created_by: { id: number; name: string }[];
+}
+
 export interface GovtTrainingSessionDetail {
   id: number;
   fpo: number;
