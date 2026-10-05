@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ViewSheet } from "@/components/ui/view-sheet";
+import { useAdminPermissions } from "@/hooks/use-admin-permissions";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 
@@ -94,6 +95,7 @@ export default function ApplicationsPage() {
   const [tCommon, setTCommon] = useState<T>({});
   const [downloading, setDownloading] = useState(false);
   const [translationsLoading, setTranslationsLoading] = useState(true);
+  const canGenerateReports = useAdminPermissions().can("can_generate_reports");
 
   const filters = useMemo(
     () => [
@@ -205,34 +207,37 @@ export default function ApplicationsPage() {
           </p>
         </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button size="sm" variant="outline" disabled={downloading} className="self-start sm:self-auto">
-              {downloading ? (
-                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-              ) : (
-                <FileSpreadsheet className="mr-1.5 h-4 w-4" />
-              )}
-              {t.btn_download ?? "Download Report"}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
-              {searchParams.get("status") || searchParams.get("district") || searchParams.get("tier")
-                ? (t.download_label_filtered ?? "Downloads with active filters")
-                : (t.download_label_all ?? "Downloads all applications")}
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => handleDownload("excel")}>
-              <FileSpreadsheet className="mr-2 h-4 w-4 text-green-600" />
-              {t.download_as_excel ?? "Download as Excel"}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleDownload("pdf")}>
-              <FileText className="mr-2 h-4 w-4 text-red-600" />
-              {t.download_as_pdf ?? "Download as PDF"}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {/* sub-admins need can_generate_reports */}
+        {canGenerateReports && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="outline" disabled={downloading} className="self-start sm:self-auto">
+                {downloading ? (
+                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                ) : (
+                  <FileSpreadsheet className="mr-1.5 h-4 w-4" />
+                )}
+                {t.btn_download ?? "Download Report"}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
+                {searchParams.get("status") || searchParams.get("district") || searchParams.get("tier")
+                  ? (t.download_label_filtered ?? "Downloads with active filters")
+                  : (t.download_label_all ?? "Downloads all applications")}
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => handleDownload("excel")}>
+                <FileSpreadsheet className="mr-2 h-4 w-4 text-green-600" />
+                {t.download_as_excel ?? "Download as Excel"}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleDownload("pdf")}>
+                <FileText className="mr-2 h-4 w-4 text-red-600" />
+                {t.download_as_pdf ?? "Download as PDF"}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       <Suspense>
