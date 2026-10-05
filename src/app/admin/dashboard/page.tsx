@@ -26,6 +26,7 @@ import { FpoReportCard } from "./_components/fpo-report-card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAdminPermissions } from "@/hooks/use-admin-permissions";
 import { translationsApi } from "@/lib/api/translations";
 import { useAuthStore } from "@/stores/auth-store";
 import { useLocaleStore } from "@/stores/locale-store";
@@ -126,6 +127,7 @@ export default function AdminDashboardPage() {
   const locale = useLocaleStore((s) => s.locale);
   const [t, setT] = useState<T>({});
   const [translationsLoading, setTranslationsLoading] = useState(true);
+  const canGenerateReports = useAdminPermissions().can("can_generate_reports");
 
 
   useEffect(() => {
@@ -503,8 +505,8 @@ export default function AdminDashboardPage() {
         </Card>
       </div>
 
-      {/* ── Row 4: Reports ───────────────────────────────────────────────────── */}
-      <FpoReportCard t={t} />
+      {/* ── Row 4: Reports — sub-admins need can_generate_reports ─────────────── */}
+      {canGenerateReports && <FpoReportCard t={t} />}
     </div>
   );
 }
