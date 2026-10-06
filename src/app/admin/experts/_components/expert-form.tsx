@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { useAdminPermissions } from "@/hooks/use-admin-permissions";
 import type { AdminExpert } from "@/types/admin";
 import { DISTRICT_OPTIONS } from "@/types/fpo";
 
@@ -93,10 +94,14 @@ export function ExpertForm({ mode, expert, t = {}, tCommon = {} }: ExpertFormPro
   const queryClient = useQueryClient();
   const isEdit = mode === "edit";
 
+  const { isSubAdmin, district: ownDistrict } = useAdminPermissions();
+
   const {
     control,
     handleSubmit,
     reset,
+    setValue,
+    getValues,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -111,10 +116,20 @@ export function ExpertForm({ mode, expert, t = {}, tCommon = {} }: ExpertFormPro
     () => EXPERT_CATEGORIES.map((c) => ({ ...c, label: t[`cat_${c.value}`] ?? c.label })),
     [t],
   );
+  // Sub-admins may only add experts to their own district, so that's the only option offered
+  // (plus the expert's current district when editing, so it still displays).
   const translatedDistricts = useMemo(
-    () => DISTRICT_SELECT_OPTIONS.map((d) => ({ ...d, label: t[`district_${d.value}`] ?? d.label })),
-    [t],
+    () =>
+      DISTRICT_SELECT_OPTIONS.filter((d) => !isSubAdmin || d.value === ownDistrict || d.value === expert?.district).map(
+        (d) => ({ ...d, label: t[`district_${d.value}`] ?? d.label }),
+      ),
+    [t, isSubAdmin, ownDistrict, expert?.district],
   );
+
+  // New experts from a sub-admin start in the sub-admin's district.
+  useEffect(() => {
+    if (!isEdit && isSubAdmin && ownDistrict && !getValues("district")) setValue("district", ownDistrict);
+  }, [isEdit, isSubAdmin, ownDistrict, getValues, setValue]);
 
   const mutation = useMutation({
     mutationFn: (values: FormValues) => {

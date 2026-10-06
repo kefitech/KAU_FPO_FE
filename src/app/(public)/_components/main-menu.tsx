@@ -32,7 +32,7 @@ const MainMenu = ({ openIndex, toggleSubMenu, navbarPlacement }: Props) => {
         <a href="/v1/login">{t.sign_in ?? "Sign In"}</a>
       </li>
       <li>
-        <a href="/register">{t.get_started ?? "Get Started"}</a>
+        <a href="/register">{t.get_started ?? "Register"}</a>
       </li>
       <li className={`dropdown pages-dropdown ${openIndex === 1 ? "on" : ""}`}>
         <Link href="#" className="dropdown-toggle" data-toggle="dropdown" onClick={toggleSubMenu?.(1)}>

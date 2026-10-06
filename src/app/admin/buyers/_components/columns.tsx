@@ -19,7 +19,16 @@ import { useConfirmStore } from "@/stores/confirm-store";
 
 type T = Record<string, string>;
 
-function StatusBadge({ status, label }: { status: BuyerStatus | "deactivated"; label: string }) {
+/** Status shown for a buyer: a verified buyer whose login is switched off shows as "Deactivated". */
+export function buyerDisplayStatus(row: AdminBuyer, t: T): { status: BuyerStatus | "deactivated"; label: string } {
+  const isDeactivated = row.status === "verified" && row.account_active === false;
+  return {
+    status: isDeactivated ? "deactivated" : row.status,
+    label: isDeactivated ? (t.status_deactivated ?? "Deactivated") : (t[`status_${row.status}`] ?? row.status),
+  };
+}
+
+export function StatusBadge({ status, label }: { status: BuyerStatus | "deactivated"; label: string }) {
   const variants: Record<BuyerStatus | "deactivated", string> = {
     pending: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
     verified: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
@@ -254,15 +263,17 @@ export function getBuyerColumns(t: T = {}): ColumnDef<AdminBuyer>[] {
       cell: ({ row }) => row.original.contact_phone || "—",
     },
     {
+      accessorKey: "location",
+      header: t.col_district ?? "District",
+      meta: { hideOnMobile: true },
+      cell: ({ row }) => row.original.district_display || "—",
+    },
+    {
       accessorKey: "status",
       header: t.col_status ?? "Status",
       cell: ({ row }) => {
-        const isDeactivated = row.original.status === "verified" && row.original.account_active === false;
-        const displayStatus = isDeactivated ? "deactivated" : row.original.status;
-        const label = isDeactivated
-          ? (t.status_deactivated ?? "Deactivated")
-          : (t[`status_${row.original.status}`] ?? row.original.status);
-        return <StatusBadge status={displayStatus} label={label} />;
+        const { status, label } = buyerDisplayStatus(row.original, t);
+        return <StatusBadge status={status} label={label} />;
       },
     },
     {

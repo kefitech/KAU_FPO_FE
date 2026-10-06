@@ -10,8 +10,6 @@ import {
   Bar,
   BarChart,
   Cell,
-  Pie,
-  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -24,6 +22,7 @@ import dynamic from "next/dynamic";
 import { adminDashboardApi } from "@/app/admin/_api/dashboard";
 import { FpoReportCard } from "./_components/fpo-report-card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { DonutChart } from "@/components/shared/donut-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAdminPermissions } from "@/hooks/use-admin-permissions";
@@ -364,42 +363,7 @@ export default function AdminDashboardPage() {
             {isLoading ? (
               <ChartSkeleton h="h-48" />
             ) : (
-              <>
-                <ResponsiveContainer width="100%" height={180}>
-                  <PieChart>
-                    <Pie
-                      data={statusData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={55}
-                      outerRadius={80}
-                      dataKey="value"
-                      paddingAngle={2}
-                    >
-                      {statusData.map((entry) => (
-                        <Cell key={entry.name} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{ fontSize: 12, borderRadius: 8 }}
-                      formatter={(v) => [v ?? 0, "FPOs"] as [number, string]}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="flex w-full flex-wrap justify-center gap-x-4 gap-y-1.5">
-                  {statusData.map((s) => (
-                    <div key={s.name} className="flex items-center gap-1.5">
-                      <span
-                        className="h-2.5 w-2.5 shrink-0 rounded-full"
-                        style={{ background: s.color }}
-                      />
-                      <span className="text-muted-foreground text-xs">
-                        {s.name} ({s.value})
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </>
+              <DonutChart data={statusData} totalLabel={t.donut_total ?? "Total FPOs"} />
             )}
           </CardContent>
         </Card>
@@ -494,7 +458,13 @@ export default function AdminDashboardPage() {
         <Card className="overflow-hidden isolation-isolate">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">{t.chart_district_dist ?? "District Distribution"}</CardTitle>
-            <p className="text-muted-foreground text-xs">{t.chart_district_subtitle ?? "FPOs registered per district — hover for details"}</p>
+            <p className="text-muted-foreground text-xs">
+              {/* The map is statewide for sub-admins too, unlike the rest of their (district-scoped) dashboard. */}
+              {user?.role === "sub_admin"
+                ? (t.chart_district_subtitle_statewide ??
+                  "FPOs registered in every district of Kerala — hover for details")
+                : (t.chart_district_subtitle ?? "FPOs registered per district — hover for details")}
+            </p>
           </CardHeader>
           <CardContent className="p-0">
             <KeralaDistrictMap

@@ -3,11 +3,12 @@
 import Link from "next/link";
 
 import { AlertTriangle, ArrowRight, CheckCircle2, MessageSquareText, Package, Sparkles } from "lucide-react";
-import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 import type { BuyerDashboardStats, BuyerInquiryStatus } from "@/app/buyer/_api/dashboard";
 import { StatCard } from "@/components/shared/stat-card";
 import { Badge } from "@/components/ui/badge";
+import { DonutChart } from "@/components/shared/donut-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type T = Record<string, string>;
@@ -149,39 +150,10 @@ export function BuyerStats({
                 {t.chart_no_inquiries ?? "You haven't sent any inquiries yet."}
               </p>
             ) : (
-              <>
-                <ResponsiveContainer width="100%" height={180}>
-                  <PieChart>
-                    <Pie
-                      data={statusData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={55}
-                      outerRadius={80}
-                      dataKey="value"
-                      paddingAngle={2}
-                    >
-                      {statusData.map((entry) => (
-                        <Cell key={entry.key} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{ fontSize: 12, borderRadius: 8 }}
-                      formatter={(v) => [v ?? 0, inquiriesLabel] as [number, string]}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="flex w-full flex-wrap justify-center gap-x-4 gap-y-1.5">
-                  {statusData.map((s) => (
-                    <div key={s.key} className="flex items-center gap-1.5">
-                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: s.color }} />
-                      <span className="text-muted-foreground text-xs">
-                        {s.name} ({s.value})
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </>
+              <DonutChart
+                data={statusData}
+                totalLabel={t.chart_inquiries_total ?? "Total inquiries"}
+              />
             )}
           </CardContent>
         </Card>
