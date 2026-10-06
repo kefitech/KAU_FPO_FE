@@ -5,6 +5,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
 
 import { cbboFposApi } from "@/app/cbbo/_api/fpos";
@@ -147,6 +148,14 @@ function NewCBBOReportForm() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
+      <button
+        type="button"
+        onClick={() => router.push("/cbbo/reports")}
+        className="flex w-fit items-center gap-1 text-muted-foreground text-sm hover:text-foreground"
+      >
+        <ChevronLeft className="h-4 w-4" /> {t.back ?? "Back"}
+      </button>
+
       <div>
         <h1 className="font-bold text-2xl">{t.page_title ?? "New Report"}</h1>
         <p className="mt-0.5 text-muted-foreground text-sm">

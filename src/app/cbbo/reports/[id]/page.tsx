@@ -5,6 +5,7 @@ import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
 
 import { cbboReportsApi } from "@/app/cbbo/_api/reports";
@@ -73,7 +74,7 @@ export default function CBBOReportDetailPage({ params }: { params: Promise<{ id:
     },
     onError: (error: unknown) => {
       const msg = (error as { data?: { message?: string } })?.data?.message;
-      toast.error(msg ?? (t.toast_update_failed ?? "Failed to update report"));
+      toast.error(msg ?? t.toast_update_failed ?? "Failed to update report");
     },
   });
 
@@ -86,14 +87,15 @@ export default function CBBOReportDetailPage({ params }: { params: Promise<{ id:
     },
     onError: (error: unknown) => {
       const msg = (error as { data?: { message?: string } })?.data?.message;
-      toast.error(msg ?? (t.toast_submit_failed ?? "Failed to submit report"));
+      toast.error(msg ?? t.toast_submit_failed ?? "Failed to submit report");
     },
   });
 
   function handleSubmitReport() {
     confirm({
       title: t.confirm_submit_title ?? "Submit Report",
-      description: t.confirm_submit_desc ?? "Once submitted, this report is locked and can no longer be edited. Continue?",
+      description:
+        t.confirm_submit_desc ?? "Once submitted, this report is locked and can no longer be edited. Continue?",
       confirmLabel: t.confirm_submit_btn ?? "Submit",
       confirmingLabel: t.confirm_submitting_btn ?? "Submitting...",
       variant: "default",
@@ -111,33 +113,37 @@ export default function CBBOReportDetailPage({ params }: { params: Promise<{ id:
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="font-bold text-2xl">{report.fpo_name}</h1>
-            {report.status === "submitted" ? (
-              <Badge
-                variant="outline"
-                className="border-green-500/40 bg-green-500/10 text-[11px] text-green-700 dark:text-green-400"
-              >
-                {t.badge_submitted ?? "Submitted"}
-              </Badge>
-            ) : (
-              <Badge
-                variant="outline"
-                className="border-yellow-500/40 bg-yellow-500/10 text-[11px] text-yellow-700 dark:text-yellow-400"
-              >
-                {t.badge_draft ?? "Draft"}
-              </Badge>
-            )}
-          </div>
-          <p className="mt-0.5 text-muted-foreground text-sm">
-            {t.filed_by ?? "Filed by"} {report.cbbo_name} {t.on_date ?? "on"} {new Date(report.created_at).toLocaleDateString()}
-          </p>
+      <button
+        type="button"
+        onClick={() => router.push("/cbbo/reports")}
+        className="flex w-fit items-center gap-1 text-muted-foreground text-sm hover:text-foreground"
+      >
+        <ChevronLeft className="h-4 w-4" /> {t.back ?? "Back"}
+      </button>
+
+      <div>
+        <div className="flex items-center gap-2">
+          <h1 className="font-bold text-2xl">{report.fpo_name}</h1>
+          {report.status === "submitted" ? (
+            <Badge
+              variant="outline"
+              className="border-green-500/40 bg-green-500/10 text-[11px] text-green-700 dark:text-green-400"
+            >
+              {t.badge_submitted ?? "Submitted"}
+            </Badge>
+          ) : (
+            <Badge
+              variant="outline"
+              className="border-yellow-500/40 bg-yellow-500/10 text-[11px] text-yellow-700 dark:text-yellow-400"
+            >
+              {t.badge_draft ?? "Draft"}
+            </Badge>
+          )}
         </div>
-        <Button type="button" variant="outline" onClick={() => router.push("/cbbo/reports")}>
-          {t.btn_back ?? "Back to Reports"}
-        </Button>
+        <p className="mt-0.5 text-muted-foreground text-sm">
+          {t.filed_by ?? "Filed by"} {report.cbbo_name} {t.on_date ?? "on"}{" "}
+          {new Date(report.created_at).toLocaleDateString()}
+        </p>
       </div>
 
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
@@ -203,7 +209,9 @@ export default function CBBOReportDetailPage({ params }: { params: Promise<{ id:
               {updateMutation.isPending ? (t.btn_saving ?? "Saving...") : (t.btn_save_changes ?? "Save Changes")}
             </Button>
             <Button type="button" onClick={handleSubmitReport} disabled={submitMutation.isPending}>
-              {submitMutation.isPending ? (t.btn_submitting ?? "Submitting...") : (t.btn_submit_report ?? "Submit Report")}
+              {submitMutation.isPending
+                ? (t.btn_submitting ?? "Submitting...")
+                : (t.btn_submit_report ?? "Submit Report")}
             </Button>
           </div>
         )}

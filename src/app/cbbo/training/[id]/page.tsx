@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
 
 import { apiErrorMessage, cbboTrainingApi } from "@/app/cbbo/_api/training";
@@ -26,8 +27,8 @@ export default function EditCbboTrainingSessionPage() {
 
   useEffect(() => {
     translationsApi
-      .getPublic(locale, "government_training_new")
-      .then((data) => setT(data.government_training_new ?? {}))
+      .getPublic(locale, "government_training_new,common")
+      .then((data) => setT({ ...(data.common ?? {}), ...(data.government_training_new ?? {}) }))
       .catch(() => undefined);
   }, [locale]);
 
@@ -100,6 +101,14 @@ export default function EditCbboTrainingSessionPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
+      <button
+        type="button"
+        onClick={() => router.push("/cbbo/training")}
+        className="flex w-fit items-center gap-1 text-muted-foreground text-sm hover:text-foreground"
+      >
+        <ChevronLeft className="h-4 w-4" /> {t.back ?? "Back"}
+      </button>
+
       <div>
         <h1 className="font-bold text-2xl">{t.edit_title ?? "Edit Training Session"}</h1>
         <p className="mt-0.5 text-muted-foreground text-sm">
