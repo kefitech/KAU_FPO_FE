@@ -65,13 +65,14 @@ export default function NewCbboTrainingSessionPage() {
       .catch(() => undefined);
   }, [locale]);
 
-  // Only FPOs assigned to this officer come back from /cbbo/fpos/
+  // Only FPOs assigned to this officer come back from /cbbo/fpos/; approved only, since
+  // sessions can't be scheduled for drafts or pending applications
   const { data: fpoData, isLoading: fposLoading } = useQuery({
-    queryKey: ["cbbo-fpos-for-training-picker"],
-    queryFn: () => cbboFposApi.getAll({ page: 1, page_size: 500 }),
+    queryKey: ["cbbo-fpos-for-training-picker", "approved"],
+    queryFn: () => cbboFposApi.getAll({ page: 1, page_size: 500, status: "approved" }),
   });
   const fpoOptions = (fpoData?.data ?? [])
-    .filter((f) => f.status !== "draft" && f.application_id)
+    .filter((f) => f.application_id)
     .map((f) => ({ code: f.application_id, name: f.name }));
 
   const [fpoIds, setFpoIds] = useState<string[]>([]);

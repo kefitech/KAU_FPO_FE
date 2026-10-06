@@ -15,14 +15,25 @@ import { FieldError } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { authApi } from "@/lib/api/auth";
 import { translationsApi } from "@/lib/api/translations";
+import { hasLetterOrDigit } from "@/lib/validations/text";
 import { useLocaleStore } from "@/stores/locale-store";
 
 type T = Record<string, string>;
 
 function makeProfileSchema(t: T) {
   return z.object({
-    first_name: z.string().min(1, { message: t.val_first_name_required ?? "First name is required." }),
-    last_name: z.string().min(1, { message: t.val_last_name_required ?? "Last name is required." }),
+    first_name: z
+      .string()
+      .min(1, { message: t.val_first_name_required ?? "First name is required." })
+      .refine((v) => !v || hasLetterOrDigit(v), {
+        message: t.val_first_name_symbols ?? "First name must contain letters or numbers, not only symbols.",
+      }),
+    last_name: z
+      .string()
+      .min(1, { message: t.val_last_name_required ?? "Last name is required." })
+      .refine((v) => !v || hasLetterOrDigit(v), {
+        message: t.val_last_name_symbols ?? "Last name must contain letters or numbers, not only symbols.",
+      }),
     phone: z
       .string()
       .optional()
@@ -103,7 +114,9 @@ function PhoneOtpBlock({
     },
     onError: (err: unknown) => {
       const axiosErr = err as { response?: { data?: { message?: string } }; message?: string } | undefined;
-      toast.error(axiosErr?.response?.data?.message ?? axiosErr?.message ?? (t.toast_otp_send_failed ?? "Failed to send OTP."));
+      toast.error(
+        axiosErr?.response?.data?.message ?? axiosErr?.message ?? t.toast_otp_send_failed ?? "Failed to send OTP.",
+      );
     },
   });
 
@@ -118,7 +131,9 @@ function PhoneOtpBlock({
     },
     onError: (err: unknown) => {
       const axiosErr = err as { response?: { data?: { message?: string } }; message?: string } | undefined;
-      setOtpError(axiosErr?.response?.data?.message ?? axiosErr?.message ?? (t.error_invalid_otp ?? "Invalid or expired OTP."));
+      setOtpError(
+        axiosErr?.response?.data?.message ?? axiosErr?.message ?? t.error_invalid_otp ?? "Invalid or expired OTP.",
+      );
     },
   });
   // biome-ignore lint/correctness/useExhaustiveDependencies: guarded by hasSentInitialOtp ref, intentionally runs once on mount
@@ -338,7 +353,13 @@ export default function SettingsProfilePage() {
             <SettingRow label={t.label_first_name ?? "First Name"}>
               {editing ? (
                 <div className="flex flex-col gap-1">
-                  <Input {...field} disabled={otpStep} id="first-name" placeholder={t.label_first_name ?? "First name"} aria-invalid={fieldState.invalid} />
+                  <Input
+                    {...field}
+                    disabled={otpStep}
+                    id="first-name"
+                    placeholder={t.label_first_name ?? "First name"}
+                    aria-invalid={fieldState.invalid}
+                  />
                   {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                 </div>
               ) : (
@@ -355,7 +376,13 @@ export default function SettingsProfilePage() {
             <SettingRow label={t.label_last_name ?? "Last Name"}>
               {editing ? (
                 <div className="flex flex-col gap-1">
-                  <Input {...field} disabled={otpStep} id="last-name" placeholder={t.label_last_name ?? "Last name"} aria-invalid={fieldState.invalid} />
+                  <Input
+                    {...field}
+                    disabled={otpStep}
+                    id="last-name"
+                    placeholder={t.label_last_name ?? "Last name"}
+                    aria-invalid={fieldState.invalid}
+                  />
                   {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                 </div>
               ) : (
@@ -369,7 +396,10 @@ export default function SettingsProfilePage() {
           control={form.control}
           name="phone"
           render={({ field, fieldState }) => (
-            <SettingRow label={t.label_phone ?? "Phone"} description={t.label_phone_desc ?? "Used for SMS notifications and account recovery."}>
+            <SettingRow
+              label={t.label_phone ?? "Phone"}
+              description={t.label_phone_desc ?? "Used for SMS notifications and account recovery."}
+            >
               {editing && !otpStep ? (
                 <div className="flex flex-col gap-1">
                   <Input
@@ -406,7 +436,10 @@ export default function SettingsProfilePage() {
           control={form.control}
           name="preferred_language"
           render={({ field, fieldState }) => (
-            <SettingRow label={t.label_language ?? "Preferred Language"} description={t.label_language_desc ?? "Language used for notifications and emails."}>
+            <SettingRow
+              label={t.label_language ?? "Preferred Language"}
+              description={t.label_language_desc ?? "Language used for notifications and emails."}
+            >
               {editing ? (
                 <select
                   {...field}
@@ -434,7 +467,10 @@ export default function SettingsProfilePage() {
       <SectionHeading title={t.section_account ?? "Account"} />
 
       <div className="flex flex-col">
-        <SettingRow label={t.label_email ?? "Email Address"} description={t.label_email_desc ?? "Your email cannot be changed."}>
+        <SettingRow
+          label={t.label_email ?? "Email Address"}
+          description={t.label_email_desc ?? "Your email cannot be changed."}
+        >
           <span className="text-muted-foreground text-sm">{user?.email}</span>
         </SettingRow>
 

@@ -77,7 +77,10 @@ export interface CBBOReportListItem {
   date: string;
   status: ReportStatus;
   participants_count: number;
+  activities: string;
+  outcomes: string;
   created_at: string;
+  updated_at: string;
 }
 
 export interface CBBOReportDetail {

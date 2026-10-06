@@ -227,13 +227,16 @@ export default function CBBOFPODetailPage() {
         >
           <FileText className="h-3.5 w-3.5" /> {t.tab_documents ?? "Documents"}
         </button>
-        <Button
-          size="sm"
-          className="ml-auto self-center"
-          onClick={() => router.push(`/cbbo/reports/new?fpo_id=${fpo.id}`)}
-        >
-          {t.action_submit_report ?? "Submit Report"}
-        </Button>
+        {/* Reports can only be filed for approved FPOs */}
+        {fpo.status === "approved" && (
+          <Button
+            size="sm"
+            className="ml-auto self-center"
+            onClick={() => router.push(`/cbbo/reports/new?fpo_id=${fpo.id}`)}
+          >
+            {t.action_submit_report ?? "Submit Report"}
+          </Button>
+        )}
       </div>
 
       {activeTab === "overview" && (

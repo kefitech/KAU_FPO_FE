@@ -60,12 +60,13 @@ export default function NewTrainingSessionPage() {
       .catch(() => undefined);
   }, [locale]);
 
+  // Approved FPOs only; sessions can't be scheduled for drafts or pending applications
   const { data: fpoData, isLoading: fposLoading } = useQuery({
-    queryKey: ["government-fpos-for-training-picker"],
-    queryFn: () => govtFposApi.getAll({ page: 1, page_size: 500 }),
+    queryKey: ["government-fpos-for-training-picker", "approved"],
+    queryFn: () => govtFposApi.getAll({ page: 1, page_size: 500, status: "approved" }),
   });
   const fpoOptions = (fpoData?.data ?? [])
-    .filter((f) => f.status !== "draft" && f.application_id)
+    .filter((f) => f.application_id)
     .map((f) => ({ code: f.application_id, name: f.name }));
 
   const [fpoIds, setFpoIds] = useState<string[]>([]);

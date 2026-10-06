@@ -18,6 +18,7 @@ interface CBBOReportsApi {
   create: (payload: CBBOReportCreatePayload) => Promise<{ id: number; status: string }>;
   update: (id: number, payload: CBBOReportEditPayload) => Promise<{ id: number }>;
   submit: (id: number) => Promise<{ id: number; status: string }>;
+  remove: (id: number) => Promise<Wrapped<null>>;
 }
 
 export const cbboReportsApi: CBBOReportsApi = {
@@ -26,4 +27,5 @@ export const cbboReportsApi: CBBOReportsApi = {
   create: (payload) => api.post<Wrapped<{ id: number; status: string }>>(BASE, payload).then(unwrap),
   update: (id, payload) => api.patch<Wrapped<{ id: number }>>(`${BASE}${id}/`, payload).then(unwrap),
   submit: (id) => api.post<Wrapped<{ id: number; status: string }>>(`${BASE}${id}/submit/`).then(unwrap),
+  remove: (id) => api.delete<Wrapped<null>>(`${BASE}${id}/`).then((r) => r.data),
 };
