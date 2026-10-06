@@ -11,7 +11,16 @@ export interface AdminBuyer {
   organisation: string;
   contact_email: string;
   contact_phone: string;
+  /** District code, e.g. "TSR" — see district_display for the name. */
   location: string;
+  district_display: string | null;
+  commodities_interested: string[];
+  commodities_display: string[];
+  min_quantity: string | null;
+  max_quantity: string | null;
+  unit: string;
+  /** Name of the FPO when this buyer is an FPO buying from other FPOs. */
+  fpo_name: string | null;
   status: BuyerStatus;
   is_verified: boolean;
   fpo: number | null;

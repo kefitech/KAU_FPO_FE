@@ -12,6 +12,8 @@ export interface User {
   preferred_language?: string;
   role: string;
   permissions: string[];
+  /** Sub-admins only (from /auth/me): their district code, e.g. "TSR". */
+  district?: string | null;
 }
 
 export interface SidebarMenuItem {

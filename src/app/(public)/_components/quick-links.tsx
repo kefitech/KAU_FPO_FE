@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "@/hooks/use-translations";
 import { useLocaleStore } from "@/stores/locale-store";
 
+import { linkTargetProps } from "../_lib/link-target";
 import { publicFetch } from "../_lib/public-fetch";
 
 interface QuickLinks {
@@ -18,8 +19,8 @@ function QuickLinkCard({ link }: { link: QuickLinks }) {
   return (
     <a
       href={link.url}
-      target="_blank"
-      rel="noopener noreferrer"
+      // Same-site links stay in this tab; other domains open a new one.
+      {...linkTargetProps(link.url)}
       title={link.name}
       style={{
         display: "flex",

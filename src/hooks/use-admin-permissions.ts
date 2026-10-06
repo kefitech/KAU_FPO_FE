@@ -27,10 +27,14 @@ export function useAdminPermissions() {
 
   const user = data?.user;
   const isSuperAdmin = user?.role === "super_admin";
+  const isSubAdmin = user?.role === "sub_admin";
   const granted = new Set(user?.permissions ?? []);
 
   return {
     isSuperAdmin,
+    isSubAdmin,
+    /** The sub-admin's district code (null for super admins, or before /auth/me loads). */
+    district: user?.district ?? null,
     can: (permission: SubAdminPermission) => isSuperAdmin || granted.has("*") || granted.has(permission),
   };
 }
