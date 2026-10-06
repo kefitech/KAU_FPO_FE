@@ -66,7 +66,7 @@ export function TransferDistrictDialog({
     },
     onError: (err: unknown) => {
       const message = (err as { data?: { message?: unknown } })?.data?.message;
-      toast.error(typeof message === "string" ? message : "Transfer failed.");
+      toast.error(typeof message === "string" ? message : (t.transfer_failed ?? "Transfer failed."));
     },
   });
 

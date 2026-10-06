@@ -279,6 +279,8 @@ export interface BulkInviteResult {
     last_name: string;
     district: string;
     reason: string;
+    /** Every problem found on the row; `reason` is these joined. */
+    reasons?: string[];
   }[];
 }
 

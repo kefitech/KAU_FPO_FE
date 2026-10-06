@@ -60,13 +60,14 @@ function SubAdminActions({
   const resetPasswordMutation = useMutation({
     mutationFn: () => subAdminsApi.resetPassword(subAdmin.id),
     onSuccess: () => toast.success(t.toast_password_reset ?? "Temporary password sent successfully"),
-    onError: (error: unknown) => toast.error(getErrorMessage(error, "Failed to reset password")),
+    onError: (error: unknown) =>
+      toast.error(getErrorMessage(error, t.reset_password_failed ?? "Failed to reset password")),
   });
 
   const disable2faMutation = useMutation({
     mutationFn: () => twoFactorApi.disableForUser(subAdmin.id),
     onSuccess: () => toast.success(t.toast_2fa_disabled ?? "2FA disabled for this user"),
-    onError: () => toast.error("Failed to disable 2FA"),
+    onError: () => toast.error(t.disable_2fa_failed ?? "Failed to disable 2FA"),
   });
 
   const deleteMutation = useMutation({
@@ -89,8 +90,8 @@ function SubAdminActions({
         t.reset_password_description ??
         'A temporary password will be generated and sent to "{name}" via email. They will be required to change it on next login.'
       ).replace("{name}", name),
-      confirmLabel: "Reset",
-      confirmingLabel: "Sending...",
+      confirmLabel: t.reset_confirm ?? "Reset",
+      confirmingLabel: t.sending ?? "Sending...",
       variant: "default",
       onConfirm: () => resetPasswordMutation.mutateAsync(),
     });
