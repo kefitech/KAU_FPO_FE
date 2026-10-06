@@ -28,7 +28,6 @@ import {
   CircleDashed,
   XCircle,
 } from "lucide-react";
-import Link from "next/link";
 
 import {
   adminDprProjectsApi,
@@ -153,11 +152,6 @@ export default function AdminDprProjectDetailPage({
       {/* Header bar — matches FPO wizard style */}
       <header className="flex items-center justify-between gap-3 border-b bg-background px-6 py-3">
         <div className="flex min-w-0 flex-1 items-center gap-3">
-          <Button asChild variant="ghost" size="sm" className="shrink-0">
-            <Link href="/admin/dpr/projects">
-              <ArrowLeft className="mr-1 h-4 w-4" /> Back
-            </Link>
-          </Button>
           {query.data ? (
             <div className="min-w-0 flex-1">
               <div className="flex min-w-0 items-center gap-2">

@@ -3,8 +3,7 @@
 import { useMemo, useState } from "react";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from "lucide-react";
-import Link from "next/link";
+import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -101,11 +100,6 @@ export default function AdminMasterDataPage() {
       {/* Header */}
       <div className="border-b bg-background px-4 py-3">
         <div className="mx-auto flex max-w-7xl items-center gap-3">
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/admin/dpr">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </Button>
           <div>
             <h1 className="text-sm font-semibold">DPR Master Data</h1>
             <p className="text-xs text-muted-foreground">

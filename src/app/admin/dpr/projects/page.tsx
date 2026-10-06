@@ -16,7 +16,7 @@
 import { useMemo } from "react";
 
 import type { ColumnDef } from "@tanstack/react-table";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import Link from "next/link";
 
 import {
@@ -153,11 +153,6 @@ export default function AdminDprProjectsPage() {
   return (
     <div className="flex flex-col gap-6 px-8 py-6">
       <div className="flex items-center gap-3">
-        <Button asChild variant="ghost" size="sm">
-          <Link href="/admin/dpr">
-            <ArrowLeft className="mr-1 h-4 w-4" /> Back
-          </Link>
-        </Button>
         <div>
           <h1 className="font-bold text-2xl">DPR Projects</h1>
           <p className="mt-0.5 text-muted-foreground text-sm">

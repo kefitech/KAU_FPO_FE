@@ -21,7 +21,6 @@ import { useEffect, useRef, useState } from "react";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  ArrowLeft,
   Edit2,
   Layers,
   Loader2,
@@ -267,16 +266,8 @@ export default function FieldRulesPage() {
 
   return (
     <div className="flex flex-col gap-6 px-8 py-6">
-      {/* Top bar — back link left, primary action right (matches
-          /admin/dpr-knowledge, /admin/dpr-master-data, etc.) */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/admin/dashboard">
-              <ArrowLeft className="mr-1 h-4 w-4" /> Dashboard
-            </Link>
-          </Button>
-        </div>
+      {/* Top bar — primary action right. Back is the admin layout's button. */}
+      <div className="flex items-center justify-end gap-3">
         <Button size="sm" onClick={openCreate} disabled={!schema}>
           <Plus className="mr-1 h-4 w-4" /> Add rule
         </Button>

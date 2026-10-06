@@ -19,7 +19,6 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
-  ArrowLeft,
   Ban,
   Bot,
   Briefcase,
@@ -30,7 +29,6 @@ import {
   Settings2,
   Sparkles,
 } from "lucide-react";
-import Link from "next/link";
 import { toast } from "sonner";
 
 import {
@@ -88,14 +86,6 @@ export default function AdminAIServicesPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-4 py-6">
-      <div className="flex items-center gap-3">
-        <Button asChild variant="ghost" size="sm">
-          <Link href="/admin/dashboard">
-            <ArrowLeft className="mr-1 h-4 w-4" /> Dashboard
-          </Link>
-        </Button>
-      </div>
-
       <div className="flex items-start gap-3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
           <Bot className="h-5 w-5" />

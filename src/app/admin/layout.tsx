@@ -10,6 +10,7 @@ import { ChevronLeft } from "lucide-react";
 
 import { AdminBreadcrumb } from "@/components/layout/admin-breadcrumb";
 import { AdminSidebar } from "@/components/layout/admin-sidebar";
+import { getBackTarget } from "@/components/layout/back-link";
 import { FontSizeControl } from "@/components/layout/font-size-control";
 import { LiveClock } from "@/components/layout/live-clock";
 import { LocaleSwitcher } from "@/components/layout/locale-switcher";
@@ -32,12 +33,25 @@ const STRUCTURAL_PARENT_OVERRIDES: Record<string, string> = {
   "/admin/notification-channel-settings": "/admin/notifications?tab=channels",
   "/admin/categories": "/admin/languages?tab=categories",
   "/admin/menu-items": "/admin/languages?tab=menu",
+  // No page lives at /admin/dpr/projects/fpo — the FPO drill-down's parent is the projects list.
+  "/admin/dpr/projects/fpo": "/admin/dpr/projects",
+};
+
+// Top-level routes that are really sub-pages of a hub, so Back returns to the hub
+// instead of the dashboard. KAU 2026-09-27: the DPR tools were removed from the
+// sidebar and are only reachable from the DPR Administration page.
+const SECTION_PARENTS: Record<string, string> = {
+  "/admin/dpr-config": "/admin/dpr",
+  "/admin/dpr-knowledge": "/admin/dpr",
+  "/admin/dpr-applicability": "/admin/dpr",
+  "/admin/dpr-risk-matrix": "/admin/dpr",
+  "/admin/dpr-field-rules": "/admin/dpr",
 };
 
 function getStructuralParent(pathname: string): string {
   const clean = pathname.split("?")[0];
   const segments = clean.split("/").filter(Boolean);
-  if (segments.length <= 2) return "/admin/dashboard";
+  if (segments.length <= 2) return SECTION_PARENTS[clean] ?? "/admin/dashboard";
   segments.pop();
   const parent = "/" + segments.join("/");
   return STRUCTURAL_PARENT_OVERRIDES[parent] ?? parent;
@@ -98,6 +112,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [pathname]);
 
   function handleBack() {
+    // A cross-link (e.g. Sub-Admins → Applications) told us exactly where to return,
+    // including the origin's filters and page — honour it before any other rule.
+    const backTarget = getBackTarget();
+    if (backTarget) {
+      navHistoryRef.current = navHistoryRef.current.slice(0, -1);
+      isPoppingRef.current = true;
+      router.push(backTarget);
+      return;
+    }
+
     const isNewPage = pathname.endsWith("/new");
     if (isNewPage) {
       navHistoryRef.current = navHistoryRef.current.slice(0, -1);
@@ -106,11 +130,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       return;
     }
 
-    // Top-level section pages (/admin/X) always go straight to dashboard —
+    // Top-level section pages (/admin/X) go straight to their hub (or the dashboard) —
     // don't step through the history stack which may contain stale edit/search entries.
     const segments = pathname.split("/").filter(Boolean);
     if (segments.length <= 2) {
-      router.push("/admin/dashboard");
+      router.push(getStructuralParent(pathname));
       return;
     }
 

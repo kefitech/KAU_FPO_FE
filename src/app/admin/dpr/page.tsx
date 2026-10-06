@@ -1,13 +1,14 @@
 "use client";
 
 import { Bot, BookOpen, Database, FileBarChart, Grid3x3, ShieldAlert, SlidersHorizontal } from "lucide-react";
-import Link from "next/link";
 
+import { BackLink } from "@/components/layout/back-link";
 import { Card, CardContent } from "@/components/ui/card";
 
 /**
  * DPR admin hub — landing page for KAU staff. Central tile-based index of
- * every DPR admin surface. Each tile links to a live sub-page.
+ * every DPR admin surface. Each tile links to a live sub-page; BackLink makes
+ * the sub-page's Back button return here (AI Services also has its own sidebar entry).
  */
 
 const CARDS = [
@@ -75,7 +76,7 @@ export default function AdminDprHubPage() {
 
       <div className="grid gap-4 sm:grid-cols-2">
         {CARDS.map((c) => (
-          <Link key={c.href} href={c.href}>
+          <BackLink key={c.href} href={c.href}>
             <Card className="cursor-pointer transition-shadow hover:shadow-md">
               <CardContent className="flex items-start gap-4 p-5">
                 <div className="rounded-md bg-muted p-2.5">
@@ -87,7 +88,7 @@ export default function AdminDprHubPage() {
                 </div>
               </CardContent>
             </Card>
-          </Link>
+          </BackLink>
         ))}
       </div>
     </div>
