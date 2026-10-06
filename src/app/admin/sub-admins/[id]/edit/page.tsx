@@ -48,12 +48,18 @@ export default function EditSubAdminPage() {
   });
 
   if (isLoading) {
-    return <div className="flex items-center justify-center p-12 text-muted-foreground text-sm">Loading...</div>;
+    return (
+      <div className="flex items-center justify-center p-12 text-muted-foreground text-sm">
+        {tForm.loading ?? "Loading..."}
+      </div>
+    );
   }
 
   if (isError || !subAdmin) {
     return (
-      <div className="flex items-center justify-center p-12 text-destructive text-sm">Failed to load sub-admin.</div>
+      <div className="flex items-center justify-center p-12 text-destructive text-sm">
+        {tForm.load_failed ?? "Failed to load sub-admin."}
+      </div>
     );
   }
 

@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Download, FileUp, Loader2 } from "lucide-react";
+import { Download, FileUp, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { subAdminsApi } from "@/app/admin/_api/sub-admins";
@@ -51,6 +51,9 @@ export function BulkInviteDialog({
     mutationFn: (f: File) => subAdminsApi.bulkInvite(f),
     onSuccess: (data) => {
       setResult(data);
+      // The file has been processed — clear it so the invite can't be resent by
+      // accident, and so re-picking the same (corrected) file fires onChange.
+      clearFile();
       queryClient.invalidateQueries({ queryKey: ["sub-admins"] });
       toast.success(
         (t.bulk_upload_summary ?? "{success} invited, {failed} failed.")
@@ -64,10 +67,14 @@ export function BulkInviteDialog({
     },
   });
 
-  function reset() {
+  function clearFile() {
     setFile(null);
-    setResult(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  function reset() {
+    clearFile();
+    setResult(null);
   }
 
   function handleClose(next: boolean) {
@@ -77,7 +84,7 @@ export function BulkInviteDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{t.bulk_invite_title ?? "Bulk Invite Sub-Admins"}</DialogTitle>
           <DialogDescription>
@@ -86,7 +93,7 @@ export function BulkInviteDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4 py-2">
+        <div className="flex min-w-0 flex-col gap-4 py-2">
           <div>
             <Button
               type="button"
@@ -104,10 +111,13 @@ export function BulkInviteDialog({
             </Button>
           </div>
 
-          <div className="rounded-md border bg-muted/30 p-4">
-            <label className="flex flex-col gap-2 text-sm">
-              <span className="font-medium">{t.upload_label ?? "Choose filled template (.xlsx or .csv)"}</span>
+          <div className="flex flex-col gap-2 rounded-md border bg-muted/30 p-4 text-sm">
+            <label htmlFor="sub-admin-bulk-invite-file" className="font-medium">
+              {t.upload_label ?? "Choose filled template (.xlsx or .csv)"}
+            </label>
+            <div className="flex items-center gap-2">
               <input
+                id="sub-admin-bulk-invite-file"
                 ref={fileInputRef}
                 type="file"
                 accept=".xlsx,.csv"
@@ -115,9 +125,23 @@ export function BulkInviteDialog({
                   setResult(null);
                   setFile(e.target.files?.[0] ?? null);
                 }}
-                className="text-xs file:mr-3 file:rounded file:border-0 file:bg-primary file:px-3 file:py-1.5 file:font-medium file:text-primary-foreground file:text-xs hover:file:bg-primary/90"
+                className="min-w-0 flex-1 text-xs file:mr-3 file:rounded file:border-0 file:bg-primary file:px-3 file:py-1.5 file:font-medium file:text-primary-foreground file:text-xs hover:file:bg-primary/90"
               />
-            </label>
+              {file && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  onClick={clearFile}
+                  disabled={uploadMutation.isPending}
+                  aria-label={t.remove_file ?? "Remove file"}
+                  title={t.remove_file ?? "Remove file"}
+                  className="shrink-0 text-muted-foreground hover:text-destructive"
+                >
+                  <X />
+                </Button>
+              )}
+            </div>
           </div>
 
           {result && (
@@ -134,13 +158,13 @@ export function BulkInviteDialog({
 
               {result.errors.length > 0 && (
                 <div className="max-h-64 overflow-y-auto">
-                  <table className="w-full text-xs">
+                  <table className="w-full table-fixed text-xs">
                     <thead className="bg-muted/50 text-left text-muted-foreground uppercase">
                       <tr>
-                        <th className="px-2 py-1.5 font-medium">Row</th>
-                        <th className="px-2 py-1.5 font-medium">Email</th>
-                        <th className="px-2 py-1.5 font-medium">District</th>
-                        <th className="px-2 py-1.5 font-medium">Reason</th>
+                        <th className="w-12 px-2 py-1.5 font-medium">{t.col_row ?? "Row"}</th>
+                        <th className="w-[35%] px-2 py-1.5 font-medium">{t.col_email ?? "Email"}</th>
+                        <th className="w-20 px-2 py-1.5 font-medium">{t.col_district ?? "District"}</th>
+                        <th className="px-2 py-1.5 font-medium">{t.col_reason ?? "Reason"}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
@@ -148,9 +172,19 @@ export function BulkInviteDialog({
                         // biome-ignore lint/suspicious/noArrayIndexKey: error list is static per render
                         <tr key={idx}>
                           <td className="px-2 py-1.5 font-mono">{e.row}</td>
-                          <td className="px-2 py-1.5">{e.email || "—"}</td>
+                          <td className="break-all px-2 py-1.5">{e.email || "—"}</td>
                           <td className="px-2 py-1.5 font-mono">{e.district || "—"}</td>
-                          <td className="px-2 py-1.5 text-red-600">{e.reason}</td>
+                          <td className="break-words px-2 py-1.5 text-red-600">
+                            {e.reasons?.length ? (
+                              <ul className="list-disc space-y-0.5 pl-4">
+                                {e.reasons.map((r) => (
+                                  <li key={r}>{r}</li>
+                                ))}
+                              </ul>
+                            ) : (
+                              e.reason
+                            )}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -165,14 +199,14 @@ export function BulkInviteDialog({
           <Button variant="outline" onClick={() => handleClose(false)}>
             {t.close ?? "Close"}
           </Button>
-          <Button
-            disabled={!file || uploadMutation.isPending}
-            onClick={() => file && uploadMutation.mutate(file)}
-          >
-            {uploadMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {!uploadMutation.isPending && <FileUp className="mr-2 h-4 w-4" />}
-            {t.upload_btn ?? "Upload & Invite"}
-          </Button>
+          {/* Hidden once a result is shown; picking a new file brings it back. */}
+          {!result && (
+            <Button disabled={!file || uploadMutation.isPending} onClick={() => file && uploadMutation.mutate(file)}>
+              {uploadMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {!uploadMutation.isPending && <FileUp className="mr-2 h-4 w-4" />}
+              {t.upload_btn ?? "Upload & Invite"}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

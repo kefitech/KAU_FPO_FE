@@ -21,10 +21,10 @@ import type { NotificationChannelType, SubAdmin, SubAdminUpdatePayload } from "@
 
 type T = Record<string, string>;
 
-const NOTIFICATION_CHANNELS: { value: NotificationChannelType; label: string }[] = [
-  { value: "email", label: "Email" },
-  { value: "sms", label: "SMS" },
-  // { value: "in_app", label: "In-App" },
+const NOTIFICATION_CHANNELS: { value: NotificationChannelType; labelKey: string; label: string }[] = [
+  { value: "email", labelKey: "channel_email", label: "Email" },
+  { value: "sms", labelKey: "channel_sms", label: "SMS" },
+  // { value: "in_app", labelKey: "channel_in_app", label: "In-App" },
 ];
 
 const DISTRICT_CODES = KERALA_DISTRICTS.map((d) => d.code) as [string, ...string[]];
@@ -32,35 +32,53 @@ const DISTRICT_CODES = KERALA_DISTRICTS.map((d) => d.code) as [string, ...string
 // Mirrors the backend's validate_person_name: letters, spaces, dots, apostrophes, hyphens.
 const NAME_PATTERN = /^[A-Za-z][A-Za-z .'-]*$/;
 
-const nameSchema = (label: string) =>
+const nameSchema = (requiredMsg: string, patternMsg: string, maxMsg: string) =>
   z
     .string()
     .trim()
-    .min(1, { message: `${label} is required` })
-    .max(50, { message: "Max 50 characters" })
-    .regex(NAME_PATTERN, { message: `${label} can only contain letters, spaces, dots, apostrophes and hyphens` });
+    .min(1, { message: requiredMsg })
+    .max(50, { message: maxMsg })
+    .regex(NAME_PATTERN, { message: patternMsg });
 
-const createSchema = z.object({
-  email: z
+function makeSchemas(t: T) {
+  const maxMsg = t.val_max_50 ?? "Max 50 characters";
+  const firstName = nameSchema(
+    t.val_first_name_required ?? "First name is required",
+    t.val_first_name_pattern ?? "First name can only contain letters, spaces, dots, apostrophes and hyphens",
+    maxMsg,
+  );
+  const lastName = nameSchema(
+    t.val_last_name_required ?? "Last name is required",
+    t.val_last_name_pattern ?? "Last name can only contain letters, spaces, dots, apostrophes and hyphens",
+    maxMsg,
+  );
+  const phone = z
     .string()
-    .email({ message: "Enter a valid email address" })
-    .max(50, { message: "Email must be at most 50 characters" }),
-  first_name: nameSchema("First name"),
-  last_name: nameSchema("Last name"),
-  phone: z.string().regex(/^[6-9]\d{9}$/, { message: "Enter a valid 10-digit mobile number" }),
-  district: z.enum(DISTRICT_CODES, { message: "Pick a district" }),
-  notification_channel: z.enum(["email", "sms", "in_app"]),
-  permissions: z.array(z.string()),
-});
+    .regex(/^[6-9]\d{9}$/, { message: t.val_phone_invalid ?? "Enter a valid 10-digit mobile number" });
 
-const editSchema = z.object({
-  // Email is read-only on edit and not part of the update payload, so don't validate it.
-  email: z.string(),
-  first_name: nameSchema("First name"),
-  last_name: nameSchema("Last name"),
-  phone: z.string().regex(/^[6-9]\d{9}$/, { message: "Enter a valid 10-digit mobile number" }),
-  permissions: z.array(z.string()),
-});
+  return {
+    create: z.object({
+      email: z
+        .string()
+        .email({ message: t.val_email_invalid ?? "Enter a valid email address" })
+        .max(50, { message: t.val_email_max ?? "Email must be at most 50 characters" }),
+      first_name: firstName,
+      last_name: lastName,
+      phone,
+      district: z.enum(DISTRICT_CODES, { message: t.val_district_required ?? "Pick a district" }),
+      notification_channel: z.enum(["email", "sms", "in_app"]),
+      permissions: z.array(z.string()),
+    }),
+    edit: z.object({
+      // Email is read-only on edit and not part of the update payload, so don't validate it.
+      email: z.string(),
+      first_name: firstName,
+      last_name: lastName,
+      phone,
+      permissions: z.array(z.string()),
+    }),
+  };
+}
 
 type FormValues = {
   email: string;
@@ -107,7 +125,8 @@ export function SubAdminForm({ mode, subAdmin, t = {}, tCommon = {} }: SubAdminF
   const isEdit = mode === "edit";
   const editingValues = subAdmin ? toFormValues(subAdmin) : null;
 
-  const schema = isEdit ? editSchema : createSchema;
+  const schemas = makeSchemas(t);
+  const schema = isEdit ? schemas.edit : schemas.create;
 
   const {
     control,
@@ -203,8 +222,8 @@ export function SubAdminForm({ mode, subAdmin, t = {}, tCommon = {} }: SubAdminF
           typeof response?.message === "string"
             ? response.message
             : isEdit
-              ? "Failed to update sub-admin"
-              : "Failed to create sub-admin",
+              ? (t.toast_update_failed ?? "Failed to update sub-admin")
+              : (t.toast_create_failed ?? "Failed to create sub-admin"),
         );
       }
     },
@@ -384,7 +403,7 @@ export function SubAdminForm({ mode, subAdmin, t = {}, tCommon = {} }: SubAdminF
                       >
                         {NOTIFICATION_CHANNELS.map((ch) => (
                           <option key={ch.value} value={ch.value}>
-                            {ch.label}
+                            {t[ch.labelKey] ?? ch.label}
                           </option>
                         ))}
                       </select>
@@ -474,7 +493,7 @@ export function SubAdminForm({ mode, subAdmin, t = {}, tCommon = {} }: SubAdminF
             {tCommon.reset_btn ?? "Reset"}
           </Button>
           <Button type="submit" disabled={mutation.isPending}>
-            {mutation.isPending ? "Saving..." : (tCommon.save_btn ?? "Save")}
+            {mutation.isPending ? (tCommon.saving ?? "Saving...") : (tCommon.save_btn ?? "Save")}
           </Button>
         </div>
       </div>
