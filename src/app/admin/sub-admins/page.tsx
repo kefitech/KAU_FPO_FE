@@ -5,19 +5,19 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { useQuery } from "@tanstack/react-query";
-import { FileUp, Pencil, Plus } from "lucide-react";
+import { FileUp, Plus } from "lucide-react";
 
 import { subAdminsApi } from "@/app/admin/_api/sub-admins";
 import { DataTable } from "@/components/data-table";
-import { BackLink } from "@/components/layout/back-link";
 import { Button } from "@/components/ui/button";
-import { ViewSheet } from "@/components/ui/view-sheet";
 import { translationsApi } from "@/lib/api/translations";
+import { KERALA_DISTRICTS } from "@/lib/kerala-districts";
 import { useLocaleStore } from "@/stores/locale-store";
 import type { SubAdmin } from "@/types/admin";
 
 import { BulkInviteDialog } from "./_components/bulk-invite-dialog";
 import { getSubAdminColumns } from "./_components/columns";
+import { SubAdminViewSheet } from "./_components/sub-admin-view-sheet";
 import { TransferDistrictDialog } from "./_components/transfer-district-dialog";
 
 type T = Record<string, string>;
@@ -29,6 +29,7 @@ export default function SubAdminsPage() {
   const [tTable, setTTable] = useState<T>({});
   const [tConfirm, setTConfirm] = useState<T>({});
   const [tCommon, setTCommon] = useState<T>({});
+  const [tDistricts, setTDistricts] = useState<T>({});
   const [subAdminView, setSubAdminView] = useState<{ open: boolean; row: SubAdmin | null }>({ open: false, row: null });
   const [transferRow, setTransferRow] = useState<{ open: boolean; row: SubAdmin | null }>({ open: false, row: null });
   const [bulkOpen, setBulkOpen] = useState(false);
@@ -42,11 +43,12 @@ export default function SubAdminsPage() {
 
   useEffect(() => {
     translationsApi
-      .getPublic(locale, "sub_admins_table,confirm_dialog,common")
+      .getPublic(locale, "sub_admins_table,confirm_dialog,common,districts")
       .then((data) => {
         setTTable(data.sub_admins_table ?? {});
         setTConfirm(data.confirm_dialog ?? {});
         setTCommon(data.common ?? {});
+        setTDistricts(data.districts ?? {});
       })
       .catch(() => undefined);
   }, [locale]);
@@ -109,71 +111,31 @@ export default function SubAdminsPage() {
             onTransferDistrict: openTransfer,
           })}
           onRowClick={(row) => setSubAdminView({ open: true, row })}
+          filters={[
+            {
+              key: "district",
+              label: tTable.filter_district ?? "All Districts",
+              options: [
+                ...KERALA_DISTRICTS.map((d) => ({ value: d.code, label: tDistricts[`district_${d.code}`] ?? d.name })),
+                // Backend treats "none" as "no district assigned".
+                { value: "none", label: tTable.no_district ?? "No district" },
+              ],
+            },
+          ]}
         />
       </Suspense>
 
-      <ViewSheet
-        open={subAdminView.open}
-        onOpenChange={(open) => setSubAdminView((s) => ({ ...s, open }))}
-        title={tTable.view_title ?? "Sub-Admin Details"}
-        actions={
-          subAdminView.row
-            ? [
-                {
-                  label: tCommon.edit ?? "Edit",
-                  icon: Pencil,
-                  onClick: () => router.push(`/admin/sub-admins/${subAdminView.row?.id}/edit`),
-                },
-              ]
-            : []
-        }
-        fields={
-          subAdminView.row
-            ? [
-                { label: tCommon.section_account ?? "Account", type: "section" },
-                {
-                  label: tTable.col_name ?? "Name",
-                  value: [subAdminView.row.first_name, subAdminView.row.last_name].filter(Boolean).join(" "),
-                },
-                { label: tTable.col_email ?? "Email", value: subAdminView.row.email },
-                { label: tTable.col_phone ?? "Phone", value: subAdminView.row.phone },
-                { label: tCommon.section_access ?? "Access", type: "section" },
-                {
-                  label: tTable.col_status ?? "Status",
-                  type: "status",
-                  active: subAdminView.row.is_active,
-                  activeLabel: tCommon.badge_active ?? "Active",
-                  inactiveLabel: tCommon.badge_inactive ?? "Inactive",
-                },
-                { label: tTable.col_date_joined ?? "Date Joined", type: "date", value: subAdminView.row.date_joined },
-                { label: tCommon.section_permissions ?? "Permissions", type: "section" },
-                { label: tTable.col_permissions ?? "Permissions", type: "tags", tags: subAdminView.row.permissions },
-                (() => {
-                  const sa = subAdminView.row;
-                  const count = sa.visible_fpos_count ?? 0;
-                  if (!sa.district || count === 0) {
-                    return {
-                      label: tTable.col_visible_fpos ?? "FPOs in Scope",
-                      value: "0",
-                    };
-                  }
-                  return {
-                    label: tTable.col_visible_fpos ?? "FPOs in Scope",
-                    type: "node" as const,
-                    node: (
-                      <BackLink
-                        href={`/admin/applications?district=${sa.district}`}
-                        className="font-medium text-primary hover:underline"
-                      >
-                        {count} — {tTable.view_all ?? "View list →"}
-                      </BackLink>
-                    ),
-                  };
-                })(),
-              ]
-            : []
-        }
-      />
+      {subAdminView.row && (
+        <SubAdminViewSheet
+          subAdmin={subAdminView.row}
+          open={subAdminView.open}
+          onOpenChange={(open) => setSubAdminView((s) => ({ ...s, open }))}
+          tTable={tTable}
+          tConfirm={tConfirm}
+          tCommon={tCommon}
+          handlers={{ onTransferDistrict: openTransfer }}
+        />
+      )}
 
       <BulkInviteDialog open={bulkOpen} onOpenChange={setBulkOpen} t={tTable} />
 

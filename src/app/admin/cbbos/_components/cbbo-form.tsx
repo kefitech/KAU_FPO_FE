@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { useAuthStore } from "@/stores/auth-store";
 import type { CBBO, CBBOLevel, CBBOUpdatePayload, NotificationChannelType } from "@/types/admin";
 
 type T = Record<string, string>;
@@ -108,6 +109,8 @@ export function CBBOForm({ mode, cbbo, t = {}, tCommon = {} }: CBBOFormProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const isEdit = mode === "edit";
+  // Sub-admins can only assign their own district, so state-wide isn't offered to them.
+  const isSubAdmin = useAuthStore((s) => s.user?.role) === "sub_admin";
   const editingValues = useMemo(() => (cbbo ? toFormValues(cbbo) : null), [cbbo]);
   const schema = isEdit ? editSchema : createSchema;
 
@@ -177,7 +180,14 @@ export function CBBOForm({ mode, cbbo, t = {}, tCommon = {} }: CBBOFormProps) {
         await cbbosApi.update(cbbo.id, basicPayload);
 
         if (districtsChanged) {
-          await cbbosApi.setDistricts(cbbo.id, "replace", values.district_codes);
+          // Send only what changed — a sub-admin may only add/remove their own district, so
+          // replacing the whole list would be rejected for a CBBO that also covers others.
+          const before = new Set(editingValues?.district_codes ?? []);
+          const after = new Set(values.district_codes);
+          const added = values.district_codes.filter((c) => !before.has(c));
+          const removed = [...before].filter((c) => !after.has(c));
+          if (added.length) await cbbosApi.setDistricts(cbbo.id, "add", added);
+          if (removed.length) await cbbosApi.setDistricts(cbbo.id, "remove", removed);
         }
       } else {
         await cbbosApi.create({
@@ -375,15 +385,17 @@ export function CBBOForm({ mode, cbbo, t = {}, tCommon = {} }: CBBOFormProps) {
                     >
                       {t.level_district ?? "District-wise"}
                     </Button>
-                    <Button
-                      type="button"
-                      variant={field.value === "state" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => field.onChange("state")}
-                      disabled={isEdit}
-                    >
-                      {t.level_state ?? "State-wide"}
-                    </Button>
+                    {!isSubAdmin && (
+                      <Button
+                        type="button"
+                        variant={field.value === "state" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => field.onChange("state")}
+                        disabled={isEdit}
+                      >
+                        {t.level_state ?? "State-wide"}
+                      </Button>
+                    )}
                   </div>
                 )}
               />

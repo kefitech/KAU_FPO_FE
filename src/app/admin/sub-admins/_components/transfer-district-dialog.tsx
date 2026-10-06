@@ -22,6 +22,13 @@ import type { SubAdmin } from "@/types/admin";
 
 type T = Record<string, string>;
 
+// Mirrors TransferDistrictSerializer.validate_reason on the backend.
+const REASON_MAX_WORDS = 500;
+
+function wordCount(text: string): number {
+  return text.trim().split(/\s+/).filter(Boolean).length;
+}
+
 export function TransferDistrictDialog({
   subAdmin,
   open,
@@ -36,6 +43,8 @@ export function TransferDistrictDialog({
   const queryClient = useQueryClient();
   const [toDistrict, setToDistrict] = useState("");
   const [reason, setReason] = useState("");
+  const reasonWords = wordCount(reason);
+  const reasonTooLong = reasonWords > REASON_MAX_WORDS;
 
   useEffect(() => {
     if (open) {
@@ -60,6 +69,7 @@ export function TransferDistrictDialog({
           .replace("{district}", toDistrict),
       );
       queryClient.invalidateQueries({ queryKey: ["sub-admins"] });
+      queryClient.invalidateQueries({ queryKey: ["sub-admin", String(subAdmin?.id)] });
       queryClient.invalidateQueries({ queryKey: ["sub-admin-district-cap-status"] });
       queryClient.invalidateQueries({ queryKey: ["sub-admin-district-transfers", subAdmin?.id] });
       onOpenChange(false);
@@ -75,7 +85,7 @@ export function TransferDistrictDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{t.transfer_title ?? "Transfer District"}</DialogTitle>
           <DialogDescription>
@@ -84,7 +94,7 @@ export function TransferDistrictDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4 py-2">
+        <div className="flex min-w-0 flex-col gap-4 py-2">
           <div className="flex items-center gap-3 rounded-md border bg-muted/30 px-3 py-2 text-sm">
             <span className="font-mono">{currentDistrict || "—"}</span>
             <span className="text-muted-foreground text-xs">{currentName}</span>
@@ -113,7 +123,32 @@ export function TransferDistrictDialog({
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder={t.reason_placeholder ?? "e.g. Reorganisation for FY 2026-27"}
+              aria-invalid={reasonTooLong}
+              aria-describedby="ta-reason-count"
+              className="max-h-48 overflow-y-auto"
             />
+            <div id="ta-reason-count" className="mt-1 flex items-start justify-between gap-2 text-xs">
+              <span className="text-destructive">
+                {reasonTooLong &&
+                  (t.reason_too_long ?? "Reason can be at most {max} words.").replace(
+                    "{max}",
+                    String(REASON_MAX_WORDS),
+                  )}
+              </span>
+              <span
+                className={`shrink-0 tabular-nums ${
+                  reasonTooLong
+                    ? "text-destructive"
+                    : reasonWords > REASON_MAX_WORDS * 0.8
+                      ? "text-amber-600"
+                      : "text-muted-foreground"
+                }`}
+              >
+                {(t.reason_word_count ?? "{count}/{max} words")
+                  .replace("{count}", String(reasonWords))
+                  .replace("{max}", String(REASON_MAX_WORDS))}
+              </span>
+            </div>
           </div>
 
           {history && history.length > 0 && (
@@ -121,12 +156,18 @@ export function TransferDistrictDialog({
               <p className="mb-1 font-medium text-sm">{t.history_heading ?? "Transfer History"}</p>
               <ol className="max-h-40 overflow-y-auto rounded-md border divide-y text-xs">
                 {history.map((h) => (
-                  <li key={h.id} className="flex items-center gap-2 px-2 py-1.5">
-                    <span className="font-mono">
+                  <li key={h.id} className="flex items-start gap-2 px-2 py-1.5">
+                    <span className="shrink-0 whitespace-nowrap font-mono">
                       {h.from_district || "—"} → {h.to_district}
                     </span>
-                    <span className="text-muted-foreground">{new Date(h.created_at).toLocaleDateString()}</span>
-                    {h.reason && <span className="truncate text-muted-foreground">· {h.reason}</span>}
+                    <span className="shrink-0 text-muted-foreground">
+                      {new Date(h.created_at).toLocaleDateString()}
+                    </span>
+                    {h.reason && (
+                      <span className="min-w-0 flex-1 whitespace-pre-wrap break-words text-muted-foreground">
+                        · {h.reason}
+                      </span>
+                    )}
                   </li>
                 ))}
               </ol>
@@ -138,7 +179,7 @@ export function TransferDistrictDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             {t.cancel ?? "Cancel"}
           </Button>
-          <Button disabled={!toDistrict || mutation.isPending} onClick={() => mutation.mutate()}>
+          <Button disabled={!toDistrict || reasonTooLong || mutation.isPending} onClick={() => mutation.mutate()}>
             {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {t.transfer_btn ?? "Transfer"}
           </Button>

@@ -223,23 +223,26 @@ export function DataTable<TData>({
                   const canSort = header.column.getCanSort();
                   const sorted = header.column.getIsSorted();
                   const width = header.column.columnDef.meta?.width;
+                  const headerMaxWidth = header.column.columnDef.meta?.headerMaxWidth;
                   const isSlNo = header.id === "_slno";
                   return (
                     <TableHead
                       key={header.id}
-                      style={width ? { width } : undefined}
+                      style={width || headerMaxWidth ? { width, maxWidth: headerMaxWidth } : undefined}
                       onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
                       className={[
                         "text-xs font-semibold uppercase tracking-wider text-slate-300",
                         canSort ? "cursor-pointer select-none hover:text-white" : "",
                         isSlNo ? "text-center" : "",
+                        // Let a capped header wrap instead of forcing the column wider.
+                        headerMaxWidth ? "whitespace-normal break-words leading-tight" : "",
                       ].join(" ")}
                     >
                       {header.isPlaceholder ? null : (
                         <div className={`flex items-center gap-1.5 ${isSlNo ? "justify-center" : ""}`}>
                           {flexRender(header.column.columnDef.header, header.getContext())}
                           {canSort && (
-                            <span>
+                            <span className="shrink-0">
                               {sorted === "asc" ? (
                                 <ArrowUp className="h-3 w-3 text-violet-400" />
                               ) : sorted === "desc" ? (

@@ -278,7 +278,13 @@ export function getCBBOColumns(t: T = {}, tConfirm: T = {}, tCommon: T = {}): Co
     {
       id: "actions",
       header: "",
-      cell: ({ row }) => <CBBOActions cbbo={row.original} t={t} tConfirm={tConfirm} tCommon={tCommon} />,
+      // No actions on CBBOs a sub-admin can only view (state-wide, or another district).
+      cell: ({ row }) =>
+        row.original.can_manage === false ? (
+          <span className="text-muted-foreground text-xs">{t.view_only ?? "View only"}</span>
+        ) : (
+          <CBBOActions cbbo={row.original} t={t} tConfirm={tConfirm} tCommon={tCommon} />
+        ),
     },
   ];
 }

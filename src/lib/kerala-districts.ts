@@ -7,13 +7,20 @@
  * Also shared with the admin dpr projects page filter.
  */
 export const KERALA_DISTRICTS: ReadonlyArray<{ code: string; name: string }> = [
-  { code: "TVM", name: "Thiruvananthapuram" }, { code: "KLM", name: "Kollam" },
-  { code: "PTA", name: "Pathanamthitta" },    { code: "ALP", name: "Alappuzha" },
-  { code: "KTM", name: "Kottayam" },          { code: "IDK", name: "Idukki" },
-  { code: "EKM", name: "Ernakulam" },         { code: "TRS", name: "Thrissur" },
-  { code: "PKD", name: "Palakkad" },          { code: "MLP", name: "Malappuram" },
-  { code: "KZD", name: "Kozhikode" },         { code: "WYD", name: "Wayanad" },
-  { code: "KNR", name: "Kannur" },            { code: "KSD", name: "Kasaragod" },
+  { code: "TVM", name: "Thiruvananthapuram" },
+  { code: "KLM", name: "Kollam" },
+  { code: "PTA", name: "Pathanamthitta" },
+  { code: "ALP", name: "Alappuzha" },
+  { code: "KTM", name: "Kottayam" },
+  { code: "IDK", name: "Idukki" },
+  { code: "EKM", name: "Ernakulam" },
+  { code: "TSR", name: "Thrissur" },
+  { code: "PKD", name: "Palakkad" },
+  { code: "MLP", name: "Malappuram" },
+  { code: "KZD", name: "Kozhikode" },
+  { code: "WYD", name: "Wayanad" },
+  { code: "KNR", name: "Kannur" },
+  { code: "KSD", name: "Kasaragod" },
 ];
 
 /** SearchableSelect-compatible options — value = code, label = "Name (Code)". */

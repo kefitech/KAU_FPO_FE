@@ -231,10 +231,29 @@ export function getGovernmentColumns(t: T = {}, tConfirm: T = {}, tCommon: T = {
             </Badge>
           );
         }
+        // Same compact display as the CBBO table: first two districts, then "+N".
+        const districts = o.assigned_districts ?? [];
+        if (districts.length === 0) {
+          return <span className="text-muted-foreground">—</span>;
+        }
+        const visible = districts.slice(0, 2);
+        const extra = districts.length - visible.length;
         return (
-          <Badge variant="outline" className="text-[10px]">
-            {o.assigned_district_display ?? o.assigned_district ?? "—"}
-          </Badge>
+          <div
+            className="flex flex-wrap items-center gap-1"
+            title={(o.assigned_districts_display ?? districts).join(", ")}
+          >
+            {visible.map((district) => (
+              <Badge key={district} variant="outline" className="text-[10px]">
+                {district}
+              </Badge>
+            ))}
+            {extra > 0 && (
+              <Badge variant="outline" className="text-[10px]">
+                +{extra}
+              </Badge>
+            )}
+          </div>
         );
       },
     },
@@ -277,7 +296,13 @@ export function getGovernmentColumns(t: T = {}, tConfirm: T = {}, tCommon: T = {
     {
       id: "actions",
       header: "",
-      cell: ({ row }) => <GovernmentActions official={row.original} t={t} tConfirm={tConfirm} tCommon={tCommon} />,
+      // No actions on officials a sub-admin can only view (state-level, or another district).
+      cell: ({ row }) =>
+        row.original.can_manage === false ? (
+          <span className="text-muted-foreground text-xs">{t.view_only ?? "View only"}</span>
+        ) : (
+          <GovernmentActions official={row.original} t={t} tConfirm={tConfirm} tCommon={tCommon} />
+        ),
     },
   ];
 }

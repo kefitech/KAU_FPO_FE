@@ -74,7 +74,7 @@ export default function CBBOsPage() {
         onOpenChange={(open) => setCbboView((s) => ({ ...s, open }))}
         title={tTable.view_title ?? "CBBO Details"}
         actions={
-          cbboView.row
+          cbboView.row && cbboView.row.can_manage !== false
             ? [
                 {
                   label: tCommon.edit ?? "Edit",

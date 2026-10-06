@@ -72,7 +72,7 @@ export default function GovernmentPage() {
         onOpenChange={(open) => setOfficialView((s) => ({ ...s, open }))}
         title={tTable.view_title ?? "Official Details"}
         actions={
-          officialView.row
+          officialView.row && officialView.row.can_manage !== false
             ? [
                 {
                   label: tCommon.edit ?? "Edit",
@@ -112,7 +112,7 @@ export default function GovernmentPage() {
                   tags:
                     officialView.row.jurisdiction_type === "state"
                       ? ["State-wide"]
-                      : [officialView.row.assigned_district_display ?? officialView.row.assigned_district ?? ""],
+                      : (officialView.row.assigned_districts_display ?? officialView.row.assigned_districts ?? []),
                 },
               ]
             : []
