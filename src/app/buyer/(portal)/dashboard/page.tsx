@@ -70,8 +70,8 @@ export default function BuyerDashboardPage() {
   const [editingProfile, setEditingProfile] = useState(false);
   const profileFormRef = useRef<HTMLDivElement>(null);
 
-  // The edit form renders above the stats while "Your Details" (where Edit is
-  // clicked) sits at the bottom, so bring the form into view when editing starts.
+  // The edit form replaces "Your Details" in place and is taller than it, so bring
+  // the whole form into view when editing starts.
   useEffect(() => {
     if (!editingProfile) return;
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -170,6 +170,138 @@ export default function BuyerDashboardPage() {
     saveMutation.mutate();
   };
 
+  // Profile form — the onboarding prompt at the top, or the editor in place of "Your Details".
+  const profileForm = (
+    <Card ref={profileFormRef} className="scroll-mt-4 border-amber-300 bg-amber-50/40 dark:bg-amber-950/20">
+      <CardHeader>
+        <CardTitle className="text-base">
+          {profileIncomplete
+            ? (t.complete_profile_title ?? "Complete your buyer profile")
+            : (t.edit_profile_title ?? "Edit your buyer profile")}
+        </CardTitle>
+        <p className="text-muted-foreground text-sm">
+          {t.complete_profile_subtitle ??
+            "Add your location and commodity interests so FPOs can match you with relevant products."}
+        </p>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        {/* Organisation (optional) */}
+        <div className="flex flex-col gap-1.5">
+          <label className="font-medium text-sm">
+            {t.label_organisation ?? "Organisation"}{" "}
+            <span className="font-normal text-muted-foreground">
+              ({t.optional ?? "optional"})
+            </span>
+          </label>
+          <Input
+            value={organisationDraft}
+            onChange={(e) => setOrganisationDraft(e.target.value)}
+            placeholder={t.organisation_placeholder ?? "Your organisation name"}
+            className="w-full sm:w-72"
+          />
+        </div>
+
+        {/* Location */}
+        <div className="flex flex-col gap-1.5">
+          <label className="font-medium text-sm">
+            {t.label_location ?? "Location (District)"}
+          </label>
+          <Select value={locationDraft} onValueChange={setLocationDraft}>
+            <SelectTrigger className="w-full sm:w-72">
+              <SelectValue placeholder={t.location_placeholder ?? "Select a district"} />
+            </SelectTrigger>
+            <SelectContent>
+              {(districts ?? []).map((d) => (
+                <SelectItem key={d.code} value={d.code}>
+                  {d.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Commodities */}
+        <div className="flex flex-col gap-1.5">
+          <label className="font-medium text-sm">
+            {t.label_commodities ?? "Commodities Interested"}
+          </label>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button type="button" variant="outline" className="w-full justify-start sm:w-72">
+                {commoditiesDraft.length > 0
+                  ? `${commoditiesDraft.length} selected`
+                  : (t.commodity_placeholder ?? "Select commodities")}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="max-h-72 overflow-y-auto">
+              {(commodities ?? []).map((c) => (
+                <DropdownMenuCheckboxItem
+                  key={c.code}
+                  checked={commoditiesDraft.includes(c.code)}
+                  onSelect={(e) => e.preventDefault()}
+                  onCheckedChange={(checked) => {
+                    setCommoditiesDraft((prev) =>
+                      checked ? [...prev, c.code] : prev.filter((v) => v !== c.code),
+                    );
+                  }}
+                >
+                  {c.name}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {commoditiesDraft.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {commoditiesDraft.map((c) => {
+                const label = commodities?.find((m) => m.code === c)?.name ?? c;
+                return (
+                  <Badge key={c} variant="secondary" className="gap-1 font-normal">
+                    {label}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setCommoditiesDraft(commoditiesDraft.filter((v) => v !== c))
+                      }
+                      className="ml-1 rounded-full hover:bg-muted-foreground/20"
+                      aria-label="Remove"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-2">
+          {!profileIncomplete && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setLocationDraft(data.location || "");
+                setCommoditiesDraft(data.commodities_interested || []);
+                setOrganisationDraft(data.organisation || "");
+                setEditingProfile(false);
+              }}
+            >
+              {t.cancel ?? "Cancel"}
+            </Button>
+          )}
+          <Button
+            onClick={handleSaveProfile}
+            disabled={saveMutation.isPending || !locationDraft || commoditiesDraft.length === 0}
+          >
+            {saveMutation.isPending
+              ? (t.saving ?? "Saving...")
+              : (t.save_profile ?? "Save profile")}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="flex flex-col gap-6 px-3 py-4 sm:px-6 sm:py-6">
       {/* ── Header ── */}
@@ -191,137 +323,9 @@ export default function BuyerDashboardPage() {
         </span>
       </div>
 
-      {/* ── Complete your profile ── (shows when incomplete, OR when the buyer clicked Edit) */}
-      {(profileIncomplete || editingProfile) && (
-        <Card ref={profileFormRef} className="scroll-mt-4 border-amber-300 bg-amber-50/40 dark:bg-amber-950/20">
-          <CardHeader>
-            <CardTitle className="text-base">
-              {profileIncomplete
-                ? (t.complete_profile_title ?? "Complete your buyer profile")
-                : (t.edit_profile_title ?? "Edit your buyer profile")}
-            </CardTitle>
-            <p className="text-muted-foreground text-sm">
-              {t.complete_profile_subtitle ??
-                "Add your location and commodity interests so FPOs can match you with relevant products."}
-            </p>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            {/* Organisation (optional) */}
-            <div className="flex flex-col gap-1.5">
-              <label className="font-medium text-sm">
-                {t.label_organisation ?? "Organisation"}{" "}
-                <span className="font-normal text-muted-foreground">
-                  ({t.optional ?? "optional"})
-                </span>
-              </label>
-              <Input
-                value={organisationDraft}
-                onChange={(e) => setOrganisationDraft(e.target.value)}
-                placeholder={t.organisation_placeholder ?? "Your organisation name"}
-                className="w-full sm:w-72"
-              />
-            </div>
-
-            {/* Location */}
-            <div className="flex flex-col gap-1.5">
-              <label className="font-medium text-sm">
-                {t.label_location ?? "Location (District)"}
-              </label>
-              <Select value={locationDraft} onValueChange={setLocationDraft}>
-                <SelectTrigger className="w-full sm:w-72">
-                  <SelectValue placeholder={t.location_placeholder ?? "Select a district"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {(districts ?? []).map((d) => (
-                    <SelectItem key={d.code} value={d.code}>
-                      {d.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Commodities */}
-            <div className="flex flex-col gap-1.5">
-              <label className="font-medium text-sm">
-                {t.label_commodities ?? "Commodities Interested"}
-              </label>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button type="button" variant="outline" className="w-full justify-start sm:w-72">
-                    {commoditiesDraft.length > 0
-                      ? `${commoditiesDraft.length} selected`
-                      : (t.commodity_placeholder ?? "Select commodities")}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="max-h-72 overflow-y-auto">
-                  {(commodities ?? []).map((c) => (
-                    <DropdownMenuCheckboxItem
-                      key={c.code}
-                      checked={commoditiesDraft.includes(c.code)}
-                      onSelect={(e) => e.preventDefault()}
-                      onCheckedChange={(checked) => {
-                        setCommoditiesDraft((prev) =>
-                          checked ? [...prev, c.code] : prev.filter((v) => v !== c.code),
-                        );
-                      }}
-                    >
-                      {c.name}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-              {commoditiesDraft.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {commoditiesDraft.map((c) => {
-                    const label = commodities?.find((m) => m.code === c)?.name ?? c;
-                    return (
-                      <Badge key={c} variant="secondary" className="gap-1 font-normal">
-                        {label}
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setCommoditiesDraft(commoditiesDraft.filter((v) => v !== c))
-                          }
-                          className="ml-1 rounded-full hover:bg-muted-foreground/20"
-                          aria-label="Remove"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </Badge>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            <div className="flex justify-end gap-2">
-              {!profileIncomplete && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setLocationDraft(data.location || "");
-                    setCommoditiesDraft(data.commodities_interested || []);
-                    setOrganisationDraft(data.organisation || "");
-                    setEditingProfile(false);
-                  }}
-                >
-                  {t.cancel ?? "Cancel"}
-                </Button>
-              )}
-              <Button
-                onClick={handleSaveProfile}
-                disabled={saveMutation.isPending || !locationDraft || commoditiesDraft.length === 0}
-              >
-                {saveMutation.isPending
-                  ? (t.saving ?? "Saving...")
-                  : (t.save_profile ?? "Save profile")}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* ── Complete your profile ── first-time / incomplete buyers. Clicking Edit on "Your Details"
+          opens the same form in that card's place instead (see below). */}
+      {profileIncomplete && !editingProfile && profileForm}
 
       {/* ── Metrics: catalogue supply + the buyer's own inquiries ── */}
       {data.stats && (
@@ -333,8 +337,10 @@ export default function BuyerDashboardPage() {
         />
       )}
 
-      {/* ── Your Details (profile + Commodities Interested, merged) ── */}
-      {!editingProfile && (
+      {/* ── Your Details (profile + Commodities Interested, merged) — the edit form replaces it while editing ── */}
+      {editingProfile ? (
+        profileForm
+      ) : (
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-2">
           <CardTitle className="text-base">{t.card_profile_title ?? "Your Details"}</CardTitle>
