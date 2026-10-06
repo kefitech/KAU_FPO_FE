@@ -9,3 +9,4 @@ export * from "./fpo";
 export * from "./market";
 export * from "./recommendation";
 export * from "./registration";
+export * from "./text";

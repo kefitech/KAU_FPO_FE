@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 import { useParams, useRouter } from "next/navigation";
 
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
 
@@ -14,12 +14,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { translationsApi } from "@/lib/api/translations";
+import { hasLetterOrDigit } from "@/lib/validations/text";
 import { useLocaleStore } from "@/stores/locale-store";
 
 type T = Record<string, string>;
 
 export default function EditCbboTrainingSessionPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const params = useParams<{ id: string }>();
   const sessionId = Number(params.id);
   const locale = useLocaleStore((s) => s.locale);
@@ -67,6 +69,8 @@ export default function EditCbboTrainingSessionPage() {
       }),
     onSuccess: () => {
       toast.success(t.toast_updated ?? "Training session updated");
+      queryClient.invalidateQueries({ queryKey: ["cbbo-training-sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["cbbo", "training-session", sessionId] });
       router.push("/cbbo/training");
     },
     onError: (error: unknown) => {
@@ -121,6 +125,19 @@ export default function EditCbboTrainingSessionPage() {
           e.preventDefault();
           if (!topic || !date) {
             toast.error(t.validation_required ?? "Fill in topic and date");
+            return;
+          }
+          const symbolsOnly = (value: string) => value.trim() !== "" && !hasLetterOrDigit(value);
+          if (symbolsOnly(topic)) {
+            toast.error(t.err_topic_symbols ?? "Topic must contain letters or numbers, not only symbols");
+            return;
+          }
+          if (symbolsOnly(trainerName)) {
+            toast.error(t.err_trainer_symbols ?? "Trainer name must contain letters or numbers, not only symbols");
+            return;
+          }
+          if (symbolsOnly(venue)) {
+            toast.error(t.err_venue_symbols ?? "Venue must contain letters or numbers, not only symbols");
             return;
           }
           mutation.mutate();

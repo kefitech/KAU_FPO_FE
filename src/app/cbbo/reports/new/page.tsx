@@ -4,12 +4,14 @@ import { Suspense, useEffect, useState } from "react";
 
 import { useRouter, useSearchParams } from "next/navigation";
 
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
 
 import { cbboFposApi } from "@/app/cbbo/_api/fpos";
 import { cbboReportsApi } from "@/app/cbbo/_api/reports";
+import { apiErrorMessage } from "@/app/cbbo/_api/training";
+import { SCROLL_TEXTAREA_CLASS, todayLocalISO } from "@/app/cbbo/reports/_lib/report-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -17,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Textarea } from "@/components/ui/textarea";
 import { translationsApi } from "@/lib/api/translations";
+import { hasLetterOrDigit } from "@/lib/validations/text";
 import { useLocaleStore } from "@/stores/locale-store";
 
 type T = Record<string, string>;
@@ -24,27 +27,16 @@ type T = Record<string, string>;
 const MAX_PARTICIPANTS = 100000;
 const MAX_PARTICIPANTS_DIGITS = String(MAX_PARTICIPANTS).length;
 
-// Fixed height with vertical scroll for long text
-const SCROLL_TEXTAREA_CLASS =
-  "field-sizing-fixed min-h-24 max-h-48 resize-none overflow-y-auto whitespace-pre-wrap break-words";
-
-function getErrorMessage(error: unknown): string | undefined {
-  const e = error as {
-    data?: { message?: string };
-    response?: { data?: { message?: string } };
-  };
-  return e?.response?.data?.message ?? e?.data?.message;
-}
-
 function NewCBBOReportForm() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const presetFpoId = searchParams.get("fpo_id");
   const locale = useLocaleStore((s) => s.locale);
   const [t, setT] = useState<T>({});
 
   const [fpoId, setFpoId] = useState(presetFpoId ?? "");
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(todayLocalISO());
   const [activities, setActivities] = useState("");
   const [participantsCount, setParticipantsCount] = useState("0");
   const [outcomes, setOutcomes] = useState("");
@@ -54,14 +46,15 @@ function NewCBBOReportForm() {
     translationsApi
       .getPublic(locale, "cbbo_reports_new,common")
       .then((data) => {
-        setT({ ...(data.cbbo_reports_new ?? {}), ...(data.common ?? {}) });
+        setT({ ...(data.common ?? {}), ...(data.cbbo_reports_new ?? {}) });
       })
       .catch(() => undefined);
   }, [locale]);
 
+  // Reports can only be filed for approved FPOs; drafts and pending applications are excluded.
   const { data: assignedFpos, isLoading: fposLoading } = useQuery({
-    queryKey: ["cbbo", "fpos", "select-options"],
-    queryFn: () => cbboFposApi.getAll({ page: 1, page_size: 200 }),
+    queryKey: ["cbbo", "fpos", "select-options", "approved"],
+    queryFn: () => cbboFposApi.getAll({ page: 1, page_size: 200, status: "approved" }),
   });
 
   const fpoOptions = (assignedFpos?.data ?? []).map((f) => ({
@@ -85,10 +78,11 @@ function NewCBBOReportForm() {
     }) => cbboReportsApi.create(payload),
     onSuccess: () => {
       toast.success(t.toast_saved ?? "Report saved as draft");
+      queryClient.invalidateQueries({ queryKey: ["cbbo-reports"] });
       router.push("/cbbo/reports");
     },
     onError: (error: unknown) => {
-      toast.error(getErrorMessage(error) ?? t.toast_save_failed ?? "Failed to save report");
+      toast.error(apiErrorMessage(error, t.toast_save_failed ?? "Failed to save report"));
     },
   });
 
@@ -119,8 +113,22 @@ function NewCBBOReportForm() {
       newErrors.fpo_id = t.error_select_fpo ?? "Select an FPO";
     }
 
+    // `max` only limits the picker; a typed-in date still needs checking
+    if (!date) {
+      newErrors.date = t.error_date_required ?? "Select a date";
+    } else if (date > todayLocalISO()) {
+      newErrors.date = t.error_future_date ?? "Report date cannot be in the future";
+    }
+
     if (activities.trim().length < 10) {
       newErrors.activities = t.error_activities_length ?? "Activities must be at least 10 characters";
+    } else if (!hasLetterOrDigit(activities)) {
+      newErrors.activities =
+        t.error_activities_symbols ?? "Activities must contain letters or numbers, not only symbols";
+    }
+
+    if (outcomes.trim() && !hasLetterOrDigit(outcomes)) {
+      newErrors.outcomes = t.error_outcomes_symbols ?? "Outcomes must contain letters or numbers, not only symbols";
     }
 
     const countStr = participantsCount.trim() === "" ? "0" : participantsCount.trim();
@@ -197,11 +205,21 @@ function NewCBBOReportForm() {
               </Field>
 
               <FieldGroup className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Field>
+                <Field data-invalid={!!errors.date}>
                   <FieldLabel htmlFor="report-date">
                     {t.field_date ?? "Date"} <span className="text-destructive">*</span>
                   </FieldLabel>
-                  <Input id="report-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+                  <Input
+                    id="report-date"
+                    type="date"
+                    max={todayLocalISO()}
+                    value={date}
+                    onChange={(e) => {
+                      setDate(e.target.value);
+                      clearError("date");
+                    }}
+                  />
+                  {errors.date && <FieldError errors={[{ message: errors.date }]} />}
                 </Field>
 
                 <Field data-invalid={!!errors.participants_count}>
@@ -238,15 +256,19 @@ function NewCBBOReportForm() {
                 {errors.activities && <FieldError errors={[{ message: errors.activities }]} />}
               </Field>
 
-              <Field>
+              <Field data-invalid={!!errors.outcomes}>
                 <FieldLabel htmlFor="outcomes">{t.field_outcomes ?? "Outcomes"}</FieldLabel>
                 <Textarea
                   id="outcomes"
                   value={outcomes}
-                  onChange={(e) => setOutcomes(e.target.value)}
+                  onChange={(e) => {
+                    setOutcomes(e.target.value);
+                    clearError("outcomes");
+                  }}
                   rows={3}
                   className={SCROLL_TEXTAREA_CLASS}
                 />
+                {errors.outcomes && <FieldError errors={[{ message: errors.outcomes }]} />}
               </Field>
             </CardContent>
           </Card>

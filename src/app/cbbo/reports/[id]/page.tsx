@@ -9,6 +9,8 @@ import { ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
 
 import { cbboReportsApi } from "@/app/cbbo/_api/reports";
+import { apiErrorMessage } from "@/app/cbbo/_api/training";
+import { SCROLL_TEXTAREA_CLASS, todayLocalISO } from "@/app/cbbo/reports/_lib/report-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +18,7 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { translationsApi } from "@/lib/api/translations";
+import { hasLetterOrDigit } from "@/lib/validations/text";
 import { useConfirmStore } from "@/stores/confirm-store";
 import { useLocaleStore } from "@/stores/locale-store";
 
@@ -33,7 +36,7 @@ export default function CBBOReportDetailPage({ params }: { params: Promise<{ id:
     translationsApi
       .getPublic(locale, "cbbo_reports_detail,common")
       .then((data) => {
-        setT({ ...(data.cbbo_reports_detail ?? {}), ...(data.common ?? {}) });
+        setT({ ...(data.common ?? {}), ...(data.cbbo_reports_detail ?? {}) });
       })
       .catch(() => undefined);
   }, [locale]);
@@ -73,8 +76,7 @@ export default function CBBOReportDetailPage({ params }: { params: Promise<{ id:
       queryClient.invalidateQueries({ queryKey: ["cbbo-reports"] });
     },
     onError: (error: unknown) => {
-      const msg = (error as { data?: { message?: string } })?.data?.message;
-      toast.error(msg ?? t.toast_update_failed ?? "Failed to update report");
+      toast.error(apiErrorMessage(error, t.toast_update_failed ?? "Failed to update report"));
     },
   });
 
@@ -90,6 +92,27 @@ export default function CBBOReportDetailPage({ params }: { params: Promise<{ id:
       toast.error(msg ?? t.toast_submit_failed ?? "Failed to submit report");
     },
   });
+
+  function handleSave() {
+    // `max` only limits the picker; a typed-in date still needs checking
+    if (date > todayLocalISO()) {
+      toast.error(t.error_future_date ?? "Report date cannot be in the future");
+      return;
+    }
+    if (activities.trim().length < 10) {
+      toast.error(t.error_activities_length ?? "Activities must be at least 10 characters");
+      return;
+    }
+    if (!hasLetterOrDigit(activities)) {
+      toast.error(t.error_activities_symbols ?? "Activities must contain letters or numbers, not only symbols");
+      return;
+    }
+    if (outcomes.trim() && !hasLetterOrDigit(outcomes)) {
+      toast.error(t.error_outcomes_symbols ?? "Outcomes must contain letters or numbers, not only symbols");
+      return;
+    }
+    updateMutation.mutate();
+  }
 
   function handleSubmitReport() {
     confirm({
@@ -158,6 +181,7 @@ export default function CBBOReportDetailPage({ params }: { params: Promise<{ id:
                 <Input
                   id="report-date"
                   type="date"
+                  max={todayLocalISO()}
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
                   disabled={!isDraft}
@@ -182,6 +206,7 @@ export default function CBBOReportDetailPage({ params }: { params: Promise<{ id:
                 value={activities}
                 onChange={(e) => setActivities(e.target.value)}
                 rows={4}
+                className={SCROLL_TEXTAREA_CLASS}
                 disabled={!isDraft}
               />
             </Field>
@@ -192,6 +217,7 @@ export default function CBBOReportDetailPage({ params }: { params: Promise<{ id:
                 value={outcomes}
                 onChange={(e) => setOutcomes(e.target.value)}
                 rows={3}
+                className={SCROLL_TEXTAREA_CLASS}
                 disabled={!isDraft}
               />
             </Field>
@@ -200,12 +226,7 @@ export default function CBBOReportDetailPage({ params }: { params: Promise<{ id:
 
         {isDraft && (
           <div className="flex items-center justify-end gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => updateMutation.mutate()}
-              disabled={updateMutation.isPending}
-            >
+            <Button type="button" variant="outline" onClick={handleSave} disabled={updateMutation.isPending}>
               {updateMutation.isPending ? (t.btn_saving ?? "Saving...") : (t.btn_save_changes ?? "Save Changes")}
             </Button>
             <Button type="button" onClick={handleSubmitReport} disabled={submitMutation.isPending}>
