@@ -2,7 +2,6 @@
 
 import { Suspense, useEffect, useState } from "react";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { useQuery } from "@tanstack/react-query";
@@ -10,6 +9,7 @@ import { FileUp, Pencil, Plus } from "lucide-react";
 
 import { subAdminsApi } from "@/app/admin/_api/sub-admins";
 import { DataTable } from "@/components/data-table";
+import { BackLink } from "@/components/layout/back-link";
 import { Button } from "@/components/ui/button";
 import { ViewSheet } from "@/components/ui/view-sheet";
 import { translationsApi } from "@/lib/api/translations";
@@ -161,12 +161,12 @@ export default function SubAdminsPage() {
                     label: tTable.col_visible_fpos ?? "FPOs in Scope",
                     type: "node" as const,
                     node: (
-                      <Link
+                      <BackLink
                         href={`/admin/applications?district=${sa.district}`}
                         className="font-medium text-primary hover:underline"
                       >
                         {count} — {tTable.view_all ?? "View list →"}
-                      </Link>
+                      </BackLink>
                     ),
                   };
                 })(),

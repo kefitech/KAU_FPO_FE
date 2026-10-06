@@ -16,8 +16,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Loader2, RotateCcw, SlidersHorizontal } from "lucide-react";
-import Link from "next/link";
+import { Loader2, RotateCcw, SlidersHorizontal } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -126,14 +125,6 @@ export default function AdminDprConfigPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-4 py-6">
-      <div className="flex items-center gap-3">
-        <Button asChild variant="ghost" size="sm">
-          <Link href="/admin/dpr">
-            <ArrowLeft className="mr-1 h-4 w-4" /> {tCommon.back ?? "Back to DPR"}
-          </Link>
-        </Button>
-      </div>
-
       <div className="flex items-start gap-4">
         <div className="rounded-md bg-muted p-3">
           <SlidersHorizontal className="h-6 w-6" />

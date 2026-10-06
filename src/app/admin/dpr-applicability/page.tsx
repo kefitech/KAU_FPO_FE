@@ -21,7 +21,6 @@ import { Fragment, useMemo, useState } from "react";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  ArrowLeft,
   Grid3x3,
   Info,
   Loader2,
@@ -29,7 +28,6 @@ import {
   Search,
   X,
 } from "lucide-react";
-import Link from "next/link";
 import { toast } from "sonner";
 
 import {
@@ -136,14 +134,6 @@ export default function AdminDprApplicabilityPage() {
 
   return (
     <div className="mx-auto max-w-[95vw] space-y-6 px-4 py-6">
-      <div className="flex items-center gap-3">
-        <Button asChild variant="ghost" size="sm">
-          <Link href="/admin/dashboard">
-            <ArrowLeft className="mr-1 h-4 w-4" /> Dashboard
-          </Link>
-        </Button>
-      </div>
-
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">

@@ -17,8 +17,7 @@
 import { useMemo } from "react";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Grid3x3, Loader2 } from "lucide-react";
-import Link from "next/link";
+import { Grid3x3, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -27,7 +26,6 @@ import {
   type RiskClass,
   type RiskLevel,
 } from "@/app/admin/_api/dpr-risk-matrix";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
 // Ordering + labels — kept in sync with backend LEVEL_CHOICES on DPRRiskItem
@@ -81,14 +79,6 @@ export default function AdminDprRiskMatrixPage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-4 py-6">
-      <div className="flex items-center gap-3">
-        <Button asChild variant="ghost" size="sm">
-          <Link href="/admin/dpr">
-            <ArrowLeft className="mr-1 h-4 w-4" /> Back to DPR
-          </Link>
-        </Button>
-      </div>
-
       <div className="flex items-start gap-4">
         <div className="rounded-md bg-muted p-3">
           <Grid3x3 className="h-6 w-6" />

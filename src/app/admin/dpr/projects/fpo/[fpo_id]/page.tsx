@@ -18,7 +18,6 @@ import { use, useMemo } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import {
-  ArrowLeft,
   CheckCircle2,
   ExternalLink,
   FileText,
@@ -221,11 +220,6 @@ export default function AdminFpoDprDetailPage({ params }: PageProps) {
   return (
     <div className="flex flex-col gap-6 px-8 py-6">
       <div className="flex items-center gap-3">
-        <Button asChild variant="ghost" size="sm">
-          <Link href="/admin/dpr/projects">
-            <ArrowLeft className="mr-1 h-4 w-4" /> Back to FPO list
-          </Link>
-        </Button>
         <div className="min-w-0">
           <h1
             className="max-w-[640px] truncate font-bold text-2xl"

@@ -23,7 +23,6 @@ import { useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  ArrowLeft,
   Ban,
   BookOpen,
   Edit2,
@@ -32,7 +31,6 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import Link from "next/link";
 import { toast } from "sonner";
 
 import {
@@ -344,14 +342,7 @@ export default function AdminDprKnowledgePage() {
 
   return (
     <div className="flex flex-col gap-6 px-8 py-6">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/admin/dashboard">
-              <ArrowLeft className="mr-1 h-4 w-4" /> Dashboard
-            </Link>
-          </Button>
-        </div>
+      <div className="flex items-center justify-end gap-3">
         <Button size="sm" onClick={() => setDialog({ mode: "create" })}>
           <Plus className="mr-1 h-4 w-4" /> Add entry
         </Button>

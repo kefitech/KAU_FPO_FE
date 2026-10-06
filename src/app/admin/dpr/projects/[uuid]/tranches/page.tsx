@@ -18,8 +18,7 @@
 import { use, useMemo, useState } from "react";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
-import Link from "next/link";
+import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -127,14 +126,6 @@ export default function AdminDprTranchesPage({
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-4 py-6">
-      <div className="flex items-center gap-3">
-        <Button asChild variant="ghost" size="sm">
-          <Link href={`/admin/dpr/projects/${uuid}`}>
-            <ArrowLeft className="mr-1 h-4 w-4" /> Back to project
-          </Link>
-        </Button>
-      </div>
-
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold">Capital Tranches</h1>

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -9,6 +8,7 @@ import { toast } from "sonner";
 
 import { subAdminsApi } from "@/app/admin/_api/sub-admins";
 import { RowActions } from "@/components/data-table/row-actions";
+import { BackLink } from "@/components/layout/back-link";
 import { Badge } from "@/components/ui/badge";
 import { twoFactorApi } from "@/lib/api/two-factor";
 import { getErrorMessage } from "@/lib/get-error-message";
@@ -229,7 +229,7 @@ export function getSubAdminColumns(
         // Clickable — jump to the applications list pre-filtered so the admin
         // can drill into each FPO for tier / products / documents / etc.
         return (
-          <Link
+          <BackLink
             href={`/admin/applications?district=${sa.district}`}
             onClick={(e) => e.stopPropagation()}
             className="inline-flex"
@@ -241,7 +241,7 @@ export function getSubAdminColumns(
             >
               {count}
             </Badge>
-          </Link>
+          </BackLink>
         );
       },
     },
