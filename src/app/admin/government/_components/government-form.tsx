@@ -10,10 +10,12 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 import { governmentApi } from "@/app/admin/_api/government";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { useAuthStore } from "@/stores/auth-store";
 import type {
   GovernmentOfficial,
   GovernmentUpdatePayload,
@@ -56,17 +58,12 @@ const createSchema = z
       .min(1, { message: "Department is required" })
       .max(90)
       .regex(/^[a-zA-Z\s]+$/, { message: "Only letters and spaces allowed" }),
-    jurisdiction_type: z.enum(["district", "block", "state"]),
-    assigned_district: z.string().nullable(),
-    assigned_block: z.string().nullable(),
+    jurisdiction_type: z.enum(["district", "state"]),
+    assigned_districts: z.array(z.string()),
   })
-  .refine((data) => data.jurisdiction_type !== "district" || !!data.assigned_district, {
-    message: "Select a district",
-    path: ["assigned_district"],
-  })
-  .refine((data) => data.jurisdiction_type !== "block" || !!data.assigned_block, {
-    message: "Select a block",
-    path: ["assigned_block"],
+  .refine((data) => data.jurisdiction_type !== "district" || data.assigned_districts.length > 0, {
+    message: "Select at least one district",
+    path: ["assigned_districts"],
   });
 
 const editSchema = z
@@ -85,17 +82,12 @@ const editSchema = z
     phone: z.string().regex(/^[6-9]\d{9}$/, { message: "Enter a valid 10-digit mobile number" }),
     designation: z.string().min(1, { message: "Designation is required" }).max(200),
     department: z.string().min(1, { message: "Department is required" }).max(200),
-    jurisdiction_type: z.enum(["district", "block", "state"]),
-    assigned_district: z.string().nullable(),
-    assigned_block: z.string().nullable(),
+    jurisdiction_type: z.enum(["district", "state"]),
+    assigned_districts: z.array(z.string()),
   })
-  .refine((data) => data.jurisdiction_type !== "district" || !!data.assigned_district, {
-    message: "Select a district",
-    path: ["assigned_district"],
-  })
-  .refine((data) => data.jurisdiction_type !== "block" || !!data.assigned_block, {
-    message: "Select a block",
-    path: ["assigned_block"],
+  .refine((data) => data.jurisdiction_type !== "district" || data.assigned_districts.length > 0, {
+    message: "Select at least one district",
+    path: ["assigned_districts"],
   });
 
 type FormValues = {
@@ -107,8 +99,7 @@ type FormValues = {
   designation: string;
   department: string;
   jurisdiction_type: GovtJurisdictionType;
-  assigned_district: string | null;
-  assigned_block: string | null;
+  assigned_districts: string[];
 };
 
 interface GovernmentFormProps {
@@ -127,8 +118,7 @@ const defaultValues: FormValues = {
   designation: "",
   department: "",
   jurisdiction_type: "district",
-  assigned_district: null,
-  assigned_block: null,
+  assigned_districts: [],
 };
 
 function toFormValues(item: GovernmentOfficial): FormValues {
@@ -141,8 +131,7 @@ function toFormValues(item: GovernmentOfficial): FormValues {
     designation: item.designation ?? "",
     department: item.department ?? "",
     jurisdiction_type: item.jurisdiction_type,
-    assigned_district: item.assigned_district,
-    assigned_block: item.assigned_block,
+    assigned_districts: item.assigned_districts ?? [],
   };
 }
 
@@ -150,6 +139,8 @@ export function GovernmentForm({ mode, official, t = {}, tCommon = {} }: Governm
   const router = useRouter();
   const queryClient = useQueryClient();
   const isEdit = mode === "edit";
+  // Sub-admins can only assign their own district, so state-wide isn't offered to them.
+  const isSubAdmin = useAuthStore((s) => s.user?.role) === "sub_admin";
   const editingValues = useMemo(() => (official ? toFormValues(official) : null), [official]);
   const schema = isEdit ? editSchema : createSchema;
 
@@ -179,12 +170,6 @@ export function GovernmentForm({ mode, official, t = {}, tCommon = {} }: Governm
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: availableBlocks = [] } = useQuery({
-    queryKey: ["available-blocks"],
-    queryFn: () => governmentApi.getAvailableBlocks(),
-    staleTime: 5 * 60 * 1000,
-  });
-
   const mutation = useMutation({
     mutationFn: async (values: FormValues) => {
       if (isEdit && official) {
@@ -199,8 +184,7 @@ export function GovernmentForm({ mode, official, t = {}, tCommon = {} }: Governm
         await governmentApi.setJurisdiction(
           official.id,
           values.jurisdiction_type,
-          values.assigned_district,
-          values.assigned_block,
+          values.jurisdiction_type === "district" ? values.assigned_districts : [],
         );
       } else {
         await governmentApi.create({
@@ -212,8 +196,7 @@ export function GovernmentForm({ mode, official, t = {}, tCommon = {} }: Governm
           designation: values.designation,
           department: values.department,
           jurisdiction_type: values.jurisdiction_type,
-          assigned_district: values.jurisdiction_type === "district" ? values.assigned_district : null,
-          assigned_block: values.jurisdiction_type === "block" ? values.assigned_block : null,
+          assigned_districts: values.jurisdiction_type === "district" ? values.assigned_districts : [],
         });
       }
     },
@@ -427,78 +410,80 @@ export function GovernmentForm({ mode, official, t = {}, tCommon = {} }: Governm
                       size="sm"
                       onClick={() => field.onChange("district")}
                     >
-                      {t.level_district ?? "District"}
+                      {t.level_district ?? "District-wise"}
                     </Button>
-                    <Button
-                      type="button"
-                      variant={field.value === "state" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => field.onChange("state")}
-                    >
-                      {t.level_state ?? "State-wide"}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={field.value === "block" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => field.onChange("block")}
-                    >
-                      {t.level_block ?? "Block/Taluk"}
-                    </Button>
+                    {!isSubAdmin && (
+                      <Button
+                        type="button"
+                        variant={field.value === "state" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => field.onChange("state")}
+                      >
+                        {t.level_state ?? "State-wide"}
+                      </Button>
+                    )}
                   </div>
                 )}
               />
             </Field>
 
             {jurisdictionType === "district" && (
+              // Same multi-district picker as the CBBO form.
               <Controller
                 control={control}
-                name="assigned_district"
-                render={({ field }) => (
-                  <FieldGroup className="gap-2">
-                    <FieldLabel htmlFor="gv-district">{t.district_label ?? "District"}</FieldLabel>
-                    <select
-                      id="gv-district"
-                      className="h-9 w-full rounded-md border bg-background px-3 text-foreground text-sm shadow-xs focus:outline-none focus:ring-1 focus:ring-ring"
-                      value={field.value ?? ""}
-                      onChange={(e) => field.onChange(e.target.value || null)}
-                    >
-                      <option value="">{t.district_placeholder ?? "Select a district"}</option>
-                      {availableDistricts.map((d) => (
-                        <option key={d.code} value={d.code}>
-                          {d.name}
-                        </option>
-                      ))}
-                    </select>
-                    {errors.assigned_district && <FieldError errors={[errors.assigned_district]} />}
-                  </FieldGroup>
-                )}
-              />
-            )}
-
-            {jurisdictionType === "block" && (
-              <Controller
-                control={control}
-                name="assigned_block"
-                render={({ field }) => (
-                  <FieldGroup className="gap-2">
-                    <FieldLabel htmlFor="gv-block">{t.block_label ?? "Block/Taluk"}</FieldLabel>
-                    <select
-                      id="gv-block"
-                      className="h-9 w-full rounded-md border bg-background px-3 text-foreground text-sm shadow-xs focus:outline-none focus:ring-1 focus:ring-ring"
-                      value={field.value ?? ""}
-                      onChange={(e) => field.onChange(e.target.value || null)}
-                    >
-                      <option value="">{t.block_placeholder ?? "Select a block"}</option>
-                      {availableBlocks.map((b) => (
-                        <option key={b.code} value={b.code}>
-                          {b.name}
-                        </option>
-                      ))}
-                    </select>
-                    {errors.assigned_block && <FieldError errors={[errors.assigned_block]} />}
-                  </FieldGroup>
-                )}
+                name="assigned_districts"
+                render={({ field }) => {
+                  const selected: string[] = field.value;
+                  return (
+                    <FieldGroup className="gap-3">
+                      <FieldLabel>{t.districts_label ?? "Districts"}</FieldLabel>
+                      {selected.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {selected.map((code) => {
+                            const name = availableDistricts.find((d) => d.code === code)?.name ?? code;
+                            return (
+                              <Badge
+                                key={code}
+                                variant="secondary"
+                                className="cursor-pointer text-[10px]"
+                                onClick={() => field.onChange(selected.filter((s) => s !== code))}
+                              >
+                                {name} ×
+                              </Badge>
+                            );
+                          })}
+                        </div>
+                      )}
+                      <div className="grid max-h-72 grid-cols-2 gap-0.5 overflow-y-auto rounded-md border bg-background px-2 py-1 sm:grid-cols-3">
+                        {availableDistricts.length === 0 && (
+                          <span className="col-span-full px-1 py-2 text-muted-foreground text-xs">
+                            {t.districts_loading ?? "Loading districts..."}
+                          </span>
+                        )}
+                        {availableDistricts.map((d) => {
+                          const checked = selected.includes(d.code);
+                          return (
+                            <label
+                              key={d.code}
+                              className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-muted"
+                            >
+                              <input
+                                type="checkbox"
+                                className="h-4 w-4 shrink-0 rounded border accent-primary"
+                                checked={checked}
+                                onChange={() =>
+                                  field.onChange(checked ? selected.filter((s) => s !== d.code) : [...selected, d.code])
+                                }
+                              />
+                              <span className="text-sm">{d.name}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                      {errors.assigned_districts && <FieldError errors={[errors.assigned_districts]} />}
+                    </FieldGroup>
+                  );
+                }}
               />
             )}
           </CardContent>

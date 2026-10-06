@@ -334,6 +334,8 @@ export interface CBBO {
   organisation_id: number | null;
   organisation_name: string | null;
   registration_status?: "pending" | "approved" | "rejected" | null;
+  /** False when a sub-admin can only view this record (state-wide, or another district). */
+  can_manage?: boolean;
 }
 
 export interface CBBOPayload {
@@ -876,7 +878,7 @@ export interface AdminDashboardStats {
 }
 
 // ─── Government Officials ─────────────────────────────────────────────────────
-export type GovtJurisdictionType = "district" | "block" | "state";
+export type GovtJurisdictionType = "district" | "state";
 export interface GovernmentOfficial {
   id: number;
   email: string;
@@ -888,11 +890,12 @@ export interface GovernmentOfficial {
   designation: string;
   department: string;
   jurisdiction_type: GovtJurisdictionType;
-  assigned_district: string | null;
-  assigned_district_display: string | null;
-  assigned_block: string | null;
-  assigned_block_display: string | null;
+  /** District codes when jurisdiction_type is "district" (one or more); empty when state-wide. */
+  assigned_districts: string[];
+  assigned_districts_display: string[];
   registration_status: "approved" | "pending" | "rejected";
+  /** False when a sub-admin can only view this record (state-wide, or another district). */
+  can_manage?: boolean;
   user_category: string | null;
   id_number: string | null;
 }
@@ -905,8 +908,7 @@ export interface GovernmentPayload {
   designation: string;
   department: string;
   jurisdiction_type: GovtJurisdictionType;
-  assigned_district?: string | null;
-  assigned_block?: string | null;
+  assigned_districts?: string[];
 }
 export interface GovernmentUpdatePayload {
   first_name?: string;

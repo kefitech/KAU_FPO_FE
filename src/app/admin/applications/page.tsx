@@ -23,6 +23,7 @@ import {
 import { ViewSheet } from "@/components/ui/view-sheet";
 import { useAdminPermissions } from "@/hooks/use-admin-permissions";
 import { translationsApi } from "@/lib/api/translations";
+import { useAuthStore } from "@/stores/auth-store";
 import { useLocaleStore } from "@/stores/locale-store";
 
 import { getApplicationColumns } from "./_components/columns";
@@ -96,6 +97,7 @@ export default function ApplicationsPage() {
   const [downloading, setDownloading] = useState(false);
   const [translationsLoading, setTranslationsLoading] = useState(true);
   const canGenerateReports = useAdminPermissions().can("can_generate_reports");
+  const isSuperAdmin = useAuthStore((s) => s.user?.role) === "super_admin";
 
   const filters = useMemo(
     () => [
@@ -113,26 +115,32 @@ export default function ApplicationsPage() {
           { label: t.status_claimed ?? "Claimed", value: "claimed" },
         ],
       },
-      {
-        key: "district",
-        label: t.filter_all_district ?? "All District",
-        options: [
-          { value: "TVM", label: t.district_TVM ?? "Thiruvananthapuram" },
-          { value: "KLM", label: t.district_KLM ?? "Kollam" },
-          { value: "PTA", label: t.district_PTA ?? "Pathanamthitta" },
-          { value: "ALP", label: t.district_ALP ?? "Alappuzha" },
-          { value: "KTM", label: t.district_KTM ?? "Kottayam" },
-          { value: "IDK", label: t.district_IDK ?? "Idukki" },
-          { value: "EKM", label: t.district_EKM ?? "Ernakulam" },
-          { value: "TSR", label: t.district_TSR ?? "Thrissur" },
-          { value: "PKD", label: t.district_PKD ?? "Palakkad" },
-          { value: "MLP", label: t.district_MLP ?? "Malappuram" },
-          { value: "KZD", label: t.district_KZD ?? "Kozhikode" },
-          { value: "WYD", label: t.district_WYD ?? "Wayanad" },
-          { value: "KNR", label: t.district_KNR ?? "Kannur" },
-          { value: "KSD", label: t.district_KSD ?? "Kasaragod" },
-        ],
-      },
+      // Sub-admins only ever see their own district's FPOs (scoped on the backend),
+      // so a district filter would be meaningless for them.
+      ...(isSuperAdmin
+        ? [
+            {
+              key: "district",
+              label: t.filter_all_district ?? "All District",
+              options: [
+                { value: "TVM", label: t.district_TVM ?? "Thiruvananthapuram" },
+                { value: "KLM", label: t.district_KLM ?? "Kollam" },
+                { value: "PTA", label: t.district_PTA ?? "Pathanamthitta" },
+                { value: "ALP", label: t.district_ALP ?? "Alappuzha" },
+                { value: "KTM", label: t.district_KTM ?? "Kottayam" },
+                { value: "IDK", label: t.district_IDK ?? "Idukki" },
+                { value: "EKM", label: t.district_EKM ?? "Ernakulam" },
+                { value: "TSR", label: t.district_TSR ?? "Thrissur" },
+                { value: "PKD", label: t.district_PKD ?? "Palakkad" },
+                { value: "MLP", label: t.district_MLP ?? "Malappuram" },
+                { value: "KZD", label: t.district_KZD ?? "Kozhikode" },
+                { value: "WYD", label: t.district_WYD ?? "Wayanad" },
+                { value: "KNR", label: t.district_KNR ?? "Kannur" },
+                { value: "KSD", label: t.district_KSD ?? "Kasaragod" },
+              ],
+            },
+          ]
+        : []),
       {
         key: "tier",
         label: t.filter_all_tier ?? "All Tier",
@@ -144,7 +152,7 @@ export default function ApplicationsPage() {
         ],
       },
     ],
-    [t],
+    [t, isSuperAdmin],
   );
   async function handleDownload(format: "excel" | "pdf") {
     setDownloading(true);

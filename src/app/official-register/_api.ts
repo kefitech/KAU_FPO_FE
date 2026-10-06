@@ -11,9 +11,8 @@ export interface GovtRegistrationPayload {
   department: string;
   user_category: string;
   id_number: string;
-  jurisdiction_type: "district" | "block" | "state";
-  assigned_district?: string | null;
-  assigned_block?: string | null;
+  jurisdiction_type: "district" | "state";
+  assigned_districts?: string[];
 }
 
 export interface CBBORegistrationPayload {
