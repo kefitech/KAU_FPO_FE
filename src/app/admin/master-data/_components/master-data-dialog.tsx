@@ -22,8 +22,18 @@ import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { hasLetterOrDigit } from "@/lib/validations/text";
 
 type T = Record<string, string>;
+
+// Mirrors the name checks in apps/accounts/api/admin/master_lookups.py — keep the two in sync.
+// Names allow letters, digits, spaces and _ ( ) . , - / & ' and must include a letter. The
+// Malayalam pattern allows the whole Malayalam block, since its vowel signs are combining marks
+// rather than letters, plus ZWNJ/ZWJ, which older Malayalam text uses for chillu letters.
+const NAME_EN_DISALLOWED = /[^A-Za-z0-9 _(),.\-/&']/g;
+const NAME_EN_CHARS = /^[A-Za-z0-9 _(),.\-/&']+$/;
+const NAME_ML_CHARS = /^(?:[\u0D00-\u0D7FA-Za-z0-9 _(),.\-/&']|\u200C|\u200D)+$/;
+const HAS_LETTER = /\p{L}/u;
 
 function makeSchema(t: T) {
   return z.object({
@@ -33,14 +43,36 @@ function makeSchema(t: T) {
       .max(50, { message: t.val_code_max ?? "Max 50 characters" })
       .refine((v) => v === "" || /^[a-z0-9_]+$/.test(v), {
         message: t.val_code_invalid ?? "Only lowercase letters, numbers and underscores",
+      })
+      .refine((v) => v === "" || /[a-z0-9]/.test(v), {
+        message: t.val_code_letter ?? "Must contain a letter or number",
       }),
     name_en: z
       .string()
+      .trim()
       .min(1, { message: t.val_name_en_required ?? "English name is required" })
-      .max(40, { message: t.val_name_en_max ?? "Max 40 characters" }),
-    name_ml: z.string(),
+      .max(40, { message: t.val_name_en_max ?? "Max 40 characters" })
+      .refine((v) => !v || NAME_EN_CHARS.test(v), {
+        message: t.val_name_en_invalid ?? "Only letters, numbers, spaces and _ ( ) . , - / & ' are allowed",
+      })
+      .refine((v) => !v || HAS_LETTER.test(v), {
+        message: t.val_name_en_letter ?? "Must contain at least one letter",
+      }),
+    name_ml: z
+      .string()
+      .trim()
+      .refine((v) => !v || NAME_ML_CHARS.test(v), {
+        message:
+          t.val_name_ml_invalid ??
+          "Only Malayalam or English letters, numbers, spaces and _ ( ) . , - / & ' are allowed",
+      })
+      .refine((v) => !v || HAS_LETTER.test(v), {
+        message: t.val_name_ml_letter ?? "Must contain at least one letter",
+      }),
     section: z.string(),
-    description: z.string(),
+    description: z.string().refine((v) => !v.trim() || hasLetterOrDigit(v), {
+      message: t.val_description_symbols ?? "Must contain letters or numbers, not only symbols",
+    }),
     display_order: z.string().regex(/^\d*$/, { message: t.val_display_order_invalid ?? "Must be a whole number" }),
     is_active: z.boolean(),
   });
@@ -130,10 +162,10 @@ export function MasterDataDialog({ open, onOpenChange, category, categoryLabel, 
     },
     onError: (e: unknown) => {
       const err = e as { message?: string; data?: { errors?: Record<string, string[]> } };
-      const codeError = err?.data?.errors?.code?.[0];
-      if (codeError) setError("code", { message: String(codeError) });
-      const nameError = err?.data?.errors?.name_en?.[0];
-      if (nameError) setError("name_en", { message: String(nameError) });
+      for (const field of ["code", "name_en", "name_ml", "description"] as const) {
+        const fieldError = err?.data?.errors?.[field]?.[0];
+        if (fieldError) setError(field, { message: String(fieldError) });
+      }
       toast.error(err?.message ?? t.toast_failed ?? "Failed to save");
     },
   });
@@ -194,7 +226,7 @@ export function MasterDataDialog({ open, onOpenChange, category, categoryLabel, 
                       id="md-name-en"
                       maxLength={40}
                       {...field}
-                      onChange={(e) => field.onChange(e.target.value.replace(/[^a-zA-Z0-9_ ]/g, ""))}
+                      onChange={(e) => field.onChange(e.target.value.replace(NAME_EN_DISALLOWED, ""))}
                     />
                   )}
                 />
@@ -208,6 +240,7 @@ export function MasterDataDialog({ open, onOpenChange, category, categoryLabel, 
                   placeholder={t.name_ml_placeholder ?? "Optional — defaults to the English name"}
                   {...register("name_ml")}
                 />
+                {errors.name_ml && <FieldError errors={[errors.name_ml]} />}
               </Field>
 
               {isCommodity && (
@@ -248,6 +281,7 @@ export function MasterDataDialog({ open, onOpenChange, category, categoryLabel, 
                   className="max-h-40 overflow-y-auto"
                   {...register("description")}
                 />
+                {errors.description && <FieldError errors={[errors.description]} />}
               </Field>
 
               <Controller
