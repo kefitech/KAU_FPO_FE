@@ -292,7 +292,9 @@ export function SectionShell({
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 px-6 py-8">
+    // No bottom padding: the sticky footer is the last element, so it should sit flush with
+    // the bottom edge instead of floating above an empty strip when scrolled to the end.
+    <div className="mx-auto max-w-3xl space-y-6 px-6 pt-8">
       {/* Header — title + optional help icon + save status */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-2">
@@ -399,9 +401,13 @@ export function SectionShell({
               always in reach when scrolling long sections. Save/Discard only
               rendered when the section is wired for hybrid save; prev/next
               always available. Clicking Next fires a save first (if dirty)
-              so no keystrokes are lost to navigation. */}
+              so no keystrokes are lost to navigation.
+              Opaque (not translucent/blurred) so the form scrolling underneath
+              doesn't show through; the top shadow marks that content continues
+              below. Extra right padding keeps Next clear of the floating chat
+              button (fixed bottom-right, 64px from the edge). */}
           {(showSaveControls || prev || next) && (
-            <div className="sticky bottom-0 -mx-6 border-t bg-background/95 px-6 py-3 backdrop-blur">
+            <div className="sticky bottom-0 z-10 -mx-6 border-t bg-background py-3 pr-18 pl-6 shadow-[0_-6px_12px_-8px_rgb(0_0_0/0.15)]">
               <div className="grid grid-cols-3 items-center gap-2">
                 {/* Left — Previous section. When the section has unsaved
                     edits, clicking Prev opens the 3-choice AlertDialog
