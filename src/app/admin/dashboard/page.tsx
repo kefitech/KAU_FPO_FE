@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 import { useQuery } from "@tanstack/react-query";
-import { AlertCircle, CheckCircle, FileWarning, LayoutDashboard, ShieldOff, Users } from "lucide-react";
+import { AlertCircle, CheckCircle, FileWarning, LayoutDashboard, MapPin, ShieldOff, Users } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -23,10 +23,13 @@ import { adminDashboardApi } from "@/app/admin/_api/dashboard";
 import { FpoReportCard } from "./_components/fpo-report-card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DonutChart } from "@/components/shared/donut-chart";
+import { RecentNotificationsCard } from "@/components/shared/recent-notifications-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAdminPermissions } from "@/hooks/use-admin-permissions";
+import { inboxApi } from "@/lib/api/inbox";
 import { translationsApi } from "@/lib/api/translations";
+import { KERALA_DISTRICTS } from "@/lib/kerala-districts";
 import { useAuthStore } from "@/stores/auth-store";
 import { useLocaleStore } from "@/stores/locale-store";
 
@@ -132,11 +135,12 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     setTranslationsLoading(true);
     translationsApi
-      .getPublic(locale, "admin_dashboard,districts,common,fpo_report")
+      .getPublic(locale, "admin_dashboard,districts,common,fpo_report,notification_bell")
       .then((data) =>
         setT({
           ...(data.districts ?? {}),
           ...(data.common ?? {}),
+          ...(data.notification_bell ?? {}), // relative times on the notifications card
           ...(data.fpo_report ?? {}),
           ...(data.admin_dashboard ?? {}),
         })
@@ -149,6 +153,17 @@ export default function AdminDashboardPage() {
     queryKey: ["admin-dashboard-stats"],
     queryFn: adminDashboardApi.getStats,
     staleTime: 5 * 60 * 1000,
+  });
+
+  const isSubAdmin = user?.role === "sub_admin";
+
+  // Sub-admins only: alerts such as a new external buyer registration in their district.
+  // The Buyers table invalidates this key when it clears a buyer's "new" dot.
+  const { data: notifications, isLoading: notificationsLoading } = useQuery({
+    queryKey: ["admin-dashboard-notifications", locale],
+    queryFn: () => inboxApi.getAll({ page: 1, page_size: 5 }),
+    refetchInterval: 30_000,
+    enabled: isSubAdmin,
   });
 
   // Welcome toast on first login
@@ -181,6 +196,10 @@ export default function AdminDashboardPage() {
   }, [user, translationsLoading]);
 
   const stats = data;
+
+  const districtName = user?.district
+    ? (t[`district_${user.district}`] ?? KERALA_DISTRICTS.find((d) => d.code === user.district)?.name ?? user.district)
+    : null;
 
   const STATUS_CONFIG = getStatusConfig(t);
   const TIER_CONFIG   = getTierConfig(t);
@@ -258,24 +277,40 @@ export default function AdminDashboardPage() {
   return (
     <div className="flex flex-col gap-6 py-6">
       {/* Header */}
-      <div className="flex items-center gap-2">
-        <LayoutDashboard className="h-5 w-5 text-muted-foreground" />
-        <div>
-          {/* Sub-admins share this page; their stats are already scoped to assigned FPOs */}
-          {user?.role === "sub_admin" ? (
-            <>
-              <h1 className="font-bold text-2xl">{t.page_title_sub_admin ?? "Sub-Admin Dashboard"}</h1>
-              <p className="text-muted-foreground text-sm">
-                {t.page_description_sub_admin ?? "Overview of your assigned FPOs"}
-              </p>
-            </>
-          ) : (
-            <>
-              <h1 className="font-bold text-2xl">{t.page_title ?? "Admin Dashboard"}</h1>
-              <p className="text-muted-foreground text-sm">{t.page_description ?? "FPO platform overview"}</p>
-            </>
-          )}
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div className="flex items-center gap-2">
+          <LayoutDashboard className="h-5 w-5 text-muted-foreground" />
+          <div>
+            {/* Sub-admins share this page; their stats are already scoped to assigned FPOs */}
+            {isSubAdmin ? (
+              <>
+                <h1 className="font-bold text-2xl">{t.page_title_sub_admin ?? "Sub-Admin Dashboard"}</h1>
+                <p className="text-muted-foreground text-sm">
+                  {t.page_description_sub_admin ?? "Overview of your assigned FPOs"}
+                </p>
+              </>
+            ) : (
+              <>
+                <h1 className="font-bold text-2xl">{t.page_title ?? "Admin Dashboard"}</h1>
+                <p className="text-muted-foreground text-sm">{t.page_description ?? "FPO platform overview"}</p>
+              </>
+            )}
+          </div>
         </div>
+
+        {/* Sub-admin's district, at the right end of the header (wraps below on narrow screens) */}
+        {isSubAdmin &&
+          (districtName ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 font-medium text-primary text-sm">
+              <MapPin className="h-4 w-4" />
+              {t.assigned_district ?? "Assigned district"}: {districtName}
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1.5 font-medium text-amber-700 text-sm dark:bg-amber-900/30 dark:text-amber-300">
+              <MapPin className="h-4 w-4" />
+              {t.no_district_assigned ?? "No district assigned yet"}
+            </span>
+          ))}
       </div>
 
       {/* ── Row 1: Stat Cards ─────────────────────────────────────────────── */}
@@ -370,12 +405,13 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* ── Row 3: Left (Tier + Actions) | Right (Map) ───────────────────── */}
-      <div className="grid gap-6 lg:grid-cols-2 items-start">
+      {/* Columns stretch to equal height: the map grows to fill, or the Tier card does when the map is taller */}
+      <div className="grid gap-6 lg:grid-cols-2">
 
         {/* Left column: Tier Distribution + Action Required stacked */}
         <div className="flex flex-col gap-6">
           {/* Tier bar chart */}
-          <Card>
+          <Card className="flex-1">
             <CardHeader className="pb-2">
               <CardTitle className="text-base">{t.chart_tier_dist ?? "Tier Distribution"}</CardTitle>
               <p className="text-muted-foreground text-xs">{t.chart_tier_subtitle ?? "Approved FPOs by performance tier"}</p>
@@ -455,18 +491,18 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Right column: District distribution map */}
-        <Card className="overflow-hidden isolation-isolate">
+        <Card className="overflow-hidden isolation-isolate pb-0">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">{t.chart_district_dist ?? "District Distribution"}</CardTitle>
             <p className="text-muted-foreground text-xs">
               {/* The map is statewide for sub-admins too, unlike the rest of their (district-scoped) dashboard. */}
-              {user?.role === "sub_admin"
+              {isSubAdmin
                 ? (t.chart_district_subtitle_statewide ??
                   "FPOs registered in every district of Kerala — hover for details")
                 : (t.chart_district_subtitle ?? "FPOs registered per district — hover for details")}
             </p>
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent className="flex flex-1 flex-col p-0">
             <KeralaDistrictMap
               data={stats?.district_distribution ?? []}
               locale={locale}
@@ -474,6 +510,19 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* ── Sub-admins: alerts such as new external buyer registrations in their district.
+          Full width so its varying length doesn't unbalance the Tier/Actions vs Map columns. */}
+      {/* Not marked read on click: the page it opens clears it (opening the buyer's row),
+          and that row keeps its "new" dot until then. */}
+      {isSubAdmin && (
+        <RecentNotificationsCard
+          items={notifications?.data ?? []}
+          isLoading={notificationsLoading}
+          viewAllHref="/admin/inbox"
+          t={t}
+        />
+      )}
 
       {/* ── Row 4: Reports — sub-admins need can_generate_reports ─────────────── */}
       {canGenerateReports && <FpoReportCard t={t} />}

@@ -4,10 +4,8 @@ import { useEffect, useState } from "react";
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import DOMPurify from "isomorphic-dompurify";
 import {
   AlertTriangle,
   Bell,
@@ -38,6 +36,7 @@ const LocationMap = dynamic(() => import("./_components/location-map").then((m) 
 import { TierNextSteps } from "./_components/tier-next-steps";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { RecentNotificationsCard } from "@/components/shared/recent-notifications-card";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -59,15 +58,6 @@ function formatDate(dateStr: string) {
     month: "short",
     year: "numeric",
   });
-}
-
-function timeAgo(dateStr: string) {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
 }
 
 const STATUS_CONFIG: Record<FpoStatus, { label: string; className: string }> = {
@@ -159,13 +149,11 @@ export default function FpoDashboardPage() {
     staleTime: 60_000,
   });
 
-  const router = useRouter();
   const queryClient = useQueryClient();
 
-  // Notifications that carry a link (e.g. new inquiries → Inquiries tab) open
-  // it directly; unread ones are marked read on the way so the badge updates.
-  const openNotification = (n: { id: number; is_read: boolean; link?: string | null }) => {
-    if (!n.link) return;
+  // Notifications that carry a link (e.g. new inquiries → Inquiries tab) open it
+  // from the card; unread ones are marked read on the way so the badge updates.
+  const markNotificationRead = (n: { id: number; is_read: boolean }) => {
     if (!n.is_read) {
       inboxApi
         .markRead(n.id)
@@ -178,7 +166,6 @@ export default function FpoDashboardPage() {
         })
         .catch(() => undefined);
     }
-    router.push(n.link);
   };
 
   const { data: appStatus } = useQuery({
@@ -471,61 +458,12 @@ export default function FpoDashboardPage() {
           </Card>
 
           {/* Recent Notifications */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">{t.card_notifications_title ?? "Recent Notifications"}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {notifications.recent.length === 0 ? (
-                <div className="flex flex-col items-center gap-2 py-6 text-center">
-                  <Bell className="h-8 w-8 text-muted-foreground/40" />
-                  <p className="text-muted-foreground text-sm">{t.no_notifications ?? "No notifications yet"}</p>
-                  <p className="text-muted-foreground text-xs">
-                    {t.no_notifications_hint ?? "Updates on your application will appear here"}
-                  </p>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-3">
-                  {notifications.recent.map((n) => {
-                    const content = (
-                      <>
-                        <p className="font-medium text-sm break-words">{n.title}</p>
-                        {/* Notification templates contain light HTML (e.g. <strong>) — render it
-                            like the inbox does, but sanitised to formatting tags only. */}
-                        <p
-                          className="mt-0.5 text-muted-foreground break-words text-xs"
-                          // biome-ignore lint/security/noDangerouslySetInnerHtml: content is sanitized with DOMPurify
-                          dangerouslySetInnerHTML={{
-                            __html: DOMPurify.sanitize(n.body, {
-                              ALLOWED_TAGS: ["strong", "b", "em", "i", "br"],
-                              ALLOWED_ATTR: [],
-                            }),
-                          }}
-                        />
-                        <p className="mt-1 text-muted-foreground text-xs">{timeAgo(n.created_at)}</p>
-                      </>
-                    );
-                    const boxClass = `rounded-lg border p-3 ${!n.is_read ? "border-primary/20 bg-primary/5" : ""}`;
-                    return n.link ? (
-                      <button
-                        key={n.id}
-                        type="button"
-                        onClick={() => openNotification(n)}
-                        className={`${boxClass} flex w-full items-start gap-2 text-left transition-colors hover:bg-muted/50`}
-                      >
-                        <div className="min-w-0 flex-1">{content}</div>
-                        <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                      </button>
-                    ) : (
-                      <div key={n.id} className={boxClass}>
-                        {content}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <RecentNotificationsCard
+            items={notifications.recent}
+            onOpen={markNotificationRead}
+            emptyHint={t.no_notifications_hint ?? "Updates on your application will appear here"}
+            t={t}
+          />
         </div>
       </div>
     </div>

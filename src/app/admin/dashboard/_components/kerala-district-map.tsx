@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import "leaflet/dist/leaflet.css";
 
 import type { Feature, FeatureCollection, Geometry } from "geojson";
-import type { LatLngBoundsExpression, Layer, LeafletMouseEvent, PathOptions } from "leaflet";
+import type { LatLngBounds, Layer, LeafletMouseEvent, PathOptions } from "leaflet";
 import { GeoJSON, MapContainer, useMap } from "react-leaflet";
 
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
@@ -32,12 +32,27 @@ function getDistrictColor(count: number): string {
 function FitBounds({ geoData }: { geoData: FeatureCollection }) {
   const map = useMap();
   useEffect(() => {
+    let active = true;
+    let bounds: LatLngBounds | null = null;
+    const fit = () => {
+      if (bounds?.isValid()) map.fitBounds(bounds, { padding: [20, 20] });
+    };
     import("leaflet").then((L) => {
-      const bounds = L.geoJSON(geoData).getBounds();
-      if (bounds.isValid()) {
-        map.fitBounds(bounds as LatLngBoundsExpression, { padding: [20, 20] });
-      }
+      if (!active) return;
+      bounds = L.geoJSON(geoData).getBounds();
+      fit();
     });
+    // The map stretches to its dashboard row, whose height settles as the other cards
+    // load — Leaflet doesn't notice container resizes, so tell it and refit Kerala.
+    const observer = new ResizeObserver(() => {
+      map.invalidateSize();
+      fit();
+    });
+    observer.observe(map.getContainer());
+    return () => {
+      active = false;
+      observer.disconnect();
+    };
   }, [map, geoData]);
   return null;
 }
@@ -56,6 +71,9 @@ interface Props {
 }
 
 // ── Main Component ─────────────────────────────────────────────────────────────
+
+// The map grows past this to match the height of the cards beside it.
+const MAP_MIN_HEIGHT = "min(360px, 75vw)";
 
 export function KeralaDistrictMap({ data, locale }: Props) {
   const [geoData, setGeoData] = useState<FeatureCollection | null>(null);
@@ -213,14 +231,14 @@ export function KeralaDistrictMap({ data, locale }: Props) {
 
   if (!geoData) {
     return (
-      <div className="animate-pulse rounded-b-xl bg-muted" style={{ height: "min(480px, 75vw)" }} />
+      <div className="flex-1 animate-pulse rounded-b-xl bg-muted" style={{ minHeight: MAP_MIN_HEIGHT }} />
     );
   }
 
   return (
     <div
-      className="relative z-0 overflow-hidden rounded-b-xl"
-      style={{ height: "min(480px, 75vw)", background: waterBg }}
+      className="relative z-0 flex-1 overflow-hidden rounded-b-xl"
+      style={{ minHeight: MAP_MIN_HEIGHT, background: waterBg }}
     >
       <MapContainer
         center={[10.85, 76.27]}
@@ -228,8 +246,8 @@ export function KeralaDistrictMap({ data, locale }: Props) {
         scrollWheelZoom={false}
         zoomControl={true}
         attributionControl={false}
-        // transparent so the wrapper div's waterBg shows through
-        style={{ height: "100%", width: "100%", background: "transparent" }}
+        // fills the wrapper (which grows with its card); transparent so the wrapper's waterBg shows through
+        style={{ position: "absolute", inset: 0, background: "transparent" }}
       >
         <FitBounds geoData={geoData} />
         <GeoJSON

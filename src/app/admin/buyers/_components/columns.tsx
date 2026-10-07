@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { type QueryClient, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Ban, CheckCheck, KeyRound, MoreHorizontal, ShieldCheck, XCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -18,6 +18,16 @@ import {
 import { useConfirmStore } from "@/stores/confirm-store";
 
 type T = Record<string, string>;
+
+/** Refetch the buyer table plus everywhere a "new registration" alert shows (bell, inbox, dashboard). */
+export function refreshBuyerAlerts(queryClient: QueryClient) {
+  queryClient.invalidateQueries({
+    predicate: (query) => typeof query.queryKey[0] === "string" && query.queryKey[0].startsWith("admin-buyers"),
+  });
+  for (const key of ["inbox-unread-count", "inbox-list", "inbox-full", "inbox-categories", "admin-dashboard-notifications"]) {
+    queryClient.invalidateQueries({ queryKey: [key] });
+  }
+}
 
 /** Status shown for a buyer: a verified buyer whose login is switched off shows as "Deactivated". */
 export function buyerDisplayStatus(row: AdminBuyer, t: T): { status: BuyerStatus | "deactivated"; label: string } {
@@ -50,9 +60,7 @@ function ActionsCell({ row, t }: { row: AdminBuyer; t: T }) {
     mutationFn: () => adminBuyersApi.verify(row.id),
     onSuccess: () => {
       toast.success(`${row.name || "Buyer"} verified`);
-      queryClient.invalidateQueries({
-        predicate: (query) => typeof query.queryKey[0] === "string" && query.queryKey[0].startsWith("admin-buyers"),
-      });
+      refreshBuyerAlerts(queryClient); // verifying clears the registration alert
     },
     onError: (err: unknown) => {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
@@ -64,9 +72,7 @@ function ActionsCell({ row, t }: { row: AdminBuyer; t: T }) {
     mutationFn: () => adminBuyersApi.reject(row.id),
     onSuccess: () => {
       toast.success(`${row.name || "Buyer"} rejected`);
-      queryClient.invalidateQueries({
-        predicate: (query) => typeof query.queryKey[0] === "string" && query.queryKey[0].startsWith("admin-buyers"),
-      });
+      refreshBuyerAlerts(queryClient); // rejecting clears the registration alert
     },
     onError: (err: unknown) => {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
@@ -242,7 +248,21 @@ export function getBuyerColumns(t: T = {}): ColumnDef<AdminBuyer>[] {
     {
       accessorKey: "name",
       header: t.col_name ?? "Name",
-      cell: ({ row }) => <TextCell value={row.original.name} maxWidth="max-w-[200px]" />,
+      cell: ({ row }) => {
+        const isNew = !!row.original.unread_notification_id;
+        return (
+          <div className="flex items-center gap-2">
+            {/* Dot = pending registration this admin hasn't opened yet; the slot keeps names aligned */}
+            <span
+              aria-hidden
+              title={isNew ? (t.new_registration ?? "New registration") : undefined}
+              className={`size-2 shrink-0 rounded-full ${isNew ? "bg-primary" : ""}`}
+            />
+            {isNew && <span className="sr-only">{t.new_registration ?? "New registration"}</span>}
+            <TextCell value={row.original.name} maxWidth="max-w-[200px]" />
+          </div>
+        );
+      },
     },
     {
       accessorKey: "organisation",
