@@ -12,6 +12,9 @@ import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
+// Mirrors InquiryCreateSerializer's max_length for `message` on the backend.
+const MESSAGE_MAX_CHARS = 500;
+
 interface InquiryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -137,8 +140,16 @@ export function InquiryDialog({
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               rows={4}
-              className="resize-none"
+              maxLength={MESSAGE_MAX_CHARS}
+              className="max-h-48 resize-none overflow-y-auto"
             />
+            <span
+              className={`ml-auto text-xs tabular-nums ${
+                message.length >= MESSAGE_MAX_CHARS ? "text-destructive" : "text-muted-foreground"
+              }`}
+            >
+              {message.length}/{MESSAGE_MAX_CHARS}
+            </span>
           </Field>
 
           <p className="text-muted-foreground text-xs">

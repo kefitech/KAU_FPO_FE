@@ -22,12 +22,14 @@ export default function EditSubAdminPage() {
   const queryClient = useQueryClient();
   const [tForm, setTForm] = useState<T>({});
   const [tCommon, setTCommon] = useState<T>({});
+  const [tTable, setTTable] = useState<T>({});
 
   useEffect(() => {
     translationsApi
-      .getPublic(locale, "sub_admins_dialog,common")
+      .getPublic(locale, "sub_admins_dialog,sub_admins_table,common")
       .then((data) => {
         setTForm(data.sub_admins_dialog ?? {});
+        setTTable(data.sub_admins_table ?? {});
         setTCommon(data.common ?? {});
       })
       .catch(() => undefined);
@@ -72,7 +74,7 @@ export default function EditSubAdminPage() {
         <p className="mt-0.5 text-muted-foreground text-sm">{fullName}</p>
       </div>
 
-      <SubAdminForm mode="edit" subAdmin={subAdmin} t={tForm} tCommon={tCommon} />
+      <SubAdminForm mode="edit" subAdmin={subAdmin} t={tForm} tCommon={tCommon} tTransfer={tTable} />
     </div>
   );
 }

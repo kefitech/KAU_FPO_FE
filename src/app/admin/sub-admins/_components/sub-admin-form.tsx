@@ -13,11 +13,13 @@ import { z } from "zod";
 import { subAdminsApi } from "@/app/admin/_api/sub-admins";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { KERALA_DISTRICTS } from "@/lib/kerala-districts";
 import type { NotificationChannelType, SubAdmin, SubAdminUpdatePayload } from "@/types/admin";
+
+import { TransferDistrictForm } from "./transfer-district-dialog";
 
 type T = Record<string, string>;
 
@@ -95,6 +97,8 @@ interface SubAdminFormProps {
   subAdmin?: SubAdmin;
   t?: T;
   tCommon?: T;
+  /** sub_admins_table keys — the transfer form shares them with the list page's dialog. */
+  tTransfer?: T;
 }
 
 const defaultValues: FormValues = {
@@ -119,7 +123,7 @@ function toFormValues(item: SubAdmin): FormValues {
   };
 }
 
-export function SubAdminForm({ mode, subAdmin, t = {}, tCommon = {} }: SubAdminFormProps) {
+export function SubAdminForm({ mode, subAdmin, t = {}, tCommon = {}, tTransfer = {} }: SubAdminFormProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const isEdit = mode === "edit";
@@ -418,6 +422,21 @@ export function SubAdminForm({ mode, subAdmin, t = {}, tCommon = {} }: SubAdminF
             )}
           </CardContent>
         </Card>
+
+        {isEdit && subAdmin && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">{tTransfer.transfer_title ?? "Transfer District"}</CardTitle>
+              <CardDescription>
+                {tTransfer.transfer_description ??
+                  "Move this sub-admin to a different district. The change is audit-logged and the destination cap is checked before the move."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <TransferDistrictForm subAdmin={subAdmin} t={tTransfer} />
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>
