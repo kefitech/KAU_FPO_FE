@@ -74,10 +74,7 @@ function GovernmentActions({
       toast.success(t.toast_approved ?? "Registration approved");
       queryClient.invalidateQueries({ queryKey: ["government"] });
     },
-    onError: (error: unknown) => {
-      const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      toast.error(msg ?? t.toast_approve_failed ?? "Failed to approve");
-    },
+    onError: (error: unknown) => toast.error(getErrorMessage(error, t.toast_approve_failed ?? "Failed to approve")),
   });
 
   const rejectRegistrationMutation = useMutation({
@@ -86,10 +83,7 @@ function GovernmentActions({
       toast.success(t.toast_rejected ?? "Registration rejected");
       queryClient.invalidateQueries({ queryKey: ["government"] });
     },
-    onError: (error: unknown) => {
-      const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      toast.error(msg ?? t.toast_reject_failed ?? "Failed to reject");
-    },
+    onError: (error: unknown) => toast.error(getErrorMessage(error, t.toast_reject_failed ?? "Failed to reject")),
   });
 
   function handleResetPassword() {
