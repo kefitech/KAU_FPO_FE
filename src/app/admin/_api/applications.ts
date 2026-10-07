@@ -88,6 +88,8 @@ export interface ApplicationListItem {
   primary_user_name: string | null;
   primary_user_email: string | null;
   primary_user_phone: string | null;
+  /** False for other districts' FPOs a sub-admin sees only via can_view_all_fpos — view only. */
+  can_manage: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -190,6 +192,8 @@ export interface ApplicationDetail {
   // Relations
   documents: ApplicationDocument[];
   status_history: ApplicationStatusEntry[];
+  /** False for other districts' FPOs a sub-admin sees only via can_view_all_fpos — view only. */
+  can_manage: boolean;
   created_at: string;
   updated_at: string;
 }
