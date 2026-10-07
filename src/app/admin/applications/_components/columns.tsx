@@ -70,10 +70,11 @@ function ActionsCell({ row, t, tCommon }: { row: ApplicationListItem; t: T; tCom
     },
   });
 
-  // sub-admins only see the actions the super admin granted them
+  // sub-admins only see the actions the super admin granted them, and none at all on
+  // other districts' FPOs (visible to them only via can_view_all_fpos)
   const { can } = useAdminPermissions();
-  const canApprove = can("can_approve_fpo");
-  const canRequestInfo = can("can_request_info");
+  const canApprove = row.can_manage && can("can_approve_fpo");
+  const canRequestInfo = row.can_manage && can("can_request_info");
 
   const isApproved = row.status === "approved";
   const canActivate = (row.status === "suspended" || row.status === "rejected") && canApprove;

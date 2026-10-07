@@ -23,7 +23,6 @@ import {
 import { ViewSheet } from "@/components/ui/view-sheet";
 import { useAdminPermissions } from "@/hooks/use-admin-permissions";
 import { translationsApi } from "@/lib/api/translations";
-import { useAuthStore } from "@/stores/auth-store";
 import { useLocaleStore } from "@/stores/locale-store";
 
 import { getApplicationColumns } from "./_components/columns";
@@ -96,8 +95,10 @@ export default function ApplicationsPage() {
   const [tCommon, setTCommon] = useState<T>({});
   const [downloading, setDownloading] = useState(false);
   const [translationsLoading, setTranslationsLoading] = useState(true);
-  const canGenerateReports = useAdminPermissions().can("can_generate_reports");
-  const isSuperAdmin = useAuthStore((s) => s.user?.role) === "super_admin";
+  const { can } = useAdminPermissions();
+  const canGenerateReports = can("can_generate_reports");
+  // true for super admins too — can() grants them everything
+  const canViewAllDistricts = can("can_view_all_fpos");
 
   const filters = useMemo(
     () => [
@@ -115,9 +116,9 @@ export default function ApplicationsPage() {
           { label: t.status_claimed ?? "Claimed", value: "claimed" },
         ],
       },
-      // Sub-admins only ever see their own district's FPOs (scoped on the backend),
-      // so a district filter would be meaningless for them.
-      ...(isSuperAdmin
+      // Without can_view_all_fpos a sub-admin only sees their own district's FPOs
+      // (scoped on the backend), so a district filter would be meaningless for them.
+      ...(canViewAllDistricts
         ? [
             {
               key: "district",
@@ -152,7 +153,7 @@ export default function ApplicationsPage() {
         ],
       },
     ],
-    [t, isSuperAdmin],
+    [t, canViewAllDistricts],
   );
   async function handleDownload(format: "excel" | "pdf") {
     setDownloading(true);

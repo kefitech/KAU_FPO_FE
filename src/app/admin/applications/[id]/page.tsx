@@ -1623,13 +1623,7 @@ function ApplicationDetailContent() {
   const user = useAuthStore((s) => s.user);
   const fpoId = Number(id);
   const isSuperAdmin = user?.role === "super_admin";
-  // sub-admins only get the actions the super admin granted them
   const { can } = useAdminPermissions();
-  const canApprove = can("can_approve_fpo");
-  const canRequestInfo = can("can_request_info");
-  const canVerifyDocs = can("can_verify_documents");
-  const canManageTrainings = can("can_manage_trainings");
-  const visibleTabs = TABS.filter((tab) => tab.key !== "training" || canManageTrainings);
   const activeTab = (searchParams.get("tab") ?? "overview") as TabKey;
 
   const confirm = useConfirmStore((s) => s.confirm);
@@ -1691,6 +1685,15 @@ function ApplicationDetailContent() {
     queryFn: () => adminApplicationsApi.getById(fpoId),
     enabled: !!fpoId,
   });
+
+  // sub-admins only get the actions the super admin granted them, and none at all on
+  // other districts' FPOs (visible to them only via can_view_all_fpos)
+  const canManage = app?.can_manage !== false;
+  const canApprove = canManage && can("can_approve_fpo");
+  const canRequestInfo = canManage && can("can_request_info");
+  const canVerifyDocs = canManage && can("can_verify_documents");
+  const canManageTrainings = canManage && can("can_manage_trainings");
+  const visibleTabs = TABS.filter((tab) => tab.key !== "training" || canManageTrainings);
 
   const { data: tierHistory = [] } = useQuery({
     queryKey: ["tier-history", fpoId],
