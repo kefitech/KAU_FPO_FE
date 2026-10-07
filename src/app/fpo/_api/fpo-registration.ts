@@ -70,14 +70,11 @@ export const fpoRegistrationApi = {
 
   confirmPhoneOtp: (otp: string) => api.post(`${BASE}phone-verify/confirm/`, { otp }),
 
-  submitInfoResponse: (notes: string) =>
-    api.post(`${BASE}me/info-response/`, { notes }).then((r) => r.data),
+  submitInfoResponse: (notes: string) => api.post(`${BASE}me/info-response/`, { notes }).then((r) => r.data),
 
   // External buyer pre-registration (Arunima — P2-11)
   sendBuyerEmailOtp: (email: string) =>
-    publicApi
-      .post<Wrapped<{ email: string }>>(`/external-buyer/pre-register/send-email-otp/`, { email })
-      .then(unwrap),
+    publicApi.post<Wrapped<{ email: string }>>(`/external-buyer/pre-register/send-email-otp/`, { email }).then(unwrap),
 
   verifyBuyerEmailOtp: (email: string, otp: string) =>
     publicApi
@@ -91,15 +88,15 @@ export const fpoRegistrationApi = {
     first_name: string;
     last_name: string;
     organisation?: string;
+    district: string;
     password: string;
     confirm_password: string;
     phone_token: string;
     email_token: string;
   }) =>
     publicApi
-      .post<Wrapped<{ id: number; email: string; first_name: string; last_name: string; phone: string }>>(
-        `/external-buyer/register/`,
-        payload,
-      )
+      .post<
+        Wrapped<{ id: number; email: string; first_name: string; last_name: string; phone: string; district: string }>
+      >(`/external-buyer/register/`, payload)
       .then(unwrap),
 };

@@ -2,8 +2,10 @@
 // Arunima 02 september 2026
 // import { useEffect, useMemo, useRef, useState } from "react";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+
 // import { useRouter } from "next/navigation";
 import { useRouter, useSearchParams } from "next/navigation";
+
 //----------------------------------------------------------------------------
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -26,6 +28,61 @@ import { DISTRICT_OPTIONS } from "@/types/fpo";
 type Stage = "eligibility" | "phone-otp" | "account";
 type T = Record<string, string>;
 
+// ─── District picker (FPO eligibility + buyer account) ───────────────────────
+
+function DistrictCombobox({ value, onChange, t }: { value: string; onChange: (v: string) => void; t: T }) {
+  const [districtQuery, setDistrictQuery] = useState("");
+  const skipNextInputChange = useRef(false);
+  const translatedDistrictOptions = useMemo(
+    () => DISTRICT_OPTIONS.map((o) => ({ ...o, label: t[`district_${o.value}`] ?? o.label })),
+    [t],
+  );
+  const filteredDistricts = translatedDistrictOptions.filter((o) =>
+    o.label.toLowerCase().includes(districtQuery.toLowerCase()),
+  );
+
+  return (
+    <Combobox
+      value={value}
+      onValueChange={(v) => {
+        onChange(v ?? "");
+        const label = translatedDistrictOptions.find((o) => o.value === v)?.label ?? "";
+        skipNextInputChange.current = true;
+        setDistrictQuery(label);
+      }}
+      inputValue={districtQuery}
+      onInputValueChange={(v) => {
+        if (skipNextInputChange.current) {
+          skipNextInputChange.current = false;
+          return;
+        }
+        setDistrictQuery(v ?? "");
+      }}
+    >
+      <ComboboxInput
+        id="district"
+        placeholder={t.eligibility_district_ph ?? "Search district…"}
+        showClear={!!value}
+        className="w-full"
+      />
+      <ComboboxContent>
+        <ComboboxList>
+          {filteredDistricts.map((opt) => (
+            <ComboboxItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </ComboboxItem>
+          ))}
+          {filteredDistricts.length === 0 && (
+            <p className="py-2 text-center text-muted-foreground text-sm">
+              {t.eligibility_district_empty ?? "No district found"}
+            </p>
+          )}
+        </ComboboxList>
+      </ComboboxContent>
+    </Combobox>
+  );
+}
+
 // ─── Eligibility form ─────────────────────────────────────────────────────────
 
 type EligibilityValues = {
@@ -38,15 +95,6 @@ type EligibilityValues = {
 
 function EligibilityStep({ onPass, t }: { onPass: (token: string) => void; t: T }) {
   const [errors, setErrors] = useState<string[]>([]);
-  const [districtQuery, setDistrictQuery] = useState("");
-  const skipNextInputChange = useRef(false);
-  const translatedDistrictOptions = useMemo(
-    () => DISTRICT_OPTIONS.map((o) => ({ ...o, label: t[`district_${o.value}`] ?? o.label })),
-    [t],
-  );
-  const filteredDistricts = translatedDistrictOptions.filter((o) =>
-    o.label.toLowerCase().includes(districtQuery.toLowerCase()),
-  );
 
   const schema = z.object({
     member_count: z.coerce
@@ -127,45 +175,7 @@ function EligibilityStep({ onPass, t }: { onPass: (token: string) => void; t: T 
         <Controller
           control={control}
           name="district"
-          render={({ field }) => (
-            <Combobox
-              value={field.value}
-              onValueChange={(v) => {
-                field.onChange(v);
-                const label = translatedDistrictOptions.find((o) => o.value === v)?.label ?? "";
-                skipNextInputChange.current = true;
-                setDistrictQuery(label);
-              }}
-              inputValue={districtQuery}
-              onInputValueChange={(v) => {
-                if (skipNextInputChange.current) {
-                  skipNextInputChange.current = false;
-                  return;
-                }
-                setDistrictQuery(v ?? "");
-              }}
-            >
-              <ComboboxInput
-                placeholder={t.eligibility_district_ph ?? "Search district…"}
-                showClear={!!field.value}
-                className="w-full"
-              />
-              <ComboboxContent>
-                <ComboboxList>
-                  {filteredDistricts.map((opt) => (
-                    <ComboboxItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </ComboboxItem>
-                  ))}
-                  {filteredDistricts.length === 0 && (
-                    <p className="py-2 text-center text-muted-foreground text-sm">
-                      {t.eligibility_district_empty ?? "No district found"}
-                    </p>
-                  )}
-                </ComboboxList>
-              </ComboboxContent>
-            </Combobox>
-          )}
+          render={({ field }) => <DistrictCombobox value={field.value} onChange={field.onChange} t={t} />}
         />
         {formState.errors.district && <FieldError errors={[formState.errors.district]} />}
       </Field>
@@ -275,7 +285,7 @@ function PhoneOtpStep({
   const [otp, setOtp] = useState("");
   const [otpError, setOtpError] = useState("");
 
-    //Arunima s — 02 sep 2026 — buyer-only email verification
+  //Arunima s — 02 sep 2026 — buyer-only email verification
 
   const [phoneVerified, setPhoneVerified] = useState(false);
   const [phoneToken, setPhoneToken] = useState("");
@@ -297,7 +307,10 @@ function PhoneOtpStep({
     onError: (err: unknown) => {
       const axiosErr = err as { response?: { data?: { message?: string } }; message?: string } | undefined;
       setEmailError(
-        axiosErr?.response?.data?.message ?? axiosErr?.message ?? t.email_err_send_failed ?? "Failed to send OTP. Please try again.",
+        axiosErr?.response?.data?.message ??
+          axiosErr?.message ??
+          t.email_err_send_failed ??
+          "Failed to send OTP. Please try again.",
       );
     },
   });
@@ -311,7 +324,10 @@ function PhoneOtpStep({
     onError: (err: unknown) => {
       const axiosErr = err as { response?: { data?: { message?: string } }; message?: string } | undefined;
       setEmailOtpError(
-        axiosErr?.response?.data?.message ?? axiosErr?.message ?? t.email_err_invalid_otp ?? "Invalid OTP. Please try again.",
+        axiosErr?.response?.data?.message ??
+          axiosErr?.message ??
+          t.email_err_invalid_otp ??
+          "Invalid OTP. Please try again.",
       );
     },
   });
@@ -375,16 +391,19 @@ function PhoneOtpStep({
 
   return (
     <div className="flex flex-col gap-5">
-    <div>
-      <h2 className="font-semibold text-lg">
-        {isBuyerMode ? (t.phone_heading_buyer ?? "Verify Phone Number and Email") : (t.phone_heading ?? "Verify Phone Number")}
-      </h2>
-      <p className="mt-0.5 text-muted-foreground text-sm">
-        {isBuyerMode
-          ? (t.phone_subheading_buyer ?? "We'll send one-time passwords to confirm your mobile number and email address.")
-          : (t.phone_subheading ?? "We'll send a one-time password to confirm your mobile number.")}
-      </p>
-    </div>
+      <div>
+        <h2 className="font-semibold text-lg">
+          {isBuyerMode
+            ? (t.phone_heading_buyer ?? "Verify Phone Number and Email")
+            : (t.phone_heading ?? "Verify Phone Number")}
+        </h2>
+        <p className="mt-0.5 text-muted-foreground text-sm">
+          {isBuyerMode
+            ? (t.phone_subheading_buyer ??
+              "We'll send one-time passwords to confirm your mobile number and email address.")
+            : (t.phone_subheading ?? "We'll send a one-time password to confirm your mobile number.")}
+        </p>
+      </div>
 
       <Field>
         <FieldLabel htmlFor="phone">
@@ -422,7 +441,6 @@ function PhoneOtpStep({
         {phoneError && <p className="mt-1 text-destructive text-xs">{phoneError}</p>}
       </Field>
 
-
       {otpSent && (
         <div className="flex flex-col gap-4">
           <div className="flex items-start gap-2.5 rounded-lg border border-green-200 bg-green-50 px-3 py-2.5 dark:border-green-800 dark:bg-green-950/30">
@@ -448,8 +466,7 @@ function PhoneOtpStep({
             {otpError && <p className="mt-1 text-destructive text-xs">{otpError}</p>}
           </Field> */}
 
-
-            {!phoneVerified && (
+          {!phoneVerified && (
             <Field>
               <FieldLabel htmlFor="otp">{t.phone_otp_label ?? "Enter OTP"}</FieldLabel>
               <div className="flex gap-2 items-start">
@@ -472,8 +489,8 @@ function PhoneOtpStep({
                 >
                   {verifyMutation.isPending
                     ? (t.phone_btn_verifying ?? "Verifying…")
-                    // : (t.phone_btn_verify ?? "Verify")}
-                    : (t.phone_btn_verify_only ?? "Verify")}
+                    : // : (t.phone_btn_verify ?? "Verify")}
+                      (t.phone_btn_verify_only ?? "Verify")}
                 </Button>
               </div>
               {otpError && <p className="mt-1 text-destructive text-xs">{otpError}</p>}
@@ -570,9 +587,9 @@ function PhoneOtpStep({
       <div className="flex items-center justify-between pt-1">
         {/* //Arunima s  */}
         {showBack && (
-        <Button type="button" variant="outline" onClick={onBack}>
-          {t.btn_back ?? "← Back"}
-        </Button>
+          <Button type="button" variant="outline" onClick={onBack}>
+            {t.btn_back ?? "← Back"}
+          </Button>
         )}
         {/* //----------- */}
         {otpSent && (
@@ -584,16 +601,16 @@ function PhoneOtpStep({
             // onClick={() => verifyMutation.mutate()}
             // disabled={verifyMutation.isPending || otp.length < 6}
 
-             className="gap-1.5 bg-green-600 hover:bg-green-700 ml-auto"
-             onClick={() => onPass(phoneToken, phone)}
-             disabled={!phoneVerified || (isBuyerMode && !emailVerified)}
+            className="gap-1.5 bg-green-600 hover:bg-green-700 ml-auto"
+            onClick={() => onPass(phoneToken, phone)}
+            disabled={!phoneVerified || (isBuyerMode && !emailVerified)}
           >
             {/* {verifyMutation.isPending
               ? (t.phone_btn_verifying ?? "Verifying…")
               : (t.phone_btn_verify ?? "Verify & Continue")} */}
-              {t.phone_btn_continue ?? "Continue"}
+            {t.phone_btn_continue ?? "Continue"}
 
-              {/* //------------------------------------------------------------------ */}
+            {/* //------------------------------------------------------------------ */}
             <ChevronRight className="h-4 w-4" />
           </Button>
         )}
@@ -608,6 +625,7 @@ type AccountValues = {
   first_name: string;
   last_name: string;
   email: string;
+  district: string;
   password: string;
   confirm_password: string;
 };
@@ -618,7 +636,7 @@ function AccountStep({
   eligibilityToken,
   phoneToken,
   verifiedPhone,
- //arunima 03rd sep 2026-------------------------------
+  //arunima 03rd sep 2026-------------------------------
   isBuyerMode = false,
   verifiedEmail,
   emailToken,
@@ -662,6 +680,10 @@ function AccountStep({
             .string()
             .email({ message: t.account_err_email ?? "Enter a valid email address" })
             .max(35, { message: t.account_err_email_max ?? "Email must be at most 35 characters" }),
+      // Buyers pick a district so their application reaches that district's sub-admin.
+      district: isBuyerMode
+        ? z.string().min(1, { message: t.eligibility_err_district ?? "Select a district" })
+        : z.any().optional(),
       password: z
         .string()
         .min(8, { message: t.account_err_pwd_min ?? "At least 8 characters" })
@@ -681,10 +703,12 @@ function AccountStep({
     handleSubmit,
     setError,
     watch,
+    control,
     formState: { errors },
   } = useForm<AccountValues>({
     resolver: zodResolver(schema),
     mode: "onChange",
+    defaultValues: { district: "" },
   });
   console.log("CURRENT FORM ERRORS:", errors);
 
@@ -693,7 +717,7 @@ function AccountStep({
   const passwordsMatch = passwordVal.length >= 8 && confirmVal.length > 0 && passwordVal === confirmVal;
   const passwordsMismatch = confirmVal.length > 0 && passwordVal !== confirmVal;
 
-  //Arunima 04 sep 
+  //Arunima 04 sep
   // const submitMutation = useMutation({
   //   mutationFn: (values: AccountValues) =>
   //     authApi.register({
@@ -706,29 +730,30 @@ function AccountStep({
   //       eligibility_token: eligibilityToken,
   //       phone_token: phoneToken,
   //     }),
-    
-      const submitMutation = useMutation<unknown, unknown, AccountValues>({
-        mutationFn: (values: AccountValues) =>
-          isBuyerMode
-            ? fpoRegistrationApi.registerBuyer({
-                first_name: values.first_name,
-                last_name: values.last_name,
-                password: values.password,
-                confirm_password: values.confirm_password,
-                phone_token: phoneToken,
-                email_token: emailToken ?? "",
-              })
-            : authApi.register({
-                first_name: values.first_name,
-                last_name: values.last_name,
-                email: values.email,
-                phone: verifiedPhone,
-                password: values.password,
-                confirm_password: values.confirm_password,
-                eligibility_token: eligibilityToken,
-                phone_token: phoneToken,
-              }),
-  //----------------------------------------
+
+  const submitMutation = useMutation<unknown, unknown, AccountValues>({
+    mutationFn: (values: AccountValues) =>
+      isBuyerMode
+        ? fpoRegistrationApi.registerBuyer({
+            first_name: values.first_name,
+            last_name: values.last_name,
+            district: values.district,
+            password: values.password,
+            confirm_password: values.confirm_password,
+            phone_token: phoneToken,
+            email_token: emailToken ?? "",
+          })
+        : authApi.register({
+            first_name: values.first_name,
+            last_name: values.last_name,
+            email: values.email,
+            phone: verifiedPhone,
+            password: values.password,
+            confirm_password: values.confirm_password,
+            eligibility_token: eligibilityToken,
+            phone_token: phoneToken,
+          }),
+    //----------------------------------------
     onSuccess: () => {
       toast.success(t.account_success ?? "Account created! Please log in to continue.");
       router.push("/v1/login");
@@ -756,6 +781,7 @@ function AccountStep({
         "first_name",
         "last_name",
         "email",
+        "district",
         "password",
         "confirm_password",
       ]);
@@ -779,17 +805,20 @@ function AccountStep({
   return (
     // <form onSubmit={handleSubmit((v) => submitMutation.mutate(v))} className="flex flex-col gap-5">
     // arunima 04rd sep 2026-------------------------------
-    <form onSubmit={handleSubmit((v) => {
-      console.log("SUBMIT CALLBACK REACHED", v);
-      submitMutation.mutate(v);
-    })} className="flex flex-col gap-5">
-    
-     {/* //---------------------------------------------------- */}
+    <form
+      onSubmit={handleSubmit((v) => {
+        console.log("SUBMIT CALLBACK REACHED", v);
+        submitMutation.mutate(v);
+      })}
+      className="flex flex-col gap-5"
+    >
+      {/* //---------------------------------------------------- */}
       <div>
         <h2 className="font-semibold text-lg">{t.account_heading ?? "Create Your Account"}</h2>
         <p className="mt-0.5 text-muted-foreground text-sm">
           {isBuyerMode
-            ? (t.account_subheading_buyer ?? "This account will be used to manage your buyer profile and purchase products from FPOs.")
+            ? (t.account_subheading_buyer ??
+              "This account will be used to manage your buyer profile and purchase products from FPOs.")
             : (t.account_subheading ?? "This account will be used to manage your FPO profile.")}
         </p>
       </div>
@@ -821,7 +850,21 @@ function AccountStep({
           {errors.last_name && <FieldError errors={[errors.last_name]} />}
         </Field>
       </div>
-{/* //arunima s 03 sep */}
+
+      {isBuyerMode && (
+        <Field>
+          <FieldLabel htmlFor="district">
+            {t.eligibility_district_label ?? "District"} <span className="text-destructive">*</span>
+          </FieldLabel>
+          <Controller
+            control={control}
+            name="district"
+            render={({ field }) => <DistrictCombobox value={field.value} onChange={field.onChange} t={t} />}
+          />
+          {errors.district && <FieldError errors={[errors.district]} />}
+        </Field>
+      )}
+      {/* //arunima s 03 sep */}
       {/* <Field>
         <FieldLabel htmlFor="email">
           {t.account_email ?? "Email Address"} <span className="text-destructive">*</span>
@@ -844,12 +887,17 @@ function AccountStep({
           <FieldLabel htmlFor="email">
             {t.account_email ?? "Email Address"} <span className="text-destructive">*</span>
           </FieldLabel>
-          <Input id="email" type="email" placeholder={t.account_email_ph ?? "rajan@example.com"} {...register("email")} />
+          <Input
+            id="email"
+            type="email"
+            placeholder={t.account_email_ph ?? "rajan@example.com"}
+            {...register("email")}
+          />
           {errors.email && <FieldError errors={[errors.email]} />}
         </Field>
       )}
 
-{/* 
+      {/* 
 
 
  */}
@@ -999,7 +1047,7 @@ function RegisterPageInner() {
       setT({ ...(data.districts ?? {}), ...(data.register ?? {}) });
     });
   }, [effectiveLocale]);
-//Arunima S  02 sep 2026 ---below line 725 const stages-------> const allStages
+  //Arunima S  02 sep 2026 ---below line 725 const stages-------> const allStages
   const allStages: { key: Stage; label: string }[] = [
     { key: "eligibility", label: t.stage_eligibility ?? "Eligibility" },
     { key: "phone-otp", label: t.stage_phone ?? "Verification" },
@@ -1007,13 +1055,13 @@ function RegisterPageInner() {
   ];
 
   //Arunima 02 sep 2026
-  
+
   const stages = isBuyerMode ? allStages.filter((s) => s.key !== "eligibility") : allStages;
 
   const stageOrderForMode = isBuyerMode ? STAGE_ORDER.filter((s) => s !== "eligibility") : STAGE_ORDER;
   const currentIndex = stageOrderForMode.indexOf(stage);
   //------------------------------------------------------------
- //below one line is commented by arunima
+  //below one line is commented by arunima
   // const currentIndex = STAGE_ORDER.indexOf(stage);
 
   return (
@@ -1100,9 +1148,6 @@ function RegisterPageInner() {
     </div>
   );
 }
-
-
-
 
 export default function RegisterPage() {
   return (
