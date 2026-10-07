@@ -13,11 +13,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -84,6 +86,9 @@ export default function BuyerDashboardPage() {
     staleTime: 60 * 60 * 1000,
     enabled: profileIncomplete || editingProfile,
   });
+  // The picker stores codes but searches and shows names.
+  const commodityNames = useMemo(() => new Map((commodities ?? []).map((c) => [c.code, c.name])), [commodities]);
+  const commodityCodes = useMemo(() => [...commodityNames.keys()], [commodityNames]);
 
   useEffect(() => {
     if (data) {
@@ -222,34 +227,32 @@ export default function BuyerDashboardPage() {
 
         {/* Commodities */}
         <div className="flex flex-col gap-1.5">
-          <label className="font-medium text-sm">
+          <label htmlFor="buyer-commodities" className="font-medium text-sm">
             {t.label_commodities ?? "Commodities Interested"}
           </label>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button type="button" variant="outline" className="w-full justify-start sm:w-72">
-                {commoditiesDraft.length > 0
-                  ? `${commoditiesDraft.length} selected`
-                  : (t.commodity_placeholder ?? "Select commodities")}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="max-h-72 overflow-y-auto">
-              {(commodities ?? []).map((c) => (
-                <DropdownMenuCheckboxItem
-                  key={c.code}
-                  checked={commoditiesDraft.includes(c.code)}
-                  onSelect={(e) => e.preventDefault()}
-                  onCheckedChange={(checked) => {
-                    setCommoditiesDraft((prev) =>
-                      checked ? [...prev, c.code] : prev.filter((v) => v !== c.code),
-                    );
-                  }}
-                >
-                  {c.name}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Combobox
+            multiple
+            items={commodityCodes}
+            itemToStringLabel={(code: string) => commodityNames.get(code) ?? code}
+            value={commoditiesDraft}
+            onValueChange={(codes) => setCommoditiesDraft(codes)}
+          >
+            <ComboboxInput
+              id="buyer-commodities"
+              placeholder={t.commodity_search_placeholder ?? "Search commodities…"}
+              className="w-full sm:w-72"
+            />
+            <ComboboxContent>
+              <ComboboxEmpty>{t.commodity_empty ?? "No commodity found"}</ComboboxEmpty>
+              <ComboboxList>
+                {(code: string) => (
+                  <ComboboxItem key={code} value={code}>
+                    {commodityNames.get(code) ?? code}
+                  </ComboboxItem>
+                )}
+              </ComboboxList>
+            </ComboboxContent>
+          </Combobox>
           {commoditiesDraft.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-2">
               {commoditiesDraft.map((c) => {

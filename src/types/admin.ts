@@ -446,6 +446,8 @@ export interface InboxNotification {
   title: string;
   body: string;
   category: InboxCategory;
+  /** In-app path the notification opens (e.g. "/admin/buyers?status=pending"), if any. */
+  link: string | null;
   is_read: boolean;
   read_at: string | null;
   created_at: string;

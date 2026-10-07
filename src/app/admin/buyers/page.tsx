@@ -2,13 +2,16 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 
+import { useQueryClient } from "@tanstack/react-query";
+
 import { type AdminBuyer, adminBuyersApi } from "@/app/admin/_api/buyers";
 import { DataTable } from "@/components/data-table";
 import { type SheetField, ViewSheet } from "@/components/ui/view-sheet";
+import { inboxApi } from "@/lib/api/inbox";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 
-import { buyerDisplayStatus, getBuyerColumns, StatusBadge } from "./_components/columns";
+import { buyerDisplayStatus, getBuyerColumns, refreshBuyerAlerts, StatusBadge } from "./_components/columns";
 
 type T = Record<string, string>;
 
@@ -17,6 +20,18 @@ export default function AdminBuyersPage() {
   const [t, setT] = useState<T>({});
   const [buyerType, setBuyerType] = useState<"" | "fpo" | "external">("");
   const [buyerView, setBuyerView] = useState<{ open: boolean; row: AdminBuyer | null }>({ open: false, row: null });
+  const queryClient = useQueryClient();
+
+  // Opening a new registration counts as seeing it: mark its alert read, which drops the row's dot.
+  const openBuyer = (row: AdminBuyer) => {
+    setBuyerView({ open: true, row });
+    if (row.unread_notification_id) {
+      inboxApi
+        .markRead(row.unread_notification_id)
+        .then(() => refreshBuyerAlerts(queryClient))
+        .catch(() => undefined);
+    }
+  };
 
   useEffect(() => {
     translationsApi.getPublic(locale, "buyers_table,common").then((data) => {
@@ -68,7 +83,7 @@ export default function AdminBuyersPage() {
           queryFn={(params) => adminBuyersApi.getAll({ ...params, buyer_type: buyerType || undefined })}
           columns={getBuyerColumns(t)}
           filters={STATUS_FILTERS}
-          onRowClick={(row) => setBuyerView({ open: true, row })}
+          onRowClick={openBuyer}
         />
       </Suspense>
 

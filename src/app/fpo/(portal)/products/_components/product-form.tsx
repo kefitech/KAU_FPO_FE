@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
@@ -15,6 +15,14 @@ import { masterDataApi } from "@/app/fpo/_api/master-data";
 import { productsApi } from "@/app/fpo/_api/products";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@/components/ui/combobox";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -234,6 +242,9 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
     queryFn: () => masterDataApi.getCommodities(locale),
     staleTime: 10 * 60_000,
   });
+  // The commodity picker stores the id (as a string) but searches and shows names.
+  const commodityNames = useMemo(() => new Map(commodities.map((c) => [String(c.id), c.name])), [commodities]);
+  const commodityIds = useMemo(() => [...commodityNames.keys()], [commodityNames]);
 
   const {
     control,
@@ -373,24 +384,36 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
                       <FieldLabel htmlFor="product-commodity">
                         {t.commodity_label ?? "Commodity"} <span className="text-destructive">*</span>
                       </FieldLabel>
-                      <Select value={field.value} onValueChange={field.onChange} disabled={commoditiesLoading}>
-                        <SelectTrigger id="product-commodity">
-                          <SelectValue
-                            placeholder={
-                              commoditiesLoading
-                                ? (t.commodity_loading ?? "Loading...")
-                                : (t.commodity_placeholder ?? "Select a commodity")
-                            }
-                          />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {commodities.map((c) => (
-                            <SelectItem key={c.id} value={String(c.id)}>
-                              {c.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {/* Remounted once names load so an existing product's commodity shows its name */}
+                      <Combobox
+                        key={commoditiesLoading ? "loading" : "ready"}
+                        items={commodityIds}
+                        itemToStringLabel={(id: string) => commodityNames.get(id) ?? ""}
+                        value={field.value || null}
+                        onValueChange={(id) => field.onChange(id ?? "")}
+                        disabled={commoditiesLoading}
+                      >
+                        <ComboboxInput
+                          id="product-commodity"
+                          placeholder={
+                            commoditiesLoading
+                              ? (t.commodity_loading ?? "Loading...")
+                              : (t.commodity_placeholder ?? "Select a commodity")
+                          }
+                          disabled={commoditiesLoading}
+                          className="w-full"
+                        />
+                        <ComboboxContent>
+                          <ComboboxEmpty>{t.commodity_empty ?? "No commodity found"}</ComboboxEmpty>
+                          <ComboboxList>
+                            {(id: string) => (
+                              <ComboboxItem key={id} value={id}>
+                                {commodityNames.get(id)}
+                              </ComboboxItem>
+                            )}
+                          </ComboboxList>
+                        </ComboboxContent>
+                      </Combobox>
                       {errors.commodity && <FieldError errors={[errors.commodity]} />}
                     </Field>
                   )}

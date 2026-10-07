@@ -18,7 +18,7 @@ import { inboxApi } from "@/lib/api/inbox";
 import type { InboxNotification } from "@/types";
 import { useTranslations } from "@/hooks/use-translations";
 
-function relativeTime(dateStr: string, t: Record<string, string>): string {
+export function relativeTime(dateStr: string, t: Record<string, string>): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const m = Math.floor(diff / 60000);
   if (m < 1) return t.time_just_now ?? "Just now";

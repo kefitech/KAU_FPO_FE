@@ -26,6 +26,8 @@ export interface AdminBuyer {
   fpo: number | null;
   user: number | null;
   account_active: boolean | null;
+  /** The caller's unread "new registration" notification for this pending buyer — shown as a dot until opened. */
+  unread_notification_id: number | null;
   created_at: string;
   updated_at: string;
 }
