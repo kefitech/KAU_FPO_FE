@@ -13,6 +13,7 @@ import { DataTable } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
 import { ViewSheet } from "@/components/ui/view-sheet";
 import { translationsApi } from "@/lib/api/translations";
+import { KERALA_DISTRICTS } from "@/lib/kerala-districts";
 import { useLocaleStore } from "@/stores/locale-store";
 import type { CBBO } from "@/types/admin";
 
@@ -24,16 +25,18 @@ export default function CBBOsPage() {
   const [tTable, setTTable] = useState<T>({});
   const [tConfirm, setTConfirm] = useState<T>({});
   const [tCommon, setTCommon] = useState<T>({});
+  const [tDistricts, setTDistricts] = useState<T>({});
   const [cbboView, setCbboView] = useState<{ open: boolean; row: CBBO | null }>({ open: false, row: null });
   const [showOrgDialog, setShowOrgDialog] = useState(false);
 
   useEffect(() => {
     translationsApi
-      .getPublic(locale, "cbbos_table,confirm_dialog,common")
+      .getPublic(locale, "cbbos_table,confirm_dialog,common,districts")
       .then((data) => {
         setTTable(data.cbbos_table ?? {});
         setTConfirm(data.confirm_dialog ?? {});
         setTCommon(data.common ?? {});
+        setTDistricts(data.districts ?? {});
       })
       .catch(() => undefined);
   }, [locale]);
@@ -64,6 +67,17 @@ export default function CBBOsPage() {
           queryFn={cbbosApi.getAll}
           columns={getCBBOColumns(tTable, tConfirm, tCommon)}
           onRowClick={(row) => setCbboView({ open: true, row })}
+          filters={[
+            {
+              key: "district",
+              label: tTable.filter_district ?? "All Districts",
+              options: [
+                ...KERALA_DISTRICTS.map((d) => ({ value: d.code, label: tDistricts[`district_${d.code}`] ?? d.name })),
+                // Backend treats "state" as state-wide (not tied to one district).
+                { value: "state", label: tTable.state_wide ?? "State-wide" },
+              ],
+            },
+          ]}
           columnsLabel={tCommon.col_header ?? "Columns"}
           toggleColumnsLabel={tCommon.col_toggle_columns ?? "Toggle columns"}
         />
