@@ -148,7 +148,9 @@ export default function AdminDprProjectDetailPage({
   }, [applicability, activeKey]);
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] flex-col">
+    // Fill the viewport below the admin chrome: header h-14 (3.5rem) + Back row (pt-4 + h-8 = 3rem).
+    // Taller and the window scrolls too, pushing the Prev/Next footer below the fold.
+    <div className="flex h-[calc(100vh-6.5rem)] flex-col">
       {/* Header bar — matches FPO wizard style */}
       <header className="flex items-center justify-between gap-3 border-b bg-background px-6 py-3">
         <div className="flex min-w-0 flex-1 items-center gap-3">
@@ -284,8 +286,10 @@ export default function AdminDprProjectDetailPage({
             )}
           </aside>
 
-          {/* Content pane */}
-          <main className="flex-1 overflow-y-auto bg-muted/20 px-6 py-6">
+          {/* Content pane. No bottom padding: a sticky child stops at the scroll
+              container's padding edge, which left a gap under the Prev/Next
+              footer with content scrolling through it. */}
+          <main className="flex-1 overflow-y-auto bg-muted/20 px-6 pt-6">
             <div className="mx-auto max-w-5xl space-y-4">
               {/* Applicability preview — Phase 6e admin surface for UAT.
                   Shows the rule engine's decision for this project so KAU
@@ -360,9 +364,11 @@ export default function AdminDprProjectDetailPage({
 
               {/* Prev / Next footer — mirrors the FPO wizard SectionShell.
                   Read-only, so no Save/Discard between them. Sticky so it's
-                  always reachable when scrolling long sections. */}
+                  always reachable when scrolling long sections. Opaque so the
+                  cards scrolling underneath don't show through; extra right
+                  padding keeps Next clear of the floating chat button. */}
               {(prev || next) && (
-                <div className="sticky bottom-0 -mx-6 border-t bg-background/95 px-6 py-3 backdrop-blur">
+                <div className="sticky bottom-0 z-10 -mx-6 border-t bg-background py-3 pr-18 pl-6 shadow-[0_-6px_12px_-8px_rgb(0_0_0/0.15)]">
                   <div className="mx-auto flex max-w-5xl items-center justify-between gap-2">
                     <div>
                       {prev ? (

@@ -104,8 +104,9 @@ export function BulkImportDialog({ open, onOpenChange, t = {}, tCommon = {} }: B
 
   return (
     <Dialog open={open} onOpenChange={closeDialog}>
-      <DialogContent className="sm:max-w-xl">
-        <DialogHeader>
+      {/* Capped to the viewport: header and footer stay put, the steps scroll on short screens */}
+      <DialogContent className="flex max-h-[90dvh] flex-col gap-0 p-0 sm:max-w-xl">
+        <DialogHeader className="shrink-0 border-b px-6 pt-6 pb-4">
           <DialogTitle>{t.bulk_import_title ?? "Bulk Import Products"}</DialogTitle>
           <DialogDescription>
             {t.bulk_import_description ??
@@ -113,7 +114,7 @@ export function BulkImportDialog({ open, onOpenChange, t = {}, tCommon = {} }: B
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-5 py-2">
+        <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-6 py-5">
           {/* Step 1 — Download template */}
           <div className="flex flex-col gap-2 rounded-lg border p-4">
             <div className="flex items-start justify-between gap-3">
@@ -190,7 +191,7 @@ export function BulkImportDialog({ open, onOpenChange, t = {}, tCommon = {} }: B
           {/* Step 3 — Results (only shown after a run) */}
           {result && (
             <div className="flex flex-col gap-3 rounded-lg border p-4">
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <p className="font-medium text-sm">{t.step3_title ?? "3. Import summary"}</p>
                 <div className="flex items-center gap-2 text-sm">
                   <span className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-green-700">
@@ -235,7 +236,7 @@ export function BulkImportDialog({ open, onOpenChange, t = {}, tCommon = {} }: B
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="shrink-0 border-t px-6 pt-4 pb-6">
           <Button type="button" variant="outline" onClick={() => closeDialog(false)}>
             {result ? (tCommon.close_btn ?? "Close") : (tCommon.cancel_btn ?? "Cancel")}
           </Button>
