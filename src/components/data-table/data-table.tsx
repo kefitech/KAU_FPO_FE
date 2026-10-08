@@ -34,6 +34,8 @@ interface DataTableProps<TData> {
   extra?: React.ReactNode;
   onSelectionChange?: (rows: TData[]) => void;
   onRowClick?: (row: TData) => void;
+  /** Called alongside the table's own refetch when the Refresh icon is clicked. */
+  onRefresh?: () => void;
   columnsLabel?: string;
   toggleColumnsLabel?: string;
   searchPlaceholder?: string;
@@ -49,6 +51,7 @@ export function DataTable<TData>({
   extra,
   onSelectionChange,
   onRowClick,
+  onRefresh,
   columnsLabel,
   toggleColumnsLabel,
   searchPlaceholder,
@@ -196,7 +199,10 @@ export function DataTable<TData>({
         onFilter={setFilter}
         onClearFilters={() => clearFilters(filters.map((f) => f.key))}
         activeFilters={activeFilters}
-        onRefresh={() => refetch()}
+        onRefresh={() => {
+          refetch();
+          onRefresh?.();
+        }}
         isRefreshing={isFetching}
         extra={extra}
         table={table}

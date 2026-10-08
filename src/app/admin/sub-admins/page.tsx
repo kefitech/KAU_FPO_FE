@@ -35,7 +35,7 @@ export default function SubAdminsPage() {
   const [bulkOpen, setBulkOpen] = useState(false);
   const openTransfer = (row: SubAdmin) => setTransferRow({ open: true, row });
 
-  const { data: capStatus } = useQuery({
+  const { data: capStatus, refetch: refetchCapStatus } = useQuery({
     queryKey: ["sub-admin-district-cap-status"],
     queryFn: subAdminsApi.getDistrictCapStatus,
     staleTime: 60_000,
@@ -111,6 +111,7 @@ export default function SubAdminsPage() {
             onTransferDistrict: openTransfer,
           })}
           onRowClick={(row) => setSubAdminView({ open: true, row })}
+          onRefresh={() => refetchCapStatus()}
           filters={[
             {
               key: "district",
