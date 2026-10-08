@@ -6,15 +6,6 @@ import Link from "next/link";
 
 import { useQuery } from "@tanstack/react-query";
 import { AlertCircle, CheckCircle, FileWarning, LayoutDashboard, MapPin, ShieldOff, Users } from "lucide-react";
-import {
-  Bar,
-  BarChart,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import { toast } from "sonner";
 
 import dynamic from "next/dynamic";
@@ -25,6 +16,7 @@ import { FpoReportCard } from "./_components/fpo-report-card";
 import type { BlockEntry } from "./_components/kerala-district-map";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DonutChart } from "@/components/shared/donut-chart";
+import { GradientBarChart } from "@/components/shared/gradient-bar-chart";
 import { RecentNotificationsCard } from "@/components/shared/recent-notifications-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -242,6 +234,16 @@ export default function AdminDashboardPage() {
     : [];
 
   // ── Tier bar data ──────────────────────────────────────────────────────────
+  // ── Registration trend data ────────────────────────────────────────────────
+  const monthFormat = new Intl.DateTimeFormat(locale === "ml" ? "ml-IN" : "en-IN", {
+    month: "short",
+    year: "2-digit",
+  });
+  const trendData = (stats?.monthly_trend ?? []).map((m) => ({
+    label: monthFormat.format(new Date(`${m.month}-01T00:00:00`)),
+    value: m.count,
+  }));
+
   const tierData = stats
     ? Object.entries(stats.tier_distribution).map(([key, value]) => ({
         name: TIER_CONFIG[key]?.label ?? key,
@@ -387,29 +389,7 @@ export default function AdminDashboardPage() {
             {isLoading ? (
               <ChartSkeleton />
             ) : (
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={stats?.monthly_trend} barSize={18}>
-                  <XAxis
-                    dataKey="label"
-                    tick={{ fontSize: 10 }}
-                    tickLine={false}
-                    axisLine={false}
-                    interval="preserveStartEnd"
-                  />
-                  <YAxis
-                    tick={{ fontSize: 10 }}
-                    tickLine={false}
-                    axisLine={false}
-                    allowDecimals={false}
-                    width={24}
-                  />
-                  <Tooltip
-                    contentStyle={{ fontSize: 12, borderRadius: 8 }}
-                    formatter={(v) => [v ?? 0, "Registrations"] as [number, string]}
-                  />
-                  <Bar dataKey="count" fill="#6366f1" radius={[3, 3, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              <GradientBarChart data={trendData} valueLabel="Registrations" color="var(--primary)" className="h-60" />
             )}
           </CardContent>
         </Card>
@@ -446,32 +426,13 @@ export default function AdminDashboardPage() {
               {isLoading ? (
                 <ChartSkeleton />
               ) : (
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={tierData} barSize={40}>
-                    <XAxis
-                      dataKey="name"
-                      tick={{ fontSize: 11 }}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis
-                      tick={{ fontSize: 10 }}
-                      tickLine={false}
-                      axisLine={false}
-                      allowDecimals={false}
-                      width={24}
-                    />
-                    <Tooltip
-                      contentStyle={{ fontSize: 12, borderRadius: 8 }}
-                      formatter={(v) => [v ?? 0, "FPOs"] as [number, string]}
-                    />
-                    <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                      {tierData.map((entry) => (
-                        <Cell key={entry.name} fill={entry.color} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                // Tier colours carry meaning (they match the tier badges), so they replace the palette
+                <GradientBarChart
+                  data={tierData.map((d) => ({ label: d.name, value: d.value, color: d.color }))}
+                  valueLabel="FPOs"
+                  highlightPeak={false}
+                  className="h-60"
+                />
               )}
             </CardContent>
           </Card>

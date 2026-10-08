@@ -3,12 +3,12 @@
 import Link from "next/link";
 
 import { AlertTriangle, ArrowRight, CheckCircle2, MessageSquareText, Package, Sparkles } from "lucide-react";
-import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 import type { BuyerDashboardStats, BuyerInquiryStatus } from "@/app/buyer/_api/dashboard";
 import { StatCard } from "@/components/shared/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { DonutChart } from "@/components/shared/donut-chart";
+import { GradientBarChart } from "@/components/shared/gradient-bar-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type T = Record<string, string>;
@@ -123,17 +123,11 @@ export function BuyerStats({
             </p>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={trend} barSize={22}>
-                <XAxis dataKey="label" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} width={24} />
-                <Tooltip
-                  contentStyle={{ fontSize: 12, borderRadius: 8 }}
-                  formatter={(v) => [v ?? 0, inquiriesLabel] as [number, string]}
-                />
-                <Bar dataKey="count" fill="#6366f1" radius={[3, 3, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <GradientBarChart
+              data={trend.map((m) => ({ label: m.label, value: m.count }))}
+              valueLabel={inquiriesLabel}
+              className="h-60"
+            />
           </CardContent>
         </Card>
 

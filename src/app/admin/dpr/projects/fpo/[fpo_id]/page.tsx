@@ -25,15 +25,6 @@ import {
   Send,
 } from "lucide-react";
 import Link from "next/link";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  LabelList,
-  ResponsiveContainer,
-  XAxis,
-  YAxis,
-} from "recharts";
 
 import {
   adminDprProjectsApi,
@@ -43,49 +34,12 @@ import {
   type DPRProjectStatus,
 } from "@/app/admin/_api/dpr-projects";
 import { DataTable } from "@/components/data-table";
+import { GradientBarChart } from "@/components/shared/gradient-bar-chart";
 import type { FilterConfig } from "@/components/data-table/data-table-toolbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from "@/components/ui/chart";
 import type { DataTableParams, PaginatedResponse } from "@/types/pagination";
-
-const chartConfig: ChartConfig = {
-  count: {
-    label: "DPRs created",
-    color: "hsl(var(--primary))",
-  },
-};
-
-// Rotating palette used to colour each month's bar. Balanced across the
-// hue wheel and calibrated to look right on both light + dark backgrounds
-// (mid-saturation, mid-lightness). Twelve entries, one per bar, so a full
-// 12-month window prints every colour exactly once.
-const BAR_PALETTE = [
-  "#2563eb", // blue-600
-  "#0891b2", // cyan-600
-  "#059669", // emerald-600
-  "#65a30d", // lime-600
-  "#ca8a04", // yellow-600
-  "#ea580c", // orange-600
-  "#dc2626", // red-600
-  "#db2777", // pink-600
-  "#c026d3", // fuchsia-600
-  "#7c3aed", // violet-600
-  "#4f46e5", // indigo-600
-  "#0284c7", // sky-600
-];
-
-/** Highlight the tallest month so the eye lands on it first. */
-function isPeak(count: number, all: number[]): boolean {
-  const max = Math.max(...all);
-  return max > 0 && count === max;
-}
 
 function monthLabel(key: string): string {
   const [y, m] = key.split("-").map(Number);
@@ -204,17 +158,9 @@ export default function AdminFpoDprDetailPage({ params }: PageProps) {
   );
 
   const data = query.data;
-  const rawCounts = (data?.monthly_counts ?? []).map((m) => m.count);
-  const chartData = (data?.monthly_counts ?? []).map((m, i) => ({
-    month: monthLabel(m.month),
-    count: m.count,
-    // Pass the fill on the datum so the custom Bar shape can render each
-    // month in a distinct colour — a simple round-robin through the
-    // palette gives us a rainbow spread without needing hue math.
-    fill: BAR_PALETTE[i % BAR_PALETTE.length],
-    // Peak month gets a slight lift + stroke — draws the eye to the
-    // busiest month without shouting.
-    isPeak: isPeak(m.count, rawCounts),
+  const chartData = (data?.monthly_counts ?? []).map((m) => ({
+    label: monthLabel(m.month),
+    value: m.count,
   }));
 
   return (
@@ -285,90 +231,7 @@ export default function AdminFpoDprDetailPage({ params }: PageProps) {
                   Counted by DPR creation date.
                 </p>
               </div>
-              <ChartContainer
-                config={chartConfig}
-                className="aspect-auto h-72 w-full"
-              >
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} margin={{ top: 24, right: 12, left: 0, bottom: 4 }}>
-                    {/* Per-palette-entry vertical gradients — bars fade from
-                        the solid palette colour at the top to ~55% opacity at
-                        the base for a modern glass feel. One gradient per
-                        colour is enough because bars only reuse a colour when
-                        the FPO has >12 months of data. */}
-                    <defs>
-                      {BAR_PALETTE.map((c, i) => (
-                        <linearGradient
-                          key={c}
-                          id={`bar-fill-${i}`}
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
-                          <stop offset="0%" stopColor={c} stopOpacity={0.95} />
-                          <stop offset="100%" stopColor={c} stopOpacity={0.55} />
-                        </linearGradient>
-                      ))}
-                    </defs>
-                    <CartesianGrid vertical={false} strokeDasharray="4 4" stroke="hsl(var(--border))" />
-                    <XAxis
-                      dataKey="month"
-                      tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                      tickLine={false}
-                      axisLine={false}
-                      dy={4}
-                    />
-                    <YAxis
-                      allowDecimals={false}
-                      width={30}
-                      tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar
-                      dataKey="count"
-                      radius={[8, 8, 2, 2]}
-                      isAnimationActive
-                      animationDuration={650}
-                      shape={(props: unknown) => {
-                        const p = props as {
-                          x: number; y: number; width: number; height: number;
-                          index: number; payload: { isPeak: boolean };
-                        };
-                        const gradId = `bar-fill-${p.index % BAR_PALETTE.length}`;
-                        return (
-                          <g>
-                            <rect
-                              x={p.x}
-                              y={p.y}
-                              width={p.width}
-                              height={p.height}
-                              rx={8}
-                              ry={8}
-                              fill={`url(#${gradId})`}
-                              stroke={p.payload.isPeak ? BAR_PALETTE[p.index % BAR_PALETTE.length] : "none"}
-                              strokeWidth={p.payload.isPeak ? 2 : 0}
-                            />
-                          </g>
-                        );
-                      }}
-                    >
-                      <LabelList
-                        dataKey="count"
-                        position="top"
-                        formatter={(v: unknown) => (Number(v) > 0 ? String(v) : "")}
-                        style={{
-                          fontSize: 11,
-                          fontWeight: 600,
-                          fill: "hsl(var(--foreground))",
-                        }}
-                      />
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartContainer>
+              <GradientBarChart data={chartData} valueLabel="DPRs created" />
             </CardContent>
           </Card>
 
