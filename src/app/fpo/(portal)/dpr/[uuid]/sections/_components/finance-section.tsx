@@ -320,7 +320,7 @@ const MOF_FIELDS: Array<[string, string]> = [
   ["mof_other_sources", "Other sources"],
   ["mof_share_capital", "Share capital"],
   ["mof_internal_accruals", "Internal accruals"],
-  ["mof_working_capital_loan", "Working capital loan"],
+  ["mof_working_capital_loan", "Working capital loan (cash credit — outside project funding)"],
   ["mof_venture_capital", "Venture capital"],
   ["mof_csr_support", "CSR support"],
   ["mof_nabard_assistance", "NABARD assistance"],
@@ -796,7 +796,12 @@ export function FinanceSection({ uuid }: { uuid: string }) {
       return s + (Number.isFinite(n) ? n : 0);
     }, 0);
   const costTotal = sumFields(COST_FIELDS);
-  const mofTotal = sumFields(MOF_FIELDS);
+  // BUG-37 (KAU §6 r4): the working-capital loan is a revolving cash-credit
+  // facility, NOT project funding — the backend variance/readiness check
+  // excludes it from the MoF total, so this live chip must too or the two
+  // disagree the moment a CC limit is entered.
+  const wcFacility = sumFields([["mof_working_capital_loan", ""]]);
+  const mofTotal = sumFields(MOF_FIELDS.filter(([k]) => k !== "mof_working_capital_loan"));
   const mofDelta = mofTotal - costTotal;
   const fmtInr = (n: number) => n.toLocaleString("en-IN", { maximumFractionDigits: 2 });
 
@@ -1131,8 +1136,11 @@ export function FinanceSection({ uuid }: { uuid: string }) {
                 stays sensible either way — backend readiness message is
                 authoritative and includes the actual threshold in effect. */}
             <div className="flex flex-wrap gap-1.5 font-mono text-xs">
-              <span className="rounded-md bg-muted px-2 py-1">MoF: ₹{fmtInr(mofTotal)}</span>
+              <span className="rounded-md bg-muted px-2 py-1">MoF (project funding): ₹{fmtInr(mofTotal)}</span>
               <span className="rounded-md bg-muted px-2 py-1">Cost: ₹{fmtInr(costTotal)}</span>
+              {wcFacility > 0 && (
+                <span className="rounded-md bg-muted px-2 py-1 text-muted-foreground">WC facility (outside project cost): ₹{fmtInr(wcFacility)}</span>
+              )}
               {costTotal > 0 && mofTotal > 0 && (() => {
                 const variancePct = (Math.abs(mofDelta) / costTotal) * 100;
                 if (variancePct < 0.01) {
