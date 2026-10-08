@@ -14,7 +14,6 @@ import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { authApi } from "@/lib/api/auth";
 import { translationsApi } from "@/lib/api/translations";
-import { useLocaleStore } from "@/stores/locale-store";
 
 type T = Record<string, string>;
 type PasswordValues = { current_password: string; new_password: string; confirm_password: string };
@@ -85,17 +84,17 @@ function PasswordInput({
 }
 
 export default function ExpertSettingsPasswordPage() {
-  const locale = useLocaleStore((s) => s.locale);
   const [t, setT] = useState<T>({});
 
+  // My Profile stays in English whatever language is selected
   useEffect(() => {
     translationsApi
-      .getPublic(locale, "fpo_settings,common")
+      .getPublic("en", "fpo_settings,common")
       .then((data) => {
         setT({ ...(data.common ?? {}), ...(data.fpo_settings ?? {}) });
       })
       .catch(() => undefined);
-  }, [locale]);
+  }, []);
 
   const form = useForm<PasswordValues>({ resolver: zodResolver(makePasswordSchema(t)), defaultValues: passwordDefaults });
 

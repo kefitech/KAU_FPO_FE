@@ -241,14 +241,15 @@ export default function ExpertSettingsProfilePage() {
   const [pendingPhone, setPendingPhone] = useState<string | null>(null);
   const [t, setT] = useState<T>({});
 
+  // My Profile stays in English whatever language is selected
   useEffect(() => {
     translationsApi
-      .getPublic(locale, "fpo_settings,expert_settings,common")
+      .getPublic("en", "fpo_settings,expert_settings,common")
       .then((data) => {
         setT({ ...(data.common ?? {}), ...(data.fpo_settings ?? {}), ...(data.expert_settings ?? {}) });
       })
       .catch(() => undefined);
-  }, [locale]);
+  }, []);
 
   const LANGUAGES = [
     { value: "en", label: t.lang_english ?? "English" },

@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import { type QueryKey, useQueryClient } from "@tanstack/react-query";
 import DOMPurify from "isomorphic-dompurify";
 import { Bell, ChevronRight } from "lucide-react";
 
 import { relativeTime } from "@/components/layout/notification-bell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { inboxApi } from "@/lib/api/inbox";
 import type { InboxNotification } from "@/types";
 
 type T = Record<string, string>;
@@ -18,8 +20,38 @@ export type RecentNotification = Pick<InboxNotification, "id" | "title" | "body"
   link?: string | null;
 };
 
+// Notification templates contain light HTML (e.g. <strong>) and escape the values
+// they substitute — render them like the inbox does, sanitised to formatting tags only.
+const sanitize = (html: string) =>
+  DOMPurify.sanitize(html, { ALLOWED_TAGS: ["strong", "b", "em", "i", "br"], ALLOWED_ATTR: [] });
+
 /**
- * Latest in-app notifications on a portal dashboard (FPO, admin sub-admin).
+ * `onOpen` for the card: marks an unread notification read and refreshes the bell,
+ * the inbox and the dashboard's own list (`listKey`).
+ */
+export function useMarkNotificationRead(listKey: QueryKey) {
+  const queryClient = useQueryClient();
+  return (n: RecentNotification) => {
+    if (n.is_read) return;
+    inboxApi
+      .markRead(n.id)
+      .then(() => {
+        for (const queryKey of [
+          listKey,
+          ["inbox-unread-count"],
+          ["inbox-list"],
+          ["inbox-full"],
+          ["inbox-categories"],
+        ]) {
+          queryClient.invalidateQueries({ queryKey });
+        }
+      })
+      .catch(() => undefined);
+  };
+}
+
+/**
+ * Latest in-app notifications on a portal dashboard (FPO, admin sub-admin, CBBO, government).
  * Notifications with a link open it; `onOpen` runs first, e.g. to mark it read.
  */
 export function RecentNotificationsCard({
@@ -29,6 +61,7 @@ export function RecentNotificationsCard({
   onOpen,
   viewAllHref,
   emptyHint,
+  className,
 }: {
   items: RecentNotification[];
   t: T;
@@ -36,27 +69,30 @@ export function RecentNotificationsCard({
   onOpen?: (n: RecentNotification) => void;
   viewAllHref?: string;
   emptyHint?: string;
+  /** e.g. a height limit — the list scrolls inside it */
+  className?: string;
 }) {
   const router = useRouter();
 
   const renderContent = (n: RecentNotification) => (
     <>
-      <p className="break-words font-medium text-sm">{n.title}</p>
-      {/* Notification templates contain light HTML (e.g. <strong>) — render it
-          like the inbox does, but sanitised to formatting tags only. */}
+      {/* Clamped so each notification stays compact — the page it links to has the full text */}
       <p
-        className="mt-0.5 break-words text-muted-foreground text-xs"
+        className="line-clamp-1 break-words font-medium text-sm"
         // biome-ignore lint/security/noDangerouslySetInnerHtml: content is sanitized with DOMPurify
-        dangerouslySetInnerHTML={{
-          __html: DOMPurify.sanitize(n.body, { ALLOWED_TAGS: ["strong", "b", "em", "i", "br"], ALLOWED_ATTR: [] }),
-        }}
+        dangerouslySetInnerHTML={{ __html: sanitize(n.title) }}
+      />
+      <p
+        className="mt-0.5 line-clamp-2 break-words text-muted-foreground text-xs"
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: content is sanitized with DOMPurify
+        dangerouslySetInnerHTML={{ __html: sanitize(n.body) }}
       />
       <p className="mt-1 text-muted-foreground text-xs">{relativeTime(n.created_at, t)}</p>
     </>
   );
 
   return (
-    <Card>
+    <Card className={className}>
       <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
         <CardTitle className="text-base">{t.card_notifications_title ?? "Recent Notifications"}</CardTitle>
         {viewAllHref && (
@@ -65,7 +101,7 @@ export function RecentNotificationsCard({
           </Link>
         )}
       </CardHeader>
-      <CardContent>
+      <CardContent className="min-h-0 flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="flex flex-col gap-3">
             <Skeleton className="h-16 w-full" />

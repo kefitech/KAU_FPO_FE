@@ -15,7 +15,6 @@ import { Input } from "@/components/ui/input";
 import { authApi } from "@/lib/api/auth";
 import { useEffect } from "react";
 import { translationsApi } from "@/lib/api/translations";
-import { useLocaleStore } from "@/stores/locale-store";
 type T = Record<string, string>;
 type PasswordValues = { current_password: string; new_password: string; confirm_password: string };
 const passwordDefaults: PasswordValues = { current_password: "", new_password: "", confirm_password: "" };
@@ -84,17 +83,17 @@ function PasswordInput({
 }
 
 export default function FpoSettingsPasswordPage() {
-  const locale = useLocaleStore((s) => s.locale);
 const [t, setT] = useState<T>({});
 
+// My Profile stays in English whatever language is selected
 useEffect(() => {
   translationsApi
-    .getPublic(locale, "fpo_settings,common")
+    .getPublic("en", "fpo_settings,common")
     .then((data) => {
       setT({ ...(data.common ?? {}), ...(data.fpo_settings ?? {}) });
     })
     .catch(() => undefined);
-}, [locale]);
+}, []);
 
 const form = useForm<PasswordValues>({ resolver: zodResolver(makePasswordSchema(t)), defaultValues: passwordDefaults });
 

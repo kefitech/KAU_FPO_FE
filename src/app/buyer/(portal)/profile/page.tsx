@@ -14,7 +14,6 @@ import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { translationsApi } from "@/lib/api/translations";
-import { useLocaleStore } from "@/stores/locale-store";
 
 type T = Record<string, string>;
 
@@ -182,18 +181,17 @@ function PhoneOtpBlock({
 
 export default function BuyerProfilePage() {
   const queryClient = useQueryClient();
-  const locale = useLocaleStore((s) => s.locale);
   const [t, setT] = useState<T>({});
   const [editing, setEditing] = useState(false);
   const [otpStep, setOtpStep] = useState(false);
   const [pendingPhone, setPendingPhone] = useState<string | null>(null);
 
+  // My Profile stays in English whatever language is selected
   useEffect(() => {
-    if (!locale) return;
-    translationsApi.getPublic(locale, "buyer_my_profile").then((data) => {
+    translationsApi.getPublic("en", "buyer_my_profile").then((data) => {
       setT(data.buyer_my_profile ?? {});
     });
-  }, [locale]);
+  }, []);
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ["buyer-account-profile"],

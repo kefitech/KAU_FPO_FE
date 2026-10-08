@@ -7,6 +7,9 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { govtFposApi } from "@/app/government/_api/fpos";
 import { govtDashboardApi } from "@/app/government/_api/dashboard";
+import { GradientBarChart } from "@/components/shared/gradient-bar-chart";
+import { RecentNotificationsCard, useMarkNotificationRead } from "@/components/shared/recent-notifications-card";
+import { inboxApi } from "@/lib/api/inbox";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 
@@ -20,9 +23,10 @@ export default function GovernmentDashboardPage() {
 
   useEffect(() => {
     translationsApi
-      .getPublic(locale, "government_dashboard,districts")
+      .getPublic(locale, "government_dashboard,districts,notification_bell")
       .then((data) => {
-        setT(data.government_dashboard ?? {});
+        // notification_bell: relative times on the notifications card
+        setT({ ...(data.notification_bell ?? {}), ...(data.government_dashboard ?? {}) });
         setTDistricts(data.districts ?? {});
       })
       .catch(() => undefined);
@@ -57,6 +61,15 @@ export default function GovernmentDashboardPage() {
     queryFn: () => govtFposApi.getAll({ page: 1, page_size: 100 }),
   });
 
+  // e.g. a KAU admin / sub-admin commented on one of the official's training sessions
+  const notificationsKey = ["government-dashboard-notifications", locale];
+  const { data: notifications, isLoading: notificationsLoading } = useQuery({
+    queryKey: notificationsKey,
+    queryFn: () => inboxApi.getAll({ page: 1, page_size: 5 }),
+    refetchInterval: 30_000,
+  });
+  const markNotificationRead = useMarkNotificationRead(notificationsKey);
+
   const fpos = fpoData?.data ?? [];
   const isLoading = statsLoading || fposLoading;
   const hasError = statsError || fposError;
@@ -64,6 +77,15 @@ export default function GovernmentDashboardPage() {
   const byStatusEntries = Object.entries(stats?.by_status ?? {}).sort((a, b) => b[1] - a[1]);
   const byDistrictEntries = Object.entries(stats?.by_district ?? {}).sort((a, b) => b[1] - a[1]);
   const totalDistricts = byDistrictEntries.length;
+
+  const monthFormat = new Intl.DateTimeFormat(locale === "ml" ? "ml-IN" : "en-IN", {
+    month: "short",
+    year: "2-digit",
+  });
+  const trainingTrend = (stats?.training_trend ?? []).map((m) => ({
+    label: monthFormat.format(new Date(`${m.month}-01T00:00:00`)),
+    value: m.count,
+  }));
 
   if (isLoading) {
     return (
@@ -162,6 +184,37 @@ export default function GovernmentDashboardPage() {
           </div>
         </div>
       </div>
+      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">{t.chart_training_trend ?? "Training Sessions"}</CardTitle>
+            <CardDescription className="text-xs">
+              {t.chart_training_trend_subtitle ?? "Sessions held for FPOs in your jurisdiction per month — last 12 months"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <GradientBarChart
+              data={trainingTrend}
+              valueLabel={t.chart_training_value ?? "Sessions"}
+              color="var(--primary)"
+              className="h-60"
+            />
+          </CardContent>
+        </Card>
+
+        {/* lg: fills the chart card's height and scrolls inside it rather than stretching the row */}
+        <div className="relative">
+          <RecentNotificationsCard
+            items={notifications?.data ?? []}
+            isLoading={notificationsLoading}
+            onOpen={markNotificationRead}
+            emptyHint={t.notifications_empty_hint ?? "KAU comments on your training sessions will appear here"}
+            t={t}
+            className="max-h-96 lg:absolute lg:inset-0 lg:max-h-none"
+          />
+        </div>
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>

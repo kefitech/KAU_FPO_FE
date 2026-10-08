@@ -187,14 +187,15 @@ export default function SettingsProfilePage() {
   const [pendingPhone, setPendingPhone] = useState<string | null>(null);
   const [t, setT] = useState<T>({});
 
+  // My Profile stays in English whatever language is selected
   useEffect(() => {
     translationsApi
-      .getPublic(locale, "fpo_settings,common")
+      .getPublic("en", "fpo_settings,common")
       .then((data) => {
         setT({ ...(data.common ?? {}), ...(data.fpo_settings ?? {}) });
       })
       .catch(() => undefined);
-  }, [locale]);
+  }, []);
 
   const LANGUAGES = [
     { value: "en", label: t.lang_english ?? "English" },

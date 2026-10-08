@@ -5,10 +5,15 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AlertCircle, CheckCircle, Clock, FileText } from "lucide-react";
 
+import { cbboDashboardApi } from "@/app/cbbo/_api/dashboard";
 import { cbboFposApi } from "@/app/cbbo/_api/fpos";
 import { cbboReportsApi } from "@/app/cbbo/_api/reports";
+import { GradientBarChart } from "@/components/shared/gradient-bar-chart";
+import { RecentNotificationsCard, useMarkNotificationRead } from "@/components/shared/recent-notifications-card";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { inboxApi } from "@/lib/api/inbox";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 
@@ -33,9 +38,10 @@ export default function CbboDashboardPage() {
 
   useEffect(() => {
     translationsApi
-      .getPublic(locale, "cbbo_dashboard,common")
+      .getPublic(locale, "cbbo_dashboard,common,notification_bell")
       .then((data) => {
-        setT({ ...(data.cbbo_dashboard ?? {}), ...(data.common ?? {}) });
+        // notification_bell: relative times on the notifications card
+        setT({ ...(data.notification_bell ?? {}), ...(data.cbbo_dashboard ?? {}), ...(data.common ?? {}) });
       })
       .catch(() => undefined);
   }, [locale]);
@@ -58,8 +64,36 @@ export default function CbboDashboardPage() {
     queryFn: () => cbboReportsApi.getAll({ page: 1, page_size: 100 }),
   });
 
+  // The chart and notifications load on their own — they don't hold up the page.
+  const {
+    data: stats,
+    isLoading: statsLoading,
+    isError: statsError,
+  } = useQuery({
+    queryKey: ["cbbo", "dashboard", "stats"],
+    queryFn: () => cbboDashboardApi.getStats(),
+  });
+
+  // e.g. a KAU admin / sub-admin commented on one of the officer's training sessions
+  const notificationsKey = ["cbbo-dashboard-notifications", locale];
+  const { data: notifications, isLoading: notificationsLoading } = useQuery({
+    queryKey: notificationsKey,
+    queryFn: () => inboxApi.getAll({ page: 1, page_size: 5 }),
+    refetchInterval: 30_000,
+  });
+  const markNotificationRead = useMarkNotificationRead(notificationsKey);
+
   const fpos = fpoData?.data ?? [];
   const reports = reportsData?.data ?? [];
+
+  const monthFormat = new Intl.DateTimeFormat(locale === "ml" ? "ml-IN" : "en-IN", {
+    month: "short",
+    year: "2-digit",
+  });
+  const trainingTrend = (stats?.training_trend ?? []).map((m) => ({
+    label: monthFormat.format(new Date(`${m.month}-01T00:00:00`)),
+    value: m.count,
+  }));
 
   const isLoading = fposLoading || reportsLoading;
   const hasError = fposError || reportsError;
@@ -165,6 +199,45 @@ export default function CbboDashboardPage() {
               <AlertCircle className="h-5 w-5 text-white" />
             </div>
           </div>
+        </div>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">{t.chart_training_trend ?? "Training Sessions"}</CardTitle>
+            <CardDescription className="text-xs">
+              {t.chart_training_trend_subtitle ?? "Sessions you recorded per month — last 12 months"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {statsLoading ? (
+              <Skeleton className="h-60 w-full rounded-xl" />
+            ) : statsError ? (
+              <p className="text-muted-foreground text-sm">
+                {t.error_load ?? "Couldn't load dashboard data. Please refresh or try again shortly."}
+              </p>
+            ) : (
+              <GradientBarChart
+                data={trainingTrend}
+                valueLabel={t.chart_training_value ?? "Sessions"}
+                color="var(--primary)"
+                className="h-60"
+              />
+            )}
+          </CardContent>
+        </Card>
+
+        {/* lg: fills the chart card's height and scrolls inside it rather than stretching the row */}
+        <div className="relative">
+          <RecentNotificationsCard
+            items={notifications?.data ?? []}
+            isLoading={notificationsLoading}
+            onOpen={markNotificationRead}
+            emptyHint={t.notifications_empty_hint ?? "KAU comments on your training sessions will appear here"}
+            t={t}
+            className="max-h-96 lg:absolute lg:inset-0 lg:max-h-none"
+          />
         </div>
       </div>
 

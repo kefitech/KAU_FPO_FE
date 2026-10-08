@@ -78,6 +78,8 @@ export default function GovernmentPage() {
           ]}
           columnsLabel={tCommon.col_header ?? "Columns"}
           toggleColumnsLabel={tCommon.col_toggle_columns ?? "Toggle columns"}
+          searchPlaceholder={tTable.search_placeholder ?? "Search officials..."}
+          clearLabel={tTable.clear ?? "Clear"}
         />
       </Suspense>
 
@@ -125,8 +127,11 @@ export default function GovernmentPage() {
                   type: "tags",
                   tags:
                     officialView.row.jurisdiction_type === "state"
-                      ? ["State-wide"]
-                      : (officialView.row.assigned_districts_display ?? officialView.row.assigned_districts ?? []),
+                      ? [tTable.state_wide ?? "State-wide"]
+                      : (officialView.row.assigned_districts ?? []).map(
+                          (code, i) =>
+                            tDistricts[`district_${code}`] ?? officialView.row?.assigned_districts_display?.[i] ?? code,
+                        ),
                 },
               ]
             : []

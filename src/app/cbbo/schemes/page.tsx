@@ -1,5 +1,6 @@
 import { SchemesBrowser } from "@/components/schemes/schemes-browser";
 
-export default function FpoSchemesPage() {
+/** Read-only — the same directory FPOs browse. */
+export default function CbboSchemesPage() {
   return <SchemesBrowser />;
 }
