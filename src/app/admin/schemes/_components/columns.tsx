@@ -128,14 +128,12 @@ export function getSchemeColumns(
     {
       accessorKey: "created_by_name",
       header: t.col_created_by ?? "Created By",
-      enableSorting: false,
       meta: { hideOnMobile: true },
       cell: ({ row }) => <CreatedByBadge scheme={row.original} currentUserId={currentUserId} t={t} />,
     },
     {
       accessorKey: "is_active",
       header: t.col_status ?? "Status",
-      enableSorting: false,
       cell: ({ row }) => (
         <Badge
           variant="secondary"

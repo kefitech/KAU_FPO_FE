@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { govtFposApi } from "@/app/government/_api/fpos";
 import { govtDashboardApi } from "@/app/government/_api/dashboard";
+import { FpoStatusBadge } from "@/components/shared/fpo-status-badge";
 import { GradientBarChart } from "@/components/shared/gradient-bar-chart";
 import { RecentNotificationsCard, useMarkNotificationRead } from "@/components/shared/recent-notifications-card";
 import { inboxApi } from "@/lib/api/inbox";
@@ -278,7 +279,7 @@ export default function GovernmentDashboardPage() {
                 <p className="font-medium text-sm">{f.name}</p>
                 <p className="text-muted-foreground text-xs">{f.district_display ?? f.district}</p>
               </div>
-              <span className="rounded bg-muted px-2 py-1 text-xs">{getStatusLabel(f.status, f.status_display)}</span>
+              <FpoStatusBadge status={f.status} label={getStatusLabel(f.status, f.status_display)} />
             </div>
           ))}
         </CardContent>

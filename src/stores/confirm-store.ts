@@ -6,6 +6,7 @@ interface ConfirmOptions {
   onConfirm: () => Promise<unknown> | unknown;
   confirmLabel?: string;
   confirmingLabel?: string;
+  cancelLabel?: string;
   variant?: "destructive" | "default";
 }
 
@@ -15,6 +16,7 @@ interface ConfirmStore {
   description: string;
   confirmLabel: string;
   confirmingLabel: string;
+  cancelLabel: string;
   variant: "destructive" | "default";
   isPending: boolean;
   onConfirm: (() => Promise<unknown> | unknown) | null;
@@ -29,6 +31,7 @@ export const useConfirmStore = create<ConfirmStore>((set) => ({
   description: "",
   confirmLabel: "Delete",
   confirmingLabel: "Deleting...",
+  cancelLabel: "Cancel",
   variant: "destructive",
   isPending: false,
   onConfirm: null,
@@ -40,8 +43,9 @@ export const useConfirmStore = create<ConfirmStore>((set) => ({
       onConfirm: options.onConfirm,
       confirmLabel: options.confirmLabel ?? "Delete",
       confirmingLabel: options.confirmingLabel ?? "Deleting...",
+      cancelLabel: options.cancelLabel ?? "Cancel",
       variant: options.variant ?? "destructive",
     }),
-  close: () => set({ open: false, isPending: false, onConfirm: null, confirmLabel: "Delete", confirmingLabel: "Deleting...", variant: "destructive" }),
+  close: () => set({ open: false, isPending: false, onConfirm: null, confirmLabel: "Delete", confirmingLabel: "Deleting...", cancelLabel: "Cancel", variant: "destructive" }),
   setIsPending: (pending) => set({ isPending: pending }),
 }));

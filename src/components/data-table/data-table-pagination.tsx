@@ -14,6 +14,15 @@ interface DataTablePaginationProps {
   onPageSizeChange: (size: number) => void;
   pageSizeOptions?: number[];
   isLoading?: boolean;
+  /** Translated text; any label left out stays English. */
+  labels?: {
+    noResults?: string;
+    /** e.g. "Showing {from}–{to} of {total}" */
+    showing?: string;
+    rowsPerPage?: string;
+    /** e.g. "Page {page} of {totalPages}" */
+    pageOf?: string;
+  };
 }
 
 export function DataTablePagination({
@@ -24,6 +33,7 @@ export function DataTablePagination({
   onPageSizeChange,
   pageSizeOptions = [10, 20, 50],
   isLoading,
+  labels = {},
 }: DataTablePaginationProps) {
   const totalPages = Math.ceil(total / pageSize);
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -68,7 +78,12 @@ export function DataTablePagination({
       {/* Mobile: row 1 — showing count + nav buttons */}
       <div className="flex items-center justify-between sm:contents">
         <p className="text-muted-foreground text-sm">
-          {total === 0 ? "No results" : `Showing ${from}–${to} of ${total}`}
+          {total === 0
+            ? (labels.noResults ?? "No results")
+            : (labels.showing ?? "Showing {from}–{to} of {total}")
+                .replace("{from}", String(from))
+                .replace("{to}", String(to))
+                .replace("{total}", String(total))}
         </p>
         <div className="sm:hidden">
           <NavButtons />
@@ -79,7 +94,7 @@ export function DataTablePagination({
       <div className="flex items-center gap-3 sm:gap-4">
         {/* Rows per page */}
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground text-sm whitespace-nowrap">Rows per page</span>
+          <span className="text-muted-foreground text-sm whitespace-nowrap">{labels.rowsPerPage ?? "Rows per page"}</span>
           <Select value={String(pageSize)} onValueChange={(v) => onPageSizeChange(Number(v))}>
             <SelectTrigger className="h-8 w-16">
               <SelectValue />
@@ -96,7 +111,9 @@ export function DataTablePagination({
 
         {/* Page X of Y */}
         <span className="text-muted-foreground text-sm whitespace-nowrap">
-          Page {totalPages === 0 ? 0 : page} of {totalPages}
+          {(labels.pageOf ?? "Page {page} of {totalPages}")
+            .replace("{page}", String(totalPages === 0 ? 0 : page))
+            .replace("{totalPages}", String(totalPages))}
         </span>
 
         {/* Nav buttons — desktop only (mobile rendered above) */}
