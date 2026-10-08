@@ -14,13 +14,27 @@ import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { translationsApi } from "@/lib/api/translations";
+import { NAME_PATTERN } from "@/lib/validations/text";
 
 type T = Record<string, string>;
 
 const profileSchema = z.object({
-  first_name: z.string().min(1, { message: "First name is required." }),
-  last_name: z.string().min(1, { message: "Last name is required." }),
-  phone: z.string().optional(),
+  first_name: z
+    .string()
+    .trim()
+    .min(1, { message: "First name is required." })
+    .max(20, { message: "First name must be at most 20 characters." })
+    .regex(NAME_PATTERN, { message: "First name can only contain letters and spaces." }),
+  last_name: z
+    .string()
+    .trim()
+    .min(1, { message: "Last name is required." })
+    .max(20, { message: "Last name must be at most 20 characters." })
+    .regex(NAME_PATTERN, { message: "Last name can only contain letters and spaces." }),
+  phone: z
+    .string()
+    .optional()
+    .refine((v) => !v || /^[6-9]\d{9}$/.test(v), { message: "Enter a valid 10-digit mobile number." }),
   preferred_language: z.string().optional(),
 });
 type ProfileValues = z.infer<typeof profileSchema>;
@@ -327,6 +341,7 @@ export default function BuyerProfilePage() {
                     <Input
                       {...field}
                       disabled={otpStep}
+                      maxLength={20}
                       placeholder={t.placeholder_first_name ?? "First name"}
                       aria-invalid={fieldState.invalid}
                     />
@@ -349,6 +364,7 @@ export default function BuyerProfilePage() {
                     <Input
                       {...field}
                       disabled={otpStep}
+                      maxLength={20}
                       placeholder={t.placeholder_last_name ?? "Last name"}
                       aria-invalid={fieldState.invalid}
                     />
@@ -374,8 +390,11 @@ export default function BuyerProfilePage() {
                     <Input
                       {...field}
                       type="tel"
-                      placeholder={t.placeholder_phone ?? "+91 98765 43210"}
+                      inputMode="numeric"
+                      maxLength={10}
+                      placeholder={t.placeholder_phone ?? "9876543210"}
                       aria-invalid={fieldState.invalid}
+                      onChange={(e) => field.onChange(e.target.value.replace(/\D/g, "").slice(0, 10))}
                     />
                     {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                   </div>

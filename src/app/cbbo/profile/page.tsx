@@ -15,7 +15,7 @@ import { FieldError } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { authApi } from "@/lib/api/auth";
 import { translationsApi } from "@/lib/api/translations";
-import { hasLetterOrDigit } from "@/lib/validations/text";
+import { NAME_PATTERN } from "@/lib/validations/text";
 import { useLocaleStore } from "@/stores/locale-store";
 
 type T = Record<string, string>;
@@ -24,16 +24,16 @@ function makeProfileSchema(t: T) {
   return z.object({
     first_name: z
       .string()
+      .trim()
       .min(1, { message: t.val_first_name_required ?? "First name is required." })
-      .refine((v) => !v || hasLetterOrDigit(v), {
-        message: t.val_first_name_symbols ?? "First name must contain letters or numbers, not only symbols.",
-      }),
+      .max(20, { message: t.val_first_name_max ?? "First name must be at most 20 characters." })
+      .regex(NAME_PATTERN, { message: t.val_first_name_invalid ?? "First name can only contain letters and spaces." }),
     last_name: z
       .string()
+      .trim()
       .min(1, { message: t.val_last_name_required ?? "Last name is required." })
-      .refine((v) => !v || hasLetterOrDigit(v), {
-        message: t.val_last_name_symbols ?? "Last name must contain letters or numbers, not only symbols.",
-      }),
+      .max(20, { message: t.val_last_name_max ?? "Last name must be at most 20 characters." })
+      .regex(NAME_PATTERN, { message: t.val_last_name_invalid ?? "Last name can only contain letters and spaces." }),
     phone: z
       .string()
       .optional()
@@ -358,6 +358,7 @@ export default function SettingsProfilePage() {
                     {...field}
                     disabled={otpStep}
                     id="first-name"
+                    maxLength={20}
                     placeholder={t.label_first_name ?? "First name"}
                     aria-invalid={fieldState.invalid}
                   />
@@ -381,6 +382,7 @@ export default function SettingsProfilePage() {
                     {...field}
                     disabled={otpStep}
                     id="last-name"
+                    maxLength={20}
                     placeholder={t.label_last_name ?? "Last name"}
                     aria-invalid={fieldState.invalid}
                   />

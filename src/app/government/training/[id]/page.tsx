@@ -13,6 +13,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { translationsApi } from "@/lib/api/translations";
+import {
+  blockNonNumeric,
+  MAX_TRAINING_PARTICIPANTS,
+  type SessionFieldKey,
+  todayLocalISO,
+  validateTrainingSession,
+} from "@/lib/validations/training-session";
 import { useLocaleStore } from "@/stores/locale-store";
 
 type T = Record<string, string>;
@@ -54,14 +61,29 @@ export default function EditTrainingSessionPage() {
     setVenue(session.venue ?? "");
   }, [session]);
 
+  // Validation state, same behaviour as the create form
+  const [touched, setTouched] = useState<Partial<Record<SessionFieldKey, boolean>>>({});
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+  const touch = (key: SessionFieldKey) => setTouched((prev) => ({ ...prev, [key]: true }));
+
+  const errors = validateTrainingSession(
+    { topic, trainerName, date, durationHours, participantsCount, venue },
+    t,
+    session?.date,
+  );
+  const hasErrors = Object.keys(errors).length > 0;
+  const showError = (key: SessionFieldKey) => (touched[key] || submitAttempted ? errors[key] : undefined);
+  const errorText = (msg?: string) => (msg ? <p className="mt-1 text-destructive text-xs">{msg}</p> : null);
+
   const mutation = useMutation({
     mutationFn: () =>
       govtTrainingApi.update(sessionId, {
-        topic,
+        topic: topic.trim(),
+        trainer_name: trainerName.trim(),
         date,
         duration_hours: Number(durationHours),
         participants_count: Number(participantsCount) || 0,
-        venue,
+        venue: venue.trim(),
       }),
     onSuccess: () => {
       toast.success(t.toast_updated ?? "Training session updated");
@@ -93,9 +115,7 @@ export default function EditTrainingSessionPage() {
   if (!session) {
     return (
       <div className="p-6">
-        <p className="text-destructive text-sm">
-          Session not found, or you don't have permission to edit it.
-        </p>
+        <p className="text-destructive text-sm">Session not found, or you don't have permission to edit it.</p>
       </div>
     );
   }
@@ -110,10 +130,12 @@ export default function EditTrainingSessionPage() {
       </div>
 
       <form
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
-          if (!topic || !date) {
-            toast.error(t.validation_required ?? "Fill in topic and date");
+          setSubmitAttempted(true);
+          if (hasErrors) {
+            toast.error(t.validation_fix_errors ?? "Please fix the highlighted fields");
             return;
           }
           mutation.mutate();
@@ -134,54 +156,110 @@ export default function EditTrainingSessionPage() {
                 <Input
                   id="topic"
                   value={topic}
-                  onChange={(e) => setTopic(e.target.value)}
+                  maxLength={200}
+                  aria-invalid={!!showError("topic")}
+                  onChange={(e) => {
+                    setTopic(e.target.value);
+                    touch("topic");
+                  }}
+                  onBlur={() => touch("topic")}
                   placeholder={t.placeholder_topic ?? "e.g. Organic Farming Practices"}
                 />
+                {errorText(showError("topic"))}
               </Field>
               <Field>
-                <FieldLabel htmlFor="trainer-name">{t.field_trainer_name ?? "Trainer Name"}</FieldLabel>
+                <FieldLabel htmlFor="trainer-name">{t.field_trainer_name ?? "Trainer Name"} *</FieldLabel>
                 <Input
                   id="trainer-name"
                   value={trainerName}
-                  onChange={(e) => setTrainerName(e.target.value)}
+                  maxLength={100}
+                  aria-invalid={!!showError("trainer")}
+                  onChange={(e) => {
+                    setTrainerName(e.target.value);
+                    touch("trainer");
+                  }}
+                  onBlur={() => touch("trainer")}
                   placeholder={t.placeholder_trainer_name ?? "Name of the person who conducted the session"}
                 />
+                {errorText(showError("trainer"))}
               </Field>
               <FieldGroup className="grid grid-cols-2 gap-4">
                 <Field>
                   <FieldLabel htmlFor="date">{t.field_date ?? "Date"} *</FieldLabel>
-                  <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+                  <Input
+                    id="date"
+                    type="date"
+                    // A past session keeps its saved date selectable
+                    min={session.date < todayLocalISO() ? session.date : todayLocalISO()}
+                    value={date}
+                    aria-invalid={!!showError("date")}
+                    onChange={(e) => {
+                      setDate(e.target.value);
+                      touch("date");
+                    }}
+                    onBlur={() => touch("date")}
+                  />
+                  {errorText(showError("date"))}
                 </Field>
                 <Field>
-                  <FieldLabel htmlFor="duration">{t.field_duration ?? "Duration (hours)"}</FieldLabel>
+                  <FieldLabel htmlFor="duration">{t.field_duration ?? "Duration (hours)"} *</FieldLabel>
                   <Input
                     id="duration"
                     type="number"
+                    inputMode="decimal"
                     step="0.5"
+                    min={0.5}
+                    max={24}
                     value={durationHours}
-                    onChange={(e) => setDurationHours(e.target.value)}
+                    aria-invalid={!!showError("duration")}
+                    onKeyDown={blockNonNumeric(true)}
+                    onWheel={(e) => e.currentTarget.blur()}
+                    onChange={(e) => {
+                      setDurationHours(e.target.value);
+                      touch("duration");
+                    }}
+                    onBlur={() => touch("duration")}
                   />
+                  {errorText(showError("duration"))}
                 </Field>
               </FieldGroup>
               <FieldGroup className="grid grid-cols-2 gap-4">
                 <Field>
-                  <FieldLabel htmlFor="participants">{t.field_participants ?? "Participants"}</FieldLabel>
+                  <FieldLabel htmlFor="participants">{t.field_participants ?? "Participants"} *</FieldLabel>
                   <Input
                     id="participants"
                     type="number"
-                    min={0}
+                    inputMode="numeric"
+                    min={1}
+                    max={MAX_TRAINING_PARTICIPANTS}
+                    step={1}
                     value={participantsCount}
-                    onChange={(e) => setParticipantsCount(e.target.value)}
+                    aria-invalid={!!showError("participants")}
+                    onKeyDown={blockNonNumeric(false)}
+                    onWheel={(e) => e.currentTarget.blur()}
+                    onChange={(e) => {
+                      setParticipantsCount(e.target.value);
+                      touch("participants");
+                    }}
+                    onBlur={() => touch("participants")}
                   />
+                  {errorText(showError("participants"))}
                 </Field>
                 <Field>
-                  <FieldLabel htmlFor="venue">{t.field_venue ?? "Venue"}</FieldLabel>
+                  <FieldLabel htmlFor="venue">{t.field_venue ?? "Venue"} *</FieldLabel>
                   <Input
                     id="venue"
                     value={venue}
-                    onChange={(e) => setVenue(e.target.value)}
-                    placeholder={t.placeholder_venue ?? "Optional"}
+                    maxLength={200}
+                    aria-invalid={!!showError("venue")}
+                    onChange={(e) => {
+                      setVenue(e.target.value);
+                      touch("venue");
+                    }}
+                    onBlur={() => touch("venue")}
+                    placeholder={t.placeholder_venue_required ?? "e.g. Panchayat Hall"}
                   />
+                  {errorText(showError("venue"))}
                 </Field>
               </FieldGroup>
             </CardContent>
