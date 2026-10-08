@@ -15,6 +15,7 @@ export type DPRConfigCategory =
   | "variance"
   | "retention"
   | "risk"
+  | "ai"
   | "other";
 
 export type DPRConfigValueType = "decimal" | "int" | "string" | "bool";

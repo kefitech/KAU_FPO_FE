@@ -48,6 +48,7 @@ const CATEGORY_ORDER: Array<{ key: DPRConfigCategory; label: string; hint: strin
   { key: "variance", label: "Variance Thresholds", hint: "How large a mismatch between user-entered vs computed totals is tolerated before a warning fires." },
   { key: "retention", label: "Retention & Archival", hint: "How many historical PDF versions to keep per project." },
   { key: "risk", label: "Risk Matrix", hint: "Configuration for the probability × impact matrix used to score project risk." },
+  { key: "ai", label: "AI Narrative", hint: "Thresholds and rules that shape the AI-generated narrative chapters." },
   { key: "other", label: "Other", hint: "Miscellaneous parameters." },
 ];
 
