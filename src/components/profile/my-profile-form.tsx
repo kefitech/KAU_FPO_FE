@@ -113,7 +113,8 @@ function SectionHeading({ title }: { title: string }) {
 // Nothing here touches the profile until confirmMutation succeeds. Uses the
 // FPO pre-registration phone-OTP endpoints (fpoProfileApi.sendPhoneOtp /
 // verifyPhoneOtp) -- despite the "fpo" name they are generic (AllowAny, phone +
-// OTP only), so every portal verifies a new phone number through them.
+// OTP only), so every portal verifies a new phone number through them. The
+// backend refuses a new phone without the phone_token that verify-otp returns.
 
 function PhoneOtpBlock({
   newPhone,
@@ -147,8 +148,8 @@ function PhoneOtpBlock({
 
   const confirmMutation = useMutation({
     mutationFn: async () => {
-      await fpoProfileApi.verifyPhoneOtp(newPhone, otp);
-      return authApi.updateProfile({ phone: newPhone });
+      const { phone_token } = await fpoProfileApi.verifyPhoneOtp(newPhone, otp);
+      return authApi.updateProfile({ phone: newPhone, phone_token });
     },
     onSuccess: () => {
       toast.success(t.toast_phone_updated ?? "Phone number updated and verified.");

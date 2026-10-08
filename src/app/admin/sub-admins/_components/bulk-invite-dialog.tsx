@@ -55,6 +55,7 @@ export function BulkInviteDialog({
       // accident, and so re-picking the same (corrected) file fires onChange.
       clearFile();
       queryClient.invalidateQueries({ queryKey: ["sub-admins"] });
+      queryClient.invalidateQueries({ queryKey: ["sub-admin-district-cap-status"] });
       toast.success(
         (t.bulk_upload_summary ?? "{success} invited, {failed} failed.")
           .replace("{success}", String(data.success))

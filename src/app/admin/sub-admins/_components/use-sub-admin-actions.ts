@@ -51,10 +51,12 @@ export function useSubAdminActions(
   const queryClient = useQueryClient();
   const confirm = useConfirmStore((s) => s.confirm);
 
-  // The list and the View Sheet's single-record query both show the status.
+  // The list and the View Sheet's single-record query both show the status;
+  // the district chips count active sub-admins, so they change too.
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ["sub-admins"] });
     queryClient.invalidateQueries({ queryKey: ["sub-admin", String(subAdmin.id)] });
+    queryClient.invalidateQueries({ queryKey: ["sub-admin-district-cap-status"] });
   };
 
   const activateMutation = useMutation({
@@ -94,6 +96,7 @@ export function useSubAdminActions(
     onSuccess: () => {
       toast.success(t.toast_deleted ?? "Sub-admin deleted");
       queryClient.invalidateQueries({ queryKey: ["sub-admins"] });
+      queryClient.invalidateQueries({ queryKey: ["sub-admin-district-cap-status"] });
     },
     onError: (error: unknown) => {
       const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;

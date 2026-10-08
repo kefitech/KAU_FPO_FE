@@ -43,7 +43,14 @@ export const authApi = {
       )
       .then((r) => r.data.data),
 
-  updateProfile: (payload: { first_name?: string; last_name?: string; phone?: string; preferred_language?: string }) =>
+  // A changed phone must carry the phone_token from OTP verification of that number.
+  updateProfile: (payload: {
+    first_name?: string;
+    last_name?: string;
+    phone?: string;
+    phone_token?: string;
+    preferred_language?: string;
+  }) =>
     api
       .patch<{ status: string; message: string; data: import("@/types").User }>("/auth/me/profile/", payload)
       .then((r) => r.data.data),

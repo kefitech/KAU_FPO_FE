@@ -1,31 +1,8 @@
 import { apiClient } from "@/lib/api/client";
 
-interface FpoProfile {
-  id: number;
-  email: string;
-  first_name: string;
-  last_name: string;
-  phone: string;
-  preferred_language: string;
-}
-
-interface FpoProfileResponse {
-  status: string;
-  message: string;
-  data: FpoProfile;
-}
-
+// Phone-OTP calls used by the shared My Profile form (components/profile) in
+// every portal. Profile reads/writes themselves go through /auth/me/.
 export const fpoProfileApi = {
-  get: async (): Promise<FpoProfile> => {
-    const res = await apiClient.get<FpoProfileResponse>("/fpo/me/profile/");
-    return res.data.data;
-  },
-
-  update: async (payload: Partial<Omit<FpoProfile, "id" | "email">>): Promise<FpoProfile> => {
-    const res = await apiClient.patch<FpoProfileResponse>("/fpo/me/profile/", payload);
-    return res.data.data;
-  },
-
   sendPhoneOtp: async (phone: string): Promise<{ phone: string }> => {
     const res = await apiClient.post("/fpo/pre-register/send-otp/", { phone });
     return res.data.data ?? res.data;
