@@ -13,11 +13,25 @@ import { fpoProfileApi } from "@/app/fpo/_api/profile";
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { NAME_PATTERN } from "@/lib/validations/text";
 
 const profileSchema = z.object({
-  first_name: z.string().min(1, { message: "First name is required." }),
-  last_name: z.string().min(1, { message: "Last name is required." }),
-  phone: z.string().optional(),
+  first_name: z
+    .string()
+    .trim()
+    .min(1, { message: "First name is required." })
+    .max(20, { message: "First name must be at most 20 characters." })
+    .regex(NAME_PATTERN, { message: "First name can only contain letters and spaces." }),
+  last_name: z
+    .string()
+    .trim()
+    .min(1, { message: "Last name is required." })
+    .max(20, { message: "Last name must be at most 20 characters." })
+    .regex(NAME_PATTERN, { message: "Last name can only contain letters and spaces." }),
+  phone: z
+    .string()
+    .optional()
+    .refine((v) => !v || /^[6-9]\d{9}$/.test(v), { message: "Enter a valid 10-digit mobile number." }),
   preferred_language: z.string().optional(),
 });
 type ProfileValues = z.infer<typeof profileSchema>;
@@ -307,7 +321,13 @@ export default function FpoSettingsProfilePage() {
             <SettingRow label="First Name">
               {editing ? (
                 <div className="flex flex-col gap-1">
-                  <Input {...field} disabled={otpStep} placeholder="First name" aria-invalid={fieldState.invalid} />
+                  <Input
+                    {...field}
+                    disabled={otpStep}
+                    maxLength={20}
+                    placeholder="First name"
+                    aria-invalid={fieldState.invalid}
+                  />
                   {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                 </div>
               ) : (
@@ -324,7 +344,13 @@ export default function FpoSettingsProfilePage() {
             <SettingRow label="Last Name">
               {editing ? (
                 <div className="flex flex-col gap-1">
-                  <Input {...field} disabled={otpStep} placeholder="Last name" aria-invalid={fieldState.invalid} />
+                  <Input
+                    {...field}
+                    disabled={otpStep}
+                    maxLength={20}
+                    placeholder="Last name"
+                    aria-invalid={fieldState.invalid}
+                  />
                   {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                 </div>
               ) : (
@@ -341,7 +367,15 @@ export default function FpoSettingsProfilePage() {
             <SettingRow label="Phone" description="Used for SMS notifications and account recovery.">
               {editing && !otpStep ? (
                 <div className="flex flex-col gap-1">
-                  <Input {...field} type="tel" placeholder="+91 98765 43210" aria-invalid={fieldState.invalid} />
+                  <Input
+                    {...field}
+                    type="tel"
+                    inputMode="numeric"
+                    maxLength={10}
+                    placeholder="9876543210"
+                    aria-invalid={fieldState.invalid}
+                    onChange={(e) => field.onChange(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                  />
                   {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                 </div>
               ) : otpStep ? (

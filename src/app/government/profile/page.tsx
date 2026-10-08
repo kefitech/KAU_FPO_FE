@@ -14,14 +14,25 @@ import { Input } from "@/components/ui/input";
 import { fpoProfileApi } from "@/app/fpo/_api/profile";
 import { authApi } from "@/lib/api/auth";
 import { translationsApi } from "@/lib/api/translations";
+import { NAME_PATTERN } from "@/lib/validations/text";
 import { useLocaleStore } from "@/stores/locale-store";
 
 type T = Record<string, string>;
 
 function makeProfileSchema(t: T) {
   return z.object({
-    first_name: z.string().min(1, { message: t.val_first_name_required ?? "First name is required." }),
-    last_name: z.string().min(1, { message: t.val_last_name_required ?? "Last name is required." }),
+    first_name: z
+      .string()
+      .trim()
+      .min(1, { message: t.val_first_name_required ?? "First name is required." })
+      .max(20, { message: t.val_first_name_max ?? "First name must be at most 20 characters." })
+      .regex(NAME_PATTERN, { message: t.val_first_name_invalid ?? "First name can only contain letters and spaces." }),
+    last_name: z
+      .string()
+      .trim()
+      .min(1, { message: t.val_last_name_required ?? "Last name is required." })
+      .max(20, { message: t.val_last_name_max ?? "Last name must be at most 20 characters." })
+      .regex(NAME_PATTERN, { message: t.val_last_name_invalid ?? "Last name can only contain letters and spaces." }),
     phone: z
       .string()
       .optional()
@@ -330,7 +341,7 @@ export default function SettingsProfilePage() {
             <SettingRow label={t.label_first_name ?? "First Name"}>
               {editing ? (
                 <div className="flex flex-col gap-1">
-                  <Input {...field} id="first-name" placeholder={t.label_first_name ?? "First name"} aria-invalid={fieldState.invalid} />
+                  <Input {...field} id="first-name" maxLength={20} placeholder={t.label_first_name ?? "First name"} aria-invalid={fieldState.invalid} />
                   {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                 </div>
               ) : (
@@ -347,7 +358,7 @@ export default function SettingsProfilePage() {
             <SettingRow label={t.label_last_name ?? "Last Name"}>
               {editing ? (
                 <div className="flex flex-col gap-1">
-                  <Input {...field} id="last-name" placeholder={t.label_last_name ?? "Last name"} aria-invalid={fieldState.invalid} />
+                  <Input {...field} id="last-name" maxLength={20} placeholder={t.label_last_name ?? "Last name"} aria-invalid={fieldState.invalid} />
                   {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                 </div>
               ) : (

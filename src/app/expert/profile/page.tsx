@@ -15,12 +15,10 @@ import { FieldError } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { authApi } from "@/lib/api/auth";
 import { translationsApi } from "@/lib/api/translations";
+import { NAME_PATTERN } from "@/lib/validations/text";
 import { useLocaleStore } from "@/stores/locale-store";
 
 type T = Record<string, string>;
-
-// Letters only, with spaces allowed between words (no leading/trailing/only-whitespace).
-const NAME_PATTERN = /^[A-Za-z]+(?:\s+[A-Za-z]+)*$/;
 
 const PROFILE_FIELDS = ["first_name", "last_name", "phone", "preferred_language"] as const;
 
@@ -54,11 +52,13 @@ function makeProfileSchema(t: T) {
       .string()
       .trim()
       .min(1, { message: t.val_first_name_required ?? "First name is required." })
+      .max(20, { message: t.val_first_name_max ?? "First name must be at most 20 characters." })
       .regex(NAME_PATTERN, { message: t.val_first_name_invalid ?? "First name can only contain letters and spaces." }),
     last_name: z
       .string()
       .trim()
       .min(1, { message: t.val_last_name_required ?? "Last name is required." })
+      .max(20, { message: t.val_last_name_max ?? "Last name must be at most 20 characters." })
       .regex(NAME_PATTERN, { message: t.val_last_name_invalid ?? "Last name can only contain letters and spaces." }),
     phone: z
       .string()
@@ -395,6 +395,7 @@ export default function ExpertSettingsProfilePage() {
                   <Input
                     {...field}
                     disabled={otpStep}
+                    maxLength={20}
                     placeholder={t.label_first_name ?? "First name"}
                     aria-invalid={fieldState.invalid}
                   />
@@ -417,6 +418,7 @@ export default function ExpertSettingsProfilePage() {
                   <Input
                     {...field}
                     disabled={otpStep}
+                    maxLength={20}
                     placeholder={t.label_last_name ?? "Last name"}
                     aria-invalid={fieldState.invalid}
                   />
