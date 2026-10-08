@@ -49,9 +49,10 @@ function getStatusConfig(t: T): Record<string, { label: string; color: string }>
   };
 }
 
+// Same hues as the FPO Tier Assessment badges (green / blue / yellow / orange), at chart strength
 function getTierConfig(t: T): Record<string, { label: string; color: string }> {
   return {
-    A:            { label: t.tier_a            ?? "Tier A",        color: "#0ea5e9" },
+    A:            { label: t.tier_a            ?? "Tier A",        color: "#22c55e" },
     B:            { label: t.tier_b            ?? "Tier B",        color: "#3b82f6" },
     C:            { label: t.tier_c            ?? "Tier C",        color: "#eab308" },
     D:            { label: t.tier_d            ?? "Tier D",        color: "#f97316" },
