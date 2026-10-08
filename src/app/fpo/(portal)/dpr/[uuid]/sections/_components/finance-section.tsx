@@ -353,6 +353,9 @@ const OP_FIELDS: Array<[string, string]> = [
   ["op_communication", "Communication"],
   ["op_professional_charges", "Professional charges"],
   ["op_miscellaneous", "Miscellaneous"],
+  // BUG-28 (2026-10-08): dedicated annual lease / rent line for leased or
+  // rented land — the leased-land warning points here.
+  ["op_lease_rent", "Land lease / rent (annual)"],
 ];
 const ASSUMPTIONS_FIELDS: Array<[string, string]> = [
   ["inflation_rate_pct", "Inflation (%)"],
@@ -437,6 +440,7 @@ const Schema = z.object({
   op_admin_expenses: decimalNullable, op_marketing_expenses: decimalNullable,
   op_communication: decimalNullable, op_professional_charges: decimalNullable,
   op_miscellaneous: decimalNullable,
+  op_lease_rent: decimalNullable,
   // E. Revenue nested
   revenue_assumptions: z.array(RevenueSchema),
   // F. Loan — BE column name is `rate_of_interest_pct` (was mis-named `rate_of_interest` before)
