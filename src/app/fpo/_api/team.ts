@@ -8,7 +8,7 @@ type BulkInviteFileResponse = {
     success: number;
     failed: number;
     results: { row: number; email: string; name: string }[];
-    errors: { row: number; email: string; reason: string }[];
+    errors: { row: number; email: string; first_name?: string; last_name?: string; reason: string }[];
   };
 };
 
@@ -61,6 +61,12 @@ export const fpoTeamApi = {
 
   bulkDeactivate: (userIds: number[]): Promise<BulkToggleResponse> =>
    api.post<{ data: BulkToggleResponse }>(`${BASE}bulk-deactivate/`, { user_ids: userIds }).then((r) => r.data.data),
+
+  /** Permanently deletes the member's account; the email can be invited again. */
+  remove: (userId: number): Promise<void> => api.delete(`${BASE}${userId}/`).then(() => undefined),
+
+  bulkDelete: (userIds: number[]): Promise<BulkToggleResponse> =>
+    api.post<{ data: BulkToggleResponse }>(`${BASE}bulk-delete/`, { user_ids: userIds }).then((r) => r.data.data),
 
   /** Actions the primary user can grant, with the role defaults a new member gets. */
   availablePermissions: (): Promise<FpoMemberPermission[]> =>

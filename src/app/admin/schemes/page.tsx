@@ -21,18 +21,12 @@ import { CreatedByBadge, getSchemeColumns } from "./_components/columns";
 
 type T = Record<string, string>;
 
-const FILTERS = [
-  {
-    key: "category",
-    label: "Category",
-    options: [
-      { label: "Credit & Finance", value: "credit" },
-      { label: "Insurance", value: "insurance" },
-      { label: "Marketing & Trade", value: "marketing" },
-      { label: "Infrastructure", value: "infrastructure" },
-      { label: "Capacity Building", value: "capacity_building" },
-    ],
-  },
+const CATEGORY_OPTIONS = [
+  { label: "Credit & Finance", value: "credit" },
+  { label: "Insurance", value: "insurance" },
+  { label: "Marketing & Trade", value: "marketing" },
+  { label: "Infrastructure", value: "infrastructure" },
+  { label: "Capacity Building", value: "capacity_building" },
 ];
 
 const CATEGORY_BADGE_COLORS: Record<string, string> = {
@@ -73,15 +67,20 @@ export default function SchemesPage() {
   const filters = useMemo(
     () => [
       {
-        ...FILTERS[0],
-        label: t.col_category ?? FILTERS[0].label,
-        options: FILTERS[0].options.map((o) => ({
-          ...o,
-          label: t[`cat_${o.value}`] ?? o.label,
-        })),
+        key: "category",
+        label: t.col_category ?? "Category",
+        options: CATEGORY_OPTIONS.map((o) => ({ ...o, label: t[`cat_${o.value}`] ?? o.label })),
+      },
+      {
+        key: "is_active",
+        label: t.col_status ?? "Status",
+        options: [
+          { value: "true", label: tCommon.badge_active ?? "Active" },
+          { value: "false", label: tCommon.badge_inactive ?? "Inactive" },
+        ],
       },
     ],
-    [t],
+    [t, tCommon],
   );
 
   const s = sheet.scheme;
@@ -118,7 +117,6 @@ export default function SchemesPage() {
           queryKey="schemes"
           queryFn={adminSchemesApi.getAll}
           columns={getSchemeColumns(t, tCommon, locale, currentUserId)}
-          // filters={FILTERS}
           filters={filters}
           onRowClick={(row) => setSheet({ open: true, scheme: row })}
           columnsLabel={tCommon.col_header ?? "Columns"}

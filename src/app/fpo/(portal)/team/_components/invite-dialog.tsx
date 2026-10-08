@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { file, z } from "zod";
+import { z } from "zod";
 
 import { fpoTeamApi } from "@/app/fpo/_api/team";
 import { translationsApi } from "@/lib/api/translations";
@@ -16,19 +16,20 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
+import { memberEmail, memberName, memberPhone } from "./member-rules";
 import { NO_PERMISSIONS, PermissionChecklist } from "./permission-checklist";
 
-const schema = z.object({
-  first_name: z.string().min(1, { message: "First name is required" }),
-  last_name: z.string().min(1, { message: "Last name is required" }),
-  email: z.string().email({ message: "Enter a valid email address" }),
-  phone: z.string().refine((v) => v === "" || /^\d{10}$/.test(v), {
-    message: "Enter a valid 10-digit phone number",
-  }),
-});
-
-type FormValues = z.infer<typeof schema>;
 type T = Record<string, string>;
+
+const buildSchema = (t: T) =>
+  z.object({
+    first_name: memberName(t, "first_name"),
+    last_name: memberName(t, "last_name"),
+    email: memberEmail(t),
+    phone: memberPhone(t),
+  });
+
+type FormValues = z.infer<ReturnType<typeof buildSchema>>;
 
 interface InviteDialogProps {
   open: boolean;
@@ -54,6 +55,9 @@ export function InviteDialog({ open, onOpenChange }: InviteDialogProps) {
       .then((data) => setT(data.fpo_team ?? {}))
       .catch(() => undefined);
   }, [locale]);
+
+  // Rebuilt when translations load so validation messages follow the language
+  const schema = useMemo(() => buildSchema(t), [t]);
 
   const {
     register,
@@ -123,7 +127,7 @@ export function InviteDialog({ open, onOpenChange }: InviteDialogProps) {
         <DialogHeader>
           <DialogTitle>{t.invite_dialog_title ?? "Invite Team Member"}</DialogTitle>
           <DialogDescription className="sr-only">
-            Fill in the details of the person you want to invite to join your team.
+            {t.invite_dialog_description ?? "Fill in the details of the person you want to invite to join your team."}
           </DialogDescription>
         </DialogHeader>
 
@@ -172,7 +176,7 @@ export function InviteDialog({ open, onOpenChange }: InviteDialogProps) {
           </Field>
 
           <p className="text-muted-foreground text-xs">
-            An email with a temporary password will be sent to the invited member.
+            {t.invite_note_temp_password ?? "An email with a temporary password will be sent to the invited member."}
           </p>
 
           <div className="flex justify-end gap-2 pt-1">

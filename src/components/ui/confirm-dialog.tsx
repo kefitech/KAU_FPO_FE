@@ -13,7 +13,7 @@ import {
 import { useConfirmStore } from "@/stores/confirm-store";
 
 export function ConfirmDialog() {
-  const { open, title, description, confirmLabel, confirmingLabel, variant, isPending, onConfirm, close, setIsPending } = useConfirmStore();
+  const { open, title, description, confirmLabel, confirmingLabel, cancelLabel, variant, isPending, onConfirm, close, setIsPending } = useConfirmStore();
 
   async function handleConfirm() {
     if (!onConfirm) return;
@@ -36,7 +36,7 @@ export function ConfirmDialog() {
           <AlertDialogDescription className="break-words">{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={isPending}>{cancelLabel}</AlertDialogCancel>
           <AlertDialogAction
             className={variant === "destructive" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
             onClick={handleConfirm}

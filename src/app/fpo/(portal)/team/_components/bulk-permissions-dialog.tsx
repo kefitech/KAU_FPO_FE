@@ -93,7 +93,10 @@ export function BulkPermissionsDialog({ open, onOpenChange, members, onDone, t }
         );
       }
       if (failed > 0) {
-        for (const e of errors) toast.error(`${e.name ?? `User ${e.user_id}`}: ${e.reason}`);
+        for (const e of errors) {
+          const who = e.name ?? (t.member_fallback ?? "User {id}").replace("{id}", String(e.user_id));
+          toast.error(`${who}: ${e.reason}`);
+        }
       }
       queryClient.invalidateQueries({ queryKey: ["fpo-team"] });
       queryClient.invalidateQueries({ queryKey: ["fpo-team-permissions"] });

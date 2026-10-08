@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckSquare, Columns3, Search, UploadCloud, UserPlus, X } from "lucide-react";
@@ -41,8 +41,8 @@ import { BulkPermissionsDialog } from "./_components/bulk-permissions-dialog";
 import { InviteDialog } from "./_components/invite-dialog";
 import { PermissionsDialog } from "./_components/permissions-dialog";
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-IN", {
+function formatDate(iso: string, locale: string) {
+  return new Date(iso).toLocaleDateString(locale === "ml" ? "ml-IN" : "en-IN", {
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -117,6 +117,7 @@ export default function FpoTeamPage() {
     staleTime: 5 * 60 * 1000,
   });
   const permissionLabel = (code: string) => permissionOptions.find((p) => p.code === code)?.label ?? code;
+  const roleLabel = (role: string) => t[`role_${role}`] ?? role.replace(/_/g, " ");
 
   // Memoised so the bulk dialog doesn't reset its state on every render
   const selectedMembers = useMemo(() => members.filter((m) => selected.has(m.id)), [members, selected]);
@@ -127,12 +128,12 @@ export default function FpoTeamPage() {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return members;
     return members.filter((m) => {
-      const haystack = [fullName(m), m.email, m.phone ?? "", formatDate(m.joined_at)]
+      const haystack = [fullName(m), m.email, m.phone ?? "", formatDate(m.joined_at, locale)]
         .join(" ")
         .toLowerCase();
       return haystack.includes(q);
     });
-  }, [members, searchQuery]);
+  }, [members, searchQuery, locale]);
 
   // ── Pagination (client-side — the whole team is loaded at once) ─────────
   const totalPages = Math.max(1, Math.ceil(filteredMembers.length / pageSize));
@@ -156,12 +157,41 @@ export default function FpoTeamPage() {
     });
   }
 
-  function toggleOne(id: number) {
+  // Shift+click applies the clicked box's new state to every row between it and
+  // the last clicked box on the current page (like a mail inbox).
+  const lastToggledId = useRef<number | null>(null);
+
+  function toggleOne(id: number, shiftKey = false) {
+    const from = lastToggledId.current === null ? -1 : pageIds.indexOf(lastToggledId.current);
+    const to = pageIds.indexOf(id);
+    const ids = shiftKey && from !== -1 && to !== -1 ? pageIds.slice(Math.min(from, to), Math.max(from, to) + 1) : [id];
+    lastToggledId.current = id;
     setSelected((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      const select = !prev.has(id);
+      for (const rowId of ids) {
+        if (select) next.add(rowId);
+        else next.delete(rowId);
+      }
       return next;
     });
+  }
+
+  // "{name}: {reason}" for a member a bulk action could not change
+  function memberLabel(userId: number, name?: string) {
+    const m = members.find((member) => member.id === userId);
+    return name ?? (m ? fullName(m) : (t.member_fallback ?? "User {id}").replace("{id}", String(userId)));
+  }
+
+  // One toast for the outcome of a bulk action, plus one per failed member
+  function reportBulk(
+    { success, failed, errors }: { success: number; failed: number; errors: { user_id: number; name?: string; reason: string }[] },
+    done: string,
+    partial: string,
+  ) {
+    if (success > 0 && failed === 0) toast.success(done.replace("{count}", String(success)));
+    else if (success > 0) toast.warning(partial.replace("{success}", String(success)).replace("{failed}", String(failed)));
+    for (const e of errors) toast.error(`${memberLabel(e.user_id, e.name)}: ${e.reason}`);
   }
 
   // ── Mutations ──────────────────────────────────────────────────────────────
@@ -174,6 +204,20 @@ export default function FpoTeamPage() {
     onError: () => toast.error(t.toast_deactivate_failed ?? "Failed to deactivate member"),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => fpoTeamApi.remove(id),
+    onSuccess: (_, id) => {
+      toast.success(t.toast_deleted ?? "Member deleted");
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      queryClient.invalidateQueries({ queryKey: ["fpo-team"] });
+    },
+    onError: (error: unknown) => toast.error(getErrorMessage(error, t.toast_delete_failed ?? "Failed to delete member")),
+  });
+
   const resetPasswordMutation = useMutation({
     mutationFn: (id: number) => fpoTeamApi.resetPassword(id),
     onSuccess: () => toast.success(t.toast_password_reset ?? "Temporary password sent to member's email"),
@@ -184,34 +228,50 @@ export default function FpoTeamPage() {
   const bulkActivateMutation = useMutation({
     mutationFn: () => fpoTeamApi.bulkActivate([...selected]),
     onSuccess: (data) => {
-      const { success, failed, errors } = data;
- 
-      if (success > 0 && failed === 0) {
-        toast.success(`${success} member(s) Activated`);
-      } else if (success > 0 && failed > 0) {
-        toast.warning(`${success} Activated, ${failed} failed`);
-        errors.forEach((e) => toast.error(`${e.name ?? `User ${e.user_id}`}: ${e.reason}`));
-      } else {
-        errors.forEach((e) => toast.error(`${e.name ?? `User ${e.user_id}`}: ${e.reason}`));
-      }
- 
+      reportBulk(
+        data,
+        t.toast_bulk_activated ?? "{count} member(s) activated",
+        t.toast_bulk_activated_partial ?? "{success} activated, {failed} failed",
+      );
       setSelected(new Set());
       queryClient.invalidateQueries({ queryKey: ["fpo-team"] });
     },
-    onError: () => toast.error("Bulk activate failed"),
+    onError: (error: unknown) =>
+      toast.error(getErrorMessage(error, t.toast_bulk_activate_failed ?? "Bulk activate failed")),
   });
 
   const bulkDeactivateMutation = useMutation({
     mutationFn: () => fpoTeamApi.bulkDeactivate([...selected]),
-    onSuccess: () => {
-      toast.success(`${selected.size} member(s) deactivated`);
+    onSuccess: (data) => {
+      reportBulk(
+        data,
+        t.toast_bulk_deactivated ?? "{count} member(s) deactivated",
+        t.toast_bulk_deactivated_partial ?? "{success} deactivated, {failed} failed",
+      );
       setSelected(new Set());
       queryClient.invalidateQueries({ queryKey: ["fpo-team"] });
     },
-    onError: () => toast.error("Bulk deactivate failed"),
+    onError: (error: unknown) =>
+      toast.error(getErrorMessage(error, t.toast_bulk_deactivate_failed ?? "Bulk deactivate failed")),
   });
 
-  const isBulkPending = bulkActivateMutation.isPending || bulkDeactivateMutation.isPending;
+  const bulkDeleteMutation = useMutation({
+    mutationFn: () => fpoTeamApi.bulkDelete([...selected]),
+    onSuccess: (data) => {
+      reportBulk(
+        data,
+        t.toast_bulk_deleted ?? "{count} member(s) deleted",
+        t.toast_bulk_deleted_partial ?? "{success} deleted, {failed} failed",
+      );
+      setSelected(new Set());
+      queryClient.invalidateQueries({ queryKey: ["fpo-team"] });
+    },
+    onError: (error: unknown) =>
+      toast.error(getErrorMessage(error, t.toast_bulk_delete_failed ?? "Bulk delete failed")),
+  });
+
+  const isBulkPending =
+    bulkActivateMutation.isPending || bulkDeactivateMutation.isPending || bulkDeleteMutation.isPending;
 
   const visibleColumnCount = TOGGLEABLE_COLUMNS.filter((c) => visibleColumns[c.key]).length;
   const isSearching = searchQuery.trim().length > 0;
@@ -225,10 +285,12 @@ export default function FpoTeamPage() {
           <h1 className="font-bold text-2xl">{t.page_title ?? "Team Members"}</h1>
           <p className="mt-0.5 text-muted-foreground text-sm">
             {isLoading
-              ? "Loading…"
+              ? (t.loading ?? "Loading…")
               : isSearching
-                ? `${filteredMembers.length} / ${members.length} ${t.team_memebers ?? "members"}`
-                : `${members.length} ${t.team_memebers ?? "members"}`}
+                ? (t.members_count_filtered ?? "{shown} / {count} members")
+                    .replace("{shown}", String(filteredMembers.length))
+                    .replace("{count}", String(members.length))
+                : (t.members_count ?? "{count} members").replace("{count}", String(members.length))}
           </p>
         </div>
 
@@ -258,7 +320,7 @@ export default function FpoTeamPage() {
               setSearchQuery(e.target.value);
               setPage(1);
             }}
-            placeholder={t.search_placehldr ?? "Search by name, email, phone, or role…"}
+            placeholder={t.search_placeholder ?? "Search by name, email or phone…"}
             className="pl-8 pr-8"
           />
           {isSearching && (
@@ -269,7 +331,7 @@ export default function FpoTeamPage() {
                 setPage(1);
               }}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              aria-label="Clear search"
+              aria-label={t.aria_clear_search ?? "Clear search"}
             >
               <X className="h-4 w-4" />
             </button>
@@ -280,7 +342,7 @@ export default function FpoTeamPage() {
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm">
               <Columns3 className="mr-1.5 h-4 w-4" />
-              {t.col_header ?? "Columns"}
+              {t.col_toggle_btn ?? "Columns"}
               {visibleColumnCount < TOGGLEABLE_COLUMNS.length && (
                 <Badge variant="secondary" className="ml-1.5 h-5 px-1.5">
                   {visibleColumnCount}/{TOGGLEABLE_COLUMNS.length}
@@ -289,7 +351,7 @@ export default function FpoTeamPage() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44">
-            <DropdownMenuLabel>{t.col_toggle_columns ?? "Toggle columns"}</DropdownMenuLabel>
+            <DropdownMenuLabel>{t.col_toggle_label ?? "Toggle columns"}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {TOGGLEABLE_COLUMNS.map((col) => (
               <DropdownMenuCheckboxItem
@@ -309,13 +371,18 @@ export default function FpoTeamPage() {
       {isPrimary && someSelected && (
         <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-muted/50 px-4 py-2.5">
           <CheckSquare className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-medium">{selected.size} selected</span>
+          <span className="text-sm font-medium">
+            {(t.bulk_selected ?? "{count} selected").replace("{count}", String(selected.size))}
+          </span>
+          <span className="hidden text-xs text-muted-foreground sm:inline">
+            {t.hint_shift_select ?? "Tip: Shift+click a box to select a range"}
+          </span>
           <div className="ml-auto flex gap-2">
             <Button size="sm" variant="outline" disabled={isBulkPending} onClick={() => setBulkPermissionsOpen(true)}>
               {t.btn_bulk_permissions ?? "Permissions"}
             </Button>
             <Button size="sm" variant="outline" disabled={isBulkPending} onClick={() => bulkActivateMutation.mutate()}>
-              {bulkActivateMutation.isPending ? "Activating…" : "Activate"}
+              {bulkActivateMutation.isPending ? (t.btn_activating ?? "Activating…") : (t.btn_activate ?? "Activate")}
             </Button>
             <Button
               size="sm"
@@ -324,7 +391,29 @@ export default function FpoTeamPage() {
               className="text-destructive hover:text-destructive"
               onClick={() => bulkDeactivateMutation.mutate()}
             >
-              {bulkDeactivateMutation.isPending ? "Deactivating…" : "Deactivate"}
+              {bulkDeactivateMutation.isPending
+                ? (t.btn_deactivating ?? "Deactivating…")
+                : (t.btn_deactivate ?? "Deactivate")}
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              disabled={isBulkPending}
+              onClick={() =>
+                confirm({
+                  title: t.bulk_delete_title ?? "Delete team members",
+                  description: (
+                    t.bulk_delete_description ??
+                    "{count} member(s) will be permanently deleted and can no longer log in. Products and bookings they created stay with your FPO. This cannot be undone."
+                  ).replace("{count}", String(selected.size)),
+                  onConfirm: () => bulkDeleteMutation.mutateAsync(),
+                  confirmLabel: t.action_delete ?? "Delete",
+                  confirmingLabel: t.btn_deleting ?? "Deleting…",
+                  cancelLabel: t.btn_cancel ?? "Cancel",
+                })
+              }
+            >
+              {bulkDeleteMutation.isPending ? (t.btn_deleting ?? "Deleting…") : (t.action_delete ?? "Delete")}
             </Button>
           </div>
         </div>
@@ -340,7 +429,7 @@ export default function FpoTeamPage() {
                   <Checkbox
                     checked={allSelected}
                     onCheckedChange={toggleAll}
-                    aria-label="Select all"
+                    aria-label={t.aria_select_all ?? "Select all"}
                     className="border-slate-400"
                   />
                 </TableHead>
@@ -407,11 +496,11 @@ export default function FpoTeamPage() {
                   className="py-12 text-center text-muted-foreground text-sm"
                 >
                   {isSearching ? (
-                    "No members match your search."
+                    (t.empty_search ?? "No members match your search.")
                   ) : (
                     <>
                       {t.empty_state ?? "No team members yet."}
-                      {isPrimary && ` ${t.empty_state_description ?? 'Use "Invite Member" to add someone.'}`}
+                      {isPrimary && ` ${t.empty_state_invite_hint ?? 'Use "Invite Member" to add someone.'}`}
                     </>
                   )}
                 </TableCell>
@@ -429,15 +518,20 @@ export default function FpoTeamPage() {
                     <TableCell>
                       <Checkbox
                         checked={selected.has(member.id)}
-                        onCheckedChange={() => toggleOne(member.id)}
-                        aria-label={`Select ${fullName(member)}`}
+                        // onClick (not onCheckedChange) so Shift can be read; Space still clicks
+                        onClick={(e) => toggleOne(member.id, e.shiftKey)}
+                        // stop Shift+click from also highlighting the table text in between
+                        onMouseDown={(e) => {
+                          if (e.shiftKey) e.preventDefault();
+                        }}
+                        aria-label={(t.aria_select_member ?? "Select {name}").replace("{name}", fullName(member))}
                       />
                     </TableCell>
                   )}
                   <TableCell className="font-medium">
                     <div>{fullName(member)}</div>
                     <div className="mt-0.5 capitalize text-muted-foreground text-xs md:hidden">
-                      {member.role.replace(/_/g, " ")}
+                      {roleLabel(member.role)}
                     </div>
                   </TableCell>
                   {visibleColumns.email && (
@@ -448,7 +542,7 @@ export default function FpoTeamPage() {
                   )}
                   {visibleColumns.role && (
                     <TableCell className="capitalize text-muted-foreground">
-                      {member.role.replace(/_/g, " ")}
+                      {roleLabel(member.role)}
                     </TableCell>
                   )}
                   <TableCell>
@@ -464,7 +558,7 @@ export default function FpoTeamPage() {
                     </Badge>
                   </TableCell>
                   {visibleColumns.joined && (
-                    <TableCell className="text-muted-foreground">{formatDate(member.joined_at)}</TableCell>
+                    <TableCell className="text-muted-foreground">{formatDate(member.joined_at, locale)}</TableCell>
                   )}
                   {isPrimary && (
                     <TableCell>
@@ -506,7 +600,11 @@ export default function FpoTeamPage() {
                                       toast.success(t.toast_activated ?? "Member reactivated");
                                     } else {
                                       const err = data.errors[0];
-                                      toast.error(err ? `${err.name ?? "Member"}: ${err.reason}` : (t.toast_activate_failed ?? "Failed to reactivate"));
+                                      toast.error(
+                                        err
+                                          ? `${memberLabel(err.user_id, err.name)}: ${err.reason}`
+                                          : (t.toast_activate_failed ?? "Failed to reactivate"),
+                                      );
                                     }
                                     queryClient.invalidateQueries({ queryKey: ["fpo-team"] });
                                   })
@@ -528,9 +626,29 @@ export default function FpoTeamPage() {
                                 ).replace("{name}", member.email),
                                 onConfirm: () => resetPasswordMutation.mutateAsync(member.id),
                                 confirmLabel: t.action_reset_password ?? "Reset Password",
+                                confirmingLabel: t.btn_resetting ?? "Resetting…",
+                                cancelLabel: t.btn_cancel ?? "Cancel",
                                 variant: "default",
                               }),
                             disabled: resetPasswordMutation.isPending,
+                          },
+                          {
+                            label: t.action_delete ?? "Delete",
+                            separator: true,
+                            destructive: true,
+                            onClick: () =>
+                              confirm({
+                                title: t.delete_title ?? "Delete team member",
+                                description: (
+                                  t.delete_description ??
+                                  "{name} will be permanently deleted and can no longer log in. Products and bookings they created stay with your FPO. This cannot be undone."
+                                ).replace("{name}", fullName(member) || member.email),
+                                onConfirm: () => deleteMutation.mutateAsync(member.id),
+                                confirmLabel: t.action_delete ?? "Delete",
+                                confirmingLabel: t.btn_deleting ?? "Deleting…",
+                                cancelLabel: t.btn_cancel ?? "Cancel",
+                              }),
+                            disabled: deleteMutation.isPending,
                           },
                         ]}
                       />
@@ -554,6 +672,12 @@ export default function FpoTeamPage() {
             setPage(1);
           }}
           isLoading={isLoading}
+          labels={{
+            noResults: t.pagination_no_results,
+            showing: t.pagination_showing,
+            rowsPerPage: t.pagination_rows_per_page,
+            pageOf: t.pagination_page_of,
+          }}
         />
       )}
 

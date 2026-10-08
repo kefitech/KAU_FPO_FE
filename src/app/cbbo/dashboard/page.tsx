@@ -8,9 +8,9 @@ import { AlertCircle, CheckCircle, Clock, FileText } from "lucide-react";
 import { cbboDashboardApi } from "@/app/cbbo/_api/dashboard";
 import { cbboFposApi } from "@/app/cbbo/_api/fpos";
 import { cbboReportsApi } from "@/app/cbbo/_api/reports";
+import { FpoStatusBadge } from "@/components/shared/fpo-status-badge";
 import { GradientBarChart } from "@/components/shared/gradient-bar-chart";
 import { RecentNotificationsCard, useMarkNotificationRead } from "@/components/shared/recent-notifications-card";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { inboxApi } from "@/lib/api/inbox";
@@ -18,17 +18,6 @@ import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 
 type T = Record<string, string>;
-
-const STATUS_BADGE_STYLES: Record<string, string> = {
-  draft: "border-muted text-muted-foreground",
-  submitted: "border-blue-500/40 bg-blue-500/10 text-blue-700 dark:text-blue-400",
-  under_review: "border-yellow-500/40 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
-  info_required: "border-orange-500/40 bg-orange-500/10 text-orange-700 dark:text-orange-400",
-  approved: "border-green-500/40 bg-green-500/10 text-green-700 dark:text-green-400",
-  rejected: "border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-400",
-  suspended: "border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-400",
-  claimed: "border-blue-500/40 bg-blue-500/10 text-blue-700 dark:text-blue-400",
-};
 
 const STRIP_COLORS = ["bg-violet-500", "bg-blue-500", "bg-amber-500", "bg-emerald-500", "bg-rose-500", "bg-cyan-500"];
 
@@ -253,16 +242,13 @@ export default function CbboDashboardPage() {
             )}
             {fpos.map((f) => {
               const label = getStatusLabel(f.status, f.status_display);
-              const badgeStyle = STATUS_BADGE_STYLES[f.status ?? ""] ?? "border-muted text-muted-foreground";
               return (
                 <div key={f.id} className="flex items-center justify-between rounded-lg border p-3">
                   <div>
                     <p className="font-medium text-sm">{f.name}</p>
                     <p className="text-muted-foreground text-xs">{f.district_display ?? f.district}</p>
                   </div>
-                  <Badge variant="outline" className={`text-[11px] ${badgeStyle}`}>
-                    {label}
-                  </Badge>
+                  <FpoStatusBadge status={f.status} label={label} />
                 </div>
               );
             })}
