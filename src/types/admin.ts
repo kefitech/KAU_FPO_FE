@@ -374,6 +374,8 @@ export interface FpoUser {
   is_active: boolean;
   joined_at: string;
   last_login: string | null;
+  /** False for other districts' FPOs a sub-admin sees only via can_view_all_fpos — view only. */
+  can_manage: boolean;
 }
 
 // ─── Audit Logs ───────────────────────────────────────────────────────────────
@@ -877,6 +879,15 @@ export interface AdminDashboardStats {
     unverified_documents: number;
     info_required_fpos: number;
   };
+}
+
+/** Dashboard map drill-down (super admins) — FPO count per block of one district. */
+export interface DistrictBlockStats {
+  district: string;
+  total: number;
+  /** FPOs in the district whose block is blank or belongs to another district. */
+  unassigned: number;
+  blocks: { code: string; name: string; count: number }[];
 }
 
 // ─── Government Officials ─────────────────────────────────────────────────────

@@ -813,21 +813,26 @@ function TeamUserRow({ user }: { user: FpoUser }) {
             Inactive
           </Badge>
         )}
-        <RowActions
-          actions={[
-            {
-              label: user.is_active ? "Deactivate" : "Activate",
-              onClick: () => (user.is_active ? deactivateMutation.mutate() : activateMutation.mutate()),
-              disabled: activateMutation.isPending || deactivateMutation.isPending,
-            },
-            {
-              label: "Reset Password",
-              onClick: handleResetPassword,
-              disabled: resetPasswordMutation.isPending,
-              separator: true,
-            },
-          ]}
-        />
+        {/* Other districts' FPOs a sub-admin sees only via can_view_all_fpos are view only */}
+        {user.can_manage === false ? (
+          <span className="text-muted-foreground text-xs">View only</span>
+        ) : (
+          <RowActions
+            actions={[
+              {
+                label: user.is_active ? "Deactivate" : "Activate",
+                onClick: () => (user.is_active ? deactivateMutation.mutate() : activateMutation.mutate()),
+                disabled: activateMutation.isPending || deactivateMutation.isPending,
+              },
+              {
+                label: "Reset Password",
+                onClick: handleResetPassword,
+                disabled: resetPasswordMutation.isPending,
+                separator: true,
+              },
+            ]}
+          />
+        )}
       </div>
     </div>
   );

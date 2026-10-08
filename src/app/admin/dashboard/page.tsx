@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import Link from "next/link";
 
@@ -20,7 +20,9 @@ import { toast } from "sonner";
 import dynamic from "next/dynamic";
 
 import { adminDashboardApi } from "@/app/admin/_api/dashboard";
+import { BlockFpoList } from "./_components/block-fpo-list";
 import { FpoReportCard } from "./_components/fpo-report-card";
+import type { BlockEntry } from "./_components/kerala-district-map";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DonutChart } from "@/components/shared/donut-chart";
 import { RecentNotificationsCard } from "@/components/shared/recent-notifications-card";
@@ -129,7 +131,8 @@ export default function AdminDashboardPage() {
   const locale = useLocaleStore((s) => s.locale);
   const [t, setT] = useState<T>({});
   const [translationsLoading, setTranslationsLoading] = useState(true);
-  const canGenerateReports = useAdminPermissions().can("can_generate_reports");
+  const adminPermissions = useAdminPermissions();
+  const canGenerateReports = adminPermissions.can("can_generate_reports");
 
 
   useEffect(() => {
@@ -156,6 +159,25 @@ export default function AdminDashboardPage() {
   });
 
   const isSubAdmin = user?.role === "sub_admin";
+  const isSuperAdmin = user?.role === "super_admin";
+
+  // Map drill-down: open a district to see its blocks, then click a block to list its FPOs —
+  // only districts whose FPOs the admin may view. Super admins and sub-admins with
+  // can_view_all_fpos click any district; other sub-admins get a button for their own district.
+  const canOpenAnyDistrict = isSuperAdmin || (isSubAdmin && adminPermissions.can("can_view_all_fpos"));
+  const canDrillDown = canOpenAnyDistrict || (isSubAdmin && !!user?.district);
+  const [mapDistrict, setMapDistrict] = useState<string | null>(null);
+  const [mapBlock, setMapBlock] = useState<BlockEntry | null>(null);
+  const blockListRef = useRef<HTMLDivElement>(null);
+
+  const handleMapDistrictChange = (code: string | null) => {
+    setMapDistrict(code);
+    setMapBlock(null);
+  };
+
+  useEffect(() => {
+    if (mapBlock) blockListRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [mapBlock]);
 
   // Sub-admins only: alerts such as a new external buyer registration in their district.
   // The Buyers table invalidates this key when it clears a buyer's "new" dot.
@@ -199,6 +221,10 @@ export default function AdminDashboardPage() {
 
   const districtName = user?.district
     ? (t[`district_${user.district}`] ?? KERALA_DISTRICTS.find((d) => d.code === user.district)?.name ?? user.district)
+    : null;
+
+  const mapDistrictName = mapDistrict
+    ? (t[`district_${mapDistrict}`] ?? KERALA_DISTRICTS.find((d) => d.code === mapDistrict)?.name ?? mapDistrict)
     : null;
 
   const STATUS_CONFIG = getStatusConfig(t);
@@ -493,23 +519,66 @@ export default function AdminDashboardPage() {
         {/* Right column: District distribution map */}
         <Card className="overflow-hidden isolation-isolate pb-0">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">{t.chart_district_dist ?? "District Distribution"}</CardTitle>
+            <CardTitle className="text-base">
+              {t.chart_district_dist ?? "District Distribution"}
+              {mapDistrictName && <span className="font-normal text-muted-foreground"> · {mapDistrictName}</span>}
+            </CardTitle>
             <p className="text-muted-foreground text-xs">
-              {/* The map is statewide for sub-admins too, unlike the rest of their (district-scoped) dashboard. */}
-              {isSubAdmin
-                ? (t.chart_district_subtitle_statewide ??
-                  "FPOs registered in every district of Kerala — hover for details")
-                : (t.chart_district_subtitle ?? "FPOs registered per district — hover for details")}
+              {/* The map is statewide for sub-admins too, unlike the rest of their (district-scoped) dashboard;
+                  they can drill into their own district's blocks only. */}
+              {mapDistrict
+                ? (t.map_block_hint ?? "Hover a block for its FPO count, click it to list its FPOs")
+                : canOpenAnyDistrict
+                  ? (t.chart_district_subtitle_drilldown ??
+                    "FPOs registered per district — click a district to see its blocks")
+                  : isSubAdmin
+                    ? (t.chart_district_subtitle_statewide ??
+                      "FPOs registered in every district of Kerala — hover for details")
+                    : (t.chart_district_subtitle ?? "FPOs registered per district — hover for details")}
             </p>
           </CardHeader>
           <CardContent className="flex flex-1 flex-col p-0">
             <KeralaDistrictMap
               data={stats?.district_distribution ?? []}
               locale={locale}
+              t={t}
+              drilldown={
+                canDrillDown
+                  ? {
+                      district: mapDistrict,
+                      block: mapBlock?.code ?? null,
+                      onDistrictChange: handleMapDistrictChange,
+                      onBlockSelect: setMapBlock,
+                      clickToOpen: canOpenAnyDistrict,
+                      homeDistrict:
+                        isSubAdmin && user?.district
+                          ? { code: user.district, name: districtName ?? user.district }
+                          : undefined,
+                    }
+                  : undefined
+              }
             />
           </CardContent>
         </Card>
       </div>
+
+      {/* ── FPOs in the block clicked on the map ──────────────────────────── */}
+      {canDrillDown && mapDistrict && mapBlock && (
+        <div>
+          {/* Scroll target — brings the list's header into view without scrolling the map away */}
+          <div ref={blockListRef} className="scroll-mb-40" />
+          <BlockFpoList
+            district={mapDistrict}
+            districtName={mapDistrictName ?? mapDistrict}
+            block={mapBlock}
+            locale={locale}
+            t={t}
+            statusConfig={STATUS_CONFIG}
+            tierConfig={TIER_CONFIG}
+            onClose={() => setMapBlock(null)}
+          />
+        </div>
+      )}
 
       {/* ── Sub-admins: alerts such as new external buyer registrations in their district.
           Full width so its varying length doesn't unbalance the Tier/Actions vs Map columns. */}

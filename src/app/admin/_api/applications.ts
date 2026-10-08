@@ -204,6 +204,8 @@ export interface ApplicationListParams {
   search?: string;
   status?: string;
   district?: string;
+  /** Block code — MasterLookup category "block" (what FPO.block_taluk stores). */
+  block?: string;
   tier?: string;
   ordering?: string;
 }
