@@ -145,7 +145,12 @@ export function getFpoUserColumns(t: T = {}, tCommon: T = {}): ColumnDef<FpoUser
       header: "",
       enableSorting: false,
       enableHiding: false,
-      cell: ({ row }) => <FpoUserActions user={row.original} t={t} tCommon={tCommon} />,
+      cell: ({ row }) =>
+        row.original.can_manage === false ? (
+          <span className="text-muted-foreground text-xs">{t.view_only ?? "View only"}</span>
+        ) : (
+          <FpoUserActions user={row.original} t={t} tCommon={tCommon} />
+        ),
     },
   ];
 }
