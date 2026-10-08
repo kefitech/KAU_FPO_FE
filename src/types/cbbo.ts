@@ -112,3 +112,9 @@ export interface CBBOReportEditPayload {
   participants_count?: number;
   outcomes?: string;
 }
+
+/** GET /cbbo/dashboard/stats/ */
+export interface CBBODashboardStats {
+  /** Sessions recorded per month (by session date), last 12 months, oldest first */
+  training_trend: { month: string; count: number }[];
+}

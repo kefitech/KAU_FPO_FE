@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
@@ -10,13 +10,14 @@ import { Plus } from "lucide-react";
 import { govtTrainingApi } from "@/app/government/_api/training";
 import { DataTable } from "@/components/data-table";
 import type { FilterConfig } from "@/components/data-table/data-table-toolbar";
+import { OpenSessionFromUrl } from "@/components/shared/open-session-from-url";
 import { TrainingCommentList } from "@/components/shared/training-comment-list";
 import { Button } from "@/components/ui/button";
 import { ViewSheet } from "@/components/ui/view-sheet";
 import { translationsApi } from "@/lib/api/translations";
 import { escapeHtml } from "@/lib/escape-html";
 import { useLocaleStore } from "@/stores/locale-store";
-import type { GovtTrainingSession } from "@/types/government";
+import type { GovtTrainingSession, GovtTrainingSessionDetail } from "@/types/government";
 
 import { getTrainingColumns } from "./_components/columns";
 
@@ -29,7 +30,10 @@ export default function GovernmentTrainingPage() {
   const [tCommon, setTCommon] = useState<T>({});
   const [translationsLoading, setTranslationsLoading] = useState(true);
   const queryClient = useQueryClient();
-  const [sheet, setSheet] = useState<{ open: boolean; session: GovtTrainingSession | null }>({
+  const [sheet, setSheet] = useState<{
+    open: boolean;
+    session: GovtTrainingSession | GovtTrainingSessionDetail | null;
+  }>({
     open: false,
     session: null,
   });
@@ -82,6 +86,22 @@ export default function GovernmentTrainingPage() {
     }
   }
 
+  // A notification link (?session=<id>) opens that session — fetched by id, since
+  // it may not be on the table's current page. Opening it clears the unread marker.
+  const openSessionById = useCallback(
+    (id: number) => {
+      govtTrainingApi
+        .getById(id)
+        .then((session) => {
+          setSheet({ open: true, session });
+          return govtTrainingApi.markCommentsRead(id);
+        })
+        .then(() => queryClient.invalidateQueries({ queryKey: ["government-training-sessions"] }))
+        .catch(() => undefined); // no longer visible to this official — the list still shows
+    },
+    [queryClient],
+  );
+
   const s = sheet.session;
 
   if (translationsLoading) {
@@ -113,6 +133,7 @@ export default function GovernmentTrainingPage() {
       </div>
 
       <Suspense>
+        <OpenSessionFromUrl onOpen={openSessionById} />
         <DataTable
           queryKey="government-training-sessions"
           queryFn={govtTrainingApi.getAll}

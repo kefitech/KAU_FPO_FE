@@ -4,23 +4,22 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { KeyRound, User } from "lucide-react";
 import { translationsApi } from "@/lib/api/translations";
-import { useLocaleStore } from "@/stores/locale-store";
 
 type T = Record<string, string>;
 
 export default function ExpertProfileLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const locale = useLocaleStore((s) => s.locale);
   const [t, setT] = useState<T>({});
 
+  // My Profile stays in English whatever language is selected
   useEffect(() => {
     translationsApi
-      .getPublic(locale, "fpo_settings,common")
+      .getPublic("en", "fpo_settings,common")
       .then((data) => {
         setT({ ...(data.common ?? {}), ...(data.fpo_settings ?? {}) });
       })
       .catch(() => undefined);
-  }, [locale]);
+  }, []);
 
   const NAV = [
     { label: t.nav_profile ?? "Profile", href: "/expert/profile", icon: User },

@@ -1,14 +1,15 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 
-import { type CbboTrainingSession, cbboTrainingApi } from "@/app/cbbo/_api/training";
+import { type CbboTrainingSession, type CbboTrainingSessionDetail, cbboTrainingApi } from "@/app/cbbo/_api/training";
 import { DataTable } from "@/components/data-table";
+import { OpenSessionFromUrl } from "@/components/shared/open-session-from-url";
 import { TrainingCommentList } from "@/components/shared/training-comment-list";
 import { Button } from "@/components/ui/button";
 import { ViewSheet } from "@/components/ui/view-sheet";
@@ -48,7 +49,10 @@ export default function CbboTrainingPage() {
   const [tCommon, setTCommon] = useState<T>({});
   const [translationsLoading, setTranslationsLoading] = useState(true);
   const queryClient = useQueryClient();
-  const [sheet, setSheet] = useState<{ open: boolean; session: CbboTrainingSession | null }>({
+  const [sheet, setSheet] = useState<{
+    open: boolean;
+    session: CbboTrainingSession | CbboTrainingSessionDetail | null;
+  }>({
     open: false,
     session: null,
   });
@@ -90,6 +94,22 @@ export default function CbboTrainingPage() {
     }
   }
 
+  // A notification link (?session=<id>) opens that session — fetched by id, since
+  // it may not be on the table's current page. Opening it clears the unread marker.
+  const openSessionById = useCallback(
+    (id: number) => {
+      cbboTrainingApi
+        .getById(id)
+        .then((session) => {
+          setSheet({ open: true, session });
+          return cbboTrainingApi.markCommentsRead(id);
+        })
+        .then(() => queryClient.invalidateQueries({ queryKey: ["cbbo-training-sessions"] }))
+        .catch(() => undefined); // no longer visible to this officer — the list still shows
+    },
+    [queryClient],
+  );
+
   const s = sheet.session;
 
   if (translationsLoading) {
@@ -121,6 +141,7 @@ export default function CbboTrainingPage() {
       </div>
 
       <Suspense>
+        <OpenSessionFromUrl onOpen={openSessionById} />
         <DataTable
           queryKey="cbbo-training-sessions"
           queryFn={cbboTrainingApi.getAll}

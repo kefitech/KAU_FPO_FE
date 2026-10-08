@@ -10,6 +10,8 @@ export interface GovtDashboardStats {
   by_status: Record<string, number>;
   by_district: Record<string, number>;
   jurisdiction_type: "state" | "district";
+  /** Sessions per month (by session date) for FPOs in scope, last 12 months, oldest first */
+  training_trend: { month: string; count: number }[];
 }
 
 // Government Official Types
@@ -316,6 +318,7 @@ export interface GovtTrainingSessionDetail {
   id: number;
   fpo: number;
   fpo_name: string;
+  district: string;
   topic: string;
   trainer_name: string;
   date: string;

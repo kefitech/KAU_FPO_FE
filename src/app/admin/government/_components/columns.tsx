@@ -53,7 +53,8 @@ function GovernmentActions({
   const resetPasswordMutation = useMutation({
     mutationFn: () => governmentApi.resetPassword(official.id),
     onSuccess: () => toast.success(t.toast_password_reset ?? "Temporary password sent successfully"),
-    onError: (error: unknown) => toast.error(getErrorMessage(error, "Failed to reset password")),
+    onError: (error: unknown) =>
+      toast.error(getErrorMessage(error, t.reset_password_failed ?? "Failed to reset password")),
   });
 
   const deleteMutation = useMutation({
@@ -94,8 +95,8 @@ function GovernmentActions({
         t.reset_password_description ??
         'A temporary password will be generated and sent to "{name}" via email. They will be required to change it on next login.'
       ).replace("{name}", name),
-      confirmLabel: "Reset",
-      confirmingLabel: "Sending...",
+      confirmLabel: t.reset_confirm ?? "Reset",
+      confirmingLabel: t.sending ?? "Sending...",
       variant: "default",
       onConfirm: () => resetPasswordMutation.mutateAsync(),
     });
