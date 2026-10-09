@@ -30,7 +30,9 @@ import {
   EyeOff,
   Home,
   Leaf,
+  Maximize2,
   MessageCircle,
+  Minimize2,
   MessagesSquare,
   Newspaper,
   RotateCcw,
@@ -87,6 +89,8 @@ const STR = {
     open: "Open help assistant",
     hide: "Hide assistant for this visit",
     show: "Show assistant",
+    expand: "Expand",
+    shrink: "Exit expanded view",
     back: "Back",
     welcome:
       "Hi! I'm the KAU-FPO assistant. Ask me anything about the platform — how to register, browse products, or contact support.",
@@ -123,6 +127,8 @@ const STR = {
     open: "സഹായി തുറക്കുക",
     hide: "ഈ സന്ദർശനത്തിൽ സഹായി മറയ്ക്കുക",
     show: "സഹായി കാണിക്കുക",
+    expand: "വലുതാക്കുക",
+    shrink: "ചെറുതാക്കുക",
     back: "തിരികെ",
     welcome:
       "ഹായ്! ഞാൻ KAU-FPO സഹായിയാണ്. പ്ലാറ്റ്‌ഫോമിനെക്കുറിച്ച് എന്തും ചോദിക്കൂ.",
@@ -185,7 +191,8 @@ const CSS = `
   border: 1px solid rgba(255,255,255,.6);
   animation: kcwIn .32s cubic-bezier(.21,1.02,.47,1) both; transform-origin: bottom right; }
 @keyframes kcwIn { from { opacity: 0; transform: translateY(18px) scale(.96); } to { opacity: 1; transform: none; } }
-@media (max-width: 480px) { .kcw-panel { right: 0; bottom: 0; width: 100vw; height: 100dvh; max-height: 100dvh; border-radius: 0; } }
+.kcw-panel.big { width: min(760px, calc(100vw - 48px)); height: min(860px, calc(100vh - 110px)); }
+@media (max-width: 480px) { .kcw-expand { display: none; } .kcw-panel, .kcw-panel.big { right: 0; bottom: 0; width: 100vw; height: 100dvh; max-height: 100dvh; border-radius: 0; } }
 
 /* ── Header ───────────────────────────────────────────────────────── */
 .kcw-head { position: relative; color: #fff; overflow: hidden; flex-shrink: 0;
@@ -298,6 +305,7 @@ export function ChatWidgetHome() {
   // the rest of the browser session (sessionStorage — returns on the
   // next visit, so the assistant is never permanently lost).
   const [hidden, setHidden] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   useEffect(() => {
     try {
       if (window.sessionStorage.getItem("kau_cw_hidden") === "1") setHidden(true);
@@ -508,7 +516,7 @@ export function ChatWidgetHome() {
       <style>{CSS}</style>
 
       {open && (
-        <div className="kcw-panel" role="dialog" aria-label={t.title}>
+        <div className={`kcw-panel${expanded ? " big" : ""}`} role="dialog" aria-label={t.title}>
           {/* ── Header ── */}
           <div className="kcw-head" style={{ padding: isHomeHero ? "22px 20px 20px" : "12px 16px 12px" }}>
             <div className="kcw-head-bar">
@@ -533,6 +541,14 @@ export function ChatWidgetHome() {
                 </span>
               </div>
               <div style={{ display: "flex", gap: 6 }}>
+                <button
+                  className="kcw-iconbtn kcw-expand"
+                  onClick={() => setExpanded((e) => !e)}
+                  aria-label={expanded ? t.shrink : t.expand}
+                  title={expanded ? t.shrink : t.expand}
+                >
+                  {expanded ? <Minimize2 size={14} strokeWidth={2.2} /> : <Maximize2 size={14} strokeWidth={2.2} />}
+                </button>
                 <button className="kcw-iconbtn" onClick={hideWidget} aria-label={t.hide} title={t.hide}>
                   <EyeOff size={14} strokeWidth={2.2} />
                 </button>
