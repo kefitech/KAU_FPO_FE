@@ -569,10 +569,11 @@ export function ChatWidgetHome() {
                         <Leaf size={13} />
                       </span>
                       <div className="kcw-bubble-b">
+                        {/* Sources (internal KB topic titles) are deliberately
+                            NOT rendered — they read as debug output to end
+                            users ("4.2 Optional Documents"). They remain in
+                            the API response + history for tester/QA use. */}
                         <ChatMessageText text={m.text} />
-                        {m.sources && m.sources.length > 0 && (
-                          <div className="kcw-src">{m.sources.map((s) => s.topic).join(" · ")}</div>
-                        )}
                       </div>
                     </div>
                   ),
