@@ -67,7 +67,7 @@ export default function LoginV1() {
 
   return (
     <div
-      className="relative flex min-h-svh items-center justify-center overflow-hidden p-4 sm:p-6"
+      className="relative flex min-h-dvh items-center justify-center overflow-hidden p-4 sm:p-6"
       style={{
         backgroundImage: "url('/assets/img/background/background.jpg')",
         backgroundSize: "cover",
