@@ -27,6 +27,7 @@ import {
   ArrowRight,
   ChevronLeft,
   CircleHelp,
+  EyeOff,
   Home,
   Leaf,
   MessageCircle,
@@ -84,6 +85,7 @@ const STR = {
     reset: "Reset conversation",
     close: "Close assistant",
     open: "Open help assistant",
+    hide: "Hide assistant for this visit",
     back: "Back",
     welcome:
       "Hi! I'm the KAU-FPO assistant. Ask me anything about the platform — how to register, browse products, or contact support.",
@@ -118,6 +120,7 @@ const STR = {
     reset: "സംഭാഷണം റീസെറ്റ് ചെയ്യുക",
     close: "സഹായി അടയ്ക്കുക",
     open: "സഹായി തുറക്കുക",
+    hide: "ഈ സന്ദർശനത്തിൽ സഹായി മറയ്ക്കുക",
     back: "തിരികെ",
     welcome:
       "ഹായ്! ഞാൻ KAU-FPO സഹായിയാണ്. പ്ലാറ്റ്‌ഫോമിനെക്കുറിച്ച് എന്തും ചോദിക്കൂ.",
@@ -263,6 +266,26 @@ export function ChatWidgetHome() {
   const t = useMemo(() => (locale === "ml" ? STR.ml : STR.en), [locale]);
 
   const [open, setOpen] = useState(false);
+  // Owner request (2026-10-09): users can hide the floating launcher for
+  // the rest of the browser session (sessionStorage — returns on the
+  // next visit, so the assistant is never permanently lost).
+  const [hidden, setHidden] = useState(false);
+  useEffect(() => {
+    try {
+      if (window.sessionStorage.getItem("kau_cw_hidden") === "1") setHidden(true);
+    } catch {
+      /* private mode */
+    }
+  }, []);
+  const hideWidget = () => {
+    setOpen(false);
+    setHidden(true);
+    try {
+      window.sessionStorage.setItem("kau_cw_hidden", "1");
+    } catch {
+      /* private mode */
+    }
+  };
   const [tab, setTab] = useState<Tab>("home");
   const [chatOpen, setChatOpen] = useState(false);
   const [unread, setUnread] = useState(0);
@@ -420,6 +443,8 @@ export function ChatWidgetHome() {
     { key: "news", label: t.news, icon: <Newspaper size={19} strokeWidth={tab === "news" ? 2.4 : 1.9} /> },
   ];
 
+  if (hidden) return null;
+
   return (
     <div className="kcw">
       <style>{CSS}</style>
@@ -449,9 +474,14 @@ export function ChatWidgetHome() {
                   {t.title}
                 </span>
               </div>
-              <button className="kcw-iconbtn" onClick={panelOpenToggle} aria-label={t.close}>
-                <X size={15} strokeWidth={2.4} />
-              </button>
+              <div style={{ display: "flex", gap: 6 }}>
+                <button className="kcw-iconbtn" onClick={hideWidget} aria-label={t.hide} title={t.hide}>
+                  <EyeOff size={14} strokeWidth={2.2} />
+                </button>
+                <button className="kcw-iconbtn" onClick={panelOpenToggle} aria-label={t.close} title={t.close}>
+                  <X size={15} strokeWidth={2.4} />
+                </button>
+              </div>
             </div>
             {isHomeHero && (
               <div style={{ marginTop: 18, position: "relative" }}>
