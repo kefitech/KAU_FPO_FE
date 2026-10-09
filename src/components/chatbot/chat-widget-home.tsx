@@ -133,6 +133,24 @@ const STR = {
 
 const SESSION_STORAGE_KEY = "kau_chatbot_session_id";
 
+/** Announcement bodies are rich HTML from the admin editor — the widget
+ *  shows a plain-text preview, so strip tags and decode the common
+ *  entities instead of printing "<p>...</p>" literally. */
+function htmlToPreview(html: string): string {
+  return (html || "")
+    .replace(/<br\s*\/?>/gi, " ")
+    .replace(/<\/(p|li|ul|ol|div|h[1-6])>/gi, " ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 const CSS = `
 .kcw * { box-sizing: border-box; margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Malayalam", sans-serif; -webkit-font-smoothing: antialiased; }
 .kcw button { font: inherit; }
@@ -222,10 +240,10 @@ button.kcw-card:hover { transform: translateY(-2px); border-color: rgba(31,77,43
   background: linear-gradient(135deg, #245c33, #112b18); color: #f2a900; display: flex; align-items: center; justify-content: center; }
 .kcw-bubble-u { margin-left: auto; max-width: 82%; color: #fff; padding: 10px 15px; font-size: 13.5px; line-height: 1.5;
   background: linear-gradient(135deg, #2e7d40, #1f4d2b); border-radius: 18px 18px 5px 18px;
-  box-shadow: 0 3px 10px rgba(20,52,29,.22); word-break: break-word; }
+  box-shadow: 0 3px 10px rgba(20,52,29,.22); word-break: break-word; overflow-wrap: anywhere; }
 .kcw-bubble-b { max-width: 82%; color: #202a23; padding: 10px 15px; font-size: 13.5px; line-height: 1.5;
   background: #fff; border: 1px solid rgba(17,43,24,.07); border-radius: 18px 18px 18px 5px;
-  box-shadow: 0 2px 8px rgba(10,24,15,.06); word-break: break-word; }
+  box-shadow: 0 2px 8px rgba(10,24,15,.06); word-break: break-word; overflow-wrap: anywhere; }
 .kcw-src { margin-top: 7px; font-size: 10.5px; color: #8a948e; border-top: 1px dashed rgba(17,43,24,.12); padding-top: 6px; }
 .kcw-tydot { width: 6px; height: 6px; border-radius: 50%; background: #9aa69f; animation: kcwTy .9s infinite; }
 @keyframes kcwTy { 0%,100% { opacity: .25; transform: translateY(0);} 50% { opacity: 1; transform: translateY(-3px);} }
@@ -233,8 +251,9 @@ button.kcw-card:hover { transform: translateY(-2px); border-color: rgba(31,77,43
 /* ── Input ────────────────────────────────────────────────────────── */
 .kcw-inputbar { display: flex; align-items: center; gap: 8px; padding: 10px 12px; flex-shrink: 0;
   background: rgba(255,255,255,.9); backdrop-filter: blur(10px); border-top: 1px solid rgba(17,43,24,.07); }
-.kcw-input { flex: 1; border: 1.5px solid rgba(17,43,24,.1); border-radius: 999px; padding: 10px 16px; font-size: 13.5px;
-  background: #f2f4f1; color: #1b241e; transition: border-color .15s ease, background .15s ease, box-shadow .15s ease; }
+.kcw-input { flex: 1; border: 1.5px solid rgba(17,43,24,.1); border-radius: 18px; padding: 10px 16px; font-size: 13.5px;
+  background: #f2f4f1; color: #1b241e; transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
+  resize: none; max-height: 108px; line-height: 1.45; overflow-y: auto; overflow-wrap: anywhere; font-family: inherit; }
 .kcw-input:focus { outline: none; border-color: #2e8b45; background: #fff; box-shadow: 0 0 0 3px rgba(46,139,69,.14); }
 .kcw-send { width: 42px; height: 42px; border: none; border-radius: 50%; color: #fff; cursor: pointer; flex-shrink: 0;
   background: linear-gradient(135deg, #2e8b45, #1f4d2b); display: flex; align-items: center; justify-content: center;
@@ -316,6 +335,13 @@ export function ChatWidgetHome() {
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const autosize = () => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 108)}px`;
+  };
   const openRef = useRef(open);
   openRef.current = open;
 
@@ -362,6 +388,9 @@ export function ChatWidgetHome() {
     }
     setMessages((m) => [...m, { id: `u${Date.now()}`, role: "user", text }]);
     setInput("");
+    requestAnimationFrame(() => {
+      if (inputRef.current) inputRef.current.style.height = "auto";
+    });
     setLoading(true);
     try {
       const res = await chatbotApi.send(text, pathname ?? "/", sessionId);
@@ -693,7 +722,7 @@ export function ChatWidgetHome() {
                   <div key={i} className="kcw-card" style={{ cursor: "default" }}>
                     <div style={{ fontWeight: 800, fontSize: 13.5, color: "#1d2a21", lineHeight: 1.4 }}>{a.title}</div>
                     <div style={{ fontSize: 12.5, color: "#4a544d", marginTop: 7, lineHeight: 1.55, display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                      {a.body}
+                      {htmlToPreview(a.body)}
                     </div>
                   </div>
                 ))}
@@ -707,14 +736,20 @@ export function ChatWidgetHome() {
               <button className="kcw-ghost" onClick={resetConversation} title={t.reset} aria-label={t.reset}>
                 <RotateCcw size={16} />
               </button>
-              <input
+              <textarea
+                ref={inputRef}
                 className="kcw-input"
+                rows={1}
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  autosize();
+                }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
                     void send();
+                    requestAnimationFrame(autosize);
                   }
                 }}
                 placeholder={t.placeholder}
