@@ -16,8 +16,13 @@
 
 import { usePathname } from "next/navigation";
 
-import { ChatWidgetPortal } from "./chat-widget-portal";
-import { ChatWidgetPublic } from "./chat-widget-public";
+// 2026-10-09 (approved): both routes now use the lemlist-style shell —
+// launcher + Home/Messages/Help/News tabs + greeting header. It is
+// self-contained (inline styles) so it renders identically under the
+// agrul Bootstrap theme and the shadcn portal. The old variants remain
+// in the repo for instant revert:
+//   - chat-widget-public.tsx / chat-widget-portal.tsx (previous UI)
+import { ChatWidgetHome } from "./chat-widget-home";
 
 
 const PORTAL_ROUTE_PREFIXES: readonly string[] = [
@@ -43,6 +48,8 @@ export function ChatWidgetMount() {
     return null;
   }
 
-  const isPortal = PORTAL_ROUTE_PREFIXES.some((p) => pathname.startsWith(p));
-  return isPortal ? <ChatWidgetPortal /> : <ChatWidgetPublic />;
+  // PORTAL_ROUTE_PREFIXES kept for documentation/analytics purposes —
+  // the unified widget self-adapts (greeting from the auth store).
+  void PORTAL_ROUTE_PREFIXES;
+  return <ChatWidgetHome />;
 }
