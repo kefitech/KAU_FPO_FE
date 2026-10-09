@@ -235,12 +235,7 @@ const Footer = () => {
 
         <div className="f-items default-padding">
           <div className="row">
-            <div className="col-12 col-lg-3 item">
-              <div className="footer-item about">
-                <FooterLogo className="logo" />
-              </div>
-            </div>
-            <div className="col-12 col-sm-6 col-lg-3 item">
+            <div className="col-12 col-sm-6 col-lg-3 offset-lg-3 item">
               <div className="footer-item link">
                 <h4 className="widget-title">{t.explore ?? "Explore"}</h4>
                 <ul>
@@ -299,14 +294,17 @@ const Footer = () => {
         </div>
 
         <div className="footer-bottom">
-          <div className="row">
+          <div className="row align-items-center">
             <div className="col-lg-6">
-              <p>
-                &copy; Copyright {new Date().getFullYear()}. All Rights Reserved by{" "}
-                <a href="https://www.kefitech.com/" target="_blank" rel="noopener noreferrer">
-                  Kefi Tech Solutions Pvt Ltd
-                </a>
-              </p>
+              <div className="copyright">
+                <FooterLogo className="logo" />
+                <p>
+                  &copy; Copyright {new Date().getFullYear()}. All Rights Reserved by{" "}
+                  <a href="https://www.kefitech.com/" target="_blank" rel="noopener noreferrer">
+                    Kefi Tech Solutions Pvt Ltd
+                  </a>
+                </p>
+              </div>
             </div>
             <div className="col-lg-6 text-end">
               <ul>

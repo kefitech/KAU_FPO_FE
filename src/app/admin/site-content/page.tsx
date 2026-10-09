@@ -457,7 +457,7 @@ function ContentBlocksTab({ t }: { t: T }) {
 
 const TABS = [
   { key: "content-blocks", label: "Content Blocks" },
-  { key: "header-logos", label: "Header Logos" },
+  { key: "header-logos", label: "Logos" },
   { key: "documents", label: "Documents" },
   { key: "gallery", label: "Gallery" },
   { key: "team", label: "Team" },

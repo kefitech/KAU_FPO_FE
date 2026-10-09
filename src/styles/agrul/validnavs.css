@@ -2983,7 +2983,7 @@ nav.navbar.validnavs .navbar-collapse.collapse button i {
 	}
 }
 
-/* Collapse "More Info" into the Pages dropdown once the nav runs out of room */
+/* Collapse "AITS" into the Pages dropdown once the nav runs out of room */
 .dropdown-menu .more-info-dropdown-item {
   display: none;
 }

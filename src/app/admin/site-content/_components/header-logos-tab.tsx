@@ -14,20 +14,39 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useConfirmStore } from "@/stores/confirm-store";
+import { useLocaleStore } from "@/stores/locale-store";
 
 type T = Record<string, string>;
 
 const QUERY_KEY = ["admin-header-logos"];
 
-// The 3 header positions (order 0, 1, 2) and the size each one is saved at.
+// The 4 header positions (order 0-3), mobile and footer logos, and the size each one is saved at.
 const POSITIONS = [
-  { order: 0, label: "Position 1", size: "2048 × 285", note: "Main logo (first in the header)" },
-  { order: 1, label: "Position 2", size: "1594 × 1038", note: "Second logo" },
-  { order: 2, label: "Position 3", size: "1594 × 1038", note: "Third logo" },
-  { order: 3, label: "Mobile menu logo", size: "960 × 160", note: "Shown at the top of the mobile (☰) menu" },
-  { order: 4, label: "Footer logo", size: "960 × 160", note: "Shown in the website footer" },
+  { order: 0, key: "pos_1", label: "Position 1", size: "2048 × 285", note: "Main logo (first in the header)" },
+  { order: 1, key: "pos_2", label: "Position 2", size: "1594 × 1038", note: "Second logo" },
+  { order: 2, key: "pos_3", label: "Position 3", size: "1594 × 1038", note: "Third logo" },
+  { order: 3, key: "pos_4", label: "Position 4", size: "1594 × 1038", note: "Fourth logo" },
+  {
+    order: 4,
+    key: "mobile",
+    label: "Mobile menu logo",
+    size: "960 × 160",
+    note: "Shown at the top of the mobile (☰) menu",
+  },
+  { order: 5, key: "footer", label: "Footer logo", size: "960 × 160", note: "Shown in the website footer" },
 ] as const;
-const MOBILE_ORDER = 3;
+const MOBILE_ORDER = 4;
+
+/** Translated name and note of a position (header_logo_label_<key> / header_logo_note_<key>). */
+function positionText(p: (typeof POSITIONS)[number] | undefined, t: T) {
+  return {
+    label: p ? (t[`header_logo_label_${p.key}`] ?? p.label) : "",
+    note: p ? (t[`header_logo_note_${p.key}`] ?? p.note) : "",
+  };
+}
+
+/** Logo name in the admin's language — the Malayalam name falls back to the English one. */
+const logoName = (logo: AdminHeaderLogo, locale: string) => (locale === "ml" && logo.name_ml) || logo.name;
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatFileSize(bytes: number): string {
@@ -92,12 +111,14 @@ function HeaderLogoDialog({
   t: T;
 }) {
   const [name, setName] = useState("");
+  const [nameMl, setNameMl] = useState("");
   const [logo, setLogo] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoInfo, setLogoInfo] = useState<string | null>(null);
   const [logoError, setLogoError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pos = POSITIONS[position];
+  const posText = positionText(pos, t);
 
   useEffect(() => {
     if (!open) return;
@@ -106,6 +127,7 @@ function HeaderLogoDialog({
     setLogoInfo(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
     setName(editing?.name ?? "");
+    setNameMl(editing?.name_ml ?? "");
   }, [open, editing]);
 
   useEffect(() => {
@@ -153,6 +175,7 @@ function HeaderLogoDialog({
     mutationFn: () => {
       const formData = new FormData();
       formData.append("name", name.trim());
+      formData.append("name_ml", nameMl.trim());
       formData.append("order", String(position));
       if (!editing) formData.append("is_active", "true");
       if (logo) formData.append("logo", logo);
@@ -177,14 +200,14 @@ function HeaderLogoDialog({
         <DialogHeader>
           <DialogTitle>
             {editing
-              ? `${t.dialog_edit_header_logo ?? "Edit"} — ${pos?.label ?? ""}`
-              : `${t.dialog_add_header_logo ?? "Add logo to"} ${pos?.label ?? ""}`}
+              ? `${t.dialog_edit_header_logo ?? "Edit"} — ${posText.label}`
+              : (t.dialog_add_header_logo ?? "Add logo to {label}").replace("{label}", posText.label)}
           </DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col gap-4 py-2">
           <div className="rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-            {pos?.note} · {t.header_logo_saved_at ?? "saved at up to"} <b>{pos?.size}</b>.{" "}
+            {posText.note} · {t.header_logo_saved_at ?? "saved at up to"} <b>{pos?.size}</b>.{" "}
             {t.header_logo_shape_kept ?? "Shape is kept — no stretching or cropping."}
           </div>
 
@@ -200,6 +223,20 @@ function HeaderLogoDialog({
               placeholder={t.field_header_logo_name_placeholder ?? "e.g. Government of Kerala"}
             />
             <p className="text-xs text-muted-foreground">{t.header_logo_name_hint ?? "Used as the image alt text."}</p>
+          </div>
+
+          {/* Malayalam name */}
+          <div className="flex flex-col gap-1.5">
+            <p className="text-sm font-medium">{t.field_header_logo_name_ml ?? "Name (Malayalam)"}</p>
+            <Input
+              id="header-logo-name-ml"
+              value={nameMl}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNameMl(e.target.value)}
+              placeholder={t.field_header_logo_name_ml_placeholder ?? "e.g. കേരള സർക്കാർ"}
+            />
+            <p className="text-xs text-muted-foreground">
+              {t.header_logo_name_ml_hint ?? "Optional — shown when the admin panel is in Malayalam."}
+            </p>
           </div>
 
           {/* Logo */}
@@ -287,6 +324,7 @@ function HeaderLogoDialog({
 export function HeaderLogosTab({ t = {} }: { t?: T }) {
   const queryClient = useQueryClient();
   const confirm = useConfirmStore((s) => s.confirm);
+  const locale = useLocaleStore((s) => s.locale);
   const [selected, setSelected] = useState("0");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<AdminHeaderLogo | null>(null);
@@ -305,6 +343,7 @@ export function HeaderLogosTab({ t = {} }: { t?: T }) {
 
   const position = Number(selected);
   const pos = POSITIONS[position];
+  const posText = positionText(pos, t);
   const current = logos.find((l) => l.order === position) ?? null;
   const usedCount = POSITIONS.filter((p) => logos.some((l) => l.order === p.order)).length;
 
@@ -334,7 +373,7 @@ export function HeaderLogosTab({ t = {} }: { t?: T }) {
       title: t.header_logo_delete_title ?? "Delete Header Logo",
       description: (
         t.header_logo_delete_description ?? 'Are you sure you want to delete "{name}"? This cannot be undone.'
-      ).replace("{name}", logo.name),
+      ).replace("{name}", logoName(logo, locale)),
       onConfirm: () => deleteMutation.mutateAsync(logo.id),
     });
   }
@@ -347,7 +386,7 @@ export function HeaderLogosTab({ t = {} }: { t?: T }) {
           <h2 className="text-base font-semibold">{t.header_logos_section_title ?? "Header Logos"}</h2>
           <p className="text-sm text-muted-foreground mt-0.5">
             {t.header_logos_section_description ??
-              "Choose a position to view, add or change its logo. The header shows up to 3 logos."}
+              "Choose a position to view, add or change its logo. The header shows up to 4 logos."}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
             {usedCount} / {POSITIONS.length} {t.header_logos_used ?? "positions used"}
@@ -382,9 +421,9 @@ export function HeaderLogosTab({ t = {} }: { t?: T }) {
                         )}
                       </span>
                       <span className="flex flex-col text-left">
-                        <span className="text-sm">{p.label}</span>
+                        <span className="text-sm">{positionText(p, t).label}</span>
                         <span className="text-xs text-muted-foreground">
-                          {l ? l.name : (t.header_logo_position_empty ?? "Empty")}
+                          {l ? logoName(l, locale) : (t.header_logo_position_empty ?? "Empty")}
                         </span>
                       </span>
                     </span>
@@ -400,9 +439,9 @@ export function HeaderLogosTab({ t = {} }: { t?: T }) {
       <div className={`rounded-lg border p-4 transition-opacity ${isFetching && !isLoading ? "opacity-60" : ""}`}>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div>
-            <p className="font-medium">{pos?.label}</p>
+            <p className="font-medium">{posText.label}</p>
             <p className="text-xs text-muted-foreground">
-              {pos?.note} · {t.header_logo_size ?? "size"} {pos?.size}
+              {posText.note} · {t.header_logo_size ?? "size"} {pos?.size}
             </p>
           </div>
           {current && (
@@ -434,7 +473,7 @@ export function HeaderLogosTab({ t = {} }: { t?: T }) {
                 <ImageIcon className="h-8 w-8 text-muted-foreground" />
               )}
             </div>
-            <p className="mt-2 text-sm font-medium">{current.name}</p>
+            <p className="mt-2 text-sm font-medium">{logoName(current, locale)}</p>
 
             <div className="mt-3 flex flex-wrap gap-2">
               <Button
@@ -475,7 +514,7 @@ export function HeaderLogosTab({ t = {} }: { t?: T }) {
           <div className="flex min-h-[160px] flex-col items-center justify-center gap-3 rounded-md border border-dashed text-center">
             <ImageIcon className="h-8 w-8 text-muted-foreground/50" />
             <p className="text-sm text-muted-foreground">
-              {(t.header_logo_position_empty_long ?? "{label} is empty.").replace("{label}", pos?.label ?? "")}
+              {(t.header_logo_position_empty_long ?? "{label} is empty.").replace("{label}", posText.label)}
             </p>
             <Button
               size="sm"
@@ -485,7 +524,7 @@ export function HeaderLogosTab({ t = {} }: { t?: T }) {
               }}
             >
               <Plus className="mr-1.5 h-4 w-4" />
-              {(t.btn_add_logo_to ?? "Add logo to {label}").replace("{label}", pos?.label ?? "")}
+              {(t.btn_add_logo_to ?? "Add logo to {label}").replace("{label}", posText.label)}
             </Button>
           </div>
         )}

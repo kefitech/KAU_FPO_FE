@@ -110,11 +110,10 @@ export default function LoginV1() {
 
               {/* Mobile-only registration — the right panel is hidden below md */}
               <div className="flex flex-col gap-2 border-t pt-5 md:hidden">
-                <p className="text-center text-sm font-medium">{t.new_here ?? "New User? Register"}</p>
                 <Button asChild variant="outline" className="w-full">
                   <a href="/register">
                     <UserPlus className="mr-2 h-4 w-4" />
-                    {t.sign_up_cta ?? "Create a new account"}
+                    {t.new_here ?? "New User? Register"}
                   </a>
                 </Button>
                 <p className="text-center text-sm text-muted-foreground">
