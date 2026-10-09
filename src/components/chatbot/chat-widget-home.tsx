@@ -20,6 +20,19 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import {
+  ArrowRight,
+  ChevronLeft,
+  CircleHelp,
+  Home,
+  MessageCircle,
+  MessagesSquare,
+  Newspaper,
+  RotateCcw,
+  SendHorizontal,
+  X,
+} from "lucide-react";
+
 import { usePathname } from "next/navigation";
 
 import { ChatMessageText } from "@/components/chatbot/chat-message-text";
@@ -286,7 +299,7 @@ export function ChatWidgetHome() {
     width: "100%",
   };
 
-  const tabBtn = (key: Tab, label: string, icon: string, badge?: number) => (
+  const tabBtn = (key: Tab, label: string, icon: React.ReactNode, badge?: number) => (
     <button
       key={key}
       onClick={() => {
@@ -306,7 +319,7 @@ export function ChatWidgetHome() {
         position: "relative",
       }}
     >
-      <span style={{ fontSize: 19, display: "block", lineHeight: "22px" }}>{icon}</span>
+      <span style={{ display: "flex", justifyContent: "center", marginBottom: 3 }}>{icon}</span>
       {label}
       {badge ? (
         <span
@@ -369,7 +382,7 @@ export function ChatWidgetHome() {
                     aria-label={t.back}
                     style={{ background: "none", border: "none", color: "#fff", fontSize: 18, cursor: "pointer", padding: 0 }}
                   >
-                    ←
+                    <ChevronLeft size={20} strokeWidth={2.4} />
                   </button>
                 )}
                 <span style={{ fontWeight: 700, fontSize: tab === "home" && !chatOpen ? 15 : 14 }}>
@@ -379,9 +392,9 @@ export function ChatWidgetHome() {
               <button
                 onClick={panelOpenToggle}
                 aria-label={t.close}
-                style={{ background: "rgba(255,255,255,0.15)", border: "none", color: "#fff", width: 28, height: 28, borderRadius: 14, cursor: "pointer", fontSize: 14 }}
+                style={{ background: "rgba(255,255,255,0.15)", border: "none", color: "#fff", width: 28, height: 28, borderRadius: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
               >
-                ✕
+                <X size={15} strokeWidth={2.4} style={{ display: "block", margin: "auto" }} />
               </button>
             </div>
             {tab === "home" && !chatOpen && (
@@ -403,11 +416,11 @@ export function ChatWidgetHome() {
                     <div style={{ fontSize: 13, marginTop: 6, color: "#1a1a1a", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
                       {lastAssistant.text}
                     </div>
-                    <div style={{ fontSize: 12, color: C.greenHi, fontWeight: 600, marginTop: 8 }}>{t.continueChat} →</div>
+                    <div style={{ fontSize: 12, color: C.greenHi, fontWeight: 600, marginTop: 8 }}>{t.continueChat} <ArrowRight size={13} style={{ display: "inline", verticalAlign: "-2px" }} /></div>
                   </button>
                 )}
                 <button style={{ ...card, background: C.green, border: "none" }} onClick={() => openChat()}>
-                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>{t.sendUs} ➤</div>
+                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>{t.sendUs} <SendHorizontal size={14} style={{ display: "inline", verticalAlign: "-2px", marginLeft: 4 }} /></div>
                   <div style={{ color: "rgba(255,255,255,0.75)", fontSize: 12, marginTop: 3 }}>{t.sendUsSub}</div>
                 </button>
                 {faqs && faqs.length > 0 && (
@@ -422,7 +435,7 @@ export function ChatWidgetHome() {
                         }}
                         style={{ display: "block", background: "none", border: "none", cursor: "pointer", padding: "7px 0", fontSize: 13, color: C.green, textAlign: "left", width: "100%", borderTop: `1px solid ${C.border}` }}
                       >
-                        {f.question} <span style={{ color: C.gold }}>→</span>
+                        {f.question} <ArrowRight size={13} style={{ display: "inline", verticalAlign: "-2px", color: C.gold }} />
                       </button>
                     ))}
                   </div>
@@ -527,7 +540,7 @@ export function ChatWidgetHome() {
                   onClick={() => openChat(faqQuery.trim() || undefined)}
                   style={{ background: "none", border: "none", color: C.greenHi, fontWeight: 600, fontSize: 13, cursor: "pointer", padding: 8 }}
                 >
-                  {t.askInstead} →
+                  {t.askInstead} <ArrowRight size={14} style={{ display: "inline", verticalAlign: "-2px" }} />
                 </button>
               </div>
             )}
@@ -558,9 +571,9 @@ export function ChatWidgetHome() {
                 onClick={resetConversation}
                 title={t.reset}
                 aria-label={t.reset}
-                style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: C.muted }}
+                style={{ background: "none", border: "none", cursor: "pointer", color: C.muted, display: "flex", alignItems: "center" }}
               >
-                ⟲
+                <RotateCcw size={17} />
               </button>
               <input
                 className="kau-cw-input"
@@ -587,10 +600,12 @@ export function ChatWidgetHome() {
                   borderRadius: 20,
                   width: 40,
                   cursor: loading || !input.trim() ? "default" : "pointer",
-                  fontSize: 16,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               >
-                ➤
+                <SendHorizontal size={17} />
               </button>
             </div>
           )}
@@ -598,18 +613,23 @@ export function ChatWidgetHome() {
           {/* ── Tab bar ── */}
           {!(tab === "messages" && chatOpen) && (
             <div style={{ display: "flex", borderTop: `1px solid ${C.border}`, background: C.card }}>
-              {tabBtn("home", t.home, "🏠")}
-              {tabBtn("messages", t.messages, "💬", unread || undefined)}
-              {tabBtn("help", t.help, "❓")}
-              {tabBtn("news", t.news, "📰")}
+              {tabBtn("home", t.home, <Home size={20} strokeWidth={tab === "home" ? 2.4 : 1.8} />)}
+              {tabBtn("messages", t.messages, <MessagesSquare size={20} strokeWidth={tab === "messages" ? 2.4 : 1.8} />, unread || undefined)}
+              {tabBtn("help", t.help, <CircleHelp size={20} strokeWidth={tab === "help" ? 2.4 : 1.8} />)}
+              {tabBtn("news", t.news, <Newspaper size={20} strokeWidth={tab === "news" ? 2.4 : 1.8} />)}
             </div>
           )}
         </div>
       )}
 
       {/* ── Launcher ── */}
-      <button className="kau-cw-fab" onClick={panelOpenToggle} aria-label={open ? t.close : t.open}>
-        {open ? "✕" : "💬"}
+      <button
+        className="kau-cw-fab"
+        onClick={panelOpenToggle}
+        aria-label={open ? t.close : t.open}
+        style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+      >
+        {open ? <X size={26} strokeWidth={2.2} /> : <MessageCircle size={27} strokeWidth={2} fill="rgba(255,255,255,0.18)" />}
         {!open && unread > 0 && (
           <span
             style={{
