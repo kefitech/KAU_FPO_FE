@@ -45,7 +45,14 @@ export function ChatMessageText({ text, linkClassName, linkStyle, onNavigate }: 
               href={part}
               className={linkClassName}
               style={linkStyle}
-              onClick={onNavigate}
+              onClick={(e) => {
+                // Explicit navigation: default anchor behaviour proved
+                // unreliable inside the widget on some pages, so command
+                // the browser directly. Full load, guaranteed.
+                e.preventDefault();
+                onNavigate?.();
+                window.location.assign(part);
+              }}
             >
               {part}
             </a>
