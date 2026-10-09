@@ -2,14 +2,18 @@
 
 import type { CSSProperties } from "react";
 
-import Link from "next/link";
-
 /**
- * Renders a chatbot reply as mixed text + clickable Next.js <Link>s for
- * every internal path token the bot mentions (/fpo/team,
- * /admin/applications, /register?mode=buyer, …). Clicking the path
- * navigates client-side instead of forcing the user to copy-paste it
- * into the address bar.
+ * Renders a chatbot reply as mixed text + clickable links for every
+ * internal path token the bot mentions (/fpo/team, /admin/applications,
+ * /register?mode=buyer, …).
+ *
+ * 2026-10-09 (owner report): these were Next.js <Link>s (soft client-side
+ * navigation). Navigating from the public agrul layout into portal
+ * routes updated the URL but left the page un-rendered until a manual
+ * refresh — the two layouts bootstrap differently. Chat links now use a
+ * plain <a> (full navigation), which always lands on a fully loaded
+ * page; the widget's conversation survives via localStorage session
+ * restore.
  */
 
 const PATH_PATTERN =
@@ -36,7 +40,7 @@ export function ChatMessageText({ text, linkClassName, linkStyle, onNavigate }: 
       {parts.map((part, i) => {
         if (PATH_ANCHOR.test(part)) {
           return (
-            <Link
+            <a
               key={i}
               href={part}
               className={linkClassName}
@@ -44,7 +48,7 @@ export function ChatMessageText({ text, linkClassName, linkStyle, onNavigate }: 
               onClick={onNavigate}
             >
               {part}
-            </Link>
+            </a>
           );
         }
         return <span key={i}>{part}</span>;
