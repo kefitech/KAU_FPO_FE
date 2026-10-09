@@ -83,7 +83,7 @@ export default function About() {
             <div className="thumb">
               <img src="/assets/img/about/2.jpeg" alt="About" className="about-thumb-img max-[990px]:hidden" />
               <div className="sub-item">
-                <img src="/assets/img/logoblack.png" alt="About" className="max-[990px]:hidden" />
+                <img src="/assets/img/logo1.png" alt="About" className="max-[990px]:hidden" />
               </div>
             </div>
           </div>

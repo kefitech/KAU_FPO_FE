@@ -9,12 +9,12 @@ type HeaderLogo = {
   name: string;
   logo_url: string | null;
   is_platform: boolean;
-  order?: number; // 0-2 = header positions, 3 = mobile menu logo
+  order?: number; // 0-3 = header positions, 4 = mobile menu logo, 5 = footer logo
 };
 
-const MAX_LOGOS = 3;
-const MOBILE_ORDER = 3;
-const FOOTER_ORDER = 4;
+const MAX_LOGOS = 4;
+const MOBILE_ORDER = 4;
+const FOOTER_ORDER = 5;
 
 // Max width (px) of the 1st header logo — change this number to make it narrower/wider
 const FIRST_LOGO_MAX_WIDTH = 400;
@@ -83,7 +83,7 @@ const HeaderLogos = () => {
 };
 
 /** Mobile menu / sidebar logo — always from the admin panel:
- *  "Mobile menu logo" (order 3), else Position 1. */
+ *  "Mobile menu logo" (order 4), else Position 1. */
 export const MobileMenuLogo = ({ className }: { className?: string }) => {
   const loaded = useHeaderLogos();
 
@@ -116,7 +116,7 @@ export const FooterLogo = ({ className }: { className?: string }) => {
     aspectRatio: "1 / 1",
     borderRadius: "50%",
     backgroundColor: "#fff",
-    padding: "3%",
+    padding: 4, // px — a % padding follows the parent's width, not the badge's
     objectFit: "contain",
     boxSizing: "border-box",
   };

@@ -7443,7 +7443,7 @@ footer {
 }
 
 .footer-bottom {
-	padding: 20px 0;
+	padding: 12px 0;
 	background: var(--dark);
 	position: relative;
 	z-index: 1;
@@ -7466,9 +7466,44 @@ footer {
 	content: "";
 	height: 100%;
 	width: 500%;
-	background: #1a4133;
+	background: linear-gradient(180deg, #21503f 0%, #163a2d 100%);
 	z-index: -1;
 	border-radius: 0 30px 0 0;
+	/* 3D: the bar is lifted off the footer, with light catching its top edge */
+	box-shadow:
+		0 -12px 30px rgba(0, 0, 0, 0.35),
+		inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.footer-bottom .copyright {
+	display: flex;
+	align-items: center;
+	gap: 15px;
+}
+
+.footer-bottom .copyright .logo {
+	width: 40px;
+	flex-shrink: 0;
+}
+
+@media only screen and (max-width: 1023.98px) {
+	.footer-bottom .copyright {
+		justify-content: center;
+	}
+}
+
+/* Wide screens: the logo sits in the left margin, halfway between the screen edge and the copyright text */
+@media only screen and (min-width: 1400px) {
+	.footer-bottom .copyright {
+		min-height: 40px; /* keep the bar's height now that the logo is out of the row */
+	}
+
+	.footer-bottom .copyright .logo {
+		position: absolute;
+		top: 50%;
+		left: calc((100% - 100vw) / 4); /* half the margin width (100% = .footer-bottom width) */
+		transform: translate(-50%, -50%);
+	}
 }
 
 /* ============================================================== 

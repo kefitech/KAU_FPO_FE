@@ -3,6 +3,7 @@ import { api } from "@/lib/api/client";
 export interface AdminHeaderLogo {
   id: number;
   name: string;
+  name_ml: string;
   logo_url: string | null;
   is_platform: boolean;
   order: number;
