@@ -86,6 +86,7 @@ const STR = {
     close: "Close assistant",
     open: "Open help assistant",
     hide: "Hide assistant for this visit",
+    show: "Show assistant",
     back: "Back",
     welcome:
       "Hi! I'm the KAU-FPO assistant. Ask me anything about the platform — how to register, browse products, or contact support.",
@@ -121,6 +122,7 @@ const STR = {
     close: "സഹായി അടയ്ക്കുക",
     open: "സഹായി തുറക്കുക",
     hide: "ഈ സന്ദർശനത്തിൽ സഹായി മറയ്ക്കുക",
+    show: "സഹായി കാണിക്കുക",
     back: "തിരികെ",
     welcome:
       "ഹായ്! ഞാൻ KAU-FPO സഹായിയാണ്. പ്ലാറ്റ്‌ഫോമിനെക്കുറിച്ച് എന്തും ചോദിക്കൂ.",
@@ -149,6 +151,13 @@ const CSS = `
 .kcw-fab-badge { position: absolute; top: -3px; right: -3px; min-width: 20px; height: 20px; padding: 0 5px;
   background: linear-gradient(135deg, #ff6b5e, #d93a2b); color: #fff; border-radius: 10px; font-size: 11px; font-weight: 800;
   line-height: 20px; box-shadow: 0 2px 8px rgba(217,58,43,.5); border: 2px solid #fff; }
+
+/* ── Edge restore handle (shown while hidden) ─────────────────────── */
+.kcw-peek { position: fixed; right: 0; bottom: 42px; z-index: 9999; width: 24px; height: 46px; border: none; cursor: pointer;
+  border-radius: 12px 0 0 12px; background: linear-gradient(140deg, #2e8b45, #1f4d2b); color: #fff;
+  display: flex; align-items: center; justify-content: center; opacity: .38; transform: translateX(6px);
+  box-shadow: -2px 2px 10px rgba(20,52,29,.3); transition: opacity .18s ease, transform .18s ease; }
+.kcw-peek:hover { opacity: 1; transform: translateX(0); }
 
 /* ── Panel ────────────────────────────────────────────────────────── */
 .kcw-panel { position: fixed; right: 24px; bottom: 98px; z-index: 9999; width: 384px; height: 660px; max-height: calc(100vh - 122px);
@@ -282,6 +291,14 @@ export function ChatWidgetHome() {
     setHidden(true);
     try {
       window.sessionStorage.setItem("kau_cw_hidden", "1");
+    } catch {
+      /* private mode */
+    }
+  };
+  const showWidget = () => {
+    setHidden(false);
+    try {
+      window.sessionStorage.removeItem("kau_cw_hidden");
     } catch {
       /* private mode */
     }
@@ -443,7 +460,19 @@ export function ChatWidgetHome() {
     { key: "news", label: t.news, icon: <Newspaper size={19} strokeWidth={tab === "news" ? 2.4 : 1.9} /> },
   ];
 
-  if (hidden) return null;
+  if (hidden) {
+    // Hidden state: a slim edge handle stays reachable so the assistant
+    // can be restored in the SAME tab (a bare `null` made hide a dead
+    // end until a new browser session).
+    return (
+      <div className="kcw">
+        <style>{CSS}</style>
+        <button className="kcw-peek" onClick={showWidget} aria-label={t.show} title={t.show}>
+          <ChevronLeft size={15} strokeWidth={2.6} />
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="kcw">
