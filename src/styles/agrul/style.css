@@ -6947,6 +6947,7 @@ li.project-feature-list h4 {
 
 .contact-style-one-info li {
 	display: flex;
+	align-items: center;
 	margin-top: 30px;
 }
 

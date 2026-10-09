@@ -3,7 +3,7 @@ import BackNavigationHandler from "./_components/back-navigation-handler";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="h-screen overflow-hidden">
+    <div className="min-h-dvh overflow-x-clip">
       <BackNavigationHandler />
       {children}
     </div>
