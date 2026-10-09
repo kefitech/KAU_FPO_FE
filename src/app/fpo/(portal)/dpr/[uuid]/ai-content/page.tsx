@@ -269,9 +269,16 @@ function ChapterPane({
 
   const generateMutation = useMutation({
     mutationFn: () => dprAiContentApi.generate(uuid, row.chapter),
-    onSuccess: () => {
+    onSuccess: (data) => {
       onSaved();
-      toast.success("Candidate generated. Review and accept, keep, or merge.");
+      // Hash-guard (2026-10-09): backend skipped the AI call because
+      // nothing upstream changed — tell the user instead of pretending a
+      // new candidate exists.
+      if (data?.unchanged) {
+        toast.info("Nothing has changed since the last generation — the current text is already up to date.");
+      } else {
+        toast.success("Candidate generated. Review and accept, keep, or merge.");
+      }
     },
     onError: (err) => {
       console.warn("[AI content generate]", err);

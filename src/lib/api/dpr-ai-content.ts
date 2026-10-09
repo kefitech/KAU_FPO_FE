@@ -70,6 +70,8 @@ export interface PlaceholderHit {
 }
 
 export interface AIContentRow {
+  /** Hash-guard: true when generation was skipped — inputs unchanged. */
+  unchanged?: boolean;
   id: number;
   chapter: ChapterKey;
   chapter_display: string;
