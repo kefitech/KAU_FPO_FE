@@ -664,7 +664,11 @@ export function ChatWidgetHome() {
                   m.role === "user" ? (
                     <div key={m.id} className="kcw-row">
                       <div className="kcw-bubble-u">
-                        <ChatMessageText text={m.text} />
+                        <ChatMessageText
+                          text={m.text}
+                          linkStyle={{ color: "#ffe9b3", fontWeight: 700, textDecoration: "underline", textUnderlineOffset: 2 }}
+                          onNavigate={() => setOpen(false)}
+                        />
                       </div>
                     </div>
                   ) : (
@@ -677,7 +681,11 @@ export function ChatWidgetHome() {
                             NOT rendered — they read as debug output to end
                             users ("4.2 Optional Documents"). They remain in
                             the API response + history for tester/QA use. */}
-                        <ChatMessageText text={m.text} />
+                        <ChatMessageText
+                          text={m.text}
+                          linkStyle={{ color: "#2e8b45", fontWeight: 700, textDecoration: "underline", textUnderlineOffset: 2 }}
+                          onNavigate={() => setOpen(false)}
+                        />
                       </div>
                     </div>
                   ),

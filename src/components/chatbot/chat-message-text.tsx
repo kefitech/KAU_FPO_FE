@@ -22,9 +22,14 @@ interface ChatMessageTextProps {
   text: string;
   linkClassName?: string;
   linkStyle?: CSSProperties;
+  /** Called when the user clicks an internal path link — the widget uses
+   *  this to collapse the panel so the destination page is visible
+   *  (on mobile the full-screen panel otherwise covers the navigation,
+   *  which read as "nothing happened"). */
+  onNavigate?: () => void;
 }
 
-export function ChatMessageText({ text, linkClassName, linkStyle }: ChatMessageTextProps) {
+export function ChatMessageText({ text, linkClassName, linkStyle, onNavigate }: ChatMessageTextProps) {
   const parts = text.split(PATH_PATTERN);
   return (
     <>
@@ -36,6 +41,7 @@ export function ChatMessageText({ text, linkClassName, linkStyle }: ChatMessageT
               href={part}
               className={linkClassName}
               style={linkStyle}
+              onClick={onNavigate}
             >
               {part}
             </Link>
