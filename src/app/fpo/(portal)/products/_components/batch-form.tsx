@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
@@ -9,6 +11,13 @@ import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import {
+  cleanQuantityInput,
+  isCountUnit,
+  MAX_STOCK_QUANTITY,
+  MAX_STOCK_QUANTITY_LABEL,
+  toWholeQuantity,
+} from "@/lib/validations/stock-quantity";
 import type { CreateStockPayload, ProductStock, ProductUnit } from "@/types/fpo";
 import { UNIT_OPTIONS } from "@/types/fpo";
 
@@ -43,6 +52,9 @@ export const batchSchema = z
       .min(1, { message: "Quantity is required" })
       .refine((val) => !Number.isNaN(Number(val)) && Number(val) > 0, {
         message: "Quantity must be greater than 0",
+      })
+      .refine((val) => Number.isNaN(Number(val)) || Number(val) <= MAX_STOCK_QUANTITY, {
+        message: `Quantity cannot exceed ${MAX_STOCK_QUANTITY_LABEL}`,
       })
       .superRefine(digitLimitRefinement(10, 2, "Quantity")),
     unit: z.enum(["kg", "quintal", "mt", "litre", "piece"]),
@@ -83,7 +95,12 @@ export const batchSchema = z
       message: "A batch has to be published before it can go on the public Market Hub.",
       path: ["is_public"],
     },
-  );
+  )
+  // Count units (pieces) are whole numbers — no fractional quantities.
+  .refine((data) => !isCountUnit(data.unit) || Number.isInteger(Number(data.quantity)), {
+    message: "Quantity must be a whole number when the unit is Piece",
+    path: ["quantity"],
+  });
 
 export type BatchFormValues = z.infer<typeof batchSchema>;
 
@@ -104,7 +121,8 @@ export const emptyBatch: BatchFormValues = {
 
 export function batchFromStock(stock: ProductStock): BatchFormValues {
   return {
-    quantity: stock.quantity ?? "",
+    // Count units are whole numbers — drop the ".00" the API returns for decimal columns.
+    quantity: isCountUnit(stock.unit) ? toWholeQuantity(stock.quantity ?? "") : (stock.quantity ?? ""),
     unit: stock.unit,
     price_per_unit: stock.price_per_unit ?? "",
     quality_certification: stock.quality_certification ?? "",
@@ -136,6 +154,8 @@ interface BatchFormProps {
   onCancel?: () => void;
   submitLabel?: string;
   isSubmitting?: boolean;
+  /** Field errors returned by the API (e.g. quantity bounds) — shown under the matching inputs. */
+  serverErrors?: Record<string, string[]>;
   t?: T;
   tCommon?: T;
 }
@@ -154,13 +174,16 @@ export function BatchForm({
   onCancel,
   submitLabel,
   isSubmitting = false,
+  serverErrors,
   t = {},
   tCommon = {},
 }: BatchFormProps) {
   const {
     control,
+    getValues,
     handleSubmit,
     watch,
+    setError,
     setValue,
     formState: { errors },
   } = useForm<BatchFormValues>({
@@ -170,6 +193,18 @@ export function BatchForm({
 
   const publishImmediately = watch("publish_immediately");
   const availableFrom = watch("available_from");
+  const selectedUnit = watch("unit");
+
+  // Backend validation (same bounds as the schema, plus anything only the
+  // server knows) lands on the matching field instead of a generic toast.
+  useEffect(() => {
+    if (!serverErrors) return;
+    for (const [field, messages] of Object.entries(serverErrors)) {
+      if (field in emptyBatch && messages[0]) {
+        setError(field as keyof BatchFormValues, { type: "server", message: messages[0] });
+      }
+    }
+  }, [serverErrors, setError]);
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
@@ -185,12 +220,9 @@ export function BatchForm({
                 </FieldLabel>
                 <Input
                   id="batch-quantity"
-                  inputMode="decimal"
+                  inputMode={isCountUnit(selectedUnit) ? "numeric" : "decimal"}
                   {...field}
-                  onChange={(e) => {
-                    const cleaned = e.target.value.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1");
-                    field.onChange(cleaned);
-                  }}
+                  onChange={(e) => field.onChange(cleanQuantityInput(e.target.value, selectedUnit))}
                 />
                 {errors.quantity && <FieldError errors={[errors.quantity]} />}
               </Field>
@@ -202,7 +234,17 @@ export function BatchForm({
             render={({ field }) => (
               <Field>
                 <FieldLabel htmlFor="batch-unit">{t.unit_label ?? "Unit"}</FieldLabel>
-                <Select value={field.value} onValueChange={field.onChange}>
+                <Select
+                  value={field.value}
+                  onValueChange={(value) => {
+                    field.onChange(value);
+                    // Switching to a count unit drops any decimals already typed in Quantity.
+                    const quantity = getValues("quantity") ?? "";
+                    if (isCountUnit(value) && quantity.includes(".")) {
+                      setValue("quantity", toWholeQuantity(quantity), { shouldValidate: true });
+                    }
+                  }}
+                >
                   <SelectTrigger id="batch-unit">
                     <SelectValue />
                   </SelectTrigger>
