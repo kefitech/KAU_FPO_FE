@@ -1,6 +1,6 @@
 import type { ExpertBooking } from "@/app/expert/_api/dashboard";
 import { api } from "@/lib/api/client";
-import type { AdminExpert, AdminExpertPayload, ExpertEnquiry } from "@/types/admin";
+import type { AdminExpert, AdminExpertPayload } from "@/types/admin";
 import type { DataTableParams, PaginatedResponse } from "@/types/pagination";
 
 const BASE = "/admin/experts/";
@@ -24,8 +24,8 @@ export const adminExpertsApi = {
 
   deactivate: (id: number) => api.post<Wrapped<AdminExpert>>(`${BASE}${id}/deactivate/`).then(unwrap),
 
-  getEnquiries: (id: number): Promise<ExpertEnquiry[]> =>
-    api.get<{ status: string; data: ExpertEnquiry[] }>(`${BASE}${id}/enquiries/`).then((r) => r.data.data),
-
   bookings: (id: number | string) => api.get(`/admin/experts/${id}/bookings/`),
+
+  getBookings: (id: number): Promise<ExpertBooking[]> =>
+    api.get<Wrapped<ExpertBooking[]>>(`${BASE}${id}/bookings/`).then(unwrap),
 };

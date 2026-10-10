@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { useQuery } from "@tanstack/react-query";
-import { Search, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, X } from "lucide-react";
 
 import { schemesApi } from "@/lib/api/schemes";
 import { translationsApi } from "@/lib/api/translations";
@@ -22,9 +22,11 @@ import {
 import type { FpoScheme } from "@/types/fpo";
 import { ExternalLink } from "lucide-react";
 
+const PAGE_SIZE = 9;
+
 /**
- * Read-only schemes & subsidies directory (category tabs, search, detail sheet).
- * Shared by the FPO and CBBO portals.
+ * Read-only schemes & subsidies directory (category tabs, search, detail sheet, pagination).
+ * Shared by the FPO, CBBO, and expert portals.
  */
 export function SchemesBrowser() {
   const locale = useLocaleStore((s) => s.locale);
@@ -50,16 +52,28 @@ export function SchemesBrowser() {
     return () => clearTimeout(handle);
   }, [searchInput]);
 
-  const { data: schemes, isLoading } = useQuery({
-    queryKey: ["fpo-schemes", locale, activeCategory, search],
+  // The page belongs to the filter set it was chosen under, so any filter
+  // change falls back to page 1 without an extra request for a stale page.
+  const filterKey = `${activeCategory}|${search}`;
+  const [pageState, setPageState] = useState({ filterKey, page: 1 });
+  const page = pageState.filterKey === filterKey ? pageState.page : 1;
+  const setPage = (next: number) => setPageState({ filterKey, page: next });
+
+  const { data: schemesPage, isLoading } = useQuery({
+    queryKey: ["fpo-schemes", locale, activeCategory, search, page],
     queryFn: () =>
-      schemesApi.list({
+      schemesApi.listPage({
         locale,
         ...(activeCategory ? { category: activeCategory } : {}),
         ...(search ? { search } : {}),
+        page,
+        page_size: PAGE_SIZE,
       }),
     staleTime: 5 * 60 * 1000,
   });
+  const schemes = schemesPage?.data;
+  const totalCount = schemesPage?.meta?.pagination?.total_count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   const sheetActions = selectedScheme?.official_link
     ? [{ label: t.btn_visit ?? "Visit Website", icon: ExternalLink, variant: "outline" as const, onClick: () => window.open(selectedScheme.official_link, "_blank") }]
@@ -166,16 +180,39 @@ export function SchemesBrowser() {
           )}
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {schemes.map((scheme) => (
-            <SchemeCard
-              key={scheme.id}
-              scheme={scheme}
-              t={t}
-              onViewDetails={() => setSelectedScheme(scheme)}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {schemes.map((scheme) => (
+              <SchemeCard
+                key={scheme.id}
+                scheme={scheme}
+                t={t}
+                onViewDetails={() => setSelectedScheme(scheme)}
+              />
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between border-t pt-4">
+              <p className="text-muted-foreground text-sm">
+                {(t.pagination_summary ?? "Page {page} of {total_pages} · {count} schemes")
+                  .replace("{page}", String(page))
+                  .replace("{total_pages}", String(totalPages))
+                  .replace("{count}", String(totalCount))}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+                  <ChevronLeft className="mr-1 h-4 w-4" />
+                  {t.btn_previous ?? "Previous"}
+                </Button>
+                <Button size="sm" variant="outline" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
+                  {t.btn_next ?? "Next"}
+                  <ChevronRight className="ml-1 h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       <ViewSheet

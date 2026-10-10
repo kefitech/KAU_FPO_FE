@@ -1,9 +1,10 @@
 "use client";
 import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { expertsApi } from "@/lib/api/experts";
+import { getErrorMessage } from "@/lib/get-error-message";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,6 +16,13 @@ function toLocalISODate(date: Date) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+/** True when the slot starting at `start` (HH:MM) on `dateStr` is already behind the clock. */
+function isSlotPast(dateStr: string, start: string) {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const [hour, minute] = start.split(":").map(Number);
+  return new Date(year, month - 1, day, hour, minute).getTime() <= Date.now();
 }
 
 interface ExpertBookingDialogProps {
@@ -30,6 +38,7 @@ export function ExpertBookingDialog({ open, onOpenChange, expertId, expertName }
   const [selectedSlotId, setSelectedSlotId] = useState<number | null>(null);
   const [topic, setTopic] = useState("");
   const [notes, setNotes] = useState("");
+  const queryClient = useQueryClient();
 
   const { data: days = [], isLoading } = useQuery({
     queryKey: ["expert-availability", expertId],
@@ -49,7 +58,10 @@ export function ExpertBookingDialog({ open, onOpenChange, expertId, expertName }
         notes,
       }),
     onSuccess: () => {
-      toast.success("Booking request submitted. The expert will confirm shortly.");
+      toast.success("Appointment booked.");
+      // The directory's booking badges and this expert's slot counts are now stale.
+      queryClient.invalidateQueries({ queryKey: ["fpo-bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["expert-availability", expertId] });
       setSelectedDate(null);
       setSelectedTime(null);
       setSelectedSlotId(null);
@@ -60,7 +72,9 @@ export function ExpertBookingDialog({ open, onOpenChange, expertId, expertName }
     onError: (error: unknown) => {
       const status = (error as { status?: number })?.status;
       if (status === 403) {
-        toast.error("Your FPO must be approved to book experts.");
+        // Both "FPO not approved" and "no can_book_experts permission" are 403s;
+        // the backend message says which.
+        toast.error(getErrorMessage(error, "Your FPO must be approved to book experts."));
         return;
       }
 
@@ -95,6 +109,9 @@ export function ExpertBookingDialog({ open, onOpenChange, expertId, expertName }
       toast.error(msg ?? "Failed to submit booking. Please try again.");
     },
   });
+
+  // One appointment per day: days the user already booked (with any expert).
+  const bookedDays = days.filter((d) => d.my_booking);
 
   function handleSubmit() {
     if (!selectedDate || !selectedTime) {
@@ -138,10 +155,25 @@ export function ExpertBookingDialog({ open, onOpenChange, expertId, expertName }
                 disabled={(date) => {
                   const iso = toLocalISODate(date);
                   const day = days.find((d) => d.date === iso);
-                  return !day || day.time_slots.length === 0;
+                  return !day || !!day.my_booking || day.time_slots.every((slot) => isSlotPast(iso, slot.start));
                 }}
+                modifiers={{
+                  bookedByMe: (date) => !!days.find((d) => d.date === toLocalISODate(date))?.my_booking,
+                }}
+                modifiersClassNames={{ bookedByMe: "bg-amber-100 text-amber-900 line-through opacity-70" }}
                 className="rounded-md border w-fit"
               />
+              {bookedDays.length > 0 && (
+                <p className="text-muted-foreground text-xs">
+                  You already have an appointment on{" "}
+                  {bookedDays
+                    .slice(0, 3)
+                    .map((d) => `${d.date} (${d.my_booking?.expert_name} at ${d.my_booking?.time})`)
+                    .join(", ")}
+                  {bookedDays.length > 3 ? ` and ${bookedDays.length - 3} more` : ""}. Only one appointment per day
+                  is allowed, so those days are unavailable.
+                </p>
+              )}
 
               {selectedDate && (
                 <>
@@ -149,22 +181,25 @@ export function ExpertBookingDialog({ open, onOpenChange, expertId, expertName }
                   <div className="flex flex-wrap gap-2">
                     {days
                       .find((d) => d.date === selectedDate)
-                      ?.time_slots.map((slot) => (
-                        <Button
-                          key={slot.id}
-                          type="button"
-                          size="sm"
-                          variant={selectedSlotId === slot.id ? "default" : "outline"}
-                          disabled={slot.is_booked}
-                          onClick={() => {
-                            setSelectedTime(slot.start);
-                            setSelectedSlotId(slot.id);
-                          }}
-                        >
-                          {slot.start} - {slot.end}
-                          {slot.is_booked ? " (booked)" : ""}
-                        </Button>
-                      ))}
+                      ?.time_slots.map((slot) => {
+                        const past = isSlotPast(selectedDate, slot.start);
+                        return (
+                          <Button
+                            key={slot.id}
+                            type="button"
+                            size="sm"
+                            variant={selectedSlotId === slot.id ? "default" : "outline"}
+                            disabled={slot.is_booked || past}
+                            onClick={() => {
+                              setSelectedTime(slot.start);
+                              setSelectedSlotId(slot.id);
+                            }}
+                          >
+                            {slot.start} - {slot.end}
+                            {slot.is_booked ? " (booked)" : past ? " (passed)" : ""}
+                          </Button>
+                        );
+                      })}
                   </div>
                 </>
               )}
@@ -194,7 +229,7 @@ export function ExpertBookingDialog({ open, onOpenChange, expertId, expertName }
             Cancel
           </Button>
           <Button type="button" onClick={handleSubmit} disabled={mutation.isPending}>
-            {mutation.isPending ? "Submitting..." : "Request Booking"}
+            {mutation.isPending ? "Booking..." : "Book Appointment"}
           </Button>
         </div>
       </DialogContent>

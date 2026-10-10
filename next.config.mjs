@@ -52,6 +52,17 @@ const nextConfig = {
         destination: "/dashboard/overview",
         permanent: false,
       },
+      // Expert booking pages moved under /expert/booking; keep old links working.
+      {
+        source: "/expert/stats",
+        destination: "/expert/booking",
+        permanent: true,
+      },
+      {
+        source: "/expert/dashboard/fpo/:fpoId",
+        destination: "/expert/booking/fpo/:fpoId",
+        permanent: true,
+      },
     ];
   },
 };

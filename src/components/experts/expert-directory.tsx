@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarClock, ChevronLeft, ChevronRight, MapPin, Search, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -15,9 +15,11 @@ import { ExpertEnquiryDialog } from "@/components/ui/expert-enquiry-dialog";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import { useFpoPermissions } from "@/hooks/use-fpo-permissions";
 import { type ExpertBooking, expertsApi } from "@/lib/api/experts";
 import { translationsApi } from "@/lib/api/translations";
+import { getErrorMessage } from "@/lib/get-error-message";
 import { useLocaleStore } from "@/stores/locale-store";
 import { DISTRICT_OPTIONS, type FpoExpert } from "@/types/fpo";
 
@@ -190,48 +192,116 @@ function ExpertBookingsListDialog({
   expertName?: string;
   bookings: ExpertBooking[];
 }) {
+  const queryClient = useQueryClient();
+  const [cancelling, setCancelling] = useState<ExpertBooking | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+
+  const cancelMutation = useMutation({
+    mutationFn: ({ id, reason }: { id: number; reason: string }) => expertsApi.cancelBooking(id, reason),
+    onSuccess: () => {
+      toast.success("Booking cancelled.");
+      setCancelling(null);
+      setCancelReason("");
+      // The slot is open again for everyone, and this FPO's list has changed.
+      queryClient.invalidateQueries({ queryKey: ["fpo-bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["expert-availability"] });
+    },
+    onError: (error) => toast.error(getErrorMessage(error, "Failed to cancel booking.")),
+  });
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Bookings with {expertName}</DialogTitle>
-        </DialogHeader>
-        <div className="flex flex-col gap-3 max-h-96 overflow-y-auto">
-          {bookings.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No bookings found.</p>
-          ) : (
-            bookings.map((b) => {
-              const statusClass = STATUS_BADGE_COLORS[b.status] ?? "bg-muted text-muted-foreground";
-              return (
-                <div key={b.id} className="rounded-lg border p-3 flex flex-col gap-1.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium">{b.requested_date}</span>
-                    <Badge variant="outline" className={`text-xs border ${statusClass}`}>
-                      {b.status_display ?? b.status}
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground">{b.requested_time}</p>
-                  {b.topic && <p className="text-xs text-foreground">{b.topic}</p>}
-                  {b.notes && <p className="text-xs text-muted-foreground">{b.notes}</p>}
-                  {b.status === "cancelled" && b.cancellation_reason && (
-                    <p className="text-xs text-muted-foreground italic">Reason: {b.cancellation_reason}</p>
-                  )}
-                  {b.status === "rejected" &&
-                    ((b as ExpertBooking & { rejection_reason?: string | null }).rejection_reason ||
-                      b.cancellation_reason) && (
-                      <p className="text-xs text-muted-foreground italic">
-                        Reason:{" "}
-                        {(b as ExpertBooking & { rejection_reason?: string | null }).rejection_reason ||
-                          b.cancellation_reason}
-                      </p>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Bookings with {expertName}</DialogTitle>
+          </DialogHeader>
+          <div className="flex max-h-96 flex-col gap-3 overflow-y-auto">
+            {bookings.length === 0 ? (
+              <p className="text-muted-foreground text-sm">No bookings found.</p>
+            ) : (
+              bookings.map((b) => {
+                const statusClass = STATUS_BADGE_COLORS[b.status] ?? "bg-muted text-muted-foreground";
+                return (
+                  <div key={b.id} className="flex flex-col gap-1.5 rounded-lg border p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium text-sm">{b.requested_date}</span>
+                      <Badge variant="outline" className={`border text-xs ${statusClass}`}>
+                        {b.status_display ?? b.status}
+                      </Badge>
+                    </div>
+                    <p className="text-muted-foreground text-xs">
+                      {b.requested_time}
+                      {b.user_name ? ` · Booked by ${b.user_name}` : ""}
+                    </p>
+                    {b.topic && <p className="text-foreground text-xs">{b.topic}</p>}
+                    {b.notes && <p className="text-muted-foreground text-xs">{b.notes}</p>}
+                    {b.status === "cancelled" && b.cancellation_reason && (
+                      <p className="text-muted-foreground text-xs italic">Reason: {b.cancellation_reason}</p>
                     )}
-                </div>
-              );
-            })
+                    {b.status === "rejected" &&
+                      ((b as ExpertBooking & { rejection_reason?: string | null }).rejection_reason ||
+                        b.cancellation_reason) && (
+                        <p className="text-muted-foreground text-xs italic">
+                          Reason:{" "}
+                          {(b as ExpertBooking & { rejection_reason?: string | null }).rejection_reason ||
+                            b.cancellation_reason}
+                        </p>
+                      )}
+                    {b.can_cancel && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="mt-1 w-fit text-destructive hover:text-destructive"
+                        onClick={() => {
+                          setCancelReason("");
+                          setCancelling(b);
+                        }}
+                      >
+                        Cancel booking
+                      </Button>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={cancelling !== null} onOpenChange={(isOpen) => !isOpen && setCancelling(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Cancel this booking?</DialogTitle>
+          </DialogHeader>
+          {cancelling && (
+            <p className="text-muted-foreground text-sm">
+              {cancelling.requested_date} · {cancelling.requested_time} with {expertName}. The slot is released for
+              others to book.
+            </p>
           )}
-        </div>
-      </DialogContent>
-    </Dialog>
+          <Textarea
+            value={cancelReason}
+            onChange={(e) => setCancelReason(e.target.value)}
+            placeholder="Reason (optional) — the expert will see this"
+            rows={3}
+          />
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => setCancelling(null)}>
+              Keep booking
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={cancelMutation.isPending}
+              onClick={() => cancelling && cancelMutation.mutate({ id: cancelling.id, reason: cancelReason.trim() })}
+            >
+              {cancelMutation.isPending ? "Cancelling..." : "Cancel booking"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
@@ -314,10 +384,11 @@ export function ExpertDirectory({ readOnly = false }: { readOnly?: boolean }) {
   const totalCount = expertsPage?.meta?.pagination?.total_count ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
-  // Fetch this FPO's own bookings so we can flag which experts already have one.
+  // Every member's bookings in this FPO, so cards show who already booked whom;
+  // the backend marks which ones the current user may cancel.
   const { data: bookings } = useQuery({
     queryKey: ["fpo-bookings"],
-    queryFn: () => expertsApi.listMyBookings(),
+    queryFn: () => expertsApi.listMyBookings({ scope: "fpo" }),
     enabled: !!isApprovedFpo,
     staleTime: 60 * 1000,
   });

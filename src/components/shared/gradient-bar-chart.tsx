@@ -4,7 +4,14 @@ import { useId } from "react";
 
 import { Bar, BarChart, CartesianGrid, LabelList, XAxis, YAxis } from "recharts";
 
-import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import {
+  type ChartConfig,
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
 import { cn } from "@/lib/utils";
 
 // Rotating palette used to colour each bar. Balanced across the hue wheel and
@@ -120,6 +127,92 @@ export function GradientBarChart({
             style={{ fontSize: 11, fontWeight: 600, fill: "var(--foreground)" }}
           />
         </Bar>
+      </BarChart>
+    </ChartContainer>
+  );
+}
+
+export interface GroupedBarSeries {
+  /** Field on each datum that holds this series' value. */
+  key: string;
+  /** Legend and tooltip name, e.g. "Confirmed". */
+  label: string;
+  /** Any CSS colour; one gradient per series. */
+  color: string;
+}
+
+export type GroupedBarDatum = { label: string } & Record<string, number | string>;
+
+/**
+ * Grouped companion to GradientBarChart: the same glass gradient, rounded tops
+ * and value labels, but with one bar per series side by side in each category
+ * (e.g. confirmed / completed / cancelled per month). Colour follows the series,
+ * so a legend names each one.
+ */
+export function GradientGroupedBarChart({
+  data,
+  series,
+  className,
+}: {
+  data: GroupedBarDatum[];
+  series: GroupedBarSeries[];
+  /** Sizing — h-72 by default. */
+  className?: string;
+}) {
+  const gradientId = useId().replace(/:/g, "");
+  const config: ChartConfig = Object.fromEntries(series.map((s) => [s.key, { label: s.label, color: s.color }]));
+  // Legend and tooltip follow the order the series were given, not recharts' alphabetical default
+  const bySeriesOrder = (item: { dataKey?: unknown }) => series.findIndex((s) => s.key === item.dataKey);
+
+  return (
+    <ChartContainer config={config} className={cn("aspect-auto h-72 w-full", className)}>
+      <BarChart data={data} margin={{ top: 24, right: 12, left: 0, bottom: 4 }} barCategoryGap="22%" barGap={3}>
+        <defs>
+          {series.map((s) => (
+            <linearGradient key={s.key} id={`${gradientId}-${s.key}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" style={{ stopColor: s.color, stopOpacity: 0.95 }} />
+              <stop offset="100%" style={{ stopColor: s.color, stopOpacity: 0.55 }} />
+            </linearGradient>
+          ))}
+        </defs>
+        <CartesianGrid vertical={false} strokeDasharray="4 4" />
+        <XAxis dataKey="label" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} dy={4} />
+        <YAxis allowDecimals={false} width={30} tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+        <ChartTooltip content={<ChartTooltipContent />} itemSorter={bySeriesOrder} />
+        <ChartLegend content={<ChartLegendContent />} itemSorter={bySeriesOrder} />
+        {series.map((s) => (
+          // `fill` feeds the legend swatch and tooltip dot; the drawn bar uses the gradient
+          <Bar
+            key={s.key}
+            dataKey={s.key}
+            fill={s.color}
+            isAnimationActive
+            animationDuration={650}
+            shape={(props: unknown) => {
+              const p = props as { x: number; y: number; width: number; height: number };
+              // Shrink the corner radius on very short bars so they stay rectangular
+              const r = Math.min(4, p.height / 2);
+              return (
+                <rect
+                  x={p.x}
+                  y={p.y}
+                  width={p.width}
+                  height={p.height}
+                  rx={r}
+                  ry={r}
+                  fill={`url(#${gradientId}-${s.key})`}
+                />
+              );
+            }}
+          >
+            <LabelList
+              dataKey={s.key}
+              position="top"
+              formatter={(v: unknown) => (Number(v) > 0 ? String(v) : "")}
+              style={{ fontSize: 10, fontWeight: 600, fill: "var(--foreground)" }}
+            />
+          </Bar>
+        ))}
       </BarChart>
     </ChartContainer>
   );

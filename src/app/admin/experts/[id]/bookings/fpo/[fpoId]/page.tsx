@@ -28,7 +28,7 @@ const STATUS_COLORS: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-800",
   confirmed: "bg-green-100 text-green-800",
   rejected: "bg-red-100 text-red-800",
-  cancelled: "bg-gray-100 text-gray-800",
+  cancelled: "bg-red-100 text-red-800",
   completed: "bg-blue-100 text-blue-800",
 };
 
@@ -205,6 +205,12 @@ export default function AdminExpertFpoBookingsPage() {
                     )}
                     {b.time_slot_display && <span className="text-muted-foreground"> · {b.time_slot_display}</span>}
                   </p>
+                  {b.user_name && (
+                    <p className="text-sm">
+                      {t.field_booked_by ?? "Booked by"}: {b.user_name}
+                      {b.user_email && <span className="text-muted-foreground"> · {b.user_email}</span>}
+                    </p>
+                  )}
                   {b.topic && (
                     <p className="text-sm">
                       {t.field_topic ?? "Topic"}: {b.topic}
