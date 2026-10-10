@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import { useRouter } from "next/navigation";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -10,8 +12,8 @@ import { toast } from "sonner";
 import { apiErrorMessage, type CbboTrainingSession, cbboTrainingApi } from "@/app/cbbo/_api/training";
 import { TextCell } from "@/components/data-table/cell-helpers";
 import { RowActions } from "@/components/data-table/row-actions";
+import { CancelSessionDialog } from "@/components/training/cancel-session-dialog";
 import { Badge } from "@/components/ui/badge";
-import { useConfirmStore } from "@/stores/confirm-store";
 
 type T = Record<string, string>;
 
@@ -28,53 +30,53 @@ function TrainingActions({
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const confirm = useConfirmStore((s) => s.confirm);
+  const [cancelOpen, setCancelOpen] = useState(false);
 
-  const deleteMutation = useMutation({
-    mutationFn: () => cbboTrainingApi.remove(session.id),
+  // Cancelling soft-deletes the session and tells the FPO's members why.
+  const cancelMutation = useMutation({
+    mutationFn: (reason: string) => cbboTrainingApi.cancel(session.id, reason),
     onSuccess: () => {
-      toast.success(t.toast_deleted ?? "Training session deleted");
+      toast.success(t.toast_cancelled ?? "Training session cancelled. The FPO has been notified.");
+      setCancelOpen(false);
       queryClient.invalidateQueries({ queryKey: ["cbbo-training-sessions"] });
     },
     onError: (error: unknown) => {
-      toast.error(apiErrorMessage(error, tCommon.delete_failed ?? "Failed to delete session"));
+      toast.error(apiErrorMessage(error, t.cancel_failed ?? "Failed to cancel session"));
     },
   });
 
-  function handleDelete() {
-    confirm({
-      title: t.delete_confirm_title ?? "Delete Training Session",
-      description: (
-        t.delete_confirm_desc ?? 'Are you sure you want to delete "{topic}"? This action cannot be undone.'
-      ).replace("{topic}", session.topic),
-      confirmLabel: tCommon.delete_btn ?? "Delete",
-      confirmingLabel: tCommon.deleting ?? "Deleting...",
-      variant: "destructive",
-      onConfirm: () => deleteMutation.mutateAsync(),
-    });
-  }
-
   return (
-    <RowActions
-      actions={[
-        { label: t.action_view ?? tCommon.view ?? "View", onClick: () => onView(session) },
-        ...(session.can_edit
-          ? [
-              {
-                label: t.action_edit ?? tCommon.edit ?? "Edit",
-                onClick: () => router.push(`/cbbo/training/${session.id}`),
-                separator: true,
-              },
-              {
-                label: t.action_delete ?? tCommon.delete_btn ?? "Delete",
-                onClick: handleDelete,
-                destructive: true,
-                disabled: deleteMutation.isPending,
-              },
-            ]
-          : []),
-      ]}
-    />
+    <>
+      <RowActions
+        actions={[
+          { label: t.action_view ?? tCommon.view ?? "View", onClick: () => onView(session) },
+          ...(session.can_edit
+            ? [
+                {
+                  label: t.action_edit ?? tCommon.edit ?? "Edit",
+                  onClick: () => router.push(`/cbbo/training/${session.id}`),
+                  separator: true,
+                },
+                {
+                  label: t.action_cancel ?? "Cancel session",
+                  onClick: () => setCancelOpen(true),
+                  destructive: true,
+                  disabled: cancelMutation.isPending,
+                },
+              ]
+            : []),
+        ]}
+      />
+      <CancelSessionDialog
+        open={cancelOpen}
+        onOpenChange={setCancelOpen}
+        topic={session.topic}
+        fpoName={session.fpo_name}
+        isPending={cancelMutation.isPending}
+        onConfirm={(reason) => cancelMutation.mutate(reason)}
+        t={t}
+      />
+    </>
   );
 }
 

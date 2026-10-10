@@ -28,7 +28,7 @@ export interface ExpertBooking {
   /** The FPO member who made the booking; null on rows older than per-user booking. */
   user: number | null;
   user_name: string | null;
-  /** Set by the backend for the current user: their own booking, or any in the FPO they own. */
+  /** Set by the backend: true only for the current user's own booking (the FPO owner also owns legacy rows with no booker). */
   can_cancel: boolean;
   requested_date: string;
   requested_time: string;
@@ -46,6 +46,8 @@ export const expertsApi = {
     category?: string;
     district?: string;
     search?: string;
+    /** `booked`: experts I have booked come first, soonest upcoming appointment first. */
+    sort?: "booked";
     page?: number;
     page_size?: number;
   }): Promise<PaginatedResponse<FpoExpert>> =>
@@ -70,7 +72,7 @@ export const expertsApi = {
       .post<{ status: string; data: ExpertBooking }>(`/experts/bookings/${bookingId}/cancel/`, { reason })
       .then((r) => r.data.data),
 
-  /** My own bookings by default; `scope: "fpo"` returns every member's bookings in my FPO. */
-  listMyBookings: (params?: { expert?: number; status?: string; scope?: "mine" | "fpo" }): Promise<ExpertBooking[]> =>
+  /** My own bookings only; the FPO owner also gets legacy rows with no booker. */
+  listMyBookings: (params?: { expert?: number; status?: string }): Promise<ExpertBooking[]> =>
     api.get<{ status: string; data: ExpertBooking[] }>("/experts/bookings/", { params }).then((r) => r.data.data),
 };

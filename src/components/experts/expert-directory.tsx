@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarClock, ChevronLeft, ChevronRight, MapPin, Search, X } from "lucide-react";
+import { CalendarCheck, CalendarClock, ChevronLeft, ChevronRight, MapPin, Search, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { fpoDashboardApi } from "@/app/fpo/_api/dashboard";
@@ -26,6 +26,8 @@ import { DISTRICT_OPTIONS, type FpoExpert } from "@/types/fpo";
 type T = Record<string, string>;
 
 const PAGE_SIZE = 12;
+// Keep in step with CANCEL_REASON_MAX_CHARS in the backend booking views.
+const CANCEL_REASON_MAX_CHARS = 300;
 
 const EXPERT_CATEGORIES = [
   { value: "", label: "All Experts" },
@@ -49,6 +51,26 @@ const STATUS_BADGE_COLORS: Record<string, string> = {
   cancelled: "bg-red-100 text-red-700 border-red-200",
   rejected: "bg-red-100 text-red-700 border-red-200",
 };
+
+// Order of status groups in the "View Bookings" dialog. Live appointments
+// first (soonest upcoming at the top), then history, most recent first.
+const BOOKING_STATUS_ORDER: Record<ExpertBooking["status"], number> = {
+  confirmed: 0,
+  pending: 1,
+  cancelled: 2,
+  completed: 3,
+  rejected: 4,
+};
+
+function sortBookingsForDisplay(bookings: ExpertBooking[]): ExpertBooking[] {
+  const when = (b: ExpertBooking) => `${b.requested_date} ${b.requested_time}`;
+  return [...bookings].sort((a, b) => {
+    const byStatus = (BOOKING_STATUS_ORDER[a.status] ?? 99) - (BOOKING_STATUS_ORDER[b.status] ?? 99);
+    if (byStatus !== 0) return byStatus;
+    const live = a.status === "confirmed" || a.status === "pending";
+    return live ? when(a).localeCompare(when(b)) : when(b).localeCompare(when(a));
+  });
+}
 
 const DISTRICT_SELECT_OPTIONS = [
   { value: "", label: "All Districts" },
@@ -195,6 +217,7 @@ function ExpertBookingsListDialog({
   const queryClient = useQueryClient();
   const [cancelling, setCancelling] = useState<ExpertBooking | null>(null);
   const [cancelReason, setCancelReason] = useState("");
+  const sortedBookings = useMemo(() => sortBookingsForDisplay(bookings), [bookings]);
 
   const cancelMutation = useMutation({
     mutationFn: ({ id, reason }: { id: number; reason: string }) => expertsApi.cancelBooking(id, reason),
@@ -212,15 +235,15 @@ function ExpertBookingsListDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="flex max-h-[85vh] flex-col supports-[height:100dvh]:max-h-[calc(100dvh-2rem)] sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Bookings with {expertName}</DialogTitle>
           </DialogHeader>
-          <div className="flex max-h-96 flex-col gap-3 overflow-y-auto">
-            {bookings.length === 0 ? (
+          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
+            {sortedBookings.length === 0 ? (
               <p className="text-muted-foreground text-sm">No bookings found.</p>
             ) : (
-              bookings.map((b) => {
+              sortedBookings.map((b) => {
                 const statusClass = STATUS_BADGE_COLORS[b.status] ?? "bg-muted text-muted-foreground";
                 return (
                   <div key={b.id} className="flex flex-col gap-1.5 rounded-lg border p-3">
@@ -230,10 +253,7 @@ function ExpertBookingsListDialog({
                         {b.status_display ?? b.status}
                       </Badge>
                     </div>
-                    <p className="text-muted-foreground text-xs">
-                      {b.requested_time}
-                      {b.user_name ? ` · Booked by ${b.user_name}` : ""}
-                    </p>
+                    <p className="text-muted-foreground text-xs">{b.requested_time}</p>
                     {b.topic && <p className="text-foreground text-xs">{b.topic}</p>}
                     {b.notes && <p className="text-muted-foreground text-xs">{b.notes}</p>}
                     {b.status === "cancelled" && b.cancellation_reason && (
@@ -270,7 +290,7 @@ function ExpertBookingsListDialog({
       </Dialog>
 
       <Dialog open={cancelling !== null} onOpenChange={(isOpen) => !isOpen && setCancelling(null)}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-h-[85vh] overflow-y-auto supports-[height:100dvh]:max-h-[calc(100dvh-2rem)] sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Cancel this booking?</DialogTitle>
           </DialogHeader>
@@ -280,12 +300,19 @@ function ExpertBookingsListDialog({
               others to book.
             </p>
           )}
-          <Textarea
-            value={cancelReason}
-            onChange={(e) => setCancelReason(e.target.value)}
-            placeholder="Reason (optional) — the expert will see this"
-            rows={3}
-          />
+          <div className="flex flex-col gap-1">
+            <Textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="Reason (optional) — the expert will see this"
+              rows={3}
+              maxLength={CANCEL_REASON_MAX_CHARS}
+              className="resize-none"
+            />
+            <p className="text-right text-muted-foreground text-xs">
+              {cancelReason.length}/{CANCEL_REASON_MAX_CHARS}
+            </p>
+          </div>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => setCancelling(null)}>
               Keep booking
@@ -315,6 +342,8 @@ export function ExpertDirectory({ readOnly = false }: { readOnly?: boolean }) {
   const [t, setT] = useState<T>({});
   const [activeCategory, setActiveCategory] = useState("");
   const [district, setDistrict] = useState("");
+  // Server-side sort: experts I have booked come first, soonest upcoming appointment first.
+  const [bookedFirst, setBookedFirst] = useState(false);
   const [translationsLoading, setTranslationsLoading] = useState(true);
 
   useEffect(() => {
@@ -362,18 +391,19 @@ export function ExpertDirectory({ readOnly = false }: { readOnly?: boolean }) {
 
   // The page belongs to the filter set it was chosen under, so any filter
   // change falls back to page 1 without an extra request for a stale page.
-  const filterKey = `${activeCategory}|${district}|${search}`;
+  const filterKey = `${activeCategory}|${district}|${search}|${bookedFirst}`;
   const [pageState, setPageState] = useState({ filterKey, page: 1 });
   const page = pageState.filterKey === filterKey ? pageState.page : 1;
   const setPage = (next: number) => setPageState({ filterKey, page: next });
 
   const { data: expertsPage, isLoading } = useQuery({
-    queryKey: ["fpo-experts", activeCategory, district, search, page],
+    queryKey: ["fpo-experts", activeCategory, district, search, bookedFirst, page],
     queryFn: () =>
       expertsApi.list({
         ...(activeCategory ? { category: activeCategory } : {}),
         ...(district ? { district } : {}),
         ...(search ? { search } : {}),
+        ...(bookedFirst ? { sort: "booked" as const } : {}),
         page,
         page_size: PAGE_SIZE,
       }),
@@ -384,11 +414,11 @@ export function ExpertDirectory({ readOnly = false }: { readOnly?: boolean }) {
   const totalCount = expertsPage?.meta?.pagination?.total_count ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
-  // Every member's bookings in this FPO, so cards show who already booked whom;
-  // the backend marks which ones the current user may cancel.
+  // Only the current user's own bookings (the FPO owner also gets legacy rows
+  // with no booker), so cards and the dialog never show other members' bookings.
   const { data: bookings } = useQuery({
     queryKey: ["fpo-bookings"],
-    queryFn: () => expertsApi.listMyBookings({ scope: "fpo" }),
+    queryFn: () => expertsApi.listMyBookings(),
     enabled: !!isApprovedFpo,
     staleTime: 60 * 1000,
   });
@@ -522,6 +552,19 @@ export function ExpertDirectory({ readOnly = false }: { readOnly?: boolean }) {
               </button>
             )}
           </div>
+          {!readOnly && isApprovedFpo && (
+            <Button
+              type="button"
+              size="sm"
+              variant={bookedFirst ? "default" : "outline"}
+              className="h-8 gap-1.5 text-xs sm:shrink-0"
+              aria-pressed={bookedFirst}
+              onClick={() => setBookedFirst((v) => !v)}
+            >
+              <CalendarCheck className="h-3.5 w-3.5" />
+              {t.btn_booked_first ?? "Booked experts first"}
+            </Button>
+          )}
         </div>
       </div>
 

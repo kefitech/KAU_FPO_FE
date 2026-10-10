@@ -23,6 +23,9 @@ import {
 } from "@/lib/validations/training-session";
 import { useLocaleStore } from "@/stores/locale-store";
 
+// Same cap as the backend serializer (TOPIC_MAX_CHARS); the column allows 300.
+const TOPIC_MAX_CHARS = 200;
+
 type T = Record<string, string>;
 
 export default function EditCbboTrainingSessionPage() {
@@ -167,7 +170,7 @@ export default function EditCbboTrainingSessionPage() {
                 <Input
                   id="topic"
                   value={topic}
-                  maxLength={200}
+                  maxLength={TOPIC_MAX_CHARS}
                   aria-invalid={!!showError("topic")}
                   onChange={(e) => {
                     setTopic(e.target.value);
@@ -176,6 +179,9 @@ export default function EditCbboTrainingSessionPage() {
                   onBlur={() => touch("topic")}
                   placeholder={t.placeholder_topic ?? "e.g. Organic Farming Practices"}
                 />
+                <p className="text-right text-muted-foreground text-xs">
+                  {topic.length}/{TOPIC_MAX_CHARS}
+                </p>
                 {errorText(showError("topic"))}
               </Field>
               <Field>

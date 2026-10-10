@@ -11,6 +11,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 
+// Keep in step with the backend CreateBookingSerializer `notes` max_length.
+const NOTES_MAX_CHARS = 1000;
+
 function toLocalISODate(date: Date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -127,7 +130,7 @@ export function ExpertBookingDialog({ open, onOpenChange, expertId, expertName }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-h-[85vh] supports-[height:100dvh]:max-h-[calc(100dvh-2rem)] max-w-lg overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Book an appointment with {expertName}</DialogTitle>
         </DialogHeader>
@@ -219,8 +222,20 @@ export function ExpertBookingDialog({ open, onOpenChange, expertId, expertName }
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="font-medium text-sm" htmlFor="booking-notes">Notes (optional)</label>
-            <Textarea id="booking-notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Any details the expert should know" />
+            <label className="font-medium text-sm" htmlFor="booking-notes">
+              Notes (optional)
+            </label>
+            <Textarea
+              id="booking-notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Any details the expert should know"
+              maxLength={NOTES_MAX_CHARS}
+              className="h-28 resize-none overflow-y-auto overscroll-y-contain"
+            />
+            <p className="text-right text-muted-foreground text-xs">
+              {notes.length}/{NOTES_MAX_CHARS}
+            </p>
           </div>
         </div>
 

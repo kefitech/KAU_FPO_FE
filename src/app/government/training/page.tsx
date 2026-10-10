@@ -4,18 +4,21 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
+import { toast } from "sonner";
 
 import { govtTrainingApi } from "@/app/government/_api/training";
 import { DataTable } from "@/components/data-table";
 import type { FilterConfig } from "@/components/data-table/data-table-toolbar";
 import { OpenSessionFromUrl } from "@/components/shared/open-session-from-url";
 import { TrainingCommentList } from "@/components/shared/training-comment-list";
+import { CancelSessionDialog } from "@/components/training/cancel-session-dialog";
 import { Button } from "@/components/ui/button";
 import { ViewSheet } from "@/components/ui/view-sheet";
 import { translationsApi } from "@/lib/api/translations";
 import { escapeHtml } from "@/lib/escape-html";
+import { getErrorMessage } from "@/lib/get-error-message";
 import { useLocaleStore } from "@/stores/locale-store";
 import type { GovtTrainingSession, GovtTrainingSessionDetail } from "@/types/government";
 
@@ -36,6 +39,21 @@ export default function GovernmentTrainingPage() {
   }>({
     open: false,
     session: null,
+  });
+  const [cancelOpen, setCancelOpen] = useState(false);
+
+  // Cancel from the view sheet: soft-deletes the session and tells the FPO's members why.
+  const cancelMutation = useMutation({
+    mutationFn: ({ id, reason }: { id: number; reason: string }) => govtTrainingApi.cancel(id, reason),
+    onSuccess: () => {
+      toast.success(t.toast_cancelled ?? "Training session cancelled. The FPO has been notified.");
+      setCancelOpen(false);
+      setSheet({ open: false, session: null });
+      queryClient.invalidateQueries({ queryKey: ["government-training-sessions"] });
+    },
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error, t.cancel_failed ?? "Failed to cancel session"));
+    },
   });
 
   useEffect(() => {
@@ -148,46 +166,63 @@ export default function GovernmentTrainingPage() {
       </Suspense>
 
       {s && (
-        <ViewSheet
-          open={sheet.open}
-          onOpenChange={(open) => setSheet((prev) => ({ ...prev, open }))}
-          title={escapeHtml(s.topic)}
-          actions={
-            s.can_edit
-              ? [
-                  {
-                    label: t.btn_edit_session ?? "Edit Session",
-                    onClick: () => router.push(`/government/training/${s.id}`),
-                  },
-                ]
-              : []
-          }
-          fields={[
-            { type: "section", label: t.section_session ?? "Session" },
-            { label: t.field_fpo ?? "FPO", value: s.fpo_name },
-            { label: t.field_trainer_name ?? "Trainer", value: s.trainer_name || "—" },
-            { label: t.field_district ?? "District", value: t[`district_${s.district}`] ?? s.district },
-            { label: t.field_date ?? "Date", type: "date", value: s.date },
-            { label: t.field_duration ?? "Duration", value: `${s.duration_hours}h` },
-            { label: t.field_venue ?? "Venue", value: s.venue || "—" },
-            { label: t.field_participants ?? "Participants", value: String(s.participants_count) },
-            { type: "section", label: t.section_created ?? "Created By" },
-            { label: t.field_created_by ?? "Official", value: s.created_by_name },
-            { type: "section", label: t.section_comments ?? "KAU Comments" },
-            {
-              label: t.col_comments ?? "Comments",
-              type: "node",
-              node: (
-                <TrainingCommentList
-                  comments={s.comments ?? []}
-                  commentByLabel={t.comment_by ?? "Comment by"}
-                  editedLabel={t.comment_edited ?? "edited"}
-                  emptyLabel={t.comments_empty ?? "No comments from KAU yet."}
-                />
-              ),
-            },
-          ]}
-        />
+        <>
+          <ViewSheet
+            open={sheet.open}
+            onOpenChange={(open) => setSheet((prev) => ({ ...prev, open }))}
+            title={escapeHtml(s.topic)}
+            actions={
+              s.can_edit
+                ? [
+                    {
+                      label: t.btn_edit_session ?? "Edit Session",
+                      onClick: () => router.push(`/government/training/${s.id}`),
+                    },
+                    {
+                      label: t.action_cancel ?? "Cancel session",
+                      onClick: () => setCancelOpen(true),
+                      variant: "destructive" as const,
+                      disabled: cancelMutation.isPending,
+                    },
+                  ]
+                : []
+            }
+            fields={[
+              { type: "section", label: t.section_session ?? "Session" },
+              { label: t.field_fpo ?? "FPO", value: s.fpo_name },
+              { label: t.field_trainer_name ?? "Trainer", value: s.trainer_name || "—" },
+              { label: t.field_district ?? "District", value: t[`district_${s.district}`] ?? s.district },
+              { label: t.field_date ?? "Date", type: "date", value: s.date },
+              { label: t.field_duration ?? "Duration", value: `${s.duration_hours}h` },
+              { label: t.field_venue ?? "Venue", value: s.venue || "—" },
+              { label: t.field_participants ?? "Participants", value: String(s.participants_count) },
+              { type: "section", label: t.section_created ?? "Created By" },
+              { label: t.field_created_by ?? "Official", value: s.created_by_name },
+              { type: "section", label: t.section_comments ?? "KAU Comments" },
+              {
+                label: t.col_comments ?? "Comments",
+                type: "node",
+                node: (
+                  <TrainingCommentList
+                    comments={s.comments ?? []}
+                    commentByLabel={t.comment_by ?? "Comment by"}
+                    editedLabel={t.comment_edited ?? "edited"}
+                    emptyLabel={t.comments_empty ?? "No comments from KAU yet."}
+                  />
+                ),
+              },
+            ]}
+          />
+          <CancelSessionDialog
+            open={cancelOpen}
+            onOpenChange={setCancelOpen}
+            topic={s.topic}
+            fpoName={s.fpo_name}
+            isPending={cancelMutation.isPending}
+            onConfirm={(reason) => cancelMutation.mutate({ id: s.id, reason })}
+            t={t}
+          />
+        </>
       )}
     </div>
   );
