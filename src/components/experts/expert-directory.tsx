@@ -342,8 +342,8 @@ export function ExpertDirectory({ readOnly = false }: { readOnly?: boolean }) {
   const [t, setT] = useState<T>({});
   const [activeCategory, setActiveCategory] = useState("");
   const [district, setDistrict] = useState("");
-  // Server-side sort: experts I have booked come first, soonest upcoming appointment first.
-  const [bookedFirst, setBookedFirst] = useState(false);
+  // "View bookings": list only the experts I have booked, soonest upcoming appointment first.
+  const [viewBookings, setViewBookings] = useState(false);
   const [translationsLoading, setTranslationsLoading] = useState(true);
 
   useEffect(() => {
@@ -391,19 +391,19 @@ export function ExpertDirectory({ readOnly = false }: { readOnly?: boolean }) {
 
   // The page belongs to the filter set it was chosen under, so any filter
   // change falls back to page 1 without an extra request for a stale page.
-  const filterKey = `${activeCategory}|${district}|${search}|${bookedFirst}`;
+  const filterKey = `${activeCategory}|${district}|${search}|${viewBookings}`;
   const [pageState, setPageState] = useState({ filterKey, page: 1 });
   const page = pageState.filterKey === filterKey ? pageState.page : 1;
   const setPage = (next: number) => setPageState({ filterKey, page: next });
 
   const { data: expertsPage, isLoading } = useQuery({
-    queryKey: ["fpo-experts", activeCategory, district, search, bookedFirst, page],
+    queryKey: ["fpo-experts", activeCategory, district, search, viewBookings, page],
     queryFn: () =>
       expertsApi.list({
         ...(activeCategory ? { category: activeCategory } : {}),
         ...(district ? { district } : {}),
         ...(search ? { search } : {}),
-        ...(bookedFirst ? { sort: "booked" as const } : {}),
+        ...(viewBookings ? { booked: true } : {}),
         page,
         page_size: PAGE_SIZE,
       }),
@@ -556,13 +556,13 @@ export function ExpertDirectory({ readOnly = false }: { readOnly?: boolean }) {
             <Button
               type="button"
               size="sm"
-              variant={bookedFirst ? "default" : "outline"}
+              variant={viewBookings ? "default" : "outline"}
               className="h-8 gap-1.5 text-xs sm:shrink-0"
-              aria-pressed={bookedFirst}
-              onClick={() => setBookedFirst((v) => !v)}
+              aria-pressed={viewBookings}
+              onClick={() => setViewBookings((v) => !v)}
             >
               <CalendarCheck className="h-3.5 w-3.5" />
-              {t.btn_booked_first ?? "Booked experts first"}
+              {t.btn_view_bookings ?? "View bookings"}
             </Button>
           )}
         </div>
@@ -579,9 +579,11 @@ export function ExpertDirectory({ readOnly = false }: { readOnly?: boolean }) {
       ) : !experts || experts.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center gap-2">
           <p className="text-muted-foreground text-sm">
-            {activeCategory || district || search
-              ? (t.empty_filtered ?? "No experts match your search. Try adjusting your filters.")
-              : (t.empty_state ?? "No experts found.")}
+            {viewBookings && !(activeCategory || district || search)
+              ? (t.empty_bookings ?? "You have not booked any experts yet.")
+              : activeCategory || district || search
+                ? (t.empty_filtered ?? "No experts match your search. Try adjusting your filters.")
+                : (t.empty_state ?? "No experts found.")}
           </p>
           {(activeCategory || district || search) && (
             <Button

@@ -131,7 +131,13 @@ export default function FpoTrainingSessionsPage() {
         <p className="mt-0.5 text-muted-foreground text-sm">Training sessions scheduled for your FPO</p>
       </div>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <Input
+          value={search}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          placeholder="Search by topic, trainer or venue..."
+          className="w-full sm:w-72"
+        />
         <div className="flex flex-wrap gap-2">
           {STATUS_FILTERS.map((f) => (
             <button
@@ -149,12 +155,6 @@ export default function FpoTrainingSessionsPage() {
             </button>
           ))}
         </div>
-        <Input
-          value={search}
-          onChange={(e) => handleSearchChange(e.target.value)}
-          placeholder="Search by topic, trainer or venue..."
-          className="max-w-sm"
-        />
       </div>
 
       {isLoading && (
