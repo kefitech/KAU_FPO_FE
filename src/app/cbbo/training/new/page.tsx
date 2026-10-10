@@ -18,6 +18,9 @@ import { Input } from "@/components/ui/input";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 
+// Same cap as the backend serializer (TOPIC_MAX_CHARS); the column allows 300.
+const TOPIC_MAX_CHARS = 200;
+
 type T = Record<string, string>;
 
 // Labels are shared with the government form.
@@ -104,7 +107,7 @@ export default function NewCbboTrainingSessionPage() {
       e.topic = t.err_topic_required ?? "Topic is required";
     } else if (tp.length < 3) {
       e.topic = t.err_topic_min ?? "Topic must be at least 3 characters";
-    } else if (tp.length > 200) {
+    } else if (tp.length > TOPIC_MAX_CHARS) {
       e.topic = t.err_topic_max ?? "Topic must be under 200 characters";
     } else if (!HAS_LETTER.test(tp)) {
       e.topic = t.err_topic_invalid ?? "Enter a valid topic";
@@ -273,7 +276,7 @@ export default function NewCbboTrainingSessionPage() {
                 <Input
                   id="topic"
                   value={topic}
-                  maxLength={200}
+                  maxLength={TOPIC_MAX_CHARS}
                   aria-invalid={!!showError("topic")}
                   onChange={(e) => {
                     setTopic(e.target.value);
@@ -282,6 +285,9 @@ export default function NewCbboTrainingSessionPage() {
                   onBlur={() => touch("topic")}
                   placeholder={t.placeholder_topic ?? "e.g. Organic Farming Practices"}
                 />
+                <p className="text-right text-muted-foreground text-xs">
+                  {topic.length}/{TOPIC_MAX_CHARS}
+                </p>
                 {errorText(showError("topic"))}
               </Field>
 

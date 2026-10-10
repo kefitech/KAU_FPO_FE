@@ -62,6 +62,9 @@ export const cbboTrainingApi = {
   update: (id: number, payload: Partial<Omit<CbboTrainingSessionPayload, "fpo_application_ids">>) =>
     api.patch<Wrapped<CbboTrainingSessionDetail>>(`${BASE}${id}/`, payload).then(unwrap),
   remove: (id: number) => api.delete<Wrapped<null>>(`${BASE}${id}/`).then((r) => r.data),
+  /** Cancel my own session; the FPO and its team are notified. */
+  cancel: (id: number, reason: string) =>
+    api.post<Wrapped<null>>(`${BASE}${id}/cancel/`, { reason }).then((r) => r.data),
   /** clears the unread KAU-comment marker for the current user */
   markCommentsRead: (id: number) => api.post(`${BASE}${id}/comments/read/`).then(() => undefined),
   setAttendance: (id: number, attendance: { member_name: string; attended: boolean }[]) =>
