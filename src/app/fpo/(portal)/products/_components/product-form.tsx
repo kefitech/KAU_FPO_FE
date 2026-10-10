@@ -28,6 +28,13 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  cleanQuantityInput,
+  isCountUnit,
+  MAX_STOCK_QUANTITY,
+  MAX_STOCK_QUANTITY_LABEL,
+  toWholeQuantity,
+} from "@/lib/validations/stock-quantity";
 import { useLocaleStore } from "@/stores/locale-store";
 import type { CreateProductPayload, Product, ProductUnit } from "@/types/fpo";
 import { UNIT_OPTIONS } from "@/types/fpo";
@@ -38,7 +45,7 @@ type T = Record<string, string>;
 
 const NAME_PATTERN = /^[A-Za-z][A-Za-z\s'-]*$/;
 
-function digitLimitRefinement(maxIntDigits: number, maxDecimalDigits: number, label: string) {
+function digitLimitRefinement(maxIntDigits: number, maxDecimalDigits: number, label: string, path: string[] = []) {
   return (val: string, ctx: z.RefinementCtx) => {
     if (!val) return;
     const hasDecimal = val.includes(".");
@@ -46,6 +53,7 @@ function digitLimitRefinement(maxIntDigits: number, maxDecimalDigits: number, la
     if (intPart && intPart.replace(/^0+(?=\d)/, "").length > maxIntDigits) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
+        path,
         message: hasDecimal
           ? `${label} can have at most ${maxIntDigits} digits before the decimal point`
           : `${label} can have at most ${maxIntDigits} digits`,
@@ -54,6 +62,7 @@ function digitLimitRefinement(maxIntDigits: number, maxDecimalDigits: number, la
     if (decPart !== undefined && decPart.length > maxDecimalDigits) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
+        path,
         message: `${label} can have at most ${maxDecimalDigits} digits after the decimal point`,
       });
     }
@@ -128,8 +137,22 @@ const schema = z
           path: ["quantity"],
           message: "Quantity must be greater than 0",
         });
+      } else if (n > MAX_STOCK_QUANTITY) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["quantity"],
+          message: `Quantity cannot exceed ${MAX_STOCK_QUANTITY_LABEL}`,
+        });
       }
-      digitLimitRefinement(10, 2, "Quantity")(data.quantity, { ...ctx, path: ["quantity"] } as z.RefinementCtx);
+      // Count units (pieces) are whole numbers — no fractional quantities.
+      if (isCountUnit(data.unit) && !Number.isInteger(n)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["quantity"],
+          message: "Quantity must be a whole number when the unit is Piece",
+        });
+      }
+      digitLimitRefinement(10, 2, "Quantity", ["quantity"])(data.quantity, ctx);
     }
     if (!data.unit) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["unit"], message: "Unit is required" });
@@ -141,10 +164,7 @@ const schema = z
         message: "Price per unit is required",
       });
     } else {
-      digitLimitRefinement(8, 2, "Price per unit")(data.price_per_unit, {
-        ...ctx,
-        path: ["price_per_unit"],
-      } as z.RefinementCtx);
+      digitLimitRefinement(8, 2, "Price per unit", ["price_per_unit"])(data.price_per_unit, ctx);
     }
     if (!data.available_from) {
       ctx.addIssue({
@@ -248,6 +268,7 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
 
   const {
     control,
+    getValues,
     handleSubmit,
     reset,
     setError,
@@ -260,6 +281,7 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
   });
 
   const includeInitialBatch = watch("include_initial_batch");
+  const selectedUnit = watch("unit");
 
   useEffect(() => {
     if (product) {
@@ -592,12 +614,9 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
                             </FieldLabel>
                             <Input
                               id="product-quantity"
-                              inputMode="decimal"
+                              inputMode={isCountUnit(selectedUnit) ? "numeric" : "decimal"}
                               {...field}
-                              onChange={(e) => {
-                                const cleaned = e.target.value.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1");
-                                field.onChange(cleaned);
-                              }}
+                              onChange={(e) => field.onChange(cleanQuantityInput(e.target.value, selectedUnit))}
                             />
                             {errors.quantity && <FieldError errors={[errors.quantity]} />}
                           </Field>
@@ -609,7 +628,17 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
                         render={({ field }) => (
                           <Field>
                             <FieldLabel htmlFor="product-unit">{t.unit_label ?? "Unit"}</FieldLabel>
-                            <Select value={field.value} onValueChange={field.onChange}>
+                            <Select
+                              value={field.value}
+                              onValueChange={(value) => {
+                                field.onChange(value);
+                                // Switching to a count unit drops any decimals already typed in Quantity.
+                                const quantity = getValues("quantity") ?? "";
+                                if (isCountUnit(value) && quantity.includes(".")) {
+                                  setValue("quantity", toWholeQuantity(quantity), { shouldValidate: true });
+                                }
+                              }}
+                            >
                               <SelectTrigger id="product-unit">
                                 <SelectValue />
                               </SelectTrigger>

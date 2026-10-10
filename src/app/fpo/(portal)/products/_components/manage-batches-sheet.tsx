@@ -17,12 +17,19 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { getErrorMessage } from "@/lib/get-error-message";
 import { useConfirmStore } from "@/stores/confirm-store";
 import type { Product, ProductStatus, ProductStock } from "@/types/fpo";
 
-import { BatchForm, batchFromStock, type BatchFormValues, toCreatePayload } from "./batch-form";
+import { BatchForm, type BatchFormValues, batchFromStock, toCreatePayload } from "./batch-form";
 
 type T = Record<string, string>;
+
+/** Field-level validation errors from the API, or null when the failure wasn't about a field. */
+function fieldErrorsOf(err: unknown): Record<string, string[]> | null {
+  const errors = (err as { data?: { errors?: Record<string, string[]> } } | undefined)?.data?.errors;
+  return errors && Object.keys(errors).length > 0 ? errors : null;
+}
 
 function statusClasses(status: ProductStatus): string {
   switch (status) {
@@ -70,6 +77,11 @@ export function ManageBatchesSheet({ product, open, onOpenChange, t = {}, tCommo
   const queryClient = useQueryClient();
   const confirm = useConfirmStore((s) => s.confirm);
   const [formState, setFormState] = useState<FormState>({ mode: "list" });
+  const [serverErrors, setServerErrors] = useState<Record<string, string[]> | null>(null);
+  const openForm = (state: FormState) => {
+    setServerErrors(null);
+    setFormState(state);
+  };
   const [selectedDraftIds, setSelectedDraftIds] = useState<Set<number>>(new Set());
 
   // Draggable sheet width — the FPO can grab the left edge and widen the
@@ -153,7 +165,11 @@ export function ManageBatchesSheet({ product, open, onOpenChange, t = {}, tCommo
       setFormState({ mode: "list" });
       invalidate();
     },
-    onError: () => toast.error(t.err_batch_create_failed ?? "Failed to add batch"),
+    onError: (err) => {
+      const fieldErrors = fieldErrorsOf(err);
+      setServerErrors(fieldErrors);
+      if (!fieldErrors) toast.error(getErrorMessage(err, t.err_batch_create_failed ?? "Failed to add batch"));
+    },
   });
 
   const updateMutation = useMutation({
@@ -164,7 +180,13 @@ export function ManageBatchesSheet({ product, open, onOpenChange, t = {}, tCommo
       setFormState({ mode: "list" });
       invalidate();
     },
-    onError: () => toast.error(t.err_batch_update_failed ?? "Only draft or active batches can be edited"),
+    onError: (err) => {
+      const fieldErrors = fieldErrorsOf(err);
+      setServerErrors(fieldErrors);
+      if (!fieldErrors) {
+        toast.error(getErrorMessage(err, t.err_batch_update_failed ?? "Only draft or active batches can be edited"));
+      }
+    },
   });
 
   const publishMutation = useMutation({
@@ -303,7 +325,7 @@ export function ManageBatchesSheet({ product, open, onOpenChange, t = {}, tCommo
                       ? (t.no_batches ?? "No batches yet. Add one to start selling.")
                       : `${stocks.length} ${stocks.length === 1 ? (t.batch_singular ?? "batch") : (t.batch_plural ?? "batches")}`}
                 </p>
-                <Button size="sm" onClick={() => setFormState({ mode: "add" })}>
+                <Button size="sm" onClick={() => openForm({ mode: "add" })}>
                   <Plus className="mr-1.5 h-4 w-4" />
                   {t.add_batch_btn ?? "Add Batch"}
                 </Button>
@@ -415,7 +437,7 @@ export function ManageBatchesSheet({ product, open, onOpenChange, t = {}, tCommo
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() => setFormState({ mode: "edit", stock: s })}
+                              onClick={() => openForm({ mode: "edit", stock: s })}
                             >
                               <Pencil className="h-3.5 w-3.5" />
                               <span className="sr-only">{tCommon.edit ?? "Edit"}</span>
@@ -448,6 +470,7 @@ export function ManageBatchesSheet({ product, open, onOpenChange, t = {}, tCommo
                 onSubmit={(values) => createMutation.mutate(values)}
                 onCancel={() => setFormState({ mode: "list" })}
                 isSubmitting={createMutation.isPending}
+                serverErrors={serverErrors ?? undefined}
                 submitLabel={t.add_batch_submit ?? "Add Batch"}
                 t={t}
                 tCommon={tCommon}
@@ -465,6 +488,7 @@ export function ManageBatchesSheet({ product, open, onOpenChange, t = {}, tCommo
                 }
                 onCancel={() => setFormState({ mode: "list" })}
                 isSubmitting={updateMutation.isPending}
+                serverErrors={serverErrors ?? undefined}
                 submitLabel={tCommon.save_btn ?? "Save"}
                 t={t}
                 tCommon={tCommon}
