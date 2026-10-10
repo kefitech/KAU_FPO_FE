@@ -48,6 +48,8 @@ export const expertsApi = {
     search?: string;
     /** `booked`: experts I have booked come first, soonest upcoming appointment first. */
     sort?: "booked";
+    /** `true`: only the experts I have booked, soonest upcoming appointment first. */
+    booked?: boolean;
     page?: number;
     page_size?: number;
   }): Promise<PaginatedResponse<FpoExpert>> =>
