@@ -6,10 +6,9 @@ import { useEffect, useRef, useState } from "react";
 
 import { usePathname, useRouter } from "next/navigation";
 
-import { ChevronLeft } from "lucide-react";
-
 import { AdminBreadcrumb } from "@/components/layout/admin-breadcrumb";
 import { AdminSidebar } from "@/components/layout/admin-sidebar";
+import { BackButton } from "@/components/layout/back-button";
 import { getBackTarget } from "@/components/layout/back-link";
 import { FontSizeControl } from "@/components/layout/font-size-control";
 import { LiveClock } from "@/components/layout/live-clock";
@@ -18,7 +17,6 @@ import { NetworkStatus } from "@/components/layout/network-status";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { SessionTimeoutDialog } from "@/components/layout/session-timeout-dialog";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
-import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -189,15 +187,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {pathname !== "/admin/dashboard" && (
           <div className="mx-auto w-full max-w-[1440px] px-3 sm:px-6 lg:px-8 pt-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="-ml-2 gap-1 text-muted-foreground hover:text-foreground"
-              onClick={handleBack}
-            >
-              <ChevronLeft className="h-4 w-4" />
-              Back
-            </Button>
+            <BackButton onClick={handleBack} />
           </div>
         )}
 

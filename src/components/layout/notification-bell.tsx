@@ -78,14 +78,16 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<InboxNotification | null>(null);
   const pathname = usePathname();
-  // only the FPO, buyer, and admin portals have a full inbox page — CBBO/Government/Expert don't
+  // only the FPO, buyer, admin, and expert portals have a full inbox page — CBBO/Government don't
   const inboxPath = pathname.startsWith("/fpo")
     ? "/fpo/inbox"
     : pathname.startsWith("/buyer")
       ? "/buyer/inbox"
       : pathname.startsWith("/admin")
         ? "/admin/inbox"
-        : null;
+        : pathname.startsWith("/expert")
+          ? "/expert/inbox"
+          : null;
   const queryClient = useQueryClient();
   const { t } = useTranslations("notification_bell");
   const locale = useLocaleStore((s) => s.locale);

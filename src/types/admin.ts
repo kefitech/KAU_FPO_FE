@@ -625,16 +625,6 @@ export interface AdminExpertPayload {
   is_active?: boolean;
 }
 
-export interface ExpertEnquiry {
-  id: number;
-  fpo_name: string | null;
-  user_name: string | null;
-  user_email: string | null;
-  message: string;
-  submitted_at: string;
-  email_sent: boolean;
-}
-
 // ─── FPO Permissions ──────────────────────────────────────────────────────────
 
 export interface FpoPermissionAction {

@@ -1,29 +1,33 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { type ExpertBooking, expertDashboardApi } from "@/app/expert/_api/dashboard";
+import { compareBookings } from "@/app/expert/booking/_lib/order";
+import { BackButton } from "@/components/layout/back-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { getErrorMessage } from "@/lib/get-error-message";
+import { cn } from "@/lib/utils";
 
 const STATUS_COLORS: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-800",
   confirmed: "bg-green-100 text-green-800",
   rejected: "bg-red-100 text-red-800",
-  cancelled: "bg-gray-100 text-gray-800",
+  cancelled: "bg-red-100 text-red-800",
   completed: "bg-blue-100 text-blue-800",
 };
 
 export default function FpoDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const fpoId = Number(params.fpoId);
   const queryClient = useQueryClient();
 
@@ -32,9 +36,24 @@ export default function FpoDetailPage() {
     queryFn: () => expertDashboardApi.getMyBookings(),
   });
 
-  const fpoBookings = bookings
-    .filter((b) => b.fpo === fpoId)
-    .sort((a, b) => new Date(b.requested_date).getTime() - new Date(a.requested_date).getTime());
+  // Same order as the My Bookings cards: upcoming soonest-first, then finished ones newest-first.
+  const fpoBookings = bookings.filter((b) => b.fpo === fpoId).sort(compareBookings);
+
+  // Links from elsewhere (e.g. the availability page's cancellation dialog)
+  // point at /expert/booking/fpo/<id>#booking-<bookingId>. The cards only
+  // exist once the query resolves, so the browser's own hash scroll misses;
+  // scroll and highlight here instead.
+  const [highlightedId, setHighlightedId] = useState<number | null>(null);
+  useEffect(() => {
+    if (isLoading || bookings.length === 0) return;
+    const match = /^#booking-(\d+)$/.exec(window.location.hash);
+    if (!match) return;
+    const id = Number(match[1]);
+    const el = document.getElementById(`booking-${id}`);
+    if (!el) return;
+    el.scrollIntoView({ block: "center", behavior: "smooth" });
+    setHighlightedId(id);
+  }, [isLoading, bookings]);
 
   const confirmMutation = useMutation({
     mutationFn: (id: number) => expertDashboardApi.confirmBooking(id),
@@ -42,7 +61,8 @@ export default function FpoDetailPage() {
       toast.success("Booking confirmed");
       queryClient.invalidateQueries({ queryKey: ["expert-my-bookings"] });
     },
-    onError: () => toast.error("Failed to confirm booking"),
+    // A 400 here means the slot filled up or disappeared while this request waited.
+    onError: (error) => toast.error(getErrorMessage(error, "Failed to confirm booking")),
   });
 
   const rejectMutation = useMutation({
@@ -53,7 +73,7 @@ export default function FpoDetailPage() {
       setRejectDialog({ open: false, booking: null }); // 👈 add this line
       setRejectReason(""); // 👈 add this line
     },
-    onError: () => toast.error("Failed to reject booking"),
+    onError: (error) => toast.error(getErrorMessage(error, "Failed to reject booking")),
   });
 
   const cancelMutation = useMutation({
@@ -64,7 +84,7 @@ export default function FpoDetailPage() {
       setCancelDialog({ open: false, booking: null }); // 👈 add this
       setCancelReason(""); // 👈 add this
     },
-    onError: () => toast.error("Failed to cancel booking"),
+    onError: (error) => toast.error(getErrorMessage(error, "Failed to cancel booking")),
   });
 
   const [rejectDialog, setRejectDialog] = useState<{ open: boolean; booking: ExpertBooking | null }>({
@@ -115,9 +135,7 @@ export default function FpoDetailPage() {
   if (fpoBookings.length === 0) {
     return (
       <div className="flex flex-col gap-4">
-        <Link href="/expert/dashboard" className="text-sm text-primary hover:underline">
-          ← Back to Dashboard
-        </Link>
+        <BackButton className="self-start" onClick={() => router.push("/expert/booking")} />
         <p className="text-muted-foreground text-sm">No bookings found for this FPO.</p>
       </div>
     );
@@ -127,10 +145,8 @@ export default function FpoDetailPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <Link href="/expert/stats" className="text-sm text-primary hover:underline">
-        ← Back
-      </Link>
-
+      {/* Same control as the admin pages; returns to the My Bookings list */}
+      <BackButton className="self-start" onClick={() => router.push("/expert/booking")} />
       <Card>
         <CardHeader>
           <CardTitle className="text-xl">{first.fpo_name}</CardTitle>
@@ -157,7 +173,11 @@ export default function FpoDetailPage() {
       <div className="flex flex-col gap-3">
         <h3 className="font-semibold text-sm">Booking History</h3>
         {fpoBookings.map((booking) => (
-          <Card key={booking.id}>
+          <Card
+            key={booking.id}
+            id={`booking-${booking.id}`}
+            className={cn("scroll-mt-20", highlightedId === booking.id && "ring-2 ring-primary")}
+          >
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-base">
                 {booking.requested_date} at {booking.requested_time}
@@ -165,6 +185,13 @@ export default function FpoDetailPage() {
               <Badge className={STATUS_COLORS[booking.status]}>{booking.status_display}</Badge>
             </CardHeader>
             <CardContent className="flex flex-col gap-2">
+              {booking.user_name && (
+                <p className="text-sm">
+                  Booked by: {booking.user_name}
+                  {booking.user_email && <span className="text-muted-foreground"> · {booking.user_email}</span>}
+                  {booking.user_phone && <span className="text-muted-foreground"> · {booking.user_phone}</span>}
+                </p>
+              )}
               {booking.topic && <p className="text-muted-foreground text-sm">Topic: {booking.topic}</p>}
               {booking.notes && <p className="text-muted-foreground text-sm">Notes: {booking.notes}</p>}
               {booking.cancellation_reason && (

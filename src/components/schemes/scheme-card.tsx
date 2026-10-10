@@ -70,7 +70,7 @@ export function buildSchemeFields(scheme: FpoScheme, t: T): SheetField[] {
 
   fields.push({ label: t.card_category ?? "Category", type: "node", node: (
     <Badge className={`w-fit text-xs font-medium border ${CATEGORY_BADGE_COLORS[scheme.category] ?? "bg-muted text-muted-foreground"}`} variant="outline">
-      {scheme.category_display}
+      {t[CATEGORY_LABEL_KEYS[scheme.category]?.key ?? ""] ?? scheme.category_display}
     </Badge>
   )});
 
@@ -105,7 +105,7 @@ export function SchemeCard({ scheme, t, onViewDetails }: { scheme: FpoScheme; t:
   return (
     <div className="rounded-xl border bg-card shadow-sm hover:shadow-md transition-shadow flex flex-col gap-3 p-5">
       <Badge className={`w-fit text-xs font-medium border ${badgeClass}`} variant="outline">
-        {scheme.category_display}
+        {t[CATEGORY_LABEL_KEYS[scheme.category]?.key ?? ""] ?? scheme.category_display}
       </Badge>
       <h3 className="font-semibold text-base leading-snug">{scheme.name}</h3>
       {scheme.administering_body && (

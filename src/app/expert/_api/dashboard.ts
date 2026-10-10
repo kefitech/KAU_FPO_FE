@@ -16,6 +16,11 @@ export interface ExpertBooking {
   fpo_district: string | null;
   fpo_registration_number: string | null;
   fpo_total_members: number | null;
+  /** The FPO member who made the booking; null on rows older than per-user booking. */
+  user: number | null;
+  user_name: string | null;
+  user_email: string | null;
+  user_phone: string | null;
   requested_date: string;
   requested_time: string;
   topic: string;
@@ -54,9 +59,10 @@ export const expertDashboardApi = {
       .post<Wrapped<ExpertBooking>>(`/experts/admin/bookings/${bookingId}/reject/`, { reason })
       .then((r) => r.data.data),
 
+  /** The new date/time must be one of the expert's own open slots, given by time or by slot id. */
   rescheduleBooking: (
     bookingId: number,
-    payload: { new_date: string; new_time: string; reason?: string },
+    payload: { new_date: string; new_time?: string; time_slot_id?: number; reason?: string },
   ): Promise<ExpertBooking> =>
     api
       .post<Wrapped<ExpertBooking>>(`/experts/admin/bookings/${bookingId}/reschedule/`, payload)
@@ -82,8 +88,10 @@ export const expertDashboardApi = {
   setWeeklyDefaults: (
     expertId: number,
     slots: { weekday: number; start: string; end: string; max_bookings: number }[],
-  ): Promise<void> =>
-    api.post<Wrapped<null>>(`/experts/admin/${expertId}/weekly-defaults/`, { slots }).then(() => undefined),
+  ): Promise<{ message: string }> =>
+    api
+      .post<Wrapped<null>>(`/experts/admin/${expertId}/weekly-defaults/`, { slots })
+      .then((r) => ({ message: r.data.message })),
 
   cancelBooking: (bookingId: number, reason: string): Promise<ExpertBooking> =>
     api
