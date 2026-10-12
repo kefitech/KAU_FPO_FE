@@ -206,6 +206,11 @@ export const dprKnowledgeApi = {
       .post<Wrapped<KnowledgeEntryDetail>>(`${BASE}${id}/deactivate/`)
       .then((r) => r.data.data),
 
+  activate: (id: number) =>
+    api
+      .post<Wrapped<KnowledgeEntryDetail>>(`${BASE}${id}/activate/`)
+      .then((r) => r.data.data),
+
   supersede: (id: number, payload: KnowledgeEntryInput) =>
     api
       .post<Wrapped<KnowledgeEntryDetail>>(`${BASE}${id}/supersede/`, payload)

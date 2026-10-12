@@ -25,6 +25,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Ban,
   BookOpen,
+  CheckCircle2,
   Edit2,
   Layers,
   Loader2,
@@ -116,6 +117,20 @@ export default function AdminDprKnowledgePage() {
       toast.success("Entry deactivated (kept for traceability).");
     },
     onError: () => toast.error("Failed to deactivate entry."),
+  });
+
+  const activateMutation = useMutation({
+    mutationFn: (id: number) => dprKnowledgeApi.activate(id),
+    onSuccess: () => {
+      invalidate();
+      toast.success("Entry reactivated.");
+    },
+    onError: (err: unknown) => {
+      // Superseded entries are refused with a specific message — surface it.
+      const detail = (err as { response?: { data?: { message?: string } } })
+        ?.response?.data?.message;
+      toast.error(detail || "Failed to reactivate entry.");
+    },
   });
 
   const deleteMutation = useMutation({
@@ -258,7 +273,7 @@ export default function AdminDprKnowledgePage() {
             >
               <Layers className="h-3.5 w-3.5" />
             </Button>
-            {row.original.is_active && (
+            {row.original.is_active ? (
               <Button
                 size="sm"
                 variant="ghost"
@@ -275,7 +290,24 @@ export default function AdminDprKnowledgePage() {
               >
                 <Ban className="h-3.5 w-3.5" />
               </Button>
-            )}
+            ) : row.original.superseded_by === null ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={activateMutation.isPending}
+                onClick={() => {
+                  confirm({
+                    title: "Reactivate knowledge entry?",
+                    description: `Reactivate "${row.original.title}"? It becomes retrievable for AI narratives again.`,
+                    confirmLabel: "Reactivate",
+                    onConfirm: () => activateMutation.mutateAsync(row.original.id),
+                  });
+                }}
+                title="Reactivate (makes entry retrievable again)"
+              >
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+              </Button>
+            ) : null}
             <Button
               size="sm"
               variant="ghost"
@@ -298,7 +330,7 @@ export default function AdminDprKnowledgePage() {
         ),
       },
     ],
-    [deactivateMutation, deleteMutation, confirm],
+    [deactivateMutation, activateMutation, deleteMutation, confirm],
   );
 
   const filters: FilterConfig[] = useMemo(
