@@ -157,7 +157,7 @@ function toDecimalString(v: string | number | null): string | null {
  * lives beside the section it validates and updates land in one PR.
  */
 type RowErrors = Partial<Record<
-  "name" | "unit_of_measurement" | "annual_quantity" | "selling_price_per_unit",
+  "name" | "unit_of_measurement" | "annual_quantity" | "selling_price_per_unit" | "category" | "product_type",
   string
 >>;
 
@@ -166,6 +166,14 @@ function validateRow(row: ProductItem): RowErrors {
 
   if (!(row.name ?? "").trim()) {
     errors.name = "Product name is required.";
+  }
+  // Tester 2026-10-12: category + product type were advisory-only, which
+  // produced AI-suggestion noise downstream — now required at entry.
+  if (!row.category) {
+    errors.category = "Category is required.";
+  }
+  if (!row.product_type) {
+    errors.product_type = "Product type is required.";
   }
   if (!row.unit_of_measurement) {
     errors.unit_of_measurement = "Unit of measurement is required.";
@@ -706,9 +714,9 @@ export function ProductsSection({ uuid }: { uuid: string }) {
             "Unit of measurement is required. Pick the unit you produce in (Litre, Kilogram, Tonne, Piece, etc.). Same unit is used for the annual quantity below.",
             "Annual quantity is required and must be greater than 0. This is the total amount produced in one year — drives revenue = quantity × selling price.",
             "Selling price per unit (₹) is required and must be greater than 0. Realistic per-unit price at the point of sale.",
-            "Category (recommended) — pick the closest match from the seeded list. Helps the AI narrative pull relevant Kerala market data.",
+            "Category is required — pick the closest match from the seeded list. Helps the AI narrative pull relevant Kerala market data.",
             "Primary / Secondary — mark your main revenue drivers as Primary; by-products and side offerings as Secondary.",
-            "Product type (recommended) — Finished, Intermediate, By-product, or Service. Improves AI content.",
+            "Product type is required — Finished, Intermediate, By-product, or Service. Improves AI content.",
             "Value-added product (optional) — Yes if the product involves processing / transformation that commands a premium; No if it's raw output. Leave blank if you're not sure.",
             "Selling unit and Description are optional. Selling unit matters only when what you sell differs from what you produce (e.g. produced in kilograms, sold in 500g packets).",
             "You can add unlimited rows. Click any row to open the details drawer; click Edit inside the drawer or the pencil icon to change a row.",
@@ -847,7 +855,7 @@ export function ProductsSection({ uuid }: { uuid: string }) {
             </ModalField>
 
             <ModalRow>
-              <ModalField label="Category">
+              <ModalField label="Category *" error={rowErrors.category}>
                 {/* Type-to-search — 18 product categories seeded, long enough
                     that a plain dropdown is painful. Selection chip below the
                     input has a ✕ to clear. */}
@@ -869,7 +877,7 @@ export function ProductsSection({ uuid }: { uuid: string }) {
             </ModalRow>
 
             <ModalRow>
-              <ModalField label="Product type">
+              <ModalField label="Product type *" error={rowErrors.product_type}>
                 <MasterSelect
                   value={row.product_type}
                   options={productTypeQuery.data ?? []}
