@@ -56,13 +56,13 @@ function NotificationItem({
         />
         <div className="min-w-0 flex-1">
           <p
-            className={`text-sm leading-snug ${
+            className={`break-words text-sm leading-snug ${
               !item.is_read ? "font-semibold" : "font-normal text-muted-foreground"
             }`}
             dangerouslySetInnerHTML={{ __html: item.title }}
           />
           <p
-            className="mt-0.5 line-clamp-2 text-muted-foreground text-xs"
+            className="mt-0.5 line-clamp-2 break-words text-muted-foreground text-xs"
             dangerouslySetInnerHTML={{ __html: item.body }}
           />
           <p className="mt-1 text-muted-foreground/70 text-xs">
@@ -206,7 +206,9 @@ export function NotificationBell() {
               <p className="text-sm">{t.empty_state ?? "No notifications"}</p>
             </div>
           ) : (
-            <ScrollArea className="h-[360px]">
+            // Radix wraps the viewport content in a display:table div that grows to the
+            // longest line, so text never wraps — force it back to block
+            <ScrollArea className="[&_[data-slot=scroll-area-viewport]>div]:block! h-[360px]">
               <div className="divide-y">
                 {notifications.map((n) => (
                   <NotificationItem
