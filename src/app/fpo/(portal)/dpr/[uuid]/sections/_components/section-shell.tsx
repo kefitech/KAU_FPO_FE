@@ -182,6 +182,12 @@ export function SectionShell({
   // being turned on. These always show the "optional" banner so the user
   // isn't confused by a "Section complete" state on an empty form.
   const ALWAYS_OPTIONAL_SECTIONS: DprSectionKey[] = ["investment"];
+  // Sections that become optional when the rule engine says their
+  // component isn't part of the project (no buildings → civil, etc.).
+  // Tester 2026-10-12: every OTHER section still enforces mandatory
+  // fields on Save, so an engine 'O' verdict there must NOT surface the
+  // "you can skip this" banner — only these three may use it.
+  const CONDITIONALLY_OPTIONAL_SECTIONS: DprSectionKey[] = ["civil", "machinery", "utilities"];
   // Seed sections + anything backend calls "ALWAYS_MANDATORY". The banner
   // must NEVER call these optional — the section-level validator will
   // block Save, so contradicting text ("this section is optional") is a
@@ -189,11 +195,17 @@ export function SectionShell({
   const ALWAYS_REQUIRED_SECTIONS: DprSectionKey[] = ["identification", "components"];
   const isSpecOptional = ALWAYS_OPTIONAL_SECTIONS.includes(sectionKey);
   const isSpecRequired = ALWAYS_REQUIRED_SECTIONS.includes(sectionKey);
-  const showOptionalBanner =
-    !isSpecRequired &&
-    (isSpecOptional || (engineEnabled && thisApplicability === "O"));
   const showRequiredBanner =
     isSpecRequired || (engineEnabled && thisApplicability === "M");
+  // Mutually exclusive with the required banner — the backend's 'M'
+  // verdict wins (e.g. investment is spec-optional on paper but the
+  // engine marks it ALWAYS_MANDATORY: no DPR without a budget).
+  const showOptionalBanner =
+    !showRequiredBanner &&
+    (isSpecOptional ||
+      (CONDITIONALLY_OPTIONAL_SECTIONS.includes(sectionKey) &&
+        engineEnabled &&
+        thisApplicability === "O"));
 
   // Dismiss state — remembered PER SESSION per (uuid, sectionKey). Uses
   // sessionStorage so a fresh browser session shows the hint again (data
