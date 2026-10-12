@@ -585,7 +585,7 @@ function ChapterPane({
                   <Button
                     size="sm"
                     onClick={() => editMutation.mutate(editText)}
-                    disabled={editMutation.isPending || editText === row.user_edited}
+                    disabled={editMutation.isPending || editText === row.user_edited || !editText.trim()}
                   >
                     {editMutation.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Save className="mr-1 h-4 w-4" />}
                     Save
@@ -611,17 +611,26 @@ function ChapterPane({
                 onChange={(e) => setEditText(e.target.value)}
                 // KAU 2026-09-19 P4.3: autosave on blur so quick edits don't
                 // need the Save-button dance. No-op when text is unchanged.
+                // Empty text is never saved (tester 2026-10-12: Ctrl+A +
+                // delete + blur wiped the active chapter).
                 onBlur={() => {
-                  if (editText !== row.user_edited && !editMutation.isPending) {
+                  if (editText.trim() && editText !== row.user_edited && !editMutation.isPending) {
                     editMutation.mutate(editText);
                   }
                 }}
               />
-            ) : (
+            ) : null}
+            {editMode && !editText.trim() ? (
+              <p className="text-xs text-destructive">
+                Chapter text cannot be empty — your current version is kept. Use
+                Regenerate if you want a fresh draft.
+              </p>
+            ) : null}
+            {!editMode ? (
               <div className="rounded-md border bg-muted/20 p-4 font-mono text-xs whitespace-pre-wrap">
                 {row.user_edited}
               </div>
-            )}
+            ) : null}
           </CardContent>
         </Card>
       )}
