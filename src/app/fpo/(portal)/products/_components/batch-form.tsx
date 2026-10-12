@@ -11,6 +11,7 @@ import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { todayIso } from "@/lib/scheme-validity";
 import {
   cleanQuantityInput,
   isCountUnit,
@@ -89,6 +90,12 @@ export const batchSchema = z
       path: ["available_until"],
     },
   )
+  // A batch whose validity has already ended would never be live — the buyer
+  // catalog hides it and the nightly expiry job removes it. Same rule as the BE.
+  .refine((data) => !data.available_until || data.available_until >= todayIso(), {
+    message: "Available until date cannot be in the past",
+    path: ["available_until"],
+  })
   .refine(
     (data) => !(data.is_public && !data.publish_immediately),
     {
@@ -194,6 +201,8 @@ export function BatchForm({
   const publishImmediately = watch("publish_immediately");
   const availableFrom = watch("available_from");
   const selectedUnit = watch("unit");
+  const today = todayIso();
+  const minUntil = availableFrom && availableFrom > today ? availableFrom : today;
 
   // Backend validation (same bounds as the schema, plus anything only the
   // server knows) lands on the matching field instead of a generic toast.
@@ -368,7 +377,7 @@ export function BatchForm({
                   type="date"
                   {...field}
                   value={field.value ?? ""}
-                  min={availableFrom || undefined}
+                  min={minUntil}
                 />
                 {errors.available_until && <FieldError errors={[errors.available_until]} />}
               </Field>
@@ -436,7 +445,7 @@ export function BatchForm({
           </Button>
         )}
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Saving..." : (submitLabel ?? tCommon.save_btn ?? "Save")}
+          {isSubmitting ? (tCommon.saving ?? "Saving...") : (submitLabel ?? tCommon.save_btn ?? "Save")}
         </Button>
       </div>
     </form>

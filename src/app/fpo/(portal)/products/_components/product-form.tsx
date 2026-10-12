@@ -28,6 +28,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { todayIso } from "@/lib/scheme-validity";
 import {
   cleanQuantityInput,
   isCountUnit,
@@ -184,6 +185,14 @@ const schema = z
         message: "Available until date must be the same as or after the Available from date",
       });
     }
+    // A batch whose validity has already ended would never be live — same rule as the BE.
+    if (data.available_until && data.available_until < todayIso()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["available_until"],
+        message: "Available until date cannot be in the past",
+      });
+    }
     // Public requires published — same rule the BE enforces.
     if (data.is_public && !data.publish_immediately) {
       ctx.addIssue({
@@ -282,6 +291,9 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
 
   const includeInitialBatch = watch("include_initial_batch");
   const selectedUnit = watch("unit");
+  const availableFrom = watch("available_from");
+  const today = todayIso();
+  const minUntil = availableFrom && availableFrom > today ? availableFrom : today;
 
   useEffect(() => {
     if (product) {
@@ -737,7 +749,7 @@ export function ProductForm({ mode, product, t = {}, tCommon = {} }: ProductForm
                               type="date"
                               {...field}
                               value={field.value ?? ""}
-                              min={watch("available_from") || undefined}
+                              min={minUntil}
                             />
                             {errors.available_until && <FieldError errors={[errors.available_until]} />}
                           </Field>
