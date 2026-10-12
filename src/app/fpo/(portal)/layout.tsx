@@ -29,10 +29,16 @@ export default function FpoPortalLayout({ children }: { children: React.ReactNod
   const [mounted, setMounted] = useState(false);
   const [checkedFresh, setCheckedFresh] = useState(false);
 
-  const { data, isFetched } = useQuery({
+  // The guard below must decide on a fresh /auth/me answer. A cached copy can
+  // carry an outdated redirect stage (e.g. "status" from a portal visit before
+  // the application was approved), which bounced "Go to Dashboard" back to
+  // /fpo/status until a hard refresh. staleTime 0 makes this observer refetch
+  // when it becomes enabled, and isFetchedAfterMount ignores the cached copy.
+  // Other ["auth-me", locale] users keep their own 5-minute staleTime.
+  const { data, isFetchedAfterMount } = useQuery({
     queryKey: ["auth-me", locale],
     queryFn: authApi.me,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0,
     enabled: mounted && isAuthenticated,
   });
 
@@ -40,10 +46,10 @@ export default function FpoPortalLayout({ children }: { children: React.ReactNod
     setMounted(true);
   }, []);
   useEffect(() => {
-    if (!isFetched) return;
+    if (!isFetchedAfterMount) return;
     setFpoRedirect(data?.redirect ?? null);
     setCheckedFresh(true);
-  }, [isFetched, data, setFpoRedirect]);
+  }, [isFetchedAfterMount, data, setFpoRedirect]);
   useEffect(() => {
     if (!mounted || !checkedFresh) return;
     if (!isAuthenticated) {
@@ -53,7 +59,7 @@ export default function FpoPortalLayout({ children }: { children: React.ReactNod
     if (fpoRedirect && fpoRedirect.stage !== "dashboard") {
       router.replace(resolvePostLoginPath(fpoRedirect));
     }
-  }, [mounted,checkedFresh, isAuthenticated, fpoRedirect, pathname, router]);
+  }, [mounted, checkedFresh, isAuthenticated, fpoRedirect, pathname, router]);
 
   if (!mounted || !checkedFresh || !isAuthenticated) {
     return null;
