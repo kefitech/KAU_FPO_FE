@@ -65,7 +65,8 @@ export function useSubAdminActions(
       toast.success(t.toast_activated ?? "Sub-admin activated");
       refresh();
     },
-    onError: () => toast.error(tCommon.update_failed ?? "Failed to activate"),
+    // e.g. "District TVM is at capacity (1/1)…" when reactivating into a full district.
+    onError: (error: unknown) => toast.error(getErrorMessage(error, tCommon.update_failed ?? "Failed to activate")),
   });
 
   const deactivateMutation = useMutation({
@@ -74,7 +75,7 @@ export function useSubAdminActions(
       toast.success(t.toast_deactivated ?? "Sub-admin deactivated");
       refresh();
     },
-    onError: () => toast.error(tCommon.update_failed ?? "Failed to deactivate"),
+    onError: (error: unknown) => toast.error(getErrorMessage(error, tCommon.update_failed ?? "Failed to deactivate")),
   });
 
   const resetPasswordMutation = useMutation({
@@ -98,10 +99,7 @@ export function useSubAdminActions(
       queryClient.invalidateQueries({ queryKey: ["sub-admins"] });
       queryClient.invalidateQueries({ queryKey: ["sub-admin-district-cap-status"] });
     },
-    onError: (error: unknown) => {
-      const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      toast.error(msg ?? tCommon.delete_failed ?? "Failed to delete");
-    },
+    onError: (error: unknown) => toast.error(getErrorMessage(error, tCommon.delete_failed ?? "Failed to delete")),
   });
 
   const name = `${subAdmin.first_name} ${subAdmin.last_name}`.trim() || subAdmin.email;
