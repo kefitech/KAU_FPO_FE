@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   Briefcase,
   CalendarClock,
+  CheckCircle2,
   FileDown,
   FileText,
   IndianRupee,
@@ -80,6 +81,9 @@ export function BusinessPlanDisplay() {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
+  // Regeneration failed while a previous plan exists — keep showing that plan,
+  // with a banner saying it's the earlier one. Holds the failure reason.
+  const [regenFailed, setRegenFailed] = useState<string | null>(null);
 
   useEffect(() => {
     translationsApi
@@ -96,6 +100,7 @@ export function BusinessPlanDisplay() {
     setLoading(true);
     setError(null);
     setLoadFailed(false);
+    setRegenFailed(null);
     getMyBusinessPlan()
       .then((res) => {
         if (!cancelled) setData(res);
@@ -141,16 +146,28 @@ export function BusinessPlanDisplay() {
   async function handleGenerate() {
     setGenerating(true);
     setError(null);
+    setRegenFailed(null);
     try {
       setData(await generateBusinessPlan());
+      toast.success(t.bp_toast_generated ?? "Business plan generated successfully.");
     } catch (err) {
-      // Backend messages are already translated (no commodity / service
-      // unavailable / generation failed).
-      setError(
-        (err as { message?: string })?.message ??
-          t.bp_error_generic ??
-          "Could not generate the business plan. Please try again.",
-      );
+      // Backend messages are already translated (no commodity / up to date /
+      // service unavailable / generation failed).
+      const e = err as { message?: string; status?: number } | undefined;
+      const message = e?.message ?? t.bp_error_generic ?? "Could not generate the business plan. Please try again.";
+      if (e?.status === 409) {
+        // Nothing the plan is based on has changed — not a failure. Refresh so
+        // the Regenerate button / "Up to date" state is current.
+        toast.info(message);
+        getMyBusinessPlan()
+          .then(setData)
+          .catch(() => undefined);
+        return;
+      }
+      toast.error(message);
+      // A previous plan stays on screen — flag it as the earlier version.
+      if (data?.plan) setRegenFailed(message);
+      else setError(message);
     } finally {
       setGenerating(false);
     }
@@ -220,7 +237,15 @@ export function BusinessPlanDisplay() {
               </button>
             </>
           )}
-          {canGenerate && (
+          {/* Regenerating unchanged data only re-spends AI budget on a reworded
+              plan, so Regenerate appears only once the plan is outdated. */}
+          {plan && !data?.is_outdated && !generating && (
+            <span className="flex items-center gap-1.5 rounded-md border px-3 py-1.5 font-medium text-muted-foreground text-xs">
+              <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+              {t.bp_up_to_date ?? "Up to date"}
+            </span>
+          )}
+          {canGenerate && (!plan || data?.is_outdated || generating) && (
             <button
               type="button"
               onClick={handleGenerate}
@@ -233,6 +258,39 @@ export function BusinessPlanDisplay() {
           )}
         </div>
       </div>
+
+      {data?.is_outdated && !generating && (
+        <div
+          role="alert"
+          className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2.5 text-amber-900 text-xs dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200"
+        >
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <p>
+            {t.bp_outdated ?? "Your FPO's details have changed since this plan was generated. Regenerate to update it."}
+          </p>
+        </div>
+      )}
+
+      {regenFailed && plan && !generating && (
+        <div
+          role="alert"
+          className="flex items-start gap-2 rounded-md border border-red-300 bg-red-50 px-3 py-2.5 text-red-900 text-xs dark:border-red-800 dark:bg-red-950/30 dark:text-red-200"
+        >
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <div className="flex flex-col gap-0.5">
+            <p className="font-semibold">{t.bp_failed_previous_title ?? "Couldn't generate a new business plan"}</p>
+            <p>{regenFailed}</p>
+            {generatedOn && (
+              <p>
+                {(t.bp_failed_previous_body ?? "Showing your previously generated plan from {date}.").replace(
+                  "{date}",
+                  generatedOn,
+                )}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {profile && (
         <div className="flex flex-col gap-3 rounded-lg border bg-muted/20 p-4">
@@ -270,19 +328,6 @@ export function BusinessPlanDisplay() {
                 "Add at least one primary commodity to your FPO profile to generate a business plan."}
             </p>
           )}
-        </div>
-      )}
-
-      {data?.is_outdated && !generating && (
-        <div
-          role="alert"
-          className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2.5 text-amber-900 text-xs dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200"
-        >
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-          <p>
-            {t.bp_outdated ??
-              "Your FPO's commodities or location have changed since this plan was generated. Regenerate to update it."}
-          </p>
         </div>
       )}
 
