@@ -20,7 +20,12 @@ function renderMessage(field: string, message: string, sectionKey: DprSectionKey
   //   Product 3: ...
   //   Material "Rice husk": ...
   //   Row 3 — ...
-  const selfLabelled = /^(Product|Material|Machine|Employee|Building|Row|Item)\s+["\d]/.test(message);
+  // Generic: any leading type word(s) followed by a quoted name or an
+  // index ('Material "Rice husk": …', 'Activity 3: …', 'Waste "Husk" —').
+  // Tester 2026-10-12: the old six-word whitelist missed every section
+  // whose item type wasn't in it, so those fell back to the Row-N
+  // breadcrumb even when the backend message named the item.
+  const selfLabelled = /^[A-Z][A-Za-z &/-]{0,40}\s+(["“]|\d+\s*[:—-])/.test(message);
   if (selfLabelled) {
     return <span>{message}</span>;
   }
