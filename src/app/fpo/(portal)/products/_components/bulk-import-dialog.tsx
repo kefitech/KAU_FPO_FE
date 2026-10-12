@@ -84,11 +84,30 @@ export function BulkImportDialog({ open, onOpenChange, t = {}, tCommon = {} }: B
         toast.error(t.err_bulk_import_all_failed ?? "No products could be imported");
       }
     },
-    onError: () => toast.error(t.err_bulk_import_upload ?? "Upload failed"),
+    onError: (err: unknown) => {
+      // Surface the backend's specific message (e.g. "Only .xlsx and .csv
+      // files are supported.") instead of a generic failure.
+      const detail = (err as { response?: { data?: { message?: string } } })
+        ?.response?.data?.message;
+      toast.error(detail || (t.err_bulk_import_upload ?? "Upload failed"));
+    },
   });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
+    // The input's `accept` attr is only a picker hint — "All files" still
+    // lets a .pdf/.txt through (tester 2026-10-12). Reject here with a
+    // specific message and never send it to the server.
+    if (file && !/\.(xlsx|csv)$/i.test(file.name)) {
+      toast.error(
+        t.err_bulk_import_invalid_format ??
+          "Invalid file format — please upload a .xlsx or .csv file.",
+      );
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      setSelectedFile(null);
+      setResult(null);
+      return;
+    }
     setSelectedFile(file);
     // A fresh file choice invalidates any previous result the user was
     // staring at — show them a clean slate before they click Upload.
