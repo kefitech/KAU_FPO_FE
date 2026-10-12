@@ -399,6 +399,7 @@ function EntryDialog({
 }) {
   const open = state.mode !== "closed";
   const targetId = state.mode === "edit" || state.mode === "supersede" ? state.entry.id : null;
+  const qc = useQueryClient();
 
   // Load full detail only when editing/superseding — need `content` field
   // that's absent from the list row shape.
@@ -441,6 +442,10 @@ function EntryDialog({
             ? `Superseded — new entry #${result.id}`
             : `Created entry #${result.id}`,
       );
+      // Tester 2026-10-12: only the list query was invalidated, so
+      // reopening the same entry served the cached pre-edit detail until
+      // a manual page refresh. Drop every cached detail too.
+      qc.invalidateQueries({ queryKey: ["admin-dpr-knowledge-detail"] });
       onSaved();
       onClose();
     },
