@@ -195,7 +195,9 @@ export function ManageBatchesSheet({ product, open, onOpenChange, t = {}, tCommo
       toast.success(t.toast_batch_published ?? "Batch published");
       invalidate();
     },
-    onError: () => toast.error(t.err_batch_publish_failed ?? "Only draft batches can be published"),
+    // Server message covers both reasons (not a draft / validity already ended).
+    onError: (err) =>
+      toast.error(getErrorMessage(err, t.err_batch_publish_failed ?? "Only draft batches can be published")),
   });
 
   const bulkPublishMutation = useMutation({
@@ -322,7 +324,7 @@ export function ManageBatchesSheet({ product, open, onOpenChange, t = {}, tCommo
                   {isLoading
                     ? (tCommon.loading ?? "Loading...")
                     : stocks.length === 0
-                      ? (t.no_batches ?? "No batches yet. Add one to start selling.")
+                      ? (t.batches_empty_hint ?? "No batches yet. Add one to start selling.")
                       : `${stocks.length} ${stocks.length === 1 ? (t.batch_singular ?? "batch") : (t.batch_plural ?? "batches")}`}
                 </p>
                 <Button size="sm" onClick={() => openForm({ mode: "add" })}>

@@ -311,7 +311,7 @@ export default function FpoProductsPage() {
                     : [
                         {
                           label: tTable.col_status ?? "Latest Status",
-                          value: tTable.no_stock ?? "No stock batches yet",
+                          value: tTable.no_stock_batches ?? "No stock batches yet",
                         },
                       ]),
                   {
