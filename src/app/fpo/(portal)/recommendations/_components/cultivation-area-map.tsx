@@ -6,6 +6,7 @@ import { CheckCircle2, Loader2, MapPin, RotateCcw, Sprout, Trash2 } from "lucide
 
 import { BoundaryMap, type LatLng } from "@/components/gis/boundary-map";
 import { WeatherCard } from "@/components/gis/weather-card";
+import { useFpoPermissions } from "@/hooks/use-fpo-permissions";
 import {
   deleteCultivationArea,
   getCultivationArea,
@@ -48,6 +49,10 @@ interface CultivationAreaMapProps {
 export function CultivationAreaMap({ onAreaChange }: CultivationAreaMapProps = {}) {
   const locale = useLocaleStore((s) => s.locale);
   const [t, setT] = useState<T>({});
+  // The boundary feeds the AI crop recommendation, so drawing / deleting it
+  // follows the same permission (backend enforces it too). Members without it
+  // get a view-only map.
+  const canEdit = useFpoPermissions().can("can_generate_recommendations");
 
   useEffect(() => {
     translationsApi
@@ -189,7 +194,9 @@ export function CultivationAreaMap({ onAreaChange }: CultivationAreaMapProps = {
           ? (t.draw_instruction ?? "Click the map to place each corner of your farm boundary.")
           : savedArea
             ? (t.draw_saved ?? "This is your saved cultivation area.")
-            : (t.draw_prompt ?? "Draw your farm's boundary to help us give more accurate recommendations.")}
+            : canEdit
+              ? (t.draw_prompt ?? "Draw your farm's boundary to help us give more accurate recommendations.")
+              : (t.draw_prompt_view_only ?? "No farm boundary has been drawn yet.")}
       </p>
 
       <BoundaryMap
@@ -198,6 +205,7 @@ export function CultivationAreaMap({ onAreaChange }: CultivationAreaMapProps = {
         isDrawing={isDrawing}
         onStartDrawing={handleStartDrawing}
         hasArea={!!savedArea}
+        canDraw={canEdit}
         t={t}
       />
 
@@ -239,15 +247,17 @@ export function CultivationAreaMap({ onAreaChange }: CultivationAreaMapProps = {
                 {savedArea.properties.area_hectares} {t.label_hectares ?? "hectares"}
               </span>
             </p>
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={saving}
-              className="flex items-center gap-1 text-muted-foreground text-xs hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
-              {t.btn_delete ?? "Delete"}
-            </button>
+            {canEdit && (
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={saving}
+                className="flex items-center gap-1 text-muted-foreground text-xs hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                {t.btn_delete ?? "Delete"}
+              </button>
+            )}
           </div>
 
           {savedArea.properties.zone_name_en && (

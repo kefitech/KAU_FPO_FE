@@ -115,6 +115,8 @@ interface BoundaryMapProps {
   onStartDrawing: () => void;
   /** Switches the draw button's label to "Redraw boundary". */
   hasArea: boolean;
+  /** Show the Draw / Redraw boundary button (default true). False = view-only map. */
+  canDraw?: boolean;
   /** Optional single-point location (admin model test). Enables the "Drop a pin" control. */
   pin?: LatLng | null;
   onDropPin?: (p: LatLng) => void;
@@ -136,6 +138,7 @@ export function BoundaryMap({
   isDrawing,
   onStartDrawing,
   hasArea,
+  canDraw = true,
   pin = null,
   onDropPin,
   loadSoilRegions,
@@ -513,7 +516,7 @@ export function BoundaryMap({
               />
             </div>
           )}
-          {!isDrawing && (
+          {!isDrawing && canDraw && (
             <button
               type="button"
               onClick={onStartDrawing}
