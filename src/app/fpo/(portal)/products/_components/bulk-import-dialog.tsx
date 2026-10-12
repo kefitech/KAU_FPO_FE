@@ -164,7 +164,8 @@ export function BulkImportDialog({ open, onOpenChange, t = {}, tCommon = {} }: B
             <div className="flex flex-col gap-0.5">
               <p className="font-medium text-sm">{t.step2_title ?? "2. Upload the filled file"}</p>
               <p className="text-muted-foreground text-xs">
-                {t.step2_description ?? "Supports .xlsx and .csv. Invalid rows are skipped and reported."}
+                {t.step2_description ??
+                  "Supports .xlsx and .csv, up to 100 rows per upload. Invalid rows are skipped and reported."}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">

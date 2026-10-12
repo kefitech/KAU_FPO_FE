@@ -99,6 +99,11 @@ export const productsApi = {
     return api
       .post(`${BASE}bulk-import/`, form, {
         headers: { "Content-Type": "multipart/form-data" },
+        // A full 100-row import takes ~10-15s on the test server — the
+        // client's default 30s timeout aborted larger files while the
+        // server kept importing (tester 2026-10-12). Backend caps the
+        // batch at 100 rows; give the request generous headroom.
+        timeout: 120_000,
       })
       .then((r) => {
         const d = r.data as Record<string, unknown>;
