@@ -151,6 +151,46 @@ export function IdentificationSection({ uuid }: { uuid: string }) {
     if ((!form.expected_outcomes || form.expected_outcomes.length === 0) && !(form.expected_outcomes_other ?? "").trim()) {
       fieldErrors.set("expected_outcomes", "At least one Expected Outcome shall be specified.");
     }
+    // Promoter-profile business rules (tester 2026-10-12) — mirror the
+    // backend serializer so invalid values are flagged the moment they are
+    // typed, not only after a rejected save.
+    const ceoName = (form.ceo_name ?? "").trim();
+    if (ceoName) {
+      const letters = (ceoName.match(/[A-Za-zഀ-ൿ]/g) ?? []).length;
+      if (!/^[A-Za-zഀ-ൿ\s.'()-]+$/.test(ceoName) || letters < 2) {
+        fieldErrors.set("ceo_name", "Enter a valid CEO name — letters only, no digits or special characters.");
+      } else if (ceoName.length > 100) {
+        fieldErrors.set("ceo_name", "CEO name cannot exceed 100 characters.");
+      }
+    }
+    const ceoQual = (form.ceo_qualification ?? "").trim();
+    if (ceoQual) {
+      const letters = (ceoQual.match(/[A-Za-zഀ-ൿ]/g) ?? []).length;
+      if (letters < 2) {
+        fieldErrors.set("ceo_qualification", "Enter a valid qualification (e.g. B.Sc Agriculture) — it cannot be only numbers.");
+      } else if (ceoQual.length > 200) {
+        fieldErrors.set("ceo_qualification", "Qualification cannot exceed 200 characters.");
+      }
+    }
+    if (form.ceo_experience_years !== null && form.ceo_experience_years !== undefined) {
+      if (form.ceo_experience_years < 0 || form.ceo_experience_years > 60) {
+        fieldErrors.set("ceo_experience_years", "CEO experience must be between 0 and 60 years.");
+      }
+    }
+    if (form.total_area_acreage !== null && form.total_area_acreage !== undefined && form.total_area_acreage !== "") {
+      const area = Number(form.total_area_acreage);
+      if (!(area > 0)) {
+        fieldErrors.set("total_area_acreage", "Total farming area must be greater than zero.");
+      } else if (area > 500000) {
+        fieldErrors.set("total_area_acreage", "Total farming area cannot exceed 5,00,000 acres — check the value (combined area of all member farmers).");
+      }
+    }
+    if (form.women_shareholding_pct !== null && form.women_shareholding_pct !== undefined && form.women_shareholding_pct !== "") {
+      const pct = Number(form.women_shareholding_pct);
+      if (!(pct >= 0 && pct <= 100)) {
+        fieldErrors.set("women_shareholding_pct", "Women shareholding is a percentage — enter a value between 0 and 100.");
+      }
+    }
   }
 
   // Mutation
@@ -598,7 +638,7 @@ export function IdentificationSection({ uuid }: { uuid: string }) {
                 <Input
                   type="number"
                   min={0}
-                  max={80}
+                  max={60}
                   value={form.ceo_experience_years ?? ""}
                   onChange={(e) => {
                     const v = e.target.value;
