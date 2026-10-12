@@ -467,7 +467,23 @@ export default function DprWizardLayout({ children }: { children: React.ReactNod
     localStorage.setItem(STATUS_TOGGLE_STORAGE_KEY, showStatus ? "1" : "0");
   }, [showStatus]);
 
-  const readinessMap = useAllSectionsReadiness(uuid, showStatus);
+  const rawReadinessMap = useAllSectionsReadiness(uuid, showStatus);
+
+  // Tester 2026-10-12: the readiness endpoint reports empty sections as
+  // "optional" (is_complete + has_data=false), which put an "Optional —
+  // skip if not applicable" dot on sections whose forms enforce mandatory
+  // fields on Save. Only the genuinely skippable sections may carry that
+  // dot — investment (spec-optional) and the component-conditional trio
+  // when the rule engine says 'O'. Everything else empty shows
+  // "Not started".
+  const SKIPPABLE_SECTIONS: DprSectionKey[] = ["investment", "civil", "machinery", "utilities"];
+  const readinessMap = { ...rawReadinessMap };
+  (Object.keys(readinessMap) as DprSectionKey[]).forEach((key) => {
+    if (readinessMap[key] !== "optional") return;
+    const genuinelySkippable =
+      SKIPPABLE_SECTIONS.includes(key) && sectionApplicability(key) === "O";
+    if (!genuinelySkippable) readinessMap[key] = "empty";
+  });
 
   // Soft-lock guard — if the user URL-hops to a locked section (bookmark,
   // browser back, or a stale link from an old email), bounce them to
