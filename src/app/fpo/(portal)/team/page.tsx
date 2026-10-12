@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckSquare, Columns3, Search, UploadCloud, UserPlus, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, CheckSquare, Columns3, Search, UploadCloud, UserPlus, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { fpoTeamApi } from "@/app/fpo/_api/team";
@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { translationsApi } from "@/lib/api/translations";
@@ -53,6 +54,44 @@ function fullName(m: FpoTeamMember) {
   return `${m.first_name} ${m.last_name}`.trim();
 }
 
+type SortKey = "name" | "email" | "phone" | "role" | "status" | "joined";
+type SortState = { key: SortKey; desc: boolean } | null;
+
+// Same header + arrow as the admin data tables; click cycles asc → desc → off
+function SortableHead({
+  label,
+  sortKey,
+  sort,
+  onSort,
+}: {
+  label: string;
+  sortKey: SortKey;
+  sort: SortState;
+  onSort: (key: SortKey) => void;
+}) {
+  const sorted = sort?.key === sortKey ? (sort.desc ? "desc" : "asc") : false;
+  return (
+    <TableHead
+      onClick={() => onSort(sortKey)}
+      aria-sort={sorted === "asc" ? "ascending" : sorted === "desc" ? "descending" : "none"}
+      className={`${HEAD_CLASS} cursor-pointer select-none hover:text-white`}
+    >
+      <div className="flex items-center gap-1.5">
+        {label}
+        <span className="shrink-0">
+          {sorted === "asc" ? (
+            <ArrowUp className="h-3 w-3 text-violet-400" />
+          ) : sorted === "desc" ? (
+            <ArrowDown className="h-3 w-3 text-violet-400" />
+          ) : (
+            <ArrowUpDown className="h-3 w-3 opacity-30" />
+          )}
+        </span>
+      </div>
+    </TableHead>
+  );
+}
+
 // ── Optional/toggleable columns ───────────────────────────────────────────
 // "name" and "status" are always shown, so they're not part of this list.
 // Visibility is controlled entirely by the dropdown now (no responsive
@@ -63,7 +102,7 @@ const TOGGLEABLE_COLUMNS = [
   { key: "phone", label: "Phone", tKey: "col_phone" },
   { key: "role", label: "Role", tKey: "col_role" },
   { key: "joined", label: "Joined", tKey: "col_joined" },
-  ] as const;
+] as const;
 
 type ColumnKey = (typeof TOGGLEABLE_COLUMNS)[number]["key"];
 
@@ -96,6 +135,8 @@ export default function FpoTeamPage() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [visibleColumns, setVisibleColumns] = useState<Record<ColumnKey, boolean>>(DEFAULT_VISIBLE_COLUMNS);
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [sort, setSort] = useState<SortState>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -122,23 +163,45 @@ export default function FpoTeamPage() {
   // Memoised so the bulk dialog doesn't reset its state on every render
   const selectedMembers = useMemo(() => members.filter((m) => selected.has(m.id)), [members, selected]);
 
-  // ── Search filtering ────────────────────────────────────────────────────
-  // Matches against name, email, phone, and role only (status excluded).
+  // ── Search + status filtering ─────────────────────────────────────────
+  // Search matches name, email, phone and joined date; status has its own dropdown.
   const filteredMembers = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return members;
     return members.filter((m) => {
-      const haystack = [fullName(m), m.email, m.phone ?? "", formatDate(m.joined_at, locale)]
-        .join(" ")
-        .toLowerCase();
+      if (statusFilter !== "all" && m.is_active !== (statusFilter === "active")) return false;
+      if (!q) return true;
+      const haystack = [fullName(m), m.email, m.phone ?? "", formatDate(m.joined_at, locale)].join(" ").toLowerCase();
       return haystack.includes(q);
     });
-  }, [members, searchQuery, locale]);
+  }, [members, searchQuery, statusFilter, locale]);
+
+  // ── Sorting (client-side; unsorted keeps the API order — owner first) ────
+  function toggleSort(key: SortKey) {
+    setSort((prev) => (prev?.key !== key ? { key, desc: false } : prev.desc ? null : { key, desc: true }));
+    setPage(1);
+  }
+
+  const sortedMembers = useMemo(() => {
+    if (!sort) return filteredMembers;
+    const text = (a: string, b: string) =>
+      a.localeCompare(b, locale === "ml" ? "ml" : "en", { numeric: true, sensitivity: "base" });
+    const role = (m: FpoTeamMember) => t[`role_${m.role}`] ?? m.role; // sort by the label the user sees
+    const compare: Record<SortKey, (a: FpoTeamMember, b: FpoTeamMember) => number> = {
+      name: (a, b) => text(fullName(a), fullName(b)),
+      email: (a, b) => text(a.email, b.email),
+      phone: (a, b) => text(a.phone ?? "", b.phone ?? ""),
+      role: (a, b) => text(role(a), role(b)),
+      status: (a, b) => Number(b.is_active) - Number(a.is_active), // active first
+      joined: (a, b) => new Date(a.joined_at).getTime() - new Date(b.joined_at).getTime(),
+    };
+    const dir = sort.desc ? -1 : 1;
+    return [...filteredMembers].sort((a, b) => dir * compare[sort.key](a, b));
+  }, [filteredMembers, sort, locale, t]);
 
   // ── Pagination (client-side — the whole team is loaded at once) ─────────
-  const totalPages = Math.max(1, Math.ceil(filteredMembers.length / pageSize));
+  const totalPages = Math.max(1, Math.ceil(sortedMembers.length / pageSize));
   const currentPage = Math.min(page, totalPages); // stay in range when the list shrinks
-  const pagedMembers = filteredMembers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const pagedMembers = sortedMembers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   // ── Selection helpers ──────────────────────────────────────────────────────
   // "Select all" covers the rows on the current page; picks on other pages are kept.
@@ -185,12 +248,17 @@ export default function FpoTeamPage() {
 
   // One toast for the outcome of a bulk action, plus one per failed member
   function reportBulk(
-    { success, failed, errors }: { success: number; failed: number; errors: { user_id: number; name?: string; reason: string }[] },
+    {
+      success,
+      failed,
+      errors,
+    }: { success: number; failed: number; errors: { user_id: number; name?: string; reason: string }[] },
     done: string,
     partial: string,
   ) {
     if (success > 0 && failed === 0) toast.success(done.replace("{count}", String(success)));
-    else if (success > 0) toast.warning(partial.replace("{success}", String(success)).replace("{failed}", String(failed)));
+    else if (success > 0)
+      toast.warning(partial.replace("{success}", String(success)).replace("{failed}", String(failed)));
     for (const e of errors) toast.error(`${memberLabel(e.user_id, e.name)}: ${e.reason}`);
   }
 
@@ -215,7 +283,8 @@ export default function FpoTeamPage() {
       });
       queryClient.invalidateQueries({ queryKey: ["fpo-team"] });
     },
-    onError: (error: unknown) => toast.error(getErrorMessage(error, t.toast_delete_failed ?? "Failed to delete member")),
+    onError: (error: unknown) =>
+      toast.error(getErrorMessage(error, t.toast_delete_failed ?? "Failed to delete member")),
   });
 
   const resetPasswordMutation = useMutation({
@@ -275,6 +344,7 @@ export default function FpoTeamPage() {
 
   const visibleColumnCount = TOGGLEABLE_COLUMNS.filter((c) => visibleColumns[c.key]).length;
   const isSearching = searchQuery.trim().length > 0;
+  const isFiltered = isSearching || statusFilter !== "all";
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -286,7 +356,7 @@ export default function FpoTeamPage() {
           <p className="mt-0.5 text-muted-foreground text-sm">
             {isLoading
               ? (t.loading ?? "Loading…")
-              : isSearching
+              : isFiltered
                 ? (t.members_count_filtered ?? "{shown} / {count} members")
                     .replace("{shown}", String(filteredMembers.length))
                     .replace("{count}", String(members.length))
@@ -310,32 +380,50 @@ export default function FpoTeamPage() {
         </div>
       </div>
 
-      {/* Search box + column visibility, pinned to the container's edges */}
+      {/* Search box + status filter + column visibility, pinned to the container's edges */}
       <div className="flex items-center justify-between gap-3">
-        <div className="relative max-w-sm flex-1">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setPage(1);
-            }}
-            placeholder={t.search_placeholder ?? "Search by name, email or phone…"}
-            className="pl-8 pr-8"
-          />
-          {isSearching && (
-            <button
-              type="button"
-              onClick={() => {
-                setSearchQuery("");
+        <div className="flex max-w-xl flex-1 items-center gap-2">
+          <div className="relative max-w-sm flex-1">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
                 setPage(1);
               }}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              aria-label={t.aria_clear_search ?? "Clear search"}
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
+              placeholder={t.search_placeholder ?? "Search by name, email or phone…"}
+              className="pl-8 pr-8"
+            />
+            {isSearching && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery("");
+                  setPage(1);
+                }}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label={t.aria_clear_search ?? "Clear search"}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          <Select
+            value={statusFilter}
+            onValueChange={(value) => {
+              setStatusFilter(value as typeof statusFilter);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="min-w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t.filter_status_all ?? "All statuses"}</SelectItem>
+              <SelectItem value="active">{t.badge_active ?? "Active"}</SelectItem>
+              <SelectItem value="inactive">{t.badge_inactive ?? "Inactive"}</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <DropdownMenu>
@@ -434,12 +522,20 @@ export default function FpoTeamPage() {
                   />
                 </TableHead>
               )}
-              <TableHead className={HEAD_CLASS}>{t.col_name ?? "Name"}</TableHead>
-              {visibleColumns.email && <TableHead className={HEAD_CLASS}>{t.col_email ?? "Email"}</TableHead>}
-              {visibleColumns.phone && <TableHead className={HEAD_CLASS}>{t.col_phone ?? "Phone"}</TableHead>}
-              {visibleColumns.role && <TableHead className={HEAD_CLASS}>{t.col_role ?? "Role"}</TableHead>}
-              <TableHead className={HEAD_CLASS}>{t.col_status ?? "Status"}</TableHead>
-              {visibleColumns.joined && <TableHead className={HEAD_CLASS}>{t.col_joined ?? "Joined"}</TableHead>}
+              <SortableHead label={t.col_name ?? "Name"} sortKey="name" sort={sort} onSort={toggleSort} />
+              {visibleColumns.email && (
+                <SortableHead label={t.col_email ?? "Email"} sortKey="email" sort={sort} onSort={toggleSort} />
+              )}
+              {visibleColumns.phone && (
+                <SortableHead label={t.col_phone ?? "Phone"} sortKey="phone" sort={sort} onSort={toggleSort} />
+              )}
+              {visibleColumns.role && (
+                <SortableHead label={t.col_role ?? "Role"} sortKey="role" sort={sort} onSort={toggleSort} />
+              )}
+              <SortableHead label={t.col_status ?? "Status"} sortKey="status" sort={sort} onSort={toggleSort} />
+              {visibleColumns.joined && (
+                <SortableHead label={t.col_joined ?? "Joined"} sortKey="joined" sort={sort} onSort={toggleSort} />
+              )}
               {isPrimary && <TableHead className={HEAD_CLASS}>{t.col_permissions ?? "Permissions"}</TableHead>}
               {/* Empty header over the row actions, so the dark header spans the full width */}
               {isPrimary && <TableHead className="w-14" />}
@@ -495,7 +591,9 @@ export default function FpoTeamPage() {
                   colSpan={2 + visibleColumnCount + (isPrimary ? 3 : 0)}
                   className="py-12 text-center text-muted-foreground text-sm"
                 >
-                  {isSearching ? (
+                  {statusFilter !== "all" ? (
+                    (t.empty_filtered ?? "No members match your filters.")
+                  ) : isSearching ? (
                     (t.empty_search ?? "No members match your search.")
                   ) : (
                     <>
@@ -534,16 +632,12 @@ export default function FpoTeamPage() {
                       {roleLabel(member.role)}
                     </div>
                   </TableCell>
-                  {visibleColumns.email && (
-                    <TableCell className="text-muted-foreground">{member.email}</TableCell>
-                  )}
+                  {visibleColumns.email && <TableCell className="text-muted-foreground">{member.email}</TableCell>}
                   {visibleColumns.phone && (
                     <TableCell className="text-muted-foreground">{member.phone || "—"}</TableCell>
                   )}
                   {visibleColumns.role && (
-                    <TableCell className="capitalize text-muted-foreground">
-                      {roleLabel(member.role)}
-                    </TableCell>
+                    <TableCell className="capitalize text-muted-foreground">{roleLabel(member.role)}</TableCell>
                   )}
                   <TableCell>
                     <Badge
@@ -683,7 +777,11 @@ export default function FpoTeamPage() {
 
       <InviteDialog open={inviteOpen} onOpenChange={setInviteOpen} />
       <BulkInviteDialog open={bulkInviteOpen} onOpenChange={setBulkInviteOpen} />
-      <PermissionsDialog member={permissionsMember} onOpenChange={(open) => !open && setPermissionsMember(null)} t={t} />
+      <PermissionsDialog
+        member={permissionsMember}
+        onOpenChange={(open) => !open && setPermissionsMember(null)}
+        t={t}
+      />
       <BulkPermissionsDialog
         open={bulkPermissionsOpen}
         onOpenChange={setBulkPermissionsOpen}

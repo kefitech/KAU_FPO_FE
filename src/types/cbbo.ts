@@ -66,6 +66,19 @@ export interface AssignedFPO {
   documents: CBBOFPODocument[];
 }
 
+/** GET /api/cbbo/fpos/{id}/team/ — read-only */
+export interface CBBOFPOTeamMember {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string | null;
+  role: string;
+  is_active: boolean;
+  joined_at: string;
+  last_login: string | null;
+}
+
 export type ReportStatus = "draft" | "submitted";
 
 export interface CBBOReportListItem {

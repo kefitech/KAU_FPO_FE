@@ -21,6 +21,7 @@ import {
 import { toast } from "sonner";
 
 import { cbboFposApi } from "@/app/cbbo/_api/fpos";
+import { FpoTeamList } from "@/components/shared/fpo-team-list";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { translationsApi } from "@/lib/api/translations";
@@ -143,13 +144,32 @@ function DocumentsSection({ fpoId, documents, t }: { fpoId: number; documents: A
   );
 }
 
+function TeamSection({ fpoId, t }: { fpoId: number; t: T }) {
+  const { data, isLoading, isError, isFetching, refetch } = useQuery({
+    queryKey: ["cbbo-fpo-team", fpoId],
+    queryFn: () => cbboFposApi.getTeam(fpoId),
+    staleTime: 30_000,
+  });
+
+  return (
+    <FpoTeamList
+      users={data ?? []}
+      isLoading={isLoading}
+      isFetching={isFetching}
+      isError={isError}
+      onRefresh={() => refetch()}
+      t={t}
+    />
+  );
+}
+
 export default function CBBOFPODetailPage() {
   const router = useRouter();
   const params = useParams();
   const fpoId = Number(params.id);
   const locale = useLocaleStore((s) => s.locale);
   const [t, setT] = useState<T>({});
-  const [activeTab, setActiveTab] = useState<"overview" | "documents">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "documents" | "team">("overview");
 
   useEffect(() => {
     translationsApi
@@ -226,6 +246,13 @@ export default function CBBOFPODetailPage() {
           className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm ${activeTab === "documents" ? "border-primary font-medium text-foreground" : "border-transparent text-muted-foreground"}`}
         >
           <FileText className="h-3.5 w-3.5" /> {t.tab_documents ?? "Documents"}
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("team")}
+          className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm ${activeTab === "team" ? "border-primary font-medium text-foreground" : "border-transparent text-muted-foreground"}`}
+        >
+          <Users className="h-3.5 w-3.5" /> {t.tab_team ?? "Team"}
         </button>
         {/* Reports can only be filed for approved FPOs */}
         {fpo.status === "approved" && (
@@ -368,6 +395,12 @@ export default function CBBOFPODetailPage() {
       {activeTab === "documents" && (
         <SectionCard icon={FileText} title={t.section_documents ?? "Documents"}>
           <DocumentsSection fpoId={fpo.id} documents={fpo.documents} t={t} />
+        </SectionCard>
+      )}
+
+      {activeTab === "team" && (
+        <SectionCard icon={Users} title={t.section_team ?? "Team"}>
+          <TeamSection fpoId={fpo.id} t={t} />
         </SectionCard>
       )}
     </div>
