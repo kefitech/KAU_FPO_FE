@@ -20,11 +20,10 @@ import {
   Sparkles,
   Sprout,
 } from "lucide-react";
-
 import { toast } from "sonner";
 
-import { downloadBusinessPlan, generateBusinessPlan, getMyBusinessPlan } from "@/lib/api/recommendation";
 import { useFpoPermissions } from "@/hooks/use-fpo-permissions";
+import { downloadBusinessPlan, generateBusinessPlan, getMyBusinessPlan } from "@/lib/api/recommendation";
 import { translationsApi } from "@/lib/api/translations";
 import { useLocaleStore } from "@/stores/locale-store";
 import type { BusinessPlanCommodity, BusinessPlanResponse } from "@/types/recommendation";
@@ -82,7 +81,8 @@ export function BusinessPlanDisplay() {
   const [error, setError] = useState<string | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   // Regeneration failed while a previous plan exists — keep showing that plan,
-  // with a banner saying it's the earlier one. Holds the failure reason.
+  // with a banner saying it's the earlier one. Holds the failure reason, which
+  // the error toast shows (the banner doesn't repeat it).
   const [regenFailed, setRegenFailed] = useState<string | null>(null);
 
   useEffect(() => {
@@ -193,6 +193,15 @@ export function BusinessPlanDisplay() {
   const generatedOn = plan?.generated_at
     ? new Date(plan.generated_at).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })
     : null;
+  const generatedAt = plan?.generated_at
+    ? new Date(plan.generated_at).toLocaleString(undefined, {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    : null;
 
   return (
     <div className="flex flex-col gap-4">
@@ -259,6 +268,26 @@ export function BusinessPlanDisplay() {
         </div>
       </div>
 
+      {regenFailed && plan && !generating && (
+        <div
+          role="alert"
+          className="flex items-start gap-2 rounded-md border border-red-300 bg-red-50 px-3 py-2.5 text-red-900 text-xs dark:border-red-800 dark:bg-red-950/30 dark:text-red-200"
+        >
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <div className="flex flex-col gap-0.5">
+            <p className="font-semibold">{t.bp_failed_previous_title ?? "Couldn't generate a new business plan"}</p>
+            {generatedAt && (
+              <p>
+                {(t.bp_failed_previous_body ?? "Showing your previously generated plan from {date}.").replace(
+                  "{date}",
+                  generatedAt,
+                )}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
       {data?.is_outdated && !generating && (
         <div
           role="alert"
@@ -268,27 +297,6 @@ export function BusinessPlanDisplay() {
           <p>
             {t.bp_outdated ?? "Your FPO's details have changed since this plan was generated. Regenerate to update it."}
           </p>
-        </div>
-      )}
-
-      {regenFailed && plan && !generating && (
-        <div
-          role="alert"
-          className="flex items-start gap-2 rounded-md border border-red-300 bg-red-50 px-3 py-2.5 text-red-900 text-xs dark:border-red-800 dark:bg-red-950/30 dark:text-red-200"
-        >
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-          <div className="flex flex-col gap-0.5">
-            <p className="font-semibold">{t.bp_failed_previous_title ?? "Couldn't generate a new business plan"}</p>
-            <p>{regenFailed}</p>
-            {generatedOn && (
-              <p>
-                {(t.bp_failed_previous_body ?? "Showing your previously generated plan from {date}.").replace(
-                  "{date}",
-                  generatedOn,
-                )}
-              </p>
-            )}
-          </div>
         </div>
       )}
 
