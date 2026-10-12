@@ -22,10 +22,12 @@ import {
   MessageSquarePlus,
   Pencil,
   RefreshCw,
+  Search,
   ShieldCheck,
   Star,
   Trash2,
   Users,
+  X,
   XCircle,
 } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -54,6 +56,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -744,41 +747,43 @@ function TierHistorySection({ entries, t }: { entries: TierAuditLogEntry[]; t: R
 
 // ─── Team tab ─────────────────────────────────────────────────────────────────
 
-function TeamUserRow({ user }: { user: FpoUser }) {
+function TeamUserRow({ user, t, tCommon }: { user: FpoUser; t: T; tCommon: T }) {
   const queryClient = useQueryClient();
   const confirm = useConfirmStore((s) => s.confirm);
 
   const activateMutation = useMutation({
     mutationFn: () => fpoUsersApi.activate(user.id),
     onSuccess: () => {
-      toast.success("User activated");
+      toast.success(t.team_toast_activated ?? "User activated");
       queryClient.invalidateQueries({ queryKey: ["fpo-team", user.fpo_id] });
     },
-    onError: () => toast.error("Failed to activate"),
+    onError: () => toast.error(t.team_activate_failed ?? "Failed to activate"),
   });
 
   const deactivateMutation = useMutation({
     mutationFn: () => fpoUsersApi.deactivate(user.id),
     onSuccess: () => {
-      toast.success("User deactivated");
+      toast.success(t.team_toast_deactivated ?? "User deactivated");
       queryClient.invalidateQueries({ queryKey: ["fpo-team", user.fpo_id] });
     },
-    onError: () => toast.error("Failed to deactivate"),
+    onError: () => toast.error(t.team_deactivate_failed ?? "Failed to deactivate"),
   });
 
   const resetPasswordMutation = useMutation({
     mutationFn: () => fpoUsersApi.resetPassword(user.id),
-    onSuccess: () => toast.success("Temporary password sent"),
-    onError: (err: unknown) => toast.error(getErrorMessage(err, "Failed to reset password")),
+    onSuccess: () => toast.success(t.team_toast_password_sent ?? "Temporary password sent"),
+    onError: (err: unknown) => toast.error(getErrorMessage(err, t.team_reset_failed ?? "Failed to reset password")),
   });
 
   function handleResetPassword() {
     const name = `${user.first_name} ${user.last_name}`.trim() || user.email;
     confirm({
-      title: "Reset Password",
-      description: `A temporary password will be sent to "${name}" via email and SMS.`,
-      confirmLabel: "Reset Password",
-      confirmingLabel: "Sending...",
+      title: t.team_reset_password ?? "Reset Password",
+      description: (
+        t.team_reset_password_desc ?? 'A temporary password will be sent to "{name}" via email and SMS.'
+      ).replace("{name}", name),
+      confirmLabel: t.team_reset_password ?? "Reset Password",
+      confirmingLabel: t.team_reset_sending ?? "Sending…",
       variant: "default",
       onConfirm: () => resetPasswordMutation.mutateAsync(),
     });
@@ -794,10 +799,13 @@ function TeamUserRow({ user }: { user: FpoUser }) {
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-medium text-sm">{`${user.first_name} ${user.last_name}`.trim() || "—"}</span>
             <Badge variant={user.role === "primary" ? "secondary" : "outline"} className="text-[10px]">
-              {user.role === "primary" ? "Primary" : "Secondary"}
+              {user.role === "primary" ? (t.team_role_primary ?? "Primary") : (t.team_role_secondary ?? "Secondary")}
             </Badge>
           </div>
-          <span className="text-muted-foreground text-xs">{user.email}</span>
+          <span className="text-muted-foreground text-xs">
+            {user.email}
+            {user.phone && ` · ${user.phone}`}
+          </span>
         </div>
       </div>
       <div className="flex items-center gap-2 shrink-0">
@@ -806,26 +814,26 @@ function TeamUserRow({ user }: { user: FpoUser }) {
             variant="outline"
             className="border-green-500/40 bg-green-500/10 text-[11px] text-green-700 dark:text-green-400"
           >
-            Active
+            {tCommon.badge_active ?? "Active"}
           </Badge>
         ) : (
           <Badge variant="outline" className="border-muted text-[11px] text-muted-foreground">
-            Inactive
+            {tCommon.badge_inactive ?? "Inactive"}
           </Badge>
         )}
         {/* Other districts' FPOs a sub-admin sees only via can_view_all_fpos are view only */}
         {user.can_manage === false ? (
-          <span className="text-muted-foreground text-xs">View only</span>
+          <span className="text-muted-foreground text-xs">{t.team_view_only ?? "View only"}</span>
         ) : (
           <RowActions
             actions={[
               {
-                label: user.is_active ? "Deactivate" : "Activate",
+                label: user.is_active ? (t.team_deactivate ?? "Deactivate") : (t.team_activate ?? "Activate"),
                 onClick: () => (user.is_active ? deactivateMutation.mutate() : activateMutation.mutate()),
                 disabled: activateMutation.isPending || deactivateMutation.isPending,
               },
               {
-                label: "Reset Password",
+                label: t.team_reset_password ?? "Reset Password",
                 onClick: handleResetPassword,
                 disabled: resetPasswordMutation.isPending,
                 separator: true,
@@ -838,7 +846,10 @@ function TeamUserRow({ user }: { user: FpoUser }) {
   );
 }
 
-function TeamTab({ fpoId }: { fpoId: number }) {
+function TeamTab({ fpoId, t, tCommon }: { fpoId: number; t: T; tCommon: T }) {
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState<"all" | "active" | "inactive">("all");
+
   const { data, isLoading, refetch, isFetching } = useQuery({
     queryKey: ["fpo-team", fpoId],
     queryFn: () => fpoUsersApi.getAll({ page: 1, page_size: 100, fpo_id: fpoId }),
@@ -847,6 +858,27 @@ function TeamTab({ fpoId }: { fpoId: number }) {
   });
 
   const users = Array.from(new Map((data?.data ?? []).map((u) => [u.id, u])).values());
+
+  // Match name / email as text; match phone on digits only when the query looks like a number
+  const query = search.trim().toLowerCase();
+  const queryDigits = /^[\d\s+()-]+$/.test(query) ? query.replace(/\D/g, "") : "";
+  const filteredUsers = users.filter(
+    (u) =>
+      (status === "all" || u.is_active === (status === "active")) &&
+      (!query ||
+        `${u.first_name ?? ""} ${u.last_name ?? ""}`.toLowerCase().includes(query) ||
+        (u.email ?? "").toLowerCase().includes(query) ||
+        (!!queryDigits && (u.phone ?? "").replace(/\D/g, "").includes(queryDigits))),
+  );
+  const isFiltered = !!query || status !== "all";
+
+  const countLabel = isFiltered
+    ? (t.team_count_filtered ?? "{shown} of {total} users")
+        .replace("{shown}", String(filteredUsers.length))
+        .replace("{total}", String(users.length))
+    : users.length === 1
+      ? (t.team_count_one ?? "1 user")
+      : (t.team_count ?? "{count} users").replace("{count}", String(users.length));
 
   if (isLoading)
     return (
@@ -859,20 +891,61 @@ function TeamTab({ fpoId }: { fpoId: number }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <p className="text-muted-foreground text-sm">
-          {users.length} user{users.length !== 1 ? "s" : ""}
-        </p>
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => refetch()} disabled={isFetching}>
-          <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
-        </Button>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="shrink-0 text-muted-foreground text-sm">{countLabel}</p>
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <Select value={status} onValueChange={(value) => setStatus(value as typeof status)}>
+            <SelectTrigger className="h-8 w-32 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t.team_filter_all ?? "All statuses"}</SelectItem>
+              <SelectItem value="active">{tCommon.badge_active ?? "Active"}</SelectItem>
+              <SelectItem value="inactive">{tCommon.badge_inactive ?? "Inactive"}</SelectItem>
+            </SelectContent>
+          </Select>
+          <div className="relative w-full sm:w-64">
+            <Search className="pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t.team_search_placeholder ?? "Search name, email, phone…"}
+              className="h-8 pr-8 pl-8 text-sm"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="absolute top-1/2 right-2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label={t.team_clear_search ?? "Clear search"}
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 shrink-0"
+            onClick={() => refetch()}
+            disabled={isFetching}
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
+          </Button>
+        </div>
       </div>
       {users.length === 0 ? (
-        <p className="text-muted-foreground text-sm py-4 text-center">No users found for this FPO.</p>
+        <p className="text-muted-foreground text-sm py-4 text-center">
+          {t.team_empty ?? "No users found for this FPO."}
+        </p>
+      ) : filteredUsers.length === 0 ? (
+        <p className="py-4 text-center text-muted-foreground text-sm">
+          {t.team_no_match ?? "No members match your filters."}
+        </p>
       ) : (
         <div className="flex flex-col">
-          {users.map((user) => (
-            <TeamUserRow key={user.id} user={user} />
+          {filteredUsers.map((user) => (
+            <TeamUserRow key={user.id} user={user} t={t} tCommon={tCommon} />
           ))}
         </div>
       )}
@@ -2285,7 +2358,7 @@ function ApplicationDetailContent() {
       {/* Team */}
       {activeTab === "team" && (
         <SectionCard icon={Users} title={t.section_team ?? "Team"}>
-          <TeamTab fpoId={fpoId} />
+          <TeamTab fpoId={fpoId} t={t} tCommon={tCommon} />
         </SectionCard>
       )}
 
