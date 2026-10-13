@@ -43,6 +43,16 @@ export interface BuyerProductParams extends DataTableParams {
   date_until?: string;
   lang?: string;
 }
+
+/** The non-price, non-paging filters — shared by getAll and getPriceRange. */
+export type BuyerProductFilters = Pick<BuyerProductParams, "search" | "commodity" | "fpo" | "date_from" | "date_until">;
+
+/** Cheapest and dearest price_per_unit under the current filters (price ignored); null when nothing matches. */
+export interface BuyerPriceRange {
+  min_price: number | null;
+  max_price: number | null;
+}
+
 const BASE = "/marketplace/buyer/products/";
 
 export interface InquiryPayload {
@@ -53,6 +63,13 @@ export interface InquiryPayload {
 export const buyerProductsApi = {
   getAll: (params: BuyerProductParams): Promise<PaginatedResponse<BuyerProduct>> =>
     api.get(BASE, { params }).then((r) => r.data as PaginatedResponse<BuyerProduct>),
+
+  /** Bounds for the price slider — send the same filters as getAll, minus page and price. */
+  getPriceRange: (params: BuyerProductFilters): Promise<BuyerPriceRange> =>
+    api.get(`${BASE}price-range/`, { params }).then((r) => {
+      const d = r.data as Record<string, unknown>;
+      return (d.data ?? d) as BuyerPriceRange;
+    }),
 
   getRecommended: (): Promise<BuyerProduct[]> =>
     api.get(`${BASE}recommended/`).then((r) => {

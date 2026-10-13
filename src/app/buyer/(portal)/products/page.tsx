@@ -9,7 +9,7 @@ import { Building2, Calendar as CalendarIcon, Package, Search } from "lucide-rea
 import { toast } from "sonner";
 
 import { buyerDashboardApi } from "@/app/buyer/_api/dashboard";
-import { type BuyerProduct, buyerProductsApi } from "@/app/buyer/_api/products";
+import { type BuyerProduct, type BuyerProductFilters, buyerProductsApi } from "@/app/buyer/_api/products";
 import { masterDataApi } from "@/app/fpo/_api/master-data";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +31,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { translationsApi } from "@/lib/api/translations";
 import { toMediaUrl } from "@/lib/utils/media-url";
 import { useLocaleStore } from "@/stores/locale-store";
+
+import { type PriceFilterValue, PriceRangeFilter } from "./_components/price-range-filter";
 
 type T = Record<string, string>;
 
@@ -188,6 +190,7 @@ export default function BuyerProductsPage() {
   const [defaultApplied, setDefaultApplied] = useState(false);
   const [fromDate, setFromDate] = useState<Date | undefined>(undefined);
   const [untilDate, setUntilDate] = useState<Date | undefined>(undefined);
+  const [price, setPrice] = useState<PriceFilterValue>({});
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
@@ -228,30 +231,36 @@ export default function BuyerProductsPage() {
   // only one is treated as "no filter yet."
   const dateFilterReady = !!fromDate && !!untilDate;
 
+  const filters: BuyerProductFilters = {
+    search: search || undefined,
+    commodity: selectedCommodities.length > 0 ? selectedCommodities.join(",") : undefined,
+    date_from: dateFilterReady ? formatDate(fromDate) : undefined,
+    date_until: dateFilterReady ? formatDate(untilDate) : undefined,
+  };
+
   const { data, isLoading } = useQuery({
-    queryKey: [
-      "buyer-products",
-      locale,
-      search,
-      selectedCommodities,
-      dateFilterReady ? fromDate : null,
-      dateFilterReady ? untilDate : null,
-      page,
-      pageSize,
-    ],
+    queryKey: ["buyer-products", locale, filters, price, page, pageSize],
     queryFn: () =>
       buyerProductsApi.getAll({
         page,
         page_size: pageSize,
-        search: search || undefined,
-        commodity: selectedCommodities.length > 0 ? selectedCommodities.join(",") : undefined,
-        date_from: dateFilterReady ? formatDate(fromDate) : undefined,
-        date_until: dateFilterReady ? formatDate(untilDate) : undefined,
+        ...filters,
+        price_min: price.min?.toString(),
+        price_max: price.max?.toString(),
       }),
     staleTime: 30_000,
     // Wait until we've decided the default commodity selection (from the
     // buyer's interests) before firing the first request, so we don't
     // briefly show "all products" and then jump to the filtered list.
+    enabled: defaultApplied,
+  });
+
+  // Price slider ends follow every filter except price itself, so they don't
+  // shrink to whatever range the buyer already picked.
+  const { data: priceBounds } = useQuery({
+    queryKey: ["buyer-products-price-range", filters],
+    queryFn: () => buyerProductsApi.getPriceRange(filters),
+    staleTime: 30_000,
     enabled: defaultApplied,
   });
 
@@ -267,8 +276,8 @@ export default function BuyerProductsPage() {
       </div>
 
       {/* ── Search + Filter bar ── */}
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <div className="relative flex-1">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+        <div className="relative flex-1 sm:min-w-56">
           <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder={t.search_placeholder ?? "Search products…"}
@@ -314,6 +323,16 @@ export default function BuyerProductsPage() {
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <PriceRangeFilter
+          value={price}
+          bounds={priceBounds}
+          t={t}
+          onApply={(next) => {
+            setPrice(next);
+            resetPage();
+          }}
+        />
 
         <Popover>
           <PopoverTrigger asChild>
