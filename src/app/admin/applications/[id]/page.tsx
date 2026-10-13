@@ -332,7 +332,7 @@ function RejectDialog({
   const mutation = useMutation({
     mutationFn: (values: RejectValues) => adminApplicationsApi.reject(fpoId, values.reason),
     onSuccess: () => {
-      toast.success(t.reject_dialog_title ?? "Application rejected");
+      toast.success(t.reject_toast_success ?? "Application rejected successfully");
       queryClient.invalidateQueries({ queryKey: ["application", fpoId] });
       queryClient.invalidateQueries({ queryKey: ["applications"] });
       reset();
