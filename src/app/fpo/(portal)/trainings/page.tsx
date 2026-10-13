@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -8,14 +8,12 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
-  Clock,
   HeartHandshake,
   Landmark,
   type LucideIcon,
   MapPin,
   ShieldCheck,
   User,
-  Users,
 } from "lucide-react";
 
 import { type FPOTrainingSession, fpoTrainingApi } from "@/app/fpo/_api/training";
@@ -66,23 +64,17 @@ function parseLocalDate(value: string): Date {
   return new Date(year, month - 1, day);
 }
 
-/** One labelled line of the card: icon, title, value. */
-function DetailRow({
-  icon: Icon,
-  label,
-  children,
-  className = "",
-}: {
-  icon: LucideIcon;
-  label: string;
-  children: ReactNode;
-  className?: string;
-}) {
+/** One line of the card: icon + value. The label is kept for screen readers and as the icon's tooltip. */
+function InfoLine({ icon: Icon, label, children }: { icon: LucideIcon; label: string; children: ReactNode }) {
   return (
-    <div className={`flex items-start gap-2 ${className}`}>
-      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-      <span className="w-24 shrink-0 text-muted-foreground text-xs leading-5">{label}</span>
-      <span className="min-w-0 flex-1 leading-5">{children}</span>
+    <div className="flex items-start gap-2">
+      <span title={label} className="mt-0.5 shrink-0 text-muted-foreground">
+        <Icon className="h-4 w-4" aria-hidden />
+      </span>
+      <span className="min-w-0 flex-1 break-words leading-5">
+        <span className="sr-only">{label}: </span>
+        {children}
+      </span>
     </div>
   );
 }
@@ -92,6 +84,108 @@ function cardStatus(session: FPOTrainingSession): CardStatus {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   return parseLocalDate(session.date).getTime() === today.getTime() ? "today" : "upcoming";
+}
+
+function TrainingCard({ session: s }: { session: FPOTrainingSession }) {
+  const theme = SESSION_THEME[cardStatus(s)];
+  const role = ROLE_THEME[s.conducted_by_role] ?? ROLE_THEME.other;
+  const titleRef = useRef<HTMLDivElement>(null);
+  const [expanded, setExpanded] = useState(false);
+  const [clamped, setClamped] = useState(false);
+
+  // Offer "Read more" only when the 2-line clamp actually hides part of the topic,
+  // which depends on the card's width — re-measured as the grid resizes.
+  useEffect(() => {
+    const el = titleRef.current;
+    if (!el || expanded) return;
+    const measure = () => setClamped(el.scrollHeight > el.clientHeight + 1);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [expanded]);
+
+  const participants = `${s.participants_count} participant${s.participants_count === 1 ? "" : "s"}`;
+
+  return (
+    <Card className={`flex flex-col gap-4 border-t-4 ${theme.accent}`}>
+      <CardHeader>
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex min-w-0 flex-col items-start gap-1">
+            <CardTitle
+              ref={titleRef}
+              title={s.topic}
+              className={`break-words text-base leading-snug ${expanded ? "" : "line-clamp-2"}`}
+            >
+              {s.topic}
+            </CardTitle>
+            {(clamped || expanded) && (
+              <button
+                type="button"
+                onClick={() => setExpanded((v) => !v)}
+                className="font-medium text-primary text-xs hover:underline"
+              >
+                {expanded ? "Show less" : "Read more"}
+              </button>
+            )}
+          </div>
+          <Badge variant="outline" className={`shrink-0 border text-[11px] ${theme.chip}`}>
+            {theme.label}
+          </Badge>
+        </div>
+        {s.status === "cancelled" && s.cancelled_at && (
+          <p className="text-rose-700 text-xs">
+            Cancelled on{" "}
+            {new Date(s.cancelled_at).toLocaleDateString("en-IN", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            })}
+            {s.cancellation_reason ? ` · ${s.cancellation_reason}` : ""}
+          </p>
+        )}
+      </CardHeader>
+      <CardContent className="flex flex-1 flex-col gap-2 text-sm">
+        <InfoLine icon={CalendarDays} label="Date, time and duration">
+          {parseLocalDate(s.date).toLocaleDateString("en-IN", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+          })}
+          {s.time ? ` · ${s.time}` : ""} · {s.duration_hours} hours
+        </InfoLine>
+        <InfoLine icon={MapPin} label="Venue">
+          {s.venue || "Venue TBD"}
+        </InfoLine>
+        <InfoLine icon={User} label="Trainer and participants">
+          {s.trainer_name || "Trainer TBD"} · {participants}
+        </InfoLine>
+        <div className="mt-auto flex flex-col gap-1 border-t pt-3">
+          <span className="text-muted-foreground text-xs">Scheduled by</span>
+          <div className="flex items-start gap-2">
+            <role.Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+              {/* Wraps: the badge drops under the name instead of squeezing it */}
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="min-w-0 break-words font-medium">{s.conducted_by_name}</span>
+                <Badge variant="outline" className={`border text-[11px] ${role.chip}`}>
+                  {s.conducted_by_role_display}
+                </Badge>
+              </div>
+              {s.conducted_by_detail && <span className="text-muted-foreground text-xs">{s.conducted_by_detail}</span>}
+              {s.conducted_by_organisation && (
+                <span className="flex items-center gap-1 text-muted-foreground text-xs">
+                  <Building2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  <span className="sr-only">Organisation: </span>
+                  {s.conducted_by_organisation}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function FpoTrainingSessionsPage() {
@@ -176,73 +270,9 @@ export default function FpoTrainingSessionsPage() {
       {!isLoading && !isError && sessions.length > 0 && (
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {sessions.map((s) => {
-              const theme = SESSION_THEME[cardStatus(s)];
-              const role = ROLE_THEME[s.conducted_by_role] ?? ROLE_THEME.other;
-              return (
-                <Card key={s.id} className={`flex flex-col border-t-4 ${theme.accent}`}>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <CardTitle className="text-base leading-snug">{s.topic}</CardTitle>
-                      <Badge variant="outline" className={`shrink-0 border text-[11px] ${theme.chip}`}>
-                        {theme.label}
-                      </Badge>
-                    </div>
-                    {s.status === "cancelled" && s.cancelled_at && (
-                      <p className="text-rose-700 text-xs">
-                        Cancelled on{" "}
-                        {new Date(s.cancelled_at).toLocaleDateString("en-IN", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                        {s.cancellation_reason ? ` · ${s.cancellation_reason}` : ""}
-                      </p>
-                    )}
-                  </CardHeader>
-                  <CardContent className="flex flex-1 flex-col gap-2.5 text-sm">
-                    <DetailRow icon={CalendarDays} label="Date">
-                      {parseLocalDate(s.date).toLocaleDateString("en-IN", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                      })}
-                      {s.time ? ` · ${s.time}` : ""}
-                    </DetailRow>
-                    <DetailRow icon={Clock} label="Duration">
-                      {s.duration_hours} hours
-                    </DetailRow>
-                    <DetailRow icon={MapPin} label="Venue">
-                      {s.venue || "TBD"}
-                    </DetailRow>
-                    <DetailRow icon={User} label="Trainer">
-                      {s.trainer_name || "TBD"}
-                    </DetailRow>
-                    <DetailRow icon={Users} label="Participants">
-                      {s.participants_count}
-                    </DetailRow>
-                    <div className="mt-auto flex flex-col gap-1 border-t pt-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <DetailRow icon={role.Icon} label="Scheduled by" className="min-w-0 flex-1">
-                          <span className="font-medium">{s.conducted_by_name}</span>
-                        </DetailRow>
-                        <Badge variant="outline" className={`shrink-0 border text-[11px] ${role.chip}`}>
-                          {s.conducted_by_role_display}
-                        </Badge>
-                      </div>
-                      {s.conducted_by_detail && (
-                        <p className="pl-6 text-muted-foreground text-xs">{s.conducted_by_detail}</p>
-                      )}
-                      {s.conducted_by_organisation && (
-                        <DetailRow icon={Building2} label="Organisation">
-                          {s.conducted_by_organisation}
-                        </DetailRow>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+            {sessions.map((s) => (
+              <TrainingCard key={s.id} session={s} />
+            ))}
           </div>
 
           <div className="flex items-center justify-between border-t pt-4">

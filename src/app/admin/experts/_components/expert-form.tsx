@@ -102,6 +102,8 @@ export function ExpertForm({ mode, expert, t = {}, tCommon = {} }: ExpertFormPro
     reset,
     setValue,
     getValues,
+    setError,
+    setFocus,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -152,6 +154,17 @@ export function ExpertForm({ mode, expert, t = {}, tCommon = {} }: ExpertFormPro
       router.push("/admin/experts");
     },
     onError: (error: unknown) => {
+      // Field errors from the backend (e.g. an email already used by another account)
+      // go under their field; anything else is a toast.
+      const fieldErrors = (error as { data?: { errors?: Record<string, string[]> } })?.data?.errors;
+      const formFields = Object.keys(fieldErrors ?? {}).filter((f): f is keyof FormValues => f in defaultValues);
+      if (fieldErrors && formFields.length > 0) {
+        for (const field of formFields) {
+          setError(field, { type: "server", message: fieldErrors[field][0] });
+        }
+        setFocus(formFields[0]);
+        return;
+      }
       const msg = (error as { message?: string })?.message;
       toast.error(
         msg ??
