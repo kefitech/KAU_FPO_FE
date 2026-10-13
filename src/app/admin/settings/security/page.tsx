@@ -15,6 +15,7 @@ import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { authApi } from "@/lib/api/auth";
 import { twoFactorApi } from "@/lib/api/two-factor";
+import { copyToClipboard } from "@/lib/copy-to-clipboard";
 import type { BackupCodesResponse, TwoFactorSetupResponse } from "@/types/auth";
 
 function SectionHeading({ title }: { title: string }) {
@@ -187,8 +188,12 @@ type DisableStep = "idle" | "confirm";
 
 function BackupCodeList({ codes, warning }: { codes: string[]; warning?: string }) {
   const [copied, setCopied] = useState(false);
-  function handleCopy() {
-    navigator.clipboard.writeText(codes.join("\n"));
+  async function handleCopy() {
+    if (!(await copyToClipboard(codes.join("\n")))) {
+      toast.error("Couldn't copy the codes. Select and copy them manually.");
+      return;
+    }
+    toast.success("Backup codes copied");
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
