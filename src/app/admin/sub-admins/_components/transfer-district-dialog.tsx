@@ -54,10 +54,21 @@ export function TransferDistrictForm({
   const mutation = useMutation({
     mutationFn: () => subAdminsApi.transferDistrict(subAdmin.id, toDistrict, reason),
     onSuccess: () => {
+      // Tester 2026-10-12: the toast showed "test@gmail.com moved to KSD"
+      // — use the person's name (email only as fallback) and the district's
+      // display name, not its 3-letter code. {email} is still substituted
+      // so an older seeded translation string keeps working.
+      const displayName =
+        `${subAdmin.first_name ?? ""} ${subAdmin.last_name ?? ""}`.trim() ||
+        subAdmin.email ||
+        "";
+      const districtName =
+        KERALA_DISTRICTS.find((d) => d.code === toDistrict)?.name ?? toDistrict;
       toast.success(
-        (t.transfer_success ?? "{email} moved to {district}.")
-          .replace("{email}", subAdmin.email ?? "")
-          .replace("{district}", toDistrict),
+        (t.transfer_success ?? "{name} moved to {district}.")
+          .replace("{name}", displayName)
+          .replace("{email}", displayName)
+          .replace("{district}", districtName),
       );
       queryClient.invalidateQueries({ queryKey: ["sub-admins"] });
       queryClient.invalidateQueries({ queryKey: ["sub-admin", String(subAdmin.id)] });
