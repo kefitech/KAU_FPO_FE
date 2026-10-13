@@ -18,6 +18,21 @@ import type { SubAdminConfigPayload } from "@/types/admin";
 
 type T = Record<string, string>;
 
+/** Parses a whole number (digits only). Null for blank, signs, decimals or letters. */
+function parseWholeNumber(raw: string): number | null {
+  const value = raw.trim();
+  return /^\d+$/.test(value) ? Number(value) : null;
+}
+
+function FieldError({ message }: { message?: string }) {
+  if (!message) return null;
+  return (
+    <p className="mt-1 text-destructive text-xs" role="alert">
+      {message}
+    </p>
+  );
+}
+
 export default function SubAdminSettingsPage() {
   const queryClient = useQueryClient();
   const locale = useLocaleStore((s) => s.locale);
@@ -30,6 +45,15 @@ export default function SubAdminSettingsPage() {
   const [overrides,      setOverrides]     = useState<Record<string, string>>({});
   const [newOverrideCode, setNewOverrideCode] = useState<string>("");
   const [newOverrideValue, setNewOverrideValue] = useState<string>("");
+  // Per-field validation messages, keyed by field (district overrides as "override:<code>")
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const clearFieldError = (key: string) =>
+    setFieldErrors((current) => {
+      if (!(key in current)) return current;
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
 
   useEffect(() => {
     translationsApi
@@ -71,19 +95,51 @@ export default function SubAdminSettingsPage() {
   });
 
   function handleSaveAll() {
+    // Every number is validated before anything is sent. Blank or non-numeric
+    // input is an error, never silently turned into 0 (that overwrote saved values).
+    const errors: Record<string, string> = {};
+    const cap = parseWholeNumber(globalCap);
+    if (cap === null || cap < 1) {
+      errors.globalCap = t.error_global_cap ?? "Global cap must be a whole number of 1 or more.";
+    }
+    const scheme = parseWholeNumber(schemeDays);
+    if (scheme === null) {
+      errors.schemeDays = t.error_scheme_days ?? "Scheme expiry must be a whole number of days, 0 or more.";
+    }
+    const training = parseWholeNumber(trainingDays);
+    if (training === null) {
+      errors.trainingDays = t.error_training_days ?? "Training expiry must be a whole number of days, 0 or more.";
+    }
+    const districtCaps: Record<string, number> = {};
+    for (const [code, raw] of Object.entries(overrides)) {
+      const value = parseWholeNumber(raw);
+      if (value === null) {
+        const name = KERALA_DISTRICTS.find((d) => d.code === code)?.name ?? code;
+        errors[`override:${code}`] = `${name}: ${t.error_override_cap ?? "Cap must be a whole number, 0 or more."}`;
+      } else {
+        districtCaps[code] = value;
+      }
+    }
+    setFieldErrors(errors);
+    if (cap === null || scheme === null || training === null || Object.keys(errors).length > 0) {
+      toast.error(t.error_fix_fields ?? "Fix the highlighted fields before saving.");
+      return;
+    }
     const payload: SubAdminConfigPayload = {
-      global_cap:            Number(globalCap) || 30,
-      scheme_expiry_days:    Number(schemeDays) || 0,
-      training_expiry_days:  Number(trainingDays) || 0,
-      district_caps: Object.fromEntries(
-        Object.entries(overrides).map(([code, val]) => [code, val ? Number(val) : 0]),
-      ),
+      global_cap: cap,
+      scheme_expiry_days: scheme,
+      training_expiry_days: training,
+      district_caps: districtCaps,
     };
     patchMutation.mutate(payload);
   }
 
   function handleAddOverride() {
     if (!newOverrideCode || !newOverrideValue) return;
+    if (parseWholeNumber(newOverrideValue) === null) {
+      toast.error(t.error_override_cap ?? "Cap must be a whole number, 0 or more.");
+      return;
+    }
     setOverrides((s) => ({ ...s, [newOverrideCode]: newOverrideValue }));
     setNewOverrideCode("");
     setNewOverrideValue("");
@@ -126,10 +182,17 @@ export default function SubAdminSettingsPage() {
                   <Input
                     id="global-cap"
                     type="number"
+                    inputMode="numeric"
                     min={1}
+                    step={1}
                     value={globalCap}
-                    onChange={(e) => setGlobalCap(e.target.value)}
+                    aria-invalid={fieldErrors.globalCap ? true : undefined}
+                    onChange={(e) => {
+                      setGlobalCap(e.target.value);
+                      clearFieldError("globalCap");
+                    }}
                   />
+                  <FieldError message={fieldErrors.globalCap} />
                   <p className="mt-1 text-[11px] text-muted-foreground">
                     {t.global_cap_hint ?? "Applies to any district without a specific override."}
                   </p>
@@ -154,11 +217,16 @@ export default function SubAdminSettingsPage() {
                             <span className="text-muted-foreground text-xs">{name}</span>
                             <Input
                               type="number"
+                              inputMode="numeric"
                               min={0}
+                              step={1}
                               value={val}
-                              onChange={(e) =>
-                                setOverrides((s) => ({ ...s, [code]: e.target.value }))
-                              }
+                              aria-invalid={fieldErrors[`override:${code}`] ? true : undefined}
+                              aria-label={`${name} cap`}
+                              onChange={(e) => {
+                                setOverrides((s) => ({ ...s, [code]: e.target.value }));
+                                clearFieldError(`override:${code}`);
+                              }}
                               className="ml-auto h-8 w-24"
                             />
                             <Button
@@ -175,6 +243,11 @@ export default function SubAdminSettingsPage() {
                       })}
                   </ul>
                 )}
+                {Object.entries(fieldErrors)
+                  .filter(([key]) => key.startsWith("override:"))
+                  .map(([key, message]) => (
+                    <FieldError key={key} message={message} />
+                  ))}
 
                 <div className="flex flex-wrap items-end gap-2 rounded-md border border-dashed p-2">
                   <div>
@@ -196,7 +269,9 @@ export default function SubAdminSettingsPage() {
                     <Label className="text-[11px]">{t.cap ?? "Cap"}</Label>
                     <Input
                       type="number"
+                      inputMode="numeric"
                       min={0}
+                      step={1}
                       value={newOverrideValue}
                       onChange={(e) => setNewOverrideValue(e.target.value)}
                       className="h-8 w-24"
@@ -224,20 +299,34 @@ export default function SubAdminSettingsPage() {
                 <Input
                   id="scheme-days"
                   type="number"
+                  inputMode="numeric"
                   min={0}
+                  step={1}
                   value={schemeDays}
-                  onChange={(e) => setSchemeDays(e.target.value)}
+                  aria-invalid={fieldErrors.schemeDays ? true : undefined}
+                  onChange={(e) => {
+                    setSchemeDays(e.target.value);
+                    clearFieldError("schemeDays");
+                  }}
                 />
+                <FieldError message={fieldErrors.schemeDays} />
               </div>
               <div>
                 <Label htmlFor="training-days">{t.training_expiry_days ?? "Training expiry (days after date)"}</Label>
                 <Input
                   id="training-days"
                   type="number"
+                  inputMode="numeric"
                   min={0}
+                  step={1}
                   value={trainingDays}
-                  onChange={(e) => setTrainingDays(e.target.value)}
+                  aria-invalid={fieldErrors.trainingDays ? true : undefined}
+                  onChange={(e) => {
+                    setTrainingDays(e.target.value);
+                    clearFieldError("trainingDays");
+                  }}
                 />
+                <FieldError message={fieldErrors.trainingDays} />
               </div>
             </CardContent>
           </Card>
