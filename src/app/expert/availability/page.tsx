@@ -177,9 +177,73 @@ function HoldableDayButton(props: ComponentProps<typeof CalendarDayButton>) {
   );
 }
 
+function toMinutes(hhmm: string) {
+  const [h, m] = hhmm.split(":").map(Number);
+  return h * 60 + m;
+}
+
+/** "14:30" -> "02:30 PM", the way the time inputs display it. */
+function to12h(hhmm: string) {
+  const [h, m] = hhmm.split(":").map(Number);
+  return `${String(h % 12 || 12).padStart(2, "0")}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`;
+}
+
+/**
+ * Problems with a day's slots, keyed by row: a missing time, a slot that does
+ * not end after it starts, or an overlap with another row. Slots that only
+ * touch (10:00–11:00 then 11:00–12:00) are fine. Mirrors the server's checks.
+ */
+function findSlotErrors(slots: TimeSlot[], t: T): Map<number, string> {
+  const errors = new Map<number, string>();
+  slots.forEach((slot, index) => {
+    if (!slot.start || !slot.end) {
+      errors.set(index, t.error_slot_missing_time ?? "Enter both a start and an end time.");
+    } else if (toMinutes(slot.end) === toMinutes(slot.start)) {
+      errors.set(
+        index,
+        (t.error_slot_zero ?? "Start and end times are the same. Pick an end time after {start}.").replace(
+          "{start}",
+          to12h(slot.start),
+        ),
+      );
+    } else if (toMinutes(slot.end) < toMinutes(slot.start)) {
+      errors.set(
+        index,
+        (t.error_slot_reversed ?? "End time is earlier than the start time. Pick an end time after {start}.").replace(
+          "{start}",
+          to12h(slot.start),
+        ),
+      );
+    }
+  });
+  const overlap = (other: TimeSlot) =>
+    (t.error_slot_overlap ?? "Clashes with the {other} slot. Times on the same day cannot overlap.").replace(
+      "{other}",
+      `${to12h(other.start)}–${to12h(other.end)}`,
+    );
+  const ordered = slots
+    .map((_, index) => index)
+    .filter((index) => !errors.has(index))
+    .sort(
+      (a, b) =>
+        toMinutes(slots[a].start) - toMinutes(slots[b].start) || toMinutes(slots[a].end) - toMinutes(slots[b].end),
+    );
+  let reach = ordered[0]; // the row whose end reaches furthest so far
+  for (const index of ordered.slice(1)) {
+    if (toMinutes(slots[index].start) < toMinutes(slots[reach].end)) {
+      if (!errors.has(index)) errors.set(index, overlap(slots[reach]));
+      if (!errors.has(reach)) errors.set(reach, overlap(slots[index]));
+    }
+    if (toMinutes(slots[index].end) > toMinutes(slots[reach].end)) reach = index;
+  }
+  return errors;
+}
+
 // ─── Slot editor (shared by the weekly template and per-date overrides) ──────
 
 function SlotEditor({ slots, onChange, t }: { slots: TimeSlot[]; onChange: (next: TimeSlot[]) => void; t: T }) {
+  const errors = findSlotErrors(slots, t);
+
   function update(index: number, patch: Partial<TimeSlot>) {
     const next = slots.map((s, i) => (i === index ? { ...s, ...patch } : s));
     const edited = next[index];
@@ -208,6 +272,7 @@ function SlotEditor({ slots, onChange, t }: { slots: TimeSlot[]; onChange: (next
           <Input
             type="time"
             value={slot.start}
+            aria-invalid={errors.has(index) ? true : undefined}
             onChange={(e) => update(index, { start: e.target.value })}
             className="w-32"
           />
@@ -215,6 +280,7 @@ function SlotEditor({ slots, onChange, t }: { slots: TimeSlot[]; onChange: (next
           <Input
             type="time"
             value={slot.end}
+            aria-invalid={errors.has(index) ? true : undefined}
             onChange={(e) => update(index, { end: e.target.value })}
             className="w-32"
           />
@@ -235,6 +301,11 @@ function SlotEditor({ slots, onChange, t }: { slots: TimeSlot[]; onChange: (next
           >
             <Trash2 className="h-4 w-4" />
           </Button>
+          {errors.has(index) && (
+            <p role="alert" className="basis-full text-destructive text-xs">
+              {errors.get(index)}
+            </p>
+          )}
         </div>
       ))}
       <Button type="button" size="sm" variant="outline" onClick={add} className="w-fit">
@@ -639,6 +710,11 @@ export default function ExpertAvailabilityPage() {
       toast.error(t.error_nothing_selected ?? "Select at least one date on the calendar first.");
       return;
     }
+    // Marking absent sends no slots, so only a real save needs valid ones.
+    if (!absent && datesInvalid) {
+      toast.error(t.error_slots_invalid ?? "Fix the highlighted time slots before saving.");
+      return;
+    }
     // Always check against the bookings as they are NOW, not the list loaded
     // with the page: a member may have booked one of these dates since, and
     // the cached list (staleTime 1 min) would let that booking be cancelled
@@ -731,6 +807,9 @@ export default function ExpertAvailabilityPage() {
   const count = String(selectedList.length);
   const activeWeekdayLabel = WEEKDAYS.find((d) => d.value === activeWeekdayTab)?.label;
   const weeklyDirty = serializeWeekly(weekdaySlots) !== serializeWeekly(savedWeeklySlots);
+  // Saving is blocked while any day holds a reversed or overlapping slot; the rows show why.
+  const weeklyInvalid = Object.values(weekdaySlots).some((slots) => findSlotErrors(slots, t).size > 0);
+  const datesInvalid = selectedList.some((iso) => findSlotErrors(getSlotsForDate(iso), t).size > 0);
   const hasSavedWeekly = ALL_WEEKDAYS.some((d) => (savedWeeklySlots[d] ?? []).length > 0);
   function discardWeeklyChanges() {
     setWeekdaySlots(
@@ -867,9 +946,11 @@ export default function ExpertAvailabilityPage() {
           {weeklyDirty && (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 dark:border-amber-900/40 dark:bg-amber-950/20">
               <p className="text-amber-800 text-sm dark:text-amber-300">
-                {hasSavedWeekly
-                  ? (t.weekly_unsaved ?? "You have unsaved changes to your weekly schedule.")
-                  : (t.weekly_not_saved_yet ?? "Your weekly schedule has not been saved yet.")}
+                {weeklyInvalid
+                  ? (t.error_slots_invalid ?? "Fix the highlighted time slots before saving.")
+                  : hasSavedWeekly
+                    ? (t.weekly_unsaved ?? "You have unsaved changes to your weekly schedule.")
+                    : (t.weekly_not_saved_yet ?? "Your weekly schedule has not been saved yet.")}
               </p>
               <div className="flex gap-2">
                 {hasSavedWeekly && (
@@ -887,7 +968,7 @@ export default function ExpertAvailabilityPage() {
                   type="button"
                   size="sm"
                   onClick={() => weeklyScheduleMutation.mutate()}
-                  disabled={weeklyScheduleMutation.isPending}
+                  disabled={weeklyScheduleMutation.isPending || weeklyInvalid}
                 >
                   {weeklyScheduleMutation.isPending
                     ? (t.btn_saving ?? "Saving...")
@@ -982,7 +1063,7 @@ export default function ExpertAvailabilityPage() {
               <Button
                 type="button"
                 onClick={() => requestSave(false)}
-                disabled={saveMutation.isPending || checking !== null}
+                disabled={saveMutation.isPending || checking !== null || datesInvalid}
               >
                 {saveMutation.isPending
                   ? (t.btn_saving ?? "Saving...")
@@ -1000,6 +1081,11 @@ export default function ExpertAvailabilityPage() {
                   ? (t.btn_checking_bookings ?? "Checking appointments...")
                   : (t.btn_mark_absent_count ?? "Mark {count} date(s) as Absent").replace("{count}", count)}
               </Button>
+              {datesInvalid && (
+                <p role="alert" className="basis-full text-destructive text-xs">
+                  {t.error_slots_invalid ?? "Fix the highlighted time slots before saving."}
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
