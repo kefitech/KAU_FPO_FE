@@ -609,6 +609,8 @@ export interface AdminExpert {
   category: string;
   category_display: string;
   is_active: boolean;
+  /** False for experts added before logins were created on save — they have no password to reset. */
+  has_login: boolean;
 }
 
 export interface AdminExpertPayload {

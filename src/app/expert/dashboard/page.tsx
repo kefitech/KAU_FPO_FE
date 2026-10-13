@@ -137,19 +137,7 @@ export default function ExpertDashboardPage() {
   const endOfWeekIso = toLocalISODate(new Date(year, month, now.getDate() + ((7 - now.getDay()) % 7)));
   const endOfMonthIso = toLocalISODate(new Date(year, month + 1, 0));
 
-  // ── Period slice ─────────────────────────────────────────────────────────
-  const monthsBack = period === "all" ? null : Number(period);
-  const periodStart = useMemo(() => {
-    if (monthsBack === null) return null;
-    return toLocalISODate(new Date(year, month - (monthsBack - 1), 1));
-  }, [monthsBack, year, month]);
-  const inPeriod = useMemo(
-    () => bookings.filter((b) => !periodStart || b.requested_date >= periodStart),
-    [bookings, periodStart],
-  );
-  const held = useMemo(() => inPeriod.filter((b) => outcomeOf(b) !== "cancelled"), [inPeriod]);
-
-  // ── Headline numbers ─────────────────────────────────────────────────────
+  // ── Headline numbers (all time; the period picker only drives the chart) ─
   const upcoming = useMemo(
     () =>
       bookings
@@ -173,13 +161,22 @@ export default function ExpertDashboardPage() {
     }
     return { count: 0, window: "month" as UpcomingWindow };
   }, [upcoming, todayIso, endOfWeekIso, endOfMonthIso]);
-  const completedCount = inPeriod.filter((b) => outcomeOf(b) === "completed").length;
-  const cancelledCount = inPeriod.filter((b) => outcomeOf(b) === "cancelled").length;
-  const fposServed = new Set(held.map((b) => b.fpo)).size;
+  const completedCount = bookings.filter((b) => outcomeOf(b) === "completed").length;
+  const cancelledCount = bookings.filter((b) => outcomeOf(b) === "cancelled").length;
+  const fposServed = new Set(bookings.filter((b) => outcomeOf(b) !== "cancelled").map((b) => b.fpo)).size;
 
   // ── Chart series ─────────────────────────────────────────────────────────
+  const monthsBack = period === "all" ? null : Number(period);
   const monthly = useMemo<MonthPoint[]>(() => {
-    const span = monthsBack ?? 12;
+    // "All time" runs from the month of the earliest booking (at least the current month).
+    const earliest = bookings.reduce<string | null>(
+      (min, b) => (min === null || b.requested_date < min ? b.requested_date : min),
+      null,
+    );
+    const sinceEarliest = earliest
+      ? (year - Number(earliest.slice(0, 4))) * 12 + (month + 1 - Number(earliest.slice(5, 7))) + 1
+      : 1;
+    const span = monthsBack ?? Math.max(1, sinceEarliest);
     const months: { key: string; month: string }[] = [];
     for (let i = span - 1; i >= 0; i--) {
       const d = new Date(year, month - i, 1);
@@ -228,7 +225,7 @@ export default function ExpertDashboardPage() {
     "12": t.period_12m ?? "Last 12 months",
     all: t.period_all ?? "All time",
   };
-  const periodDesc = periodLabels[period];
+  const allTimeDesc = t.period_all ?? "All time";
   const upcomingDesc = {
     today: t.card_upcoming_today ?? "Confirmed, today",
     week: t.card_upcoming_week ?? "Confirmed, this week",
@@ -240,23 +237,6 @@ export default function ExpertDashboardPage() {
       <div>
         <h1 className="font-bold text-3xl">{t.dashboard_heading ?? "Dashboard"}</h1>
         <p className="text-muted-foreground">{t.page_description ?? "How your appointments are going"}</p>
-      </div>
-
-      {/* One filter row; everything below it follows the same period. */}
-      <div className="flex flex-wrap items-center gap-3">
-        <span className="text-muted-foreground text-sm">{t.period_label ?? "Period"}</span>
-        <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
-          <SelectTrigger className="w-44">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {(Object.keys(periodLabels) as Period[]).map((p) => (
-              <SelectItem key={p} value={p}>
-                {periodLabels[p]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -272,21 +252,21 @@ export default function ExpertDashboardPage() {
           icon={CheckCircle}
           label={t.card_completed ?? "Completed"}
           value={completedCount}
-          desc={periodDesc}
+          desc={allTimeDesc}
         />
         <StatTile
           gradient="from-rose-500 to-red-600"
           icon={XCircle}
           label={t.card_cancelled ?? "Cancelled"}
           value={cancelledCount}
-          desc={periodDesc}
+          desc={allTimeDesc}
         />
         <StatTile
           gradient="from-violet-500 to-purple-600"
           icon={Users}
           label={t.card_fpos ?? "FPOs served"}
           value={fposServed}
-          desc={periodDesc}
+          desc={allTimeDesc}
         />
       </div>
 
@@ -302,6 +282,20 @@ export default function ExpertDashboardPage() {
           { key: "total", label: t.col_total ?? "Total", align: "right" },
         ]}
         rows={bookings.length ? monthly : []}
+        actions={
+          <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
+            <SelectTrigger size="sm" className="w-40" aria-label={t.period_label ?? "Period"}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(periodLabels) as Period[]).map((p) => (
+                <SelectItem key={p} value={p}>
+                  {periodLabels[p]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        }
       >
         <GradientGroupedBarChart
           data={monthly.map((m) => ({

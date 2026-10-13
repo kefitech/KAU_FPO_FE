@@ -405,7 +405,7 @@ function RequestInfoDialog({
   const mutation = useMutation({
     mutationFn: (values: RequestInfoValues) => adminApplicationsApi.requestInfo(fpoId, values.notes),
     onSuccess: () => {
-      toast.success(t.req_info_btn_submit ?? "Information requested");
+      toast.success(t.req_info_toast_success ?? "Information request sent to the FPO.");
       queryClient.invalidateQueries({ queryKey: ["application", fpoId] });
       queryClient.invalidateQueries({ queryKey: ["applications"] });
       reset();

@@ -24,6 +24,9 @@ export const adminExpertsApi = {
 
   deactivate: (id: number) => api.post<Wrapped<AdminExpert>>(`${BASE}${id}/deactivate/`).then(unwrap),
 
+  /** Emails the expert a temporary password; they must change it on next login. */
+  resetPassword: (id: number): Promise<void> => api.post(`${BASE}${id}/reset-password/`).then(() => undefined),
+
   bookings: (id: number | string) => api.get(`/admin/experts/${id}/bookings/`),
 
   getBookings: (id: number): Promise<ExpertBooking[]> =>
