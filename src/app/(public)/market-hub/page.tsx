@@ -362,6 +362,26 @@ export default function MarketHubPage() {
                         <div style={{ fontSize: 13, color: "#888", marginTop: 10 }}>
                           {t.label_available ?? "Available"}: {formatAvailability(product.available_from, product.available_until)}
                         </div>
+                        {/* PM-17: expired-in-grace banner (EN/ML text comes
+                            from the API). Grace cards keep the Inquire
+                            button hidden — the banner itself tells the
+                            visitor to check back for restock. */}
+                        {product.in_grace_period && product.grace_message && (
+                          <div
+                            role="note"
+                            style={{
+                              marginTop: 8,
+                              padding: "6px 10px",
+                              borderRadius: 6,
+                              background: "#fff7e6",
+                              border: "1px solid #ffd591",
+                              color: "#ad6800",
+                              fontSize: 13,
+                            }}
+                          >
+                            {product.grace_message}
+                          </div>
+                        )}
                         {product.contact_phone && (
                           <a
                             href={`tel:${product.contact_phone}`}
@@ -379,14 +399,16 @@ export default function MarketHubPage() {
                             📞 {product.contact_phone}
                           </a>
                         )}
-                        <button
-                          type="button"
-                          className="btn btn-theme secondary btn-sm radius animation mt-15"
-                          style={{ marginTop: "auto", alignSelf: "flex-start" }}
-                          onClick={() => openInquiry(product)}
-                        >
-                          {t.btn_inquire ?? "Inquire"}
-                        </button>
+                        {!product.in_grace_period && (
+                          <button
+                            type="button"
+                            className="btn btn-theme secondary btn-sm radius animation mt-15"
+                            style={{ marginTop: "auto", alignSelf: "flex-start" }}
+                            onClick={() => openInquiry(product)}
+                          >
+                            {t.btn_inquire ?? "Inquire"}
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
