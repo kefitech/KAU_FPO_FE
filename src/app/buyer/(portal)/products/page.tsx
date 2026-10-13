@@ -277,7 +277,7 @@ export default function BuyerProductsPage() {
 
       {/* ── Search + Filter bar ── */}
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-        <div className="relative flex-1 sm:min-w-56">
+        <div className="relative flex-1 sm:min-w-48">
           <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder={t.search_placeholder ?? "Search products…"}
