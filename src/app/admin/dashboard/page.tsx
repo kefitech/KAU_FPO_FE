@@ -17,7 +17,7 @@ import type { BlockEntry } from "./_components/kerala-district-map";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DonutChart } from "@/components/shared/donut-chart";
 import { GradientBarChart } from "@/components/shared/gradient-bar-chart";
-import { RecentNotificationsCard } from "@/components/shared/recent-notifications-card";
+import { RecentNotificationsCard, useMarkNotificationRead } from "@/components/shared/recent-notifications-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAdminPermissions } from "@/hooks/use-admin-permissions";
@@ -180,6 +180,7 @@ export default function AdminDashboardPage() {
     refetchInterval: 30_000,
     enabled: isSubAdmin,
   });
+  const markNotificationRead = useMarkNotificationRead(["admin-dashboard-notifications"]);
 
   // Welcome toast on first login
   useEffect(() => {
@@ -550,6 +551,7 @@ export default function AdminDashboardPage() {
         <RecentNotificationsCard
           items={notifications?.data ?? []}
           isLoading={notificationsLoading}
+          onOpen={markNotificationRead}
           viewAllHref="/admin/inbox"
           t={t}
         />

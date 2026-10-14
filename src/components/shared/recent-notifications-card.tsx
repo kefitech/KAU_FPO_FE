@@ -11,12 +11,13 @@ import { relativeTime } from "@/components/layout/notification-bell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { inboxApi } from "@/lib/api/inbox";
+import { isExternalLink, openExternalLink } from "@/lib/notification-link";
 import type { InboxNotification } from "@/types";
 
 type T = Record<string, string>;
 
 export type RecentNotification = Pick<InboxNotification, "id" | "title" | "body" | "created_at" | "is_read"> & {
-  /** In-app path the notification opens, if any */
+  /** In-app path the notification opens, or a webmail URL opened in a new tab; if any */
   link?: string | null;
 };
 
@@ -124,7 +125,8 @@ export function RecentNotificationsCard({
                   type="button"
                   onClick={() => {
                     onOpen?.(n);
-                    router.push(link);
+                    if (isExternalLink(link)) openExternalLink(link);
+                    else router.push(link);
                   }}
                   className={`${boxClass} flex w-full items-start gap-2 text-left transition-colors hover:bg-muted/50`}
                 >

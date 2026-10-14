@@ -27,6 +27,8 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { inboxApi } from "@/lib/api/inbox";
+import { sanitizeNotificationHtml } from "@/lib/notification-html";
+import { isExternalLink, openExternalLink } from "@/lib/notification-link";
 import { cn } from "@/lib/utils";
 import type { InboxCategory, InboxNotification } from "@/types";
 import { useLocaleStore } from "@/stores/locale-store";
@@ -217,7 +219,7 @@ function NotifRow({
                 "text-sm truncate",
                 !item.is_read ? "font-semibold text-foreground" : "font-normal text-muted-foreground",
               )}
-              dangerouslySetInnerHTML={{ __html: item.title }}
+              dangerouslySetInnerHTML={{ __html: sanitizeNotificationHtml(item.title) }}
             />
             <span className="shrink-0 text-[11px] text-muted-foreground/70">
               {relativeTime(item.created_at, t)}
@@ -225,7 +227,7 @@ function NotifRow({
           </div>
           <p
             className="mt-0.5 text-xs text-muted-foreground truncate"
-            dangerouslySetInnerHTML={{ __html: item.body }}
+            dangerouslySetInnerHTML={{ __html: sanitizeNotificationHtml(item.body) }}
           />
           {showCategory && item.category && (
             <span className="mt-1 inline-block rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
@@ -264,7 +266,7 @@ function NotifDetail({
         )}
         <h2
           className="font-semibold text-base sm:text-lg leading-snug"
-          dangerouslySetInnerHTML={{ __html: item.title }}
+          dangerouslySetInnerHTML={{ __html: sanitizeNotificationHtml(item.title) }}
         />
         <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-muted-foreground">
@@ -284,7 +286,7 @@ function NotifDetail({
       <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 sm:py-6">
         <div
           className="text-sm leading-relaxed text-foreground prose prose-sm max-w-none dark:prose-invert"
-          dangerouslySetInnerHTML={{ __html: item.body }}
+          dangerouslySetInnerHTML={{ __html: sanitizeNotificationHtml(item.body) }}
         />
       </div>
     </div>
@@ -426,11 +428,16 @@ export function InboxPage() {
 
   // Auto-mark read when opening
   const handleSelect = (item: InboxNotification) => {
-    setSelectedId(item.id);
-    setShowDetail(true);
     if (!item.is_read) {
       markReadMutation.mutate(item.id);
     }
+    // Webmail links (expert enquiries) open the mailbox instead of the detail pane
+    if (isExternalLink(item.link)) {
+      openExternalLink(item.link);
+      return;
+    }
+    setSelectedId(item.id);
+    setShowDetail(true);
   };
 
   // Reset selection when page or category changes

@@ -68,7 +68,9 @@ export function BuyerStats({
     color: STATUS_COLORS[s],
   }));
 
-  const maxListings = Math.max(1, ...stats.supply_by_commodity.map((r) => r.listings));
+  // Only commodities with live listings; the rest would just read "No listings right now".
+  const supplyRows = stats.supply_by_commodity.filter((r) => r.listings > 0);
+  const maxListings = Math.max(1, ...supplyRows.map((r) => r.listings));
   const inquiriesLabel = t.chart_inquiries_label ?? "Inquiries";
 
   return (
@@ -153,16 +155,17 @@ export function BuyerStats({
         </Card>
       </div>
 
-      {/* ── Supply in your commodities + recent inquiries ── */}
+      {/* ── Supply in your commodities + recent inquiries ──
+          Both cards stop at max-h-96 and scroll inside, so a long list doesn't stretch the row */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
+        <Card className="max-h-96">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">{t.supply_title ?? "Supply in Your Commodities"}</CardTitle>
             <p className="text-muted-foreground text-xs">
               {t.supply_subtitle ?? "Live listings for the commodities you follow"}
             </p>
           </CardHeader>
-          <CardContent className="flex flex-col gap-4">
+          <CardContent className="flex min-h-0 flex-1 flex-col gap-4">
             {cards.expiring_soon > 0 && (
               <p className="flex items-start gap-2 rounded-md bg-amber-50 px-3 py-2 text-amber-800 text-xs dark:bg-amber-950/30 dark:text-amber-300">
                 <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
@@ -176,16 +179,19 @@ export function BuyerStats({
               <p className="py-6 text-center text-muted-foreground text-sm">
                 {t.supply_empty ?? "Add commodities of interest to your profile to see supply here."}
               </p>
+            ) : supplyRows.length === 0 ? (
+              <p className="py-6 text-center text-muted-foreground text-sm">
+                {t.supply_empty_listings ?? "No listings in your commodities right now."}
+              </p>
             ) : (
-              <ul className="flex flex-col gap-3">
-                {stats.supply_by_commodity.map((row) => (
+              <ul className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
+                {supplyRows.map((row) => (
                   <li key={row.code} className="flex flex-col gap-1.5">
                     <div className="flex items-baseline justify-between gap-2 text-sm">
                       <span className="font-medium">{row.name}</span>
                       <span className="shrink-0 text-muted-foreground text-xs">
-                        {row.listings > 0
-                          ? `${fill(t.supply_listings ?? "{n} listings", row.listings)} · ${fill(t.supply_fpos ?? "{n} FPOs", row.fpos)}`
-                          : (t.supply_none ?? "No listings right now")}
+                        {fill(t.supply_listings ?? "{n} listings", row.listings)} ·{" "}
+                        {fill(t.supply_fpos ?? "{n} FPOs", row.fpos)}
                       </span>
                     </div>
                     <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
@@ -218,7 +224,7 @@ export function BuyerStats({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="max-h-96">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">{t.recent_title ?? "Recent Inquiries"}</CardTitle>
             <p className="text-muted-foreground text-xs">
@@ -227,7 +233,7 @@ export function BuyerStats({
                 : (t.recent_subtitle_empty ?? "Your latest inquiries to FPOs")}
             </p>
           </CardHeader>
-          <CardContent>
+          <CardContent className="min-h-0 flex-1 overflow-y-auto">
             {stats.recent_inquiries.length === 0 ? (
               <p className="py-10 text-center text-muted-foreground text-sm">
                 {t.recent_empty ?? "No inquiries yet — browse products and send one."}

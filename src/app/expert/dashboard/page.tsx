@@ -10,11 +10,11 @@ import { toast } from "sonner";
 
 import { type ExpertBooking, expertDashboardApi } from "@/app/expert/_api/dashboard";
 import { GradientGroupedBarChart } from "@/components/shared/gradient-bar-chart";
-import { RecentNotificationsCard } from "@/components/shared/recent-notifications-card";
+import { RecentNotificationsCard, useMarkNotificationRead } from "@/components/shared/recent-notifications-card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { inboxApi } from "@/lib/api/inbox";
 import { translationsApi } from "@/lib/api/translations";
@@ -126,7 +126,9 @@ export default function ExpertDashboardPage() {
   const { data: notifications, isLoading: notificationsLoading } = useQuery({
     queryKey: ["expert-dashboard-notifications", locale],
     queryFn: () => inboxApi.getAll({ page: 1, page_size: 5 }),
+    refetchInterval: 30_000,
   });
+  const markNotificationRead = useMarkNotificationRead(["expert-dashboard-notifications"]);
 
   // Fixed for the life of the page so memoised series do not recompute every render.
   const [now] = useState(() => new Date());
@@ -313,13 +315,14 @@ export default function ExpertDashboardPage() {
         />
       </ChartCard>
 
+      {/* Both cards stop at max-h-96 and scroll inside, so a long list doesn't stretch the row */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
+        <Card className="max-h-96">
           <CardHeader>
             <CardTitle className="text-base">{t.upcoming_title ?? "Next appointments"}</CardTitle>
             <CardDescription>{t.upcoming_subtitle ?? "Your nearest confirmed bookings"}</CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col gap-2">
+          <CardContent className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
             {upcoming.length === 0 && (
               <p className="py-6 text-center text-muted-foreground text-sm">
                 {t.empty_upcoming ?? "No upcoming appointments."}
@@ -350,19 +353,23 @@ export default function ExpertDashboardPage() {
                 </div>
               );
             })}
-            {bookings.length > 0 && (
-              <Button asChild variant="outline" size="sm" className="mt-1 w-fit">
+          </CardContent>
+          {bookings.length > 0 && (
+            <CardFooter>
+              <Button asChild variant="outline" size="sm" className="w-fit">
                 <Link href="/expert/booking">{t.btn_all_bookings ?? "View all bookings"}</Link>
               </Button>
-            )}
-          </CardContent>
+            </CardFooter>
+          )}
         </Card>
 
         <RecentNotificationsCard
           items={notifications?.data ?? []}
           isLoading={notificationsLoading}
+          onOpen={markNotificationRead}
           viewAllHref="/expert/inbox"
           t={t}
+          className="max-h-96"
         />
       </div>
     </div>

@@ -25,9 +25,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { translationsApi } from "@/lib/api/translations";
+import { byUpcomingDate } from "@/lib/booking-order";
 import { useLocaleStore } from "@/stores/locale-store";
-
-import { compareBookings, compareFpoGroups } from "./_lib/order";
 
 type T = Record<string, string>;
 
@@ -50,11 +49,22 @@ const STATUSES = ["confirmed", "completed", "cancelled"] as const;
 const PER_FPO_PREVIEW = 3;
 
 /** One labelled line of a booking row; long values wrap to two lines and show in full on hover. */
-function BookingField({ label, value }: { label: string; value?: string | null }) {
+function BookingField({
+  label,
+  value,
+  destructive = false,
+}: {
+  label: string;
+  value?: string | null;
+  destructive?: boolean;
+}) {
   if (!value) return null;
   return (
-    <p className="line-clamp-2 text-muted-foreground text-xs [overflow-wrap:anywhere]" title={value}>
-      <span className="font-medium text-foreground/80">{label}:</span> {value}
+    <p
+      className={`line-clamp-2 text-xs [overflow-wrap:anywhere] ${destructive ? "text-destructive" : "text-muted-foreground"}`}
+      title={value}
+    >
+      <span className={`font-medium ${destructive ? "" : "text-foreground/80"}`}>{label}:</span> {value}
     </p>
   );
 }
@@ -141,12 +151,15 @@ export default function ExpertBookingOverviewPage() {
     return acc;
   }, {});
 
+  const byUpcoming = byUpcomingDate();
   for (const group of Object.values(groupedByFpo)) {
-    group.sort(compareBookings);
+    group.sort(byUpcoming);
   }
 
-  // FPOs with the nearest upcoming appointment first; the detail page uses the same order.
-  const fpoGroups = Object.values(groupedByFpo).sort(compareFpoGroups);
+  // Each group's first row is its soonest upcoming booking (or latest past one), so
+  // ordering on it puts FPOs with the nearest appointment first. The detail page
+  // uses the same order.
+  const fpoGroups = Object.values(groupedByFpo).sort((a, b) => byUpcoming(a[0], b[0]));
 
   const totalPages = Math.max(1, Math.ceil(fpoGroups.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -301,7 +314,7 @@ export default function ExpertBookingOverviewPage() {
                       <BookingField label={t.field_topic ?? "Topic"} value={b.topic} />
                       <BookingField label={t.field_message ?? "Message"} value={b.notes} />
                       {(b.status === "cancelled" || b.status === "rejected") && (
-                        <BookingField label={t.field_reason ?? "Reason"} value={b.cancellation_reason} />
+                        <BookingField label={t.field_reason ?? "Reason"} value={b.cancellation_reason} destructive />
                       )}
                     </div>
                     <Badge variant="outline" className={`shrink-0 text-[11px] ${badgeStyle}`}>
