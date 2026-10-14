@@ -14,29 +14,17 @@ import type { Product, ProductStatus } from "@/types/fpo";
 
 type T = Record<string, string>;
 
-function statusClasses(status: ProductStatus): string {
-  switch (status) {
-    case "draft":
-      return "border-slate-200 bg-slate-50 text-slate-700";
-    case "active":
-      return "border-green-200 bg-green-50 text-green-700";
-    case "sold":
-      return "border-blue-200 bg-blue-50 text-blue-700";
-    case "expired":
-      return "border-red-200 bg-red-50 text-red-700";
-  }
-}
-
 /**
  * Short summary of how many batches each product has, bucketed by status.
  * Shown in the Batches column so the FPO sees "2 active + 1 draft" at a
  * glance without having to open the Manage Batches sheet.
  */
 function batchSummary(product: Product, t: T): string {
-  const buckets: Record<ProductStatus, number> = { draft: 0, active: 0, sold: 0, expired: 0 };
+  const buckets: Record<ProductStatus, number> = { draft: 0, active: 0, inactive: 0, sold: 0, expired: 0 };
   for (const s of product.stocks) buckets[s.status] += 1;
   const parts: string[] = [];
   if (buckets.active) parts.push(`${buckets.active} ${t.status_active ?? "active"}`);
+  if (buckets.inactive) parts.push(`${buckets.inactive} ${t.status_inactive ?? "inactive"}`);
   if (buckets.draft) parts.push(`${buckets.draft} ${t.status_draft ?? "draft"}`);
   if (buckets.sold) parts.push(`${buckets.sold} ${t.status_sold ?? "sold"}`);
   if (buckets.expired) parts.push(`${buckets.expired} ${t.status_expired ?? "expired"}`);
@@ -72,6 +60,40 @@ function ProductActions({
       ),
   });
 
+  // Product-level switch — batches keep their own status, so switching the
+  // product back on restores exactly what was live.
+  const toggleActiveMutation = useMutation({
+    mutationFn: () => productsApi.setActive(product.id, !product.is_active),
+    onSuccess: () => {
+      toast.success(
+        product.is_active
+          ? (t.toast_product_deactivated ?? "Product deactivated — hidden from buyers")
+          : (t.toast_product_activated ?? "Product activated"),
+      );
+      invalidate();
+    },
+    onError: () => toast.error(t.err_product_toggle_failed ?? "Could not change the product status"),
+  });
+
+  const handleToggleActive = () => {
+    if (!product.is_active) {
+      toggleActiveMutation.mutate();
+      return;
+    }
+    confirm({
+      title: t.confirm_deactivate_product_title ?? "Deactivate Product",
+      description:
+        t.confirm_deactivate_product_description ??
+        "All batches of this product will be hidden from buyers and the Market Hub until you activate it again.",
+      // The dialog defaults to a red "Delete" button — this is a reversible switch.
+      confirmLabel: t.action_deactivate_product ?? "Deactivate",
+      confirmingLabel: t.deactivating ?? "Deactivating...",
+      cancelLabel: tCommon.cancel_btn ?? "Cancel",
+      variant: "default",
+      onConfirm: () => toggleActiveMutation.mutateAsync(),
+    });
+  };
+
   const handleDelete = () => {
     confirm({
       title: t.confirm_delete_title ?? "Delete Product",
@@ -92,6 +114,13 @@ function ProductActions({
         {
           label: tCommon.edit ?? "Edit Product",
           onClick: () => router.push(`/fpo/products/${product.id}/edit`),
+        },
+        {
+          label: product.is_active
+            ? (t.action_deactivate_product ?? "Deactivate")
+            : (t.action_activate_product ?? "Activate"),
+          onClick: handleToggleActive,
+          disabled: toggleActiveMutation.isPending,
         },
         {
           label: tCommon.delete ?? "Delete",
@@ -154,21 +183,19 @@ export function getProductColumns(
     },
     {
       id: "status",
-      header: t.col_status ?? "Latest Status",
-      cell: ({ row }) => {
-        const s = row.original.latest_stock;
-        if (!s)
-          return (
-            <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-600">
-              {t.no_stock ?? "No stock"}
-            </Badge>
-          );
-        return (
-          <Badge variant="outline" className={statusClasses(s.status)}>
-            {t[`status_${s.status}`] ?? s.status}
+      // Product-level status (the Activate / Deactivate switch). Batch statuses
+      // are shown in the Product Details sheet and the Manage Batches sheet.
+      header: t.col_status ?? "Status",
+      cell: ({ row }) =>
+        row.original.is_active ? (
+          <Badge variant="outline" className="border-green-200 bg-green-50 text-green-700">
+            {t.product_status_active ?? "Active"}
           </Badge>
-        );
-      },
+        ) : (
+          <Badge variant="outline" className="border-zinc-300 bg-zinc-100 text-zinc-600">
+            {t.product_inactive_badge ?? "Inactive"}
+          </Badge>
+        ),
     },
     {
       id: "is_public",

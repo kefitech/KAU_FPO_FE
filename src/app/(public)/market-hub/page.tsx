@@ -54,7 +54,9 @@ export default function MarketHubPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState("");
-  const [fieldErrors, setFieldErrors] = useState<{ name?: string; email?: string; phone?: string }>({});
+  const [fieldErrors, setFieldErrors] = useState<{ name?: string; email?: string; phone?: string; message?: string }>(
+    {},
+  );
 
   useEffect(() => {
     if (!locale) return;
@@ -124,20 +126,34 @@ export default function MarketHubPage() {
   const closeInquiry = () => setInquiryProduct(null);
 
 
-  const NAME_PATTERN = /^[A-Za-z][A-Za-z\s'-]*$/;
+  // English or Malayalam letters (incl. Malayalam vowel signs/chillu and the
+  // ZWJ/ZWNJ used to render them), plus spaces, dots for initials ("K. Ravi"),
+  // apostrophes and hyphens. Same rule as the BE (PublicInquirySerializer).
+  const NAME_PATTERN = /^[A-Za-zഀ-ൿ](?:[A-Za-zഀ-ൿ .'-]|‌|‍)*$/;
   const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const PHONE_PATTERN = /^\d{10}$/;
+  const NAME_MIN_LENGTH = 2;
+  const NAME_MAX_LENGTH = 100;
+  const MESSAGE_MAX_LENGTH = 1000;
+
+  const normalizedName = () => inquiryName.trim().replace(/\s+/g, " ");
 
   const validateInquiryForm = () => {
-    const errors: { name?: string; email?: string; phone?: string } = {};
+    const errors: { name?: string; email?: string; phone?: string; message?: string } = {};
 
-    const trimmedName = inquiryName.trim();
+    const trimmedName = normalizedName();
     if (!trimmedName) {
       errors.name = t.err_name_required ?? "Name is required";
-    } else if (trimmedName.length > 100) {
-      errors.name = t.err_name_too_long ?? "Name must be under 100 characters";
+    } else if (trimmedName.length < NAME_MIN_LENGTH) {
+      errors.name = t.err_name_too_short ?? "Name must be at least 2 characters";
+    } else if (trimmedName.length > NAME_MAX_LENGTH) {
+      errors.name = t.err_name_too_long ?? "Name must be 100 characters or fewer";
     } else if (!NAME_PATTERN.test(trimmedName)) {
-      errors.name = t.err_name_invalid ?? "Name must contain only letters, spaces, apostrophes, or hyphens";
+      errors.name = t.err_name_invalid ?? "Name can only contain letters, spaces, dots, apostrophes and hyphens";
+    }
+
+    if (inquiryMessage.trim().length > MESSAGE_MAX_LENGTH) {
+      errors.message = t.err_message_too_long ?? "Message must be 1000 characters or fewer";
     }
 
     const trimmedEmail = inquiryEmail.trim();
@@ -164,10 +180,10 @@ export default function MarketHubPage() {
     setSubmitError("");
     try {
       await marketHubApi.inquire(inquiryProduct.id, {
-        name: inquiryName.trim(),
+        name: normalizedName(),
         email: inquiryEmail.trim(),
         phone: inquiryPhone.trim() || undefined,
-        message: inquiryMessage || undefined,
+        message: inquiryMessage.trim() || undefined,
       });
       setSubmitSuccess(true);
     } catch {
@@ -253,24 +269,45 @@ export default function MarketHubPage() {
                         </div>
                       )}
                       <div style={{ padding: 20, display: "flex", flexDirection: "column", flex: 1 }}>
-                        <div className="d-flex justify-content-between mb-10 align-items-start">
+                        {/* Wraps so a long commodity name (e.g. "Traditional Health Foods /
+                            Nutritional Mixes") drops below the product name instead of
+                            squeezing it down to an ellipsis. */}
+                        <div
+                          className="d-flex justify-content-between mb-10 align-items-start"
+                          style={{ flexWrap: "wrap", gap: 8 }}
+                        >
                           <h5
                             className="mb-0"
+                            title={productName(product)}
                             style={{
                               overflow: "hidden",
                               textOverflow: "ellipsis",
                               whiteSpace: "nowrap",
-                              maxWidth: "70%",
+                              flex: "1 1 auto",
+                              minWidth: 0,
+                              maxWidth: "100%",
                             }}
                           >
                             {productName(product)}
                           </h5>
                           <span
                             className="badge"
-                            style={{ background: "var(--color-primary)", color: "#fff", padding: "4px 10px" }}
+                            style={{
+                              background: "var(--color-primary)",
+                              color: "#fff",
+                              padding: "4px 10px",
+                              maxWidth: "100%",
+                              whiteSpace: "normal",
+                              textAlign: "left",
+                              lineHeight: 1.3,
+                            }}
                           >
                             {product.commodity_name}
                           </span>
+                        </div>
+                        {/* Identifies the exact batch so a visitor (and the FPO) can refer to it. */}
+                        <div style={{ fontSize: 12, color: "#888", fontFamily: "monospace", marginBottom: 8 }}>
+                          {t.label_batch ?? "Batch"}: {product.batch_number}
                         </div>
                         {productDesc(product) && (
                           <>
@@ -363,9 +400,9 @@ export default function MarketHubPage() {
                           {t.label_available ?? "Available"}: {formatAvailability(product.available_from, product.available_until)}
                         </div>
                         {/* PM-17: expired-in-grace banner (EN/ML text comes
-                            from the API). Grace cards keep the Inquire
-                            button hidden — the banner itself tells the
-                            visitor to check back for restock. */}
+                            from the API). It asks the visitor to contact the
+                            seller about a restock, so grace cards keep the
+                            Inquire button (the API accepts grace inquiries). */}
                         {product.in_grace_period && product.grace_message && (
                           <div
                             role="note"
@@ -399,16 +436,14 @@ export default function MarketHubPage() {
                             📞 {product.contact_phone}
                           </a>
                         )}
-                        {!product.in_grace_period && (
-                          <button
-                            type="button"
-                            className="btn btn-theme secondary btn-sm radius animation mt-15"
-                            style={{ marginTop: "auto", alignSelf: "flex-start" }}
-                            onClick={() => openInquiry(product)}
-                          >
-                            {t.btn_inquire ?? "Inquire"}
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          className="btn btn-theme secondary btn-sm radius animation mt-15"
+                          style={{ marginTop: "auto", alignSelf: "flex-start" }}
+                          onClick={() => openInquiry(product)}
+                        >
+                          {t.btn_inquire ?? "Inquire"}
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -457,7 +492,16 @@ export default function MarketHubPage() {
           <div
             role="dialog"
             aria-modal="true"
-            style={{ background: "#fff", borderRadius: 8, padding: 30, maxWidth: 500, width: "90%" }}
+            style={{
+              background: "#fff",
+              borderRadius: 8,
+              padding: 30,
+              maxWidth: 500,
+              width: "90%",
+              // Scroll inside the card on short screens instead of running off the viewport.
+              maxHeight: "90vh",
+              overflowY: "auto",
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             {submitSuccess ? (
@@ -485,6 +529,7 @@ export default function MarketHubPage() {
                       className="form-control"
                       placeholder={t.field_name ?? "Your Name"}
                       required
+                      maxLength={NAME_MAX_LENGTH}
                       value={inquiryName}
                       onChange={(e) => setInquiryName(e.target.value)}
                     />
@@ -516,9 +561,16 @@ export default function MarketHubPage() {
                       className="form-control"
                       placeholder={t.field_message ?? "Message (optional)"}
                       rows={3}
+                      maxLength={MESSAGE_MAX_LENGTH}
                       value={inquiryMessage}
                       onChange={(e) => setInquiryMessage(e.target.value)}
                     />
+                    <p style={{ color: "#888", fontSize: 12, marginTop: 4, textAlign: "right" }}>
+                      {inquiryMessage.length}/{MESSAGE_MAX_LENGTH}
+                    </p>
+                    {fieldErrors.message && (
+                      <p style={{ color: "red", fontSize: 13, marginTop: 4 }}>{fieldErrors.message}</p>
+                    )}
                   </div>
                   {submitError && <p style={{ color: "red", fontSize: 13 }}>{submitError}</p>}
                   <div className="d-flex gap-2">

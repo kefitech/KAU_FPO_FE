@@ -48,9 +48,16 @@ function ProductCard({ product, locale, t }: { product: BuyerProduct; locale: st
           </div>
         )}
         <CardHeader>
-          <div className="flex items-start justify-between gap-2">
-            <CardTitle className="line-clamp-1 text-base">{name}</CardTitle>
-            <Badge variant="outline" className="shrink-0 font-normal">
+          {/* Wraps so a long commodity name drops below the product name instead of squeezing it. */}
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            {/* Batch number sits with the name so the FPO can quote the exact batch. */}
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <CardTitle className="line-clamp-1 text-base">{name}</CardTitle>
+              <span className="font-mono text-muted-foreground text-xs">
+                {t.label_batch ?? "Batch"}: {product.batch_number}
+              </span>
+            </div>
+            <Badge variant="outline" className="h-auto max-w-full whitespace-normal text-left font-normal">
               {product.commodity_name ?? product.commodity_code}
             </Badge>
           </div>

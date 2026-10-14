@@ -5,6 +5,8 @@ export interface MarketHubInquiry {
   id: number;
   product: number;
   product_name: string;
+  /** Batch the inquiry was made on — null for inquiries made before batches were recorded. */
+  batch_number: string | null;
   name: string;
   email: string;
   phone: string;
