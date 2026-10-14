@@ -4,10 +4,12 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
-import { Layers, Pencil, Plus, Upload } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Layers, Pause, Pencil, Play, Plus, Upload } from "lucide-react";
+import { toast } from "sonner";
 
 import { type Inquiry, inquiriesApi } from "@/app/fpo/_api/inquiries";
-import { marketHubInquiriesApi } from "@/app/fpo/_api/market-hub-inquiries";
+import { type MarketHubInquiry, marketHubInquiriesApi } from "@/app/fpo/_api/market-hub-inquiries";
 import { productsApi } from "@/app/fpo/_api/products";
 import { DataTable } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
@@ -15,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ViewSheet } from "@/components/ui/view-sheet";
 import { useFpoPermissions } from "@/hooks/use-fpo-permissions";
 import { translationsApi } from "@/lib/api/translations";
+import { useConfirmStore } from "@/stores/confirm-store";
 import { useLocaleStore } from "@/stores/locale-store";
 import type { Product } from "@/types/fpo";
 import { PRODUCT_STATUS_LABEL } from "@/types/fpo";
@@ -25,6 +28,7 @@ import { getInquiryColumns } from "./_components/inquiry-columns";
 import { InquiryDetailDialog } from "./_components/inquiry-detail-dialog";
 import { ManageBatchesSheet } from "./_components/manage-batches-sheet";
 import { getMarketHubInquiryColumns } from "./_components/market-hub-inquiry-columns";
+import { MarketHubInquiryDetailDialog } from "./_components/market-hub-inquiry-detail-dialog";
 
 type T = Record<string, string>;
 type ViewMode = "products" | "inquiries" | "market-hub-inquiries";
@@ -59,12 +63,55 @@ export default function FpoProductsPage() {
     row: null,
   });
 
+  const [marketHubView, setMarketHubView] = useState<{ open: boolean; row: MarketHubInquiry | null }>({
+    open: false,
+    row: null,
+  });
+
   const [batchesSheet, setBatchesSheet] = useState<{ open: boolean; product: Product | null }>({
     open: false,
     product: null,
   });
 
   const [bulkImportOpen, setBulkImportOpen] = useState(false);
+
+  const queryClient = useQueryClient();
+  const confirm = useConfirmStore((s) => s.confirm);
+
+  // Product-level switch from the Product Details sheet (the table row has the
+  // same action). Batches keep their own status, so reactivating restores them.
+  const productActiveMutation = useMutation({
+    mutationFn: (p: Product) => productsApi.setActive(p.id, !p.is_active),
+    onSuccess: (updated, p) => {
+      toast.success(
+        p.is_active
+          ? (tTable.toast_product_deactivated ?? "Product deactivated — hidden from buyers")
+          : (tTable.toast_product_activated ?? "Product activated"),
+      );
+      setProductView((s) => (s.row?.id === updated.id ? { ...s, row: updated } : s));
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    },
+    onError: () => toast.error(tTable.err_product_toggle_failed ?? "Could not change the product status"),
+  });
+
+  const toggleProductActive = (p: Product) => {
+    if (!p.is_active) {
+      productActiveMutation.mutate(p);
+      return;
+    }
+    confirm({
+      title: tTable.confirm_deactivate_product_title ?? "Deactivate Product",
+      description:
+        tTable.confirm_deactivate_product_description ??
+        "All batches of this product will be hidden from buyers and the Market Hub until you activate it again.",
+      // The dialog defaults to a red "Delete" button — this is a reversible switch.
+      confirmLabel: tTable.action_deactivate_product ?? "Deactivate",
+      confirmingLabel: tTable.deactivating ?? "Deactivating...",
+      cancelLabel: tCommon.cancel_btn ?? "Cancel",
+      variant: "default",
+      onConfirm: () => productActiveMutation.mutateAsync(p),
+    });
+  };
 
   const [viewMode, setViewMode] = useState<ViewMode>("products");
 
@@ -79,13 +126,12 @@ export default function FpoProductsPage() {
   const STATUS_FILTERS = useMemo(
     () => [
       {
-        key: "status",
+        // Product-level status, matching the table's Status column.
+        key: "product_status",
         label: tTable.col_status ?? "Status",
         options: [
-          { label: tTable.status_draft ?? "Draft", value: "draft" },
-          { label: tTable.status_active ?? "Active", value: "active" },
-          { label: tTable.status_sold ?? "Sold", value: "sold" },
-          { label: tTable.status_expired ?? "Expired", value: "expired" },
+          { label: tTable.product_status_active ?? "Active", value: "active" },
+          { label: tTable.product_inactive_badge ?? "Inactive", value: "inactive" },
         ],
       },
     ],
@@ -113,8 +159,8 @@ export default function FpoProductsPage() {
         label: tPage.col_status ?? "Status",
         options: [
           { label: tPage.status_mh_pending ?? "Pending", value: "suggested" },
-          { label: tPage.status_mh_accepted ?? "Accepted", value: "accepted" },
-          { label: tPage.status_mh_rejected ?? "Rejected", value: "rejected" },
+          { label: tPage.status_mh_accepted ?? "Resolved", value: "accepted" },
+          { label: tPage.status_mh_rejected ?? "Spam", value: "rejected" },
         ],
       },
     ],
@@ -214,6 +260,7 @@ export default function FpoProductsPage() {
             queryKey="market-hub-inquiries"
             queryFn={marketHubInquiriesApi.getAll}
             columns={getMarketHubInquiryColumns(tPage, canManage)}
+            onRowClick={(row) => setMarketHubView({ open: true, row })}
             filters={MARKET_HUB_STATUS_FILTERS}
             columnsLabel={tCommon.columns_header}
             toggleColumnsLabel={tCommon.columns_toggle_columns}
@@ -228,6 +275,16 @@ export default function FpoProductsPage() {
         open={inquiryView.open}
         onOpenChange={(open) => setInquiryView((s) => ({ ...s, open }))}
         inquiry={inquiryView.row}
+        canManage={canManage}
+        t={tPage}
+        tCommon={tCommon}
+      />
+
+      <MarketHubInquiryDetailDialog
+        key={`mh-${marketHubView.row?.id ?? "none"}`}
+        open={marketHubView.open}
+        onOpenChange={(open) => setMarketHubView((s) => ({ ...s, open }))}
+        inquiry={marketHubView.row}
         canManage={canManage}
         t={tPage}
         tCommon={tCommon}
@@ -255,6 +312,15 @@ export default function FpoProductsPage() {
                   icon: Pencil,
                   onClick: () => router.push(`/fpo/products/${productView.row?.id}/edit`),
                 },
+                {
+                  label: productView.row.is_active
+                    ? (tTable.action_deactivate_product ?? "Deactivate")
+                    : (tTable.action_activate_product ?? "Activate"),
+                  icon: productView.row.is_active ? Pause : Play,
+                  onClick: () => {
+                    if (productView.row) toggleProductActive(productView.row);
+                  },
+                },
               ]
             : []
         }
@@ -266,6 +332,13 @@ export default function FpoProductsPage() {
                 return [
                   { label: tTable.col_name ?? "Name", value: p.name.en },
                   {
+                    label: tTable.label_product_status ?? "Product Status",
+                    type: "status" as const,
+                    active: p.is_active,
+                    activeLabel: tTable.product_status_active ?? "Active",
+                    inactiveLabel: tTable.product_inactive_badge ?? "Inactive",
+                  },
+                  {
                     label: tTable.col_commodity ?? "Commodity",
                     value: p.commodity_name || p.commodity_code || "—",
                   },
@@ -274,6 +347,10 @@ export default function FpoProductsPage() {
                   // yet — the FPO sees exactly where to go next.
                   ...(s
                     ? [
+                        {
+                          label: tTable.col_latest_batch ?? "Latest Batch",
+                          value: s.batch_number,
+                        },
                         {
                           label: tTable.col_quantity ?? "Latest Qty",
                           value: `${s.quantity} ${s.unit}`,
@@ -297,7 +374,7 @@ export default function FpoProductsPage() {
                           value: s.available_until ?? undefined,
                         },
                         {
-                          label: tTable.col_status ?? "Latest Status",
+                          label: tTable.col_latest_batch_status ?? "Latest Batch Status",
                           value: tTable[`status_${s.status}`] ?? PRODUCT_STATUS_LABEL[s.status],
                         },
                         {
@@ -310,7 +387,7 @@ export default function FpoProductsPage() {
                       ]
                     : [
                         {
-                          label: tTable.col_status ?? "Latest Status",
+                          label: tTable.col_latest_batch_status ?? "Latest Batch Status",
                           value: tTable.no_stock_batches ?? "No stock batches yet",
                         },
                       ]),

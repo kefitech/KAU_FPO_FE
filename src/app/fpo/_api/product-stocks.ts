@@ -51,4 +51,18 @@ export const productStocksApi = {
       const d = r.data as Record<string, unknown>;
       return (d.data ?? d) as ProductStock;
     }),
+
+  /** ACTIVE → INACTIVE (paused, hidden from buyers). */
+  deactivate: (productId: number, stockId: number): Promise<ProductStock> =>
+    api.post(`${stockUrl(productId, stockId)}deactivate/`).then((r) => {
+      const d = r.data as Record<string, unknown>;
+      return (d.data ?? d) as ProductStock;
+    }),
+
+  /** INACTIVE → ACTIVE (rejected if the batch's validity has ended). */
+  activate: (productId: number, stockId: number): Promise<ProductStock> =>
+    api.post(`${stockUrl(productId, stockId)}activate/`).then((r) => {
+      const d = r.data as Record<string, unknown>;
+      return (d.data ?? d) as ProductStock;
+    }),
 };

@@ -515,7 +515,8 @@ Arunima S
 
 // ─── Marketplace: Enums / Literals ─────────────────────────────────────────────
 
-export type ProductStatus = "draft" | "active" | "sold" | "expired";
+/** `inactive` = paused by the FPO: hidden from buyers / the Market Hub, can be reactivated. */
+export type ProductStatus = "draft" | "active" | "inactive" | "sold" | "expired";
 
 export type ProductUnit = "kg" | "quintal" | "mt" | "litre" | "piece";
 
@@ -534,6 +535,8 @@ export interface LocalizedText {
 export interface ProductStock {
   id: number;
   product: number;
+  /** Auto-generated on create — "P<product id>-B<n>" (e.g. P34-B2). */
+  batch_number: string;
   quantity: string; // DecimalField -> serialized as string
   unit: ProductUnit;
   price_per_unit: string;
@@ -563,6 +566,8 @@ export interface Product {
   description: LocalizedText;
   /** Product photo URL — nullable when no image was uploaded. */
   image: string | null;
+  /** Product-level switch — when false none of its batches are shown to buyers. */
+  is_active: boolean;
   /** Every batch on this product, including draft/sold/expired. */
   stocks: ProductStock[];
   /** The batch to surface in single-batch UI — most recent ACTIVE batch,
@@ -626,7 +631,10 @@ export interface CreateStockPayload {
   contact_phone?: string;
 }
 
-export type UpdateStockPayload = Partial<CreateStockPayload>;
+/** Edits may also keep a paused batch `inactive`. */
+export type UpdateStockPayload = Partial<Omit<CreateStockPayload, "status">> & {
+  status?: Extract<ProductStatus, "draft" | "active" | "inactive">;
+};
 
 // ─── Marketplace: Pagination envelope ───────────────────────────────────────────
 // Matches StandardPagination's meta.pagination block, confirmed via testing.
@@ -658,6 +666,7 @@ export const UNIT_OPTIONS: { value: ProductUnit; label: string }[] = [
 export const PRODUCT_STATUS_LABEL: Record<ProductStatus, string> = {
   draft: "Draft",
   active: "Active",
+  inactive: "Inactive",
   sold: "Sold",
   expired: "Expired",
 };

@@ -49,7 +49,7 @@ export function InquiryDetailDialog({ open, onOpenChange, inquiry, canManage, t,
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{t.inquiry_view_title ?? "Inquiry Details"}</DialogTitle>
         </DialogHeader>
@@ -59,6 +59,11 @@ export function InquiryDetailDialog({ open, onOpenChange, inquiry, canManage, t,
             <div className="min-w-0">
               <p className="text-muted-foreground text-xs">{t.col_product_name ?? "Product Name"}</p>
               <p className="font-semibold">{inquiry.product_name}</p>
+              {inquiry.batch_number && (
+                <p className="font-mono text-muted-foreground text-xs">
+                  {t.col_batch ?? "Batch"}: {inquiry.batch_number}
+                </p>
+              )}
             </div>
             <Badge variant="outline" className={`shrink-0 ${statusClasses(status)}`}>
               {inquiryStatusLabel(status, t)}
@@ -96,7 +101,7 @@ export function InquiryDetailDialog({ open, onOpenChange, inquiry, canManage, t,
             {inquiry.contact_email && (
               <a
                 href={`mailto:${inquiry.contact_email}`}
-                className="flex w-fit items-center gap-2 text-muted-foreground text-sm hover:text-foreground"
+                className="flex w-fit items-center gap-2 break-all text-muted-foreground text-sm hover:text-foreground"
               >
                 <Mail className="h-3.5 w-3.5 shrink-0" />
                 {inquiry.contact_email}
@@ -116,18 +121,30 @@ export function InquiryDetailDialog({ open, onOpenChange, inquiry, canManage, t,
           />
         </div>
 
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <DialogFooter className="gap-2 sm:flex-wrap">
+          <Button
+            variant="outline"
+            className="h-auto min-h-9 shrink whitespace-normal py-1.5 sm:grow"
+            onClick={() => onOpenChange(false)}
+          >
             {tCommon.close ?? "Close"}
           </Button>
           {canManage && status === "pending" && (
-            <Button onClick={() => markContacted.mutate()} disabled={markContacted.isPending} className="gap-1.5">
+            <Button
+              onClick={() => markContacted.mutate()}
+              disabled={markContacted.isPending}
+              className="h-auto min-h-9 shrink gap-1.5 whitespace-normal py-1.5 sm:grow"
+            >
               <PhoneCall className="h-4 w-4" />
               {t.action_mark_contacted ?? "Mark as Contacted"}
             </Button>
           )}
           {canManage && status === "contacted" && (
-            <Button onClick={() => markResolved.mutate()} disabled={markResolved.isPending} className="gap-1.5">
+            <Button
+              onClick={() => markResolved.mutate()}
+              disabled={markResolved.isPending}
+              className="h-auto min-h-9 shrink gap-1.5 whitespace-normal py-1.5 sm:grow"
+            >
               <CheckCheck className="h-4 w-4" />
               {t.action_mark_resolved ?? "Mark as Resolved"}
             </Button>

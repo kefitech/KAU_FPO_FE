@@ -78,6 +78,13 @@ export const productsApi = {
 
   delete: (id: number): Promise<void> => api.delete(`${BASE}${id}/`).then(() => undefined),
 
+  /** Product-level switch: hides / shows every batch of the product to buyers. */
+  setActive: (id: number, active: boolean): Promise<Product> =>
+    api.post(`${BASE}${id}/${active ? "activate" : "deactivate"}/`).then((r) => {
+      const d = r.data as Record<string, unknown>;
+      return (d.data ?? d) as Product;
+    }),
+
   /**
    * Downloads the bulk-import Excel template. Returns a Blob so the caller
    * can hand it to a download link / FileSaver without touching the raw

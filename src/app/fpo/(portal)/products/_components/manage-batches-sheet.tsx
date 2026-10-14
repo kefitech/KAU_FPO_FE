@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Pencil, Plus, Trash2, Upload } from "lucide-react";
+import { CheckCircle2, Pause, Pencil, Play, Plus, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 import { productStocksApi } from "@/app/fpo/_api/product-stocks";
@@ -37,6 +37,8 @@ function statusClasses(status: ProductStatus): string {
       return "border-slate-200 bg-slate-50 text-slate-700";
     case "active":
       return "border-green-200 bg-green-50 text-green-700";
+    case "inactive":
+      return "border-amber-200 bg-amber-50 text-amber-700";
     case "sold":
       return "border-blue-200 bg-blue-50 text-blue-700";
     case "expired":
@@ -173,8 +175,13 @@ export function ManageBatchesSheet({ product, open, onOpenChange, t = {}, tCommo
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ stockId, values }: { stockId: number; values: BatchFormValues }) =>
-      productStocksApi.update(product.id, stockId, toCreatePayload(values)),
+    mutationFn: ({ stock, values }: { stock: ProductStock; values: BatchFormValues }) =>
+      productStocksApi.update(product.id, stock.id, {
+        ...toCreatePayload(values),
+        // "Publish immediately" off keeps a paused batch paused instead of
+        // turning it back into a draft.
+        status: values.publish_immediately ? "active" : stock.status === "inactive" ? "inactive" : "draft",
+      }),
     onSuccess: () => {
       toast.success(t.toast_batch_updated ?? "Batch updated");
       setFormState({ mode: "list" });
@@ -184,7 +191,9 @@ export function ManageBatchesSheet({ product, open, onOpenChange, t = {}, tCommo
       const fieldErrors = fieldErrorsOf(err);
       setServerErrors(fieldErrors);
       if (!fieldErrors) {
-        toast.error(getErrorMessage(err, t.err_batch_update_failed ?? "Only draft or active batches can be edited"));
+        toast.error(
+          getErrorMessage(err, t.err_batch_update_failed ?? "Only draft, active or inactive batches can be edited"),
+        );
       }
     },
   });
@@ -245,6 +254,23 @@ export function ManageBatchesSheet({ product, open, onOpenChange, t = {}, tCommo
       invalidate();
     },
     onError: () => toast.error(t.err_batch_mark_sold_failed ?? "Only active batches can be marked sold"),
+  });
+
+  // Pause / resume a single batch — inactive batches are hidden from buyers
+  // and the Market Hub but keep everything else.
+  const setBatchActiveMutation = useMutation({
+    mutationFn: ({ stockId, active }: { stockId: number; active: boolean }) =>
+      active ? productStocksApi.activate(product.id, stockId) : productStocksApi.deactivate(product.id, stockId),
+    onSuccess: (_data, { active }) => {
+      toast.success(
+        active
+          ? (t.toast_batch_activated ?? "Batch activated")
+          : (t.toast_batch_deactivated ?? "Batch deactivated — hidden from buyers"),
+      );
+      invalidate();
+    },
+    // Server message covers the reasons (wrong status / validity ended).
+    onError: (err) => toast.error(getErrorMessage(err, t.err_batch_toggle_failed ?? "Could not change the batch status")),
   });
 
   const deleteMutation = useMutation({
@@ -314,6 +340,12 @@ export function ManageBatchesSheet({ product, open, onOpenChange, t = {}, tCommo
             {product.name.en} —{" "}
             {t.manage_batches_description ?? "Each batch has its own quantity, price, and validity window."}
           </SheetDescription>
+          {!product.is_active && (
+            <p className="rounded-md border border-zinc-300 bg-zinc-100 px-3 py-2 text-xs text-zinc-700">
+              {t.product_inactive_hint ??
+                "This product is inactive — none of its batches are shown to buyers until the product is activated."}
+            </p>
+          )}
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto px-6 py-4">
@@ -368,9 +400,10 @@ export function ManageBatchesSheet({ product, open, onOpenChange, t = {}, tCommo
 
               <div className="flex flex-col gap-3">
                 {stocks.map((s) => {
-                  const isEditable = s.status === "draft" || s.status === "active";
+                  const isEditable = s.status === "draft" || s.status === "active" || s.status === "inactive";
                   const isDraft = s.status === "draft";
                   const isActive = s.status === "active";
+                  const isInactive = s.status === "inactive";
                   return (
                     <div key={s.id} className="rounded-lg border p-4">
                       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -384,6 +417,9 @@ export function ManageBatchesSheet({ product, open, onOpenChange, t = {}, tCommo
                             />
                           )}
                           <div className="flex flex-col gap-1">
+                            <span className="font-mono text-muted-foreground text-xs">
+                              {t.label_batch ?? "Batch"}: {s.batch_number}
+                            </span>
                             <div className="flex items-center gap-2">
                               <span className="font-semibold text-sm">
                                 {s.quantity} {s.unit}
@@ -433,6 +469,21 @@ export function ManageBatchesSheet({ product, open, onOpenChange, t = {}, tCommo
                             >
                               <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
                               {t.action_mark_sold ?? "Mark Sold"}
+                            </Button>
+                          )}
+                          {(isActive || isInactive) && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setBatchActiveMutation.mutate({ stockId: s.id, active: isInactive })}
+                              disabled={setBatchActiveMutation.isPending}
+                            >
+                              {isInactive ? (
+                                <Play className="mr-1 h-3.5 w-3.5" />
+                              ) : (
+                                <Pause className="mr-1 h-3.5 w-3.5" />
+                              )}
+                              {isInactive ? (t.action_activate ?? "Activate") : (t.action_deactivate ?? "Deactivate")}
                             </Button>
                           )}
                           {isEditable && (
@@ -486,7 +537,7 @@ export function ManageBatchesSheet({ product, open, onOpenChange, t = {}, tCommo
               <BatchForm
                 defaultValues={batchFromStock(formState.stock)}
                 onSubmit={(values) =>
-                  updateMutation.mutate({ stockId: formState.stock.id, values })
+                  updateMutation.mutate({ stock: formState.stock, values })
                 }
                 onCancel={() => setFormState({ mode: "list" })}
                 isSubmitting={updateMutation.isPending}

@@ -10,6 +10,8 @@ import { publicApiClient } from "./client";
  */
 export interface MarketHubProduct {
   id: number; // ProductStock id
+  /** Auto-generated batch number, e.g. "P34-B2" — quote it when contacting the FPO. */
+  batch_number: string;
   product_id: number;
   name: { en: string; ml: string };
   description: { en: string; ml: string };

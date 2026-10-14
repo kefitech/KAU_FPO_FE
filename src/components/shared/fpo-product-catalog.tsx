@@ -33,6 +33,7 @@ type CatalogParams = DataTableParams & { commodity?: string };
 const STATUS_CLASSES: Record<ProductStatus, string> = {
   draft:   "border-slate-200 bg-slate-50 text-slate-700",
   active:  "border-green-200 bg-green-50 text-green-700",
+  inactive: "border-amber-200 bg-amber-50 text-amber-700",
   sold:    "border-blue-200 bg-blue-50 text-blue-700",
   expired: "border-red-200 bg-red-50 text-red-700",
 };
@@ -88,17 +89,25 @@ function ProductCard({
           </div>
         )}
         <CardHeader>
-          <div className="flex items-start justify-between gap-2">
-            <CardTitle className="text-base">{name}</CardTitle>
-            <Badge variant="outline" className="shrink-0 font-normal">
+          {/* Wraps so a long commodity name drops below the product name instead of squeezing it. */}
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <CardTitle className="min-w-0 flex-1 text-base">{name}</CardTitle>
+            <Badge variant="outline" className="h-auto max-w-full whitespace-normal text-left font-normal">
               {product.commodity_name ?? product.commodity_code}
             </Badge>
           </div>
-          {product.status && (
-            <Badge variant="outline" className={`w-fit capitalize ${STATUS_CLASSES[product.status]}`}>
-              {product.status}
-            </Badge>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            {product.batch_number && (
+              <span className="font-mono text-muted-foreground text-xs">
+                {t.label_batch ?? "Batch"}: {product.batch_number}
+              </span>
+            )}
+            {product.status && (
+              <Badge variant="outline" className={`w-fit capitalize ${STATUS_CLASSES[product.status]}`}>
+                {product.status}
+              </Badge>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           {description && (

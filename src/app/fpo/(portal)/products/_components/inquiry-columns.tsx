@@ -5,6 +5,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
 
 import { type Inquiry, inquiriesApi } from "@/app/fpo/_api/inquiries";
+import { TextCell } from "@/components/data-table/cell-helpers";
 import { RowActions } from "@/components/data-table/row-actions";
 import { Badge } from "@/components/ui/badge";
 
@@ -105,6 +106,11 @@ export function getInquiryColumns(t: T, canManage = true): ColumnDef<Inquiry>[] 
       cell: ({ row }) => <div className="font-medium">{row.original.product_name}</div>,
     },
     {
+      accessorKey: "batch_number",
+      header: t.col_batch ?? "Batch",
+      cell: ({ row }) => <span className="font-mono text-sm">{row.original.batch_number ?? "—"}</span>,
+    },
+    {
       accessorKey: "buyer_name",
       header: t.col_buyer ?? "Buyer",
       cell: ({ row }) => row.original.buyer_name,
@@ -132,7 +138,8 @@ export function getInquiryColumns(t: T, canManage = true): ColumnDef<Inquiry>[] 
     {
       accessorKey: "message",
       header: t.col_message ?? "Message",
-      cell: ({ row }) => <span className="text-muted-foreground text-sm">{row.original.message || "—"}</span>,
+      // One line + ellipsis; full text on hover and in the row's detail dialog.
+      cell: ({ row }) => <TextCell value={row.original.message} muted />,
     },
     {
       accessorKey: "created_at",

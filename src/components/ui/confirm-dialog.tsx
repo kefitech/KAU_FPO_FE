@@ -33,7 +33,9 @@ export function ConfirmDialog() {
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription className="break-words">{description}</AlertDialogDescription>
+          {/* Normal wrapping — the base text-balance / md:text-pretty pull words onto
+              the next line to even them out, leaving a gap at the end of line 1. */}
+          <AlertDialogDescription className="break-words text-wrap md:text-wrap">{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isPending}>{cancelLabel}</AlertDialogCancel>
