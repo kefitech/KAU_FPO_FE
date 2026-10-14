@@ -142,11 +142,9 @@ export default function AdminExpertBookingsPage() {
             className="rounded-md border bg-background px-2 py-1 text-sm"
           >
             <option value="all">{t.filter_status_all ?? "All"}</option>
-            <option value="pending">{t.status_pending ?? "Pending"}</option>
             <option value="confirmed">{t.status_confirmed ?? "Confirmed"}</option>
-            <option value="rejected">{t.status_rejected ?? "Rejected"}</option>
-            <option value="cancelled">{t.status_cancelled ?? "Cancelled"}</option>
             <option value="completed">{t.status_completed ?? "Completed"}</option>
+            <option value="cancelled">{t.status_cancelled ?? "Cancelled"}</option>
           </select>
         </div>
         <div className="flex flex-col gap-1">

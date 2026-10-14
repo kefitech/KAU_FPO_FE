@@ -15,6 +15,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { ViewSheet } from "@/components/ui/view-sheet";
 import { inboxApi } from "@/lib/api/inbox";
+import { sanitizeNotificationHtml } from "@/lib/notification-html";
+import { isExternalLink, openExternalLink } from "@/lib/notification-link";
 import type { InboxNotification } from "@/types";
 import { useTranslations } from "@/hooks/use-translations";
 
@@ -59,11 +61,13 @@ function NotificationItem({
             className={`break-words text-sm leading-snug ${
               !item.is_read ? "font-semibold" : "font-normal text-muted-foreground"
             }`}
-            dangerouslySetInnerHTML={{ __html: item.title }}
+            // biome-ignore lint/security/noDangerouslySetInnerHtml: content is sanitized with DOMPurify
+            dangerouslySetInnerHTML={{ __html: sanitizeNotificationHtml(item.title) }}
           />
           <p
             className="mt-0.5 line-clamp-2 break-words text-muted-foreground text-xs"
-            dangerouslySetInnerHTML={{ __html: item.body }}
+            // biome-ignore lint/security/noDangerouslySetInnerHtml: content is sanitized with DOMPurify
+            dangerouslySetInnerHTML={{ __html: sanitizeNotificationHtml(item.body) }}
           />
           <p className="mt-1 text-muted-foreground/70 text-xs">
             {relativeTime(item.created_at, t)}
@@ -126,6 +130,11 @@ export function NotificationBell() {
 
   const handleView = (item: InboxNotification) => {
     setOpen(false);
+    // Webmail links (expert enquiries) open the mailbox instead of the detail sheet
+    if (isExternalLink(item.link)) {
+      openExternalLink(item.link);
+      return;
+    }
     setSelected(item);
   };
 
@@ -144,7 +153,8 @@ export function NotificationBell() {
           node: (
             <div
               className="text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none prose-a:text-blue-400 prose-a:no-underline hover:prose-a:underline"
-              dangerouslySetInnerHTML={{ __html: selected.body }}
+              // biome-ignore lint/security/noDangerouslySetInnerHtml: content is sanitized with DOMPurify
+              dangerouslySetInnerHTML={{ __html: sanitizeNotificationHtml(selected.body) }}
             />
           ),
         },
@@ -242,7 +252,7 @@ export function NotificationBell() {
       <ViewSheet
         open={!!selected}
         onOpenChange={(v) => !v && setSelected(null)}
-        title={selected?.title ?? ""}
+        title={sanitizeNotificationHtml(selected?.title ?? "")}
         fields={sheetFields}
         actions={sheetActions}
       />

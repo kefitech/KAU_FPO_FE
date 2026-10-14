@@ -13,12 +13,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ExpertBookingDialog } from "@/components/ui/expert-booking-dialog";
 import { ExpertEnquiryDialog } from "@/components/ui/expert-enquiry-dialog";
 import { Input } from "@/components/ui/input";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useFpoPermissions } from "@/hooks/use-fpo-permissions";
 import { type ExpertBooking, expertsApi } from "@/lib/api/experts";
 import { translationsApi } from "@/lib/api/translations";
+import { byUpcomingDate } from "@/lib/booking-order";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useLocaleStore } from "@/stores/locale-store";
 import { DISTRICT_OPTIONS, type FpoExpert } from "@/types/fpo";
@@ -51,26 +53,6 @@ const STATUS_BADGE_COLORS: Record<string, string> = {
   cancelled: "bg-red-100 text-red-700 border-red-200",
   rejected: "bg-red-100 text-red-700 border-red-200",
 };
-
-// Order of status groups in the "View Bookings" dialog. Live appointments
-// first (soonest upcoming at the top), then history, most recent first.
-const BOOKING_STATUS_ORDER: Record<ExpertBooking["status"], number> = {
-  confirmed: 0,
-  pending: 1,
-  cancelled: 2,
-  completed: 3,
-  rejected: 4,
-};
-
-function sortBookingsForDisplay(bookings: ExpertBooking[]): ExpertBooking[] {
-  const when = (b: ExpertBooking) => `${b.requested_date} ${b.requested_time}`;
-  return [...bookings].sort((a, b) => {
-    const byStatus = (BOOKING_STATUS_ORDER[a.status] ?? 99) - (BOOKING_STATUS_ORDER[b.status] ?? 99);
-    if (byStatus !== 0) return byStatus;
-    const live = a.status === "confirmed" || a.status === "pending";
-    return live ? when(a).localeCompare(when(b)) : when(b).localeCompare(when(a));
-  });
-}
 
 const DISTRICT_SELECT_OPTIONS = [
   { value: "", label: "All Districts" },
@@ -217,7 +199,24 @@ function ExpertBookingsListDialog({
   const queryClient = useQueryClient();
   const [cancelling, setCancelling] = useState<ExpertBooking | null>(null);
   const [cancelReason, setCancelReason] = useState("");
-  const sortedBookings = useMemo(() => sortBookingsForDisplay(bookings), [bookings]);
+  const sortedBookings = useMemo(() => [...bookings].sort(byUpcomingDate()), [bookings]);
+
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
+  const hasFilters = filterStatus !== "all" || !!filterDateFrom || !!filterDateTo;
+  function clearFilters() {
+    setFilterStatus("all");
+    setFilterDateFrom("");
+    setFilterDateTo("");
+  }
+
+  const filteredBookings = sortedBookings.filter((b) => {
+    if (filterStatus !== "all" && b.status !== filterStatus) return false;
+    if (filterDateFrom && b.requested_date < filterDateFrom) return false;
+    if (filterDateTo && b.requested_date > filterDateTo) return false;
+    return true;
+  });
 
   const cancelMutation = useMutation({
     mutationFn: ({ id, reason }: { id: number; reason: string }) => expertsApi.cancelBooking(id, reason),
@@ -235,18 +234,73 @@ function ExpertBookingsListDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="flex max-h-[85vh] flex-col supports-[height:100dvh]:max-h-[calc(100dvh-2rem)] sm:max-w-md">
+        <DialogContent className="flex max-h-[70vh] flex-col supports-[height:100dvh]:max-h-[70dvh] sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Bookings with {expertName}</DialogTitle>
           </DialogHeader>
+          {/* Stays put while the list below scrolls */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="col-span-2 flex items-end gap-2">
+              <div className="flex flex-1 flex-col gap-1">
+                <label className="text-muted-foreground text-xs" htmlFor="bookings-filter-status">
+                  Status
+                </label>
+                <NativeSelect
+                  id="bookings-filter-status"
+                  size="sm"
+                  className="w-full"
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                >
+                  <NativeSelectOption value="all">All</NativeSelectOption>
+                  <NativeSelectOption value="confirmed">Confirmed</NativeSelectOption>
+                  <NativeSelectOption value="completed">Completed</NativeSelectOption>
+                  <NativeSelectOption value="cancelled">Cancelled</NativeSelectOption>
+                </NativeSelect>
+              </div>
+              {hasFilters && (
+                <Button type="button" size="sm" variant="ghost" onClick={clearFilters}>
+                  Clear filters
+                </Button>
+              )}
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-muted-foreground text-xs" htmlFor="bookings-filter-from">
+                From
+              </label>
+              <Input
+                id="bookings-filter-from"
+                type="date"
+                className="h-8 text-sm"
+                value={filterDateFrom}
+                max={filterDateTo || undefined}
+                onChange={(e) => setFilterDateFrom(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-muted-foreground text-xs" htmlFor="bookings-filter-to">
+                To
+              </label>
+              <Input
+                id="bookings-filter-to"
+                type="date"
+                className="h-8 text-sm"
+                value={filterDateTo}
+                min={filterDateFrom || undefined}
+                onChange={(e) => setFilterDateTo(e.target.value)}
+              />
+            </div>
+          </div>
           <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
-            {sortedBookings.length === 0 ? (
-              <p className="text-muted-foreground text-sm">No bookings found.</p>
+            {filteredBookings.length === 0 ? (
+              <p className="text-muted-foreground text-sm">
+                {sortedBookings.length === 0 ? "No bookings found." : "No bookings match your filters."}
+              </p>
             ) : (
-              sortedBookings.map((b) => {
+              filteredBookings.map((b) => {
                 const statusClass = STATUS_BADGE_COLORS[b.status] ?? "bg-muted text-muted-foreground";
                 return (
-                  <div key={b.id} className="flex flex-col gap-1.5 rounded-lg border p-3">
+                  <div key={b.id} className="wrap-anywhere flex flex-col gap-1.5 rounded-lg border p-3">
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-medium text-sm">{b.requested_date}</span>
                       <Badge variant="outline" className={`border text-xs ${statusClass}`}>
@@ -257,12 +311,12 @@ function ExpertBookingsListDialog({
                     {b.topic && <p className="text-foreground text-xs">{b.topic}</p>}
                     {b.notes && <p className="text-muted-foreground text-xs">{b.notes}</p>}
                     {b.status === "cancelled" && b.cancellation_reason && (
-                      <p className="text-muted-foreground text-xs italic">Reason: {b.cancellation_reason}</p>
+                      <p className="text-destructive text-xs italic">Reason: {b.cancellation_reason}</p>
                     )}
                     {b.status === "rejected" &&
                       ((b as ExpertBooking & { rejection_reason?: string | null }).rejection_reason ||
                         b.cancellation_reason) && (
-                        <p className="text-muted-foreground text-xs italic">
+                        <p className="text-destructive text-xs italic">
                           Reason:{" "}
                           {(b as ExpertBooking & { rejection_reason?: string | null }).rejection_reason ||
                             b.cancellation_reason}
@@ -661,6 +715,8 @@ export function ExpertDirectory({ readOnly = false }: { readOnly?: boolean }) {
       )}
       {bookingsListDialog.expert && (
         <ExpertBookingsListDialog
+          // Fresh filters for each expert
+          key={bookingsListDialog.expert.id}
           open={bookingsListDialog.open}
           onOpenChange={(open) => setBookingsListDialog((s) => ({ ...s, open }))}
           expertName={bookingsListDialog.expert.name}

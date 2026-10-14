@@ -1,19 +1,20 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useParams, useRouter } from "next/navigation";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
 import { type ExpertBooking, expertDashboardApi } from "@/app/expert/_api/dashboard";
-import { compareBookings } from "@/app/expert/booking/_lib/order";
 import { BackButton } from "@/components/layout/back-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { byUpcomingDate } from "@/lib/booking-order";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +25,8 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled: "bg-red-100 text-red-800",
   completed: "bg-blue-100 text-blue-800",
 };
+
+const PAGE_SIZE = 10;
 
 export default function FpoDetailPage() {
   const params = useParams();
@@ -36,24 +39,41 @@ export default function FpoDetailPage() {
     queryFn: () => expertDashboardApi.getMyBookings(),
   });
 
-  // Same order as the My Bookings cards: upcoming soonest-first, then finished ones newest-first.
-  const fpoBookings = bookings.filter((b) => b.fpo === fpoId).sort(compareBookings);
+  // Same order as the My Bookings cards: upcoming soonest-first, then past ones most recent first.
+  const fpoBookings = bookings.filter((b) => b.fpo === fpoId).sort(byUpcomingDate());
+
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(fpoBookings.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pagedBookings = fpoBookings.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   // Links from elsewhere (e.g. the availability page's cancellation dialog)
   // point at /expert/booking/fpo/<id>#booking-<bookingId>. The cards only
   // exist once the query resolves, so the browser's own hash scroll misses;
-  // scroll and highlight here instead.
+  // open the page holding that booking, then scroll and highlight it here.
+  // Only on first load, so a refetch doesn't yank the expert off the page they moved to.
   const [highlightedId, setHighlightedId] = useState<number | null>(null);
+  const hashHandled = useRef(false);
   useEffect(() => {
-    if (isLoading || bookings.length === 0) return;
+    if (isLoading || hashHandled.current) return;
     const match = /^#booking-(\d+)$/.exec(window.location.hash);
     if (!match) return;
     const id = Number(match[1]);
-    const el = document.getElementById(`booking-${id}`);
-    if (!el) return;
-    el.scrollIntoView({ block: "center", behavior: "smooth" });
+    const index = bookings
+      .filter((b) => b.fpo === fpoId)
+      .sort(byUpcomingDate())
+      .findIndex((b) => b.id === id);
+    if (index === -1) return;
+    hashHandled.current = true;
+    setPage(Math.floor(index / PAGE_SIZE) + 1);
     setHighlightedId(id);
-  }, [isLoading, bookings]);
+  }, [isLoading, bookings, fpoId]);
+
+  // Runs after the page switch above has rendered the highlighted card.
+  useEffect(() => {
+    if (highlightedId == null) return;
+    document.getElementById(`booking-${highlightedId}`)?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [highlightedId]);
 
   const confirmMutation = useMutation({
     mutationFn: (id: number) => expertDashboardApi.confirmBooking(id),
@@ -152,7 +172,7 @@ export default function FpoDetailPage() {
           <CardTitle className="text-xl">{first.fpo_name}</CardTitle>
           <p className="text-muted-foreground text-sm">{fpoBookings.length} booking(s) with you</p>
         </CardHeader>
-        <CardContent className="flex flex-col gap-1">
+        <CardContent className="wrap-anywhere flex flex-col gap-1">
           {first.fpo_application_id && (
             <p className="text-muted-foreground text-sm">Application ID: {first.fpo_application_id}</p>
           )}
@@ -172,7 +192,7 @@ export default function FpoDetailPage() {
 
       <div className="flex flex-col gap-3">
         <h3 className="font-semibold text-sm">Booking History</h3>
-        {fpoBookings.map((booking) => (
+        {pagedBookings.map((booking) => (
           <Card
             key={booking.id}
             id={`booking-${booking.id}`}
@@ -184,7 +204,7 @@ export default function FpoDetailPage() {
               </CardTitle>
               <Badge className={STATUS_COLORS[booking.status]}>{booking.status_display}</Badge>
             </CardHeader>
-            <CardContent className="flex flex-col gap-2">
+            <CardContent className="wrap-anywhere flex flex-col gap-2">
               {booking.user_name && (
                 <p className="text-sm">
                   Booked by: {booking.user_name}
@@ -195,7 +215,7 @@ export default function FpoDetailPage() {
               {booking.topic && <p className="text-muted-foreground text-sm">Topic: {booking.topic}</p>}
               {booking.notes && <p className="text-muted-foreground text-sm">Notes: {booking.notes}</p>}
               {booking.cancellation_reason && (
-                <p className="text-muted-foreground text-xs">Reason: {booking.cancellation_reason}</p>
+                <p className="text-destructive text-xs">Reason: {booking.cancellation_reason}</p>
               )}
               {booking.status === "pending" && (
                 <div className="flex gap-2">
@@ -232,6 +252,27 @@ export default function FpoDetailPage() {
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      <div className="flex items-center justify-between border-t pt-4">
+        <p className="text-muted-foreground text-sm">
+          Page {currentPage} of {totalPages} · {fpoBookings.length} bookings
+        </p>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)}>
+            <ChevronLeft className="mr-1 h-4 w-4" />
+            Previous
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={currentPage >= totalPages}
+            onClick={() => setPage(currentPage + 1)}
+          >
+            Next
+            <ChevronRight className="ml-1 h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <Dialog open={rejectDialog.open} onOpenChange={(open) => setRejectDialog((s) => ({ ...s, open }))}>

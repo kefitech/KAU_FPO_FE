@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 
 import { useQuery } from "@tanstack/react-query";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { adminExpertsApi } from "@/app/admin/_api/experts";
 import type { ExpertBooking } from "@/app/expert/_api/dashboard";
@@ -12,9 +13,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { translationsApi } from "@/lib/api/translations";
+import { byUpcomingDate } from "@/lib/booking-order";
 import { useLocaleStore } from "@/stores/locale-store";
 
 type T = Record<string, string>;
+
+const PAGE_SIZE = 10;
 
 type Booking = ExpertBooking & {
   requested_time?: string | null;
@@ -65,6 +69,22 @@ export default function AdminExpertFpoBookingsPage() {
   const locale = useLocaleStore((s) => s.locale);
   const [t, setT] = useState<T>({});
   const [filterStatus, setFilterStatus] = useState("all");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
+
+  // The page belongs to the filter set it was chosen under, so changing any
+  // filter drops back to page 1.
+  const filterKey = `${filterStatus}|${filterDateFrom}|${filterDateTo}`;
+  const [pageState, setPageState] = useState({ filterKey, page: 1 });
+  const page = pageState.filterKey === filterKey ? pageState.page : 1;
+  const setPage = (next: number) => setPageState({ filterKey, page: next });
+
+  const hasFilters = filterStatus !== "all" || !!filterDateFrom || !!filterDateTo;
+  function clearFilters() {
+    setFilterStatus("all");
+    setFilterDateFrom("");
+    setFilterDateTo("");
+  }
 
   useEffect(() => {
     translationsApi
@@ -99,10 +119,20 @@ export default function AdminExpertFpoBookingsPage() {
 
   const fpoBookings = toBookingArray(data)
     .filter((b) => b.fpo === fpoId)
-    .sort((a, b) => new Date(b.requested_date).getTime() - new Date(a.requested_date).getTime());
+    .sort(byUpcomingDate());
 
   const first = fpoBookings[0];
-  const visible = fpoBookings.filter((b) => filterStatus === "all" || b.status === filterStatus);
+
+  const filtered = fpoBookings.filter((b) => {
+    if (filterStatus !== "all" && b.status !== filterStatus) return false;
+    if (filterDateFrom && b.requested_date < filterDateFrom) return false;
+    if (filterDateTo && b.requested_date > filterDateTo) return false;
+    return true;
+  });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const visible = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   return (
     <div className="flex flex-col gap-6">
@@ -169,35 +199,70 @@ export default function AdminExpertFpoBookingsPage() {
         </Card>
       )}
 
-      {/* Status filter */}
-      <div className="flex items-center gap-2">
-        <label className="text-muted-foreground text-xs" htmlFor="fpo-filter-status">
-          {t.filter_status ?? "Status"}
-        </label>
-        <select
-          id="fpo-filter-status"
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          className="rounded-md border bg-background px-2 py-1 text-sm"
-        >
-          <option value="all">{t.filter_status_all ?? "All"}</option>
-          <option value="pending">{t.status_pending ?? "Pending"}</option>
-          <option value="confirmed">{t.status_confirmed ?? "Confirmed"}</option>
-          <option value="rejected">{t.status_rejected ?? "Rejected"}</option>
-          <option value="cancelled">{t.status_cancelled ?? "Cancelled"}</option>
-          <option value="completed">{t.status_completed ?? "Completed"}</option>
-        </select>
+      {/* Filters */}
+      <div className="flex flex-wrap items-end gap-3 rounded-md border p-3">
+        <div className="flex flex-col gap-1">
+          <label className="text-muted-foreground text-xs" htmlFor="fpo-filter-status">
+            {t.filter_status ?? "Status"}
+          </label>
+          <select
+            id="fpo-filter-status"
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="rounded-md border bg-background px-2 py-1 text-sm"
+          >
+            <option value="all">{t.filter_status_all ?? "All"}</option>
+            <option value="confirmed">{t.status_confirmed ?? "Confirmed"}</option>
+            <option value="completed">{t.status_completed ?? "Completed"}</option>
+            <option value="cancelled">{t.status_cancelled ?? "Cancelled"}</option>
+          </select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-muted-foreground text-xs" htmlFor="fpo-filter-from">
+            {t.filter_from ?? "From"}
+          </label>
+          <input
+            id="fpo-filter-from"
+            type="date"
+            value={filterDateFrom}
+            max={filterDateTo || undefined}
+            onChange={(e) => setFilterDateFrom(e.target.value)}
+            className="rounded-md border bg-background px-2 py-1 text-sm"
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-muted-foreground text-xs" htmlFor="fpo-filter-to">
+            {t.filter_to ?? "To"}
+          </label>
+          <input
+            id="fpo-filter-to"
+            type="date"
+            value={filterDateTo}
+            min={filterDateFrom || undefined}
+            onChange={(e) => setFilterDateTo(e.target.value)}
+            className="rounded-md border bg-background px-2 py-1 text-sm"
+          />
+        </div>
+        {hasFilters && (
+          <Button type="button" size="sm" variant="ghost" onClick={clearFilters}>
+            {t.filter_clear ?? "Clear filters"}
+          </Button>
+        )}
       </div>
 
       {/* Date list */}
       {visible.length === 0 ? (
-        <p className="text-muted-foreground text-sm">{t.empty_no_bookings ?? "No bookings found."}</p>
+        <p className="text-muted-foreground text-sm">
+          {fpoBookings.length === 0
+            ? (t.empty_no_bookings ?? "No bookings found.")
+            : (t.empty_no_matches ?? "No bookings match your filters.")}
+        </p>
       ) : (
         <div className="flex flex-col gap-3">
           {visible.map((b) => (
             <Card key={b.id}>
               <CardContent className="flex flex-col gap-2 pt-6 sm:flex-row sm:items-start sm:justify-between">
-                <div className="flex flex-col gap-1">
+                <div className="wrap-anywhere flex min-w-0 flex-1 flex-col gap-1">
                   <p className="font-medium">
                     {formatDate(b.requested_date)}
                     {b.requested_time && (
@@ -230,7 +295,7 @@ export default function AdminExpertFpoBookingsPage() {
                     {t.field_created_at ?? "Booked on"}: {new Date(b.created_at).toLocaleString("en-IN")}
                   </p>
                 </div>
-                <Badge className={`w-fit ${STATUS_COLORS[b.status] ?? ""}`}>
+                <Badge className={`w-fit shrink-0 ${STATUS_COLORS[b.status] ?? ""}`}>
                   {getStatusLabel(b.status, b.status_display)}
                 </Badge>
               </CardContent>
@@ -238,6 +303,30 @@ export default function AdminExpertFpoBookingsPage() {
           ))}
         </div>
       )}
+
+      <div className="flex items-center justify-between border-t pt-4">
+        <p className="text-muted-foreground text-sm">
+          {(t.pagination_summary_bookings ?? "Page {page} of {total_pages} · {count} bookings")
+            .replace("{page}", String(currentPage))
+            .replace("{total_pages}", String(totalPages))
+            .replace("{count}", String(filtered.length))}
+        </p>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)}>
+            <ChevronLeft className="mr-1 h-4 w-4" />
+            {t.btn_previous ?? "Previous"}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={currentPage >= totalPages}
+            onClick={() => setPage(currentPage + 1)}
+          >
+            {t.btn_next ?? "Next"}
+            <ChevronRight className="ml-1 h-4 w-4" />
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
