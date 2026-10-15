@@ -436,14 +436,18 @@ export default function MarketHubPage() {
                             📞 {product.contact_phone}
                           </a>
                         )}
-                        <button
-                          type="button"
-                          className="btn btn-theme secondary btn-sm radius animation mt-15"
-                          style={{ marginTop: "auto", alignSelf: "flex-start" }}
-                          onClick={() => openInquiry(product)}
-                        >
-                          {t.btn_inquire ?? "Inquire"}
-                        </button>
+                        {/* PM-17: no Inquire on expired-in-grace cards — the
+                            banner above tells the visitor to check back. */}
+                        {!product.in_grace_period && (
+                          <button
+                            type="button"
+                            className="btn btn-theme secondary btn-sm radius animation mt-15"
+                            style={{ marginTop: "auto", alignSelf: "flex-start" }}
+                            onClick={() => openInquiry(product)}
+                          >
+                            {t.btn_inquire ?? "Inquire"}
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
