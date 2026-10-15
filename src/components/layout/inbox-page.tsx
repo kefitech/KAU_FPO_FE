@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -13,6 +13,7 @@ import {
   GraduationCap,
   Inbox,
   type LucideIcon,
+  Mail,
   PanelLeftClose,
   PanelLeftOpen,
   Search,
@@ -28,7 +29,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { inboxApi } from "@/lib/api/inbox";
 import { sanitizeNotificationHtml } from "@/lib/notification-html";
-import { isExternalLink, openExternalLink } from "@/lib/notification-link";
+import { isExternalLink, openExternalLink, replyMailto } from "@/lib/notification-link";
 import { cn } from "@/lib/utils";
 import type { InboxCategory, InboxNotification } from "@/types";
 import { useLocaleStore } from "@/stores/locale-store";
@@ -255,6 +256,7 @@ function NotifDetail({
   onBack?: () => void;
   t: T;
 }) {
+  const replyTo = replyMailto(item);
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -273,12 +275,22 @@ function NotifDetail({
             <span>{t.label_from ?? "From:"} <span className="font-medium text-foreground">{t.platform_name ?? "KAU-FPO Platform"}</span></span>
             <span>{formatFull(item.created_at)}</span>
           </div>
-          {!item.is_read && (
-            <Button size="sm" variant="outline" onClick={onMarkRead} disabled={isPending} className="h-7 text-xs">
-              <CheckCheck className="h-3.5 w-3.5 mr-1.5" />
-              {t.action_mark_as_read ?? "Mark as read"}
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {replyTo && (
+              <Button size="sm" asChild className="h-7 text-xs">
+                <a href={replyTo} target="_blank" rel="noopener noreferrer">
+                  <Mail className="h-3.5 w-3.5 mr-1.5" />
+                  {t.btn_reply_email ?? "Reply by email"}
+                </a>
+              </Button>
+            )}
+            {!item.is_read && (
+              <Button size="sm" variant="outline" onClick={onMarkRead} disabled={isPending} className="h-7 text-xs">
+                <CheckCheck className="h-3.5 w-3.5 mr-1.5" />
+                {t.action_mark_as_read ?? "Mark as read"}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -443,6 +455,22 @@ export function InboxPage() {
   // Reset selection when page or category changes
   // biome-ignore lint/correctness/useExhaustiveDependencies: reset intentionally triggered by page / category change
   useEffect(() => { setSelectedId(null); setShowDetail(false); }, [page, category]);
+
+  // Opened from a dashboard card as /inbox?id=<n>: select that notification once it is loaded
+  const openedFromUrlRef = useRef(false);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs when the list arrives; handleSelect is stable enough for a one-off
+  useEffect(() => {
+    if (openedFromUrlRef.current || notifications.length === 0) return;
+    const id = Number(new URLSearchParams(window.location.search).get("id"));
+    if (!id) {
+      openedFromUrlRef.current = true;
+      return;
+    }
+    const item = notifications.find((n) => n.id === id);
+    if (!item) return;
+    openedFromUrlRef.current = true;
+    handleSelect(item);
+  }, [notifications]);
 
   return (
     <div className="flex flex-col gap-0 h-[calc(100vh-120px)]">

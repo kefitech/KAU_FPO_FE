@@ -118,15 +118,16 @@ export function RecentNotificationsCard({
           <div className="flex flex-col gap-3">
             {items.map((n) => {
               const boxClass = `rounded-lg border p-3 ${!n.is_read ? "border-primary/20 bg-primary/5" : ""}`;
-              const { link } = n;
-              return link ? (
+              // A notification with no link of its own opens the inbox with it selected
+              const target = n.link ?? (viewAllHref ? `${viewAllHref}?id=${n.id}` : null);
+              return target ? (
                 <button
                   key={n.id}
                   type="button"
                   onClick={() => {
                     onOpen?.(n);
-                    if (isExternalLink(link)) openExternalLink(link);
-                    else router.push(link);
+                    if (isExternalLink(target)) openExternalLink(target);
+                    else router.push(target);
                   }}
                   className={`${boxClass} flex w-full items-start gap-2 text-left transition-colors hover:bg-muted/50`}
                 >

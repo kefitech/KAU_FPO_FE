@@ -450,6 +450,8 @@ export interface InboxNotification {
   category: InboxCategory;
   /** In-app path the notification opens (e.g. "/admin/buyers?status=pending"), or the recipient's webmail URL (https), if any. */
   link: string | null;
+  /** Email address to answer by mail, e.g. the FPO member who sent an expert an enquiry. */
+  reply_to: string | null;
   is_read: boolean;
   read_at: string | null;
   created_at: string;

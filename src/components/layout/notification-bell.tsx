@@ -16,7 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { ViewSheet } from "@/components/ui/view-sheet";
 import { inboxApi } from "@/lib/api/inbox";
 import { sanitizeNotificationHtml } from "@/lib/notification-html";
-import { isExternalLink, openExternalLink } from "@/lib/notification-link";
+import { isExternalLink, openExternalLink, replyMailto } from "@/lib/notification-link";
 import type { InboxNotification } from "@/types";
 import { useTranslations } from "@/hooks/use-translations";
 
@@ -161,20 +161,33 @@ export function NotificationBell() {
       ]
     : [];
 
-  const sheetActions =
-    selected && !selected.is_read
-      ? [
-          {
-            label: t.action_mark_as_read ?? "Mark as read",
-            variant: "outline" as const,
-            onClick: () => {
-              markReadMutation.mutate(selected.id);
-              setSelected((prev) => (prev ? { ...prev, is_read: true } : null));
-            },
-            disabled: markReadMutation.isPending,
-          },
-        ]
-      : undefined;
+  const replyTo = selected ? replyMailto(selected) : null;
+  const sheetActions = selected
+    ? [
+        ...(replyTo
+          ? [
+              {
+                label: t.btn_reply_email ?? "Reply by email",
+                variant: "default" as const,
+                onClick: () => openExternalLink(replyTo),
+              },
+            ]
+          : []),
+        ...(!selected.is_read
+          ? [
+              {
+                label: t.action_mark_as_read ?? "Mark as read",
+                variant: "outline" as const,
+                onClick: () => {
+                  markReadMutation.mutate(selected.id);
+                  setSelected((prev) => (prev ? { ...prev, is_read: true } : null));
+                },
+                disabled: markReadMutation.isPending,
+              },
+            ]
+          : []),
+      ]
+    : undefined;
     console.log("countData is::::", countData?.data?.unread_count);
 
   return (
