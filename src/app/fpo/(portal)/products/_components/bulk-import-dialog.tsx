@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, CheckCircle2, Download, FileSpreadsheet, Upload, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, CircleDashed, Download, FileSpreadsheet, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { productsApi, type BulkImportResult } from "@/app/fpo/_api/products";
@@ -32,8 +32,10 @@ interface BulkImportDialogProps {
  *   1. Download the Excel template (3 sheets: Products / Instructions /
  *      Commodity Codes).
  *   2. FPO fills it offline, then picks the file here.
- *   3. On upload, the backend creates one Product + ACTIVE batch per
- *      valid row and returns {success, failed, results, errors}. We show
+ *   3. On upload, the backend creates one ACTIVE batch per valid row —
+ *      rows sharing name + commodity code are batches of one product, and
+ *      an existing product with that name + code gets them instead of a
+ *      duplicate — and returns {success, failed, results, errors}. We show
  *      the counts inline + an error table so bad rows can be fixed and
  *      re-uploaded without resending the valid ones.
  */
@@ -74,13 +76,24 @@ export function BulkImportDialog({ open, onOpenChange, t = {}, tCommon = {} }: B
     onSuccess: (res) => {
       setResult(res);
       if (res.success > 0) {
+        const products = String(res.products_created + res.products_updated);
         toast.success(
-          t.toast_bulk_import_success?.replace("{count}", String(res.success)) ??
-            `${res.success} product(s) imported`,
+          t.toast_bulk_import_success
+            ?.replace("{count}", String(res.success))
+            .replace("{products}", products) ??
+            `${res.success} batch(es) imported into ${products} product(s)`,
         );
+      }
+      if (res.drafted > 0) {
+        toast.warning(
+          t.toast_bulk_import_drafts?.replace("{count}", String(res.drafted)) ??
+            `${res.drafted} product(s) saved as draft without a batch`,
+        );
+      }
+      if (res.success > 0 || res.drafted > 0) {
         queryClient.invalidateQueries({ queryKey: ["products"] });
       }
-      if (res.failed > 0 && res.success === 0) {
+      if (res.failed > 0 && res.success === 0 && res.drafted === 0) {
         toast.error(t.err_bulk_import_all_failed ?? "No products could be imported");
       }
     },
@@ -129,7 +142,7 @@ export function BulkImportDialog({ open, onOpenChange, t = {}, tCommon = {} }: B
           <DialogTitle>{t.bulk_import_title ?? "Bulk Import Products"}</DialogTitle>
           <DialogDescription>
             {t.bulk_import_description ??
-              "Upload a filled Excel/CSV to create many products at once. Each row becomes a live product with one active batch."}
+              "Upload a filled Excel/CSV to create many products at once. Each row becomes a live batch — rows with the same product name and commodity code are batches of one product."}
           </DialogDescription>
         </DialogHeader>
 
@@ -213,17 +226,54 @@ export function BulkImportDialog({ open, onOpenChange, t = {}, tCommon = {} }: B
             <div className="flex flex-col gap-3 rounded-lg border p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <p className="font-medium text-sm">{t.step3_title ?? "3. Import summary"}</p>
-                <div className="flex items-center gap-2 text-sm">
+                <div className="flex flex-wrap items-center gap-2 text-sm">
                   <span className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-green-700">
                     <CheckCircle2 className="h-3.5 w-3.5" />
                     {result.success} {t.imported ?? "imported"}
                   </span>
+                  {result.drafted > 0 && (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-amber-700">
+                      <CircleDashed className="h-3.5 w-3.5" />
+                      {result.drafted} {t.saved_as_draft ?? "saved as draft"}
+                    </span>
+                  )}
                   <span className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-red-700">
                     <AlertCircle className="h-3.5 w-3.5" />
                     {result.failed} {t.failed ?? "failed"}
                   </span>
                 </div>
               </div>
+
+              {result.drafts.length > 0 && (
+                <div className="flex flex-col gap-1">
+                  <p className="text-muted-foreground text-xs">
+                    {t.draft_rows_label ??
+                      "Saved as draft — these products were created switched off with no batch. Add a batch from Manage Batches; the product switches on once that batch is live."}
+                  </p>
+                  <div className="max-h-60 overflow-y-auto rounded border">
+                    <table className="w-full text-xs">
+                      <thead className="sticky top-0 bg-muted">
+                        <tr className="text-left">
+                          <th className="px-2 py-1.5 font-medium">{t.col_row ?? "Row"}</th>
+                          <th className="px-2 py-1.5 font-medium">{t.col_name ?? "Name"}</th>
+                          <th className="px-2 py-1.5 font-medium">
+                            {t.col_batch_not_added ?? "Why the batch was not added"}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {result.drafts.map((draft) => (
+                          <tr key={draft.row} className="border-t">
+                            <td className="px-2 py-1.5 align-top">{draft.row}</td>
+                            <td className="px-2 py-1.5 align-top">{draft.name}</td>
+                            <td className="px-2 py-1.5 align-top text-amber-700">{draft.reason}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
 
               {result.errors.length > 0 && (
                 <div className="flex flex-col gap-1">

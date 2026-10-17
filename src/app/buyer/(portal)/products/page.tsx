@@ -12,6 +12,7 @@ import { buyerDashboardApi } from "@/app/buyer/_api/dashboard";
 import { type BuyerProduct, type BuyerProductFilters, buyerProductsApi } from "@/app/buyer/_api/products";
 import { masterDataApi } from "@/app/fpo/_api/master-data";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
+import { type PriceFilterValue, PriceRangeFilter } from "@/components/shared/price-range-filter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -31,8 +32,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { translationsApi } from "@/lib/api/translations";
 import { toMediaUrl } from "@/lib/utils/media-url";
 import { useLocaleStore } from "@/stores/locale-store";
-
-import { type PriceFilterValue, PriceRangeFilter } from "./_components/price-range-filter";
 
 type T = Record<string, string>;
 

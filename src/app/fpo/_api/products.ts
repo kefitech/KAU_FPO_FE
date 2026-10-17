@@ -97,8 +97,9 @@ export const productsApi = {
 
   /**
    * Uploads a filled bulk-import .xlsx / .csv. The backend creates one
-   * Product + ACTIVE ProductStock per valid row and returns per-row
-   * success / failure info (see `BulkImportResult` below).
+   * ACTIVE ProductStock per valid row — rows sharing name_en + commodity_code
+   * are batches of one Product (an existing one if the FPO already has it) —
+   * and returns per-row success / failure info (see `BulkImportResult` below).
    */
   bulkImport: (file: File): Promise<BulkImportResult> => {
     const form = new FormData();
@@ -123,6 +124,18 @@ export interface BulkImportRowSuccess {
   row: number;
   product_id: number;
   name: string;
+  batch_number: string;
+  /** true only on the row that created the product; later rows of the same product are false. */
+  new_product: boolean;
+}
+
+/** A row whose batch details failed: its product was still created, switched off and without a batch. */
+export interface BulkImportRowDraft {
+  row: number;
+  product_id: number;
+  name: string;
+  /** Why the batch was not added. */
+  reason: string;
 }
 
 export interface BulkImportRowError {
@@ -132,8 +145,16 @@ export interface BulkImportRowError {
 }
 
 export interface BulkImportResult {
+  /** Rows imported, i.e. batches created. */
   success: number;
+  /** Products created as drafts (switched off, no batch). */
+  drafted: number;
   failed: number;
+  /** New products that got at least one batch (drafts not included). */
+  products_created: number;
+  /** Existing products that received new batches. */
+  products_updated: number;
   results: BulkImportRowSuccess[];
+  drafts: BulkImportRowDraft[];
   errors: BulkImportRowError[];
 }

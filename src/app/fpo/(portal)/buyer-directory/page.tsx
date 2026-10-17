@@ -8,11 +8,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2, Calendar as CalendarIcon, CheckCircle2, Clock, Package, Search, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
 
-import { type BuyerProduct, buyerProductsApi } from "@/app/buyer/_api/products";
+import { type BuyerProduct, type BuyerProductFilters, buyerProductsApi } from "@/app/buyer/_api/products";
 import { buyerDirectoryApi } from "@/app/fpo/_api/buyer-directory";
 import { masterDataApi } from "@/app/fpo/_api/master-data";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { DetailModal } from "@/components/shared/detail-modal";
+import { type PriceFilterValue, PriceRangeFilter } from "@/components/shared/price-range-filter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -157,6 +158,7 @@ function ProductCatalogSection({ locale, t }: { locale: string; t: T }) {
   const [commodity, setCommodity] = useState("");
   const [fromDate, setFromDate] = useState<Date | undefined>(undefined);
   const [untilDate, setUntilDate] = useState<Date | undefined>(undefined);
+  const [price, setPrice] = useState<PriceFilterValue>({});
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
@@ -170,26 +172,31 @@ function ProductCatalogSection({ locale, t }: { locale: string; t: T }) {
   // only one is treated as "no filter yet."
   const dateFilterReady = !!fromDate && !!untilDate;
 
+  const filters: BuyerProductFilters = {
+    search: search || undefined,
+    commodity: commodity || undefined,
+    date_from: dateFilterReady ? formatDate(fromDate) : undefined,
+    date_until: dateFilterReady ? formatDate(untilDate) : undefined,
+  };
+
   const { data, isLoading } = useQuery({
-    queryKey: [
-      "buyer-products",
-      locale,
-      search,
-      commodity,
-      dateFilterReady ? fromDate : null,
-      dateFilterReady ? untilDate : null,
-      page,
-      pageSize,
-    ],
+    queryKey: ["buyer-products", locale, filters, price, page, pageSize],
     queryFn: () =>
       buyerProductsApi.getAll({
         page,
         page_size: pageSize,
-        search: search || undefined,
-        commodity: commodity !== "all" ? commodity : undefined,
-        date_from: dateFilterReady ? formatDate(fromDate) : undefined,
-        date_until: dateFilterReady ? formatDate(untilDate) : undefined,
+        ...filters,
+        price_min: price.min?.toString(),
+        price_max: price.max?.toString(),
       }),
+    staleTime: 30_000,
+  });
+
+  // Price slider ends follow every filter except price itself, so they don't
+  // shrink to whatever range the buyer already picked.
+  const { data: priceBounds } = useQuery({
+    queryKey: ["buyer-products-price-range", filters],
+    queryFn: () => buyerProductsApi.getPriceRange(filters),
     staleTime: 30_000,
   });
 
@@ -201,8 +208,8 @@ function ProductCatalogSection({ locale, t }: { locale: string; t: T }) {
 
   return (
     <div className="flex w-full flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <div className="relative flex-1">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+        <div className="relative flex-1 sm:min-w-48">
           <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder={t.search_placeholder ?? "Search products…"}
@@ -234,6 +241,16 @@ function ProductCatalogSection({ locale, t }: { locale: string; t: T }) {
             ))}
           </SelectContent>
         </Select>
+
+        <PriceRangeFilter
+          value={price}
+          bounds={priceBounds}
+          t={t}
+          onApply={(next) => {
+            setPrice(next);
+            resetPage();
+          }}
+        />
 
         <Popover>
           <PopoverTrigger asChild>

@@ -209,7 +209,7 @@ export default function MarketHubPage() {
                 <input
                   type="text"
                   className="form-control"
-                  placeholder={t.search_placeholder ?? "Search products..."}
+                  placeholder={t.search_placeholder ?? "Search products or batch number..."}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />

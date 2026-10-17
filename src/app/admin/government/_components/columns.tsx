@@ -38,7 +38,7 @@ function GovernmentActions({
       toast.success(t.toast_activated ?? "Official activated");
       queryClient.invalidateQueries({ queryKey: ["government"] });
     },
-    onError: () => toast.error(tCommon.update_failed ?? "Failed to activate"),
+    onError: (error: unknown) => toast.error(getErrorMessage(error, tCommon.update_failed ?? "Failed to activate")),
   });
 
   const deactivateMutation = useMutation({
@@ -47,7 +47,7 @@ function GovernmentActions({
       toast.success(t.toast_deactivated ?? "Official deactivated");
       queryClient.invalidateQueries({ queryKey: ["government"] });
     },
-    onError: () => toast.error(tCommon.update_failed ?? "Failed to deactivate"),
+    onError: (error: unknown) => toast.error(getErrorMessage(error, tCommon.update_failed ?? "Failed to deactivate")),
   });
 
   const resetPasswordMutation = useMutation({

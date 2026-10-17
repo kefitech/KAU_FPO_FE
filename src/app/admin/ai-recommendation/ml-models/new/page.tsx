@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { X } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -33,8 +34,17 @@ export default function NewMlModelPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { t, loading: translationsLoading } = useTranslations("ml_models");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
+
+  // Discard the chosen file. Clearing the input's value too lets the same
+  // file be picked again afterwards (onChange wouldn't fire otherwise).
+  const clearFile = () => {
+    setFile(null);
+    setFileError(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
 
   const schema = useMemo(() => buildSchema(t), [t]);
   const {
@@ -144,16 +154,31 @@ export default function NewMlModelPage() {
                   <FieldLabel htmlFor="model_file">
                     {t.model_file_label ?? "Model File"} <span className="text-destructive">*</span>
                   </FieldLabel>
-                  <input
-                    id="model_file"
-                    type="file"
-                    accept=".joblib"
-                    onChange={(e) => {
-                      setFile(e.target.files?.[0] ?? null);
-                      setFileError(null);
-                    }}
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1.5 text-sm shadow-xs file:mr-3 file:rounded file:border-0 file:bg-muted file:px-2 file:py-1 file:text-sm"
-                  />
+                  <div className="relative">
+                    <input
+                      ref={fileInputRef}
+                      id="model_file"
+                      type="file"
+                      accept=".joblib"
+                      onChange={(e) => {
+                        setFile(e.target.files?.[0] ?? null);
+                        setFileError(null);
+                      }}
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent py-1.5 pr-9 pl-3 text-sm shadow-xs file:mr-3 file:rounded file:border-0 file:bg-muted file:px-2 file:py-1 file:text-sm"
+                    />
+                    {file && (
+                      <button
+                        type="button"
+                        aria-label={t.remove_file ?? "Remove file"}
+                        title={t.remove_file ?? "Remove file"}
+                        onClick={clearFile}
+                        disabled={mutation.isPending}
+                        className="absolute top-1/2 right-2 -translate-y-1/2 rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
                   {fileError && <p className="text-destructive text-sm">{fileError}</p>}
                   <p className="text-muted-foreground text-xs">
                     {t.model_file_helper ??

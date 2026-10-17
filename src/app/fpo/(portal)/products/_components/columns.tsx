@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { productsApi } from "@/app/fpo/_api/products";
 import { RowActions } from "@/components/data-table/row-actions";
 import { Badge } from "@/components/ui/badge";
+import { getErrorMessage } from "@/lib/get-error-message";
 import { useConfirmStore } from "@/stores/confirm-store";
 import type { Product, ProductStatus } from "@/types/fpo";
 
@@ -60,8 +61,8 @@ function ProductActions({
       ),
   });
 
-  // Product-level switch — batches keep their own status, so switching the
-  // product back on restores exactly what was live.
+  // Product-level switch — switching off pauses the live batches, and
+  // switching back on restores exactly those (the backend tracks them).
   const toggleActiveMutation = useMutation({
     mutationFn: () => productsApi.setActive(product.id, !product.is_active),
     onSuccess: () => {
@@ -71,8 +72,13 @@ function ProductActions({
           : (t.toast_product_activated ?? "Product activated"),
       );
       invalidate();
+      // The batch statuses changed too.
+      queryClient.invalidateQueries({ queryKey: ["product-stocks", product.id] });
     },
-    onError: () => toast.error(t.err_product_toggle_failed ?? "Could not change the product status"),
+    // Server message names the reason, e.g. every batch is paused so the
+    // product stays inactive until a batch is activated.
+    onError: (err) =>
+      toast.error(getErrorMessage(err, t.err_product_toggle_failed ?? "Could not change the product status")),
   });
 
   const handleToggleActive = () => {
@@ -84,7 +90,7 @@ function ProductActions({
       title: t.confirm_deactivate_product_title ?? "Deactivate Product",
       description:
         t.confirm_deactivate_product_description ??
-        "All batches of this product will be hidden from buyers and the Market Hub until you activate it again.",
+        "Its active batches will be set to Inactive and hidden from buyers and the Market Hub. Activating the product again restores them.",
       // The dialog defaults to a red "Delete" button — this is a reversible switch.
       confirmLabel: t.action_deactivate_product ?? "Deactivate",
       confirmingLabel: t.deactivating ?? "Deactivating...",

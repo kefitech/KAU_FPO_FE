@@ -154,19 +154,43 @@ export default function EditSchemePage({ params }: { params: Promise<{ id: strin
               </FieldGroup>
               <Field>
                 <FieldLabel htmlFor="objective">{t.field_objective ?? "Objective"}</FieldLabel>
-                <Textarea id="objective" value={objective} onChange={(e) => setObjective(e.target.value)} rows={2} />
+                <Textarea
+                  id="objective"
+                  value={objective}
+                  onChange={(e) => setObjective(e.target.value)}
+                  rows={2}
+                  className="max-h-40 overflow-y-auto"
+                />
               </Field>
               <Field>
                 <FieldLabel htmlFor="eligibility">{t.field_eligibility ?? "Eligibility"} *</FieldLabel>
-                <Textarea id="eligibility" value={eligibility} onChange={(e) => setEligibility(e.target.value)} rows={2} />
+                <Textarea
+                  id="eligibility"
+                  value={eligibility}
+                  onChange={(e) => setEligibility(e.target.value)}
+                  rows={2}
+                  className="max-h-40 overflow-y-auto"
+                />
               </Field>
               <Field>
                 <FieldLabel htmlFor="benefits">{t.field_benefit_details ?? "Benefit Details"} *</FieldLabel>
-                <Textarea id="benefits" value={benefitDetails} onChange={(e) => setBenefitDetails(e.target.value)} rows={2} />
+                <Textarea
+                  id="benefits"
+                  value={benefitDetails}
+                  onChange={(e) => setBenefitDetails(e.target.value)}
+                  rows={2}
+                  className="max-h-40 overflow-y-auto"
+                />
               </Field>
               <Field>
                 <FieldLabel htmlFor="process">{t.field_application_process ?? "Application Process"} *</FieldLabel>
-                <Textarea id="process" value={applicationProcess} onChange={(e) => setApplicationProcess(e.target.value)} rows={2} />
+                <Textarea
+                  id="process"
+                  value={applicationProcess}
+                  onChange={(e) => setApplicationProcess(e.target.value)}
+                  rows={2}
+                  className="max-h-40 overflow-y-auto"
+                />
               </Field>
               <Field data-invalid={!!deadlineError}>
                 <FieldLabel htmlFor="deadline">{t.field_valid_till ?? "Valid Till"}</FieldLabel>

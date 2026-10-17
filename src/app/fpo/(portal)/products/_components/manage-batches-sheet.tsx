@@ -7,6 +7,7 @@ import { CheckCircle2, Pause, Pencil, Play, Plus, Trash2, Upload } from "lucide-
 import { toast } from "sonner";
 
 import { productStocksApi } from "@/app/fpo/_api/product-stocks";
+import { productsApi } from "@/app/fpo/_api/products";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -138,6 +139,18 @@ export function ManageBatchesSheet({ product, open, onOpenChange, t = {}, tCommo
     enabled: open,
   });
 
+  // The backend switches the product off when its last live batch is
+  // deactivated and back on when a batch goes live, so read the switch
+  // fresh rather than from the `product` prop snapshot. Same key as the
+  // edit page's product query, so both stay in step.
+  const { data: liveProduct } = useQuery({
+    queryKey: ["product", String(product.id)],
+    queryFn: () => productsApi.getById(product.id),
+    enabled: open,
+    initialData: product,
+  });
+  const isProductActive = liveProduct?.is_active ?? product.is_active;
+
   const draftIds = useMemo(
     () => stocks.filter((s) => s.status === "draft").map((s) => s.id),
     [stocks],
@@ -156,8 +169,10 @@ export function ManageBatchesSheet({ product, open, onOpenChange, t = {}, tCommo
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["product-stocks", product.id] });
     // Also refresh the parent product list — latest_stock / has_stock
-    // badges reflect the batch changes.
+    // badges reflect the batch changes — and the product itself, whose
+    // Active/Inactive switch can flip with a batch status change.
     queryClient.invalidateQueries({ queryKey: ["products"] });
+    queryClient.invalidateQueries({ queryKey: ["product", String(product.id)] });
   };
 
   const createMutation = useMutation({
@@ -340,10 +355,10 @@ export function ManageBatchesSheet({ product, open, onOpenChange, t = {}, tCommo
             {product.name.en} —{" "}
             {t.manage_batches_description ?? "Each batch has its own quantity, price, and validity window."}
           </SheetDescription>
-          {!product.is_active && (
+          {!isProductActive && (
             <p className="rounded-md border border-zinc-300 bg-zinc-100 px-3 py-2 text-xs text-zinc-700">
               {t.product_inactive_hint ??
-                "This product is inactive — none of its batches are shown to buyers until the product is activated."}
+                "This product is inactive — the batches that were live were set to Inactive and come back when the product is activated."}
             </p>
           )}
         </SheetHeader>

@@ -43,14 +43,16 @@ export default function GovernmentFPODetailPage({ params }: { params: Promise<{ 
   const [tApp, setTApp] = useState<T>({});
 
   const [tStatus, setTStatus] = useState<T>({});
+  const [tDistricts, setTDistricts] = useState<T>({});
 
   useEffect(() => {
     translationsApi
-      .getPublic(locale, "government_fpo_detail,fpo_my_application,government_dashboard")
+      .getPublic(locale, "government_fpo_detail,fpo_my_application,government_dashboard,districts")
       .then((data) => {
         setT(data.government_fpo_detail ?? {});
         setTApp(data.fpo_my_application ?? {});
         setTStatus(data.government_dashboard ?? {});
+        setTDistricts(data.districts ?? {});
       })
       .catch(() => undefined);
   }, [locale]);
@@ -60,6 +62,9 @@ export default function GovernmentFPODetailPage({ params }: { params: Promise<{ 
     const key = String(status).toLowerCase().replace(/ /g, "_");
     return tStatus[`status_${key}`] ?? fallback ?? status;
   }
+
+  // Malayalam month names when Malayalam is picked; otherwise the browser's default format, as before.
+  const dateLocale = locale === "ml" ? "ml-IN" : undefined;
 
   const {
     data: fpo,
@@ -97,7 +102,8 @@ export default function GovernmentFPODetailPage({ params }: { params: Promise<{ 
                   <CardTitle className="text-xl">{fpo.name}</CardTitle>
                   {fpo.name_ml && <p className="mt-0.5 text-muted-foreground text-sm">{fpo.name_ml}</p>}
                   <p className="mt-1 flex items-center gap-1 text-muted-foreground text-xs">
-                    <MapPin className="h-3 w-3" /> {fpo.district_display ?? fpo.district}
+                    <MapPin className="h-3 w-3" />{" "}
+                    {tDistricts[`district_${fpo.district}`] ?? fpo.district_display ?? fpo.district}
                   </p>
                 </div>
                 <Badge
@@ -114,7 +120,7 @@ export default function GovernmentFPODetailPage({ params }: { params: Promise<{ 
               <InfoRow label={tApp.field_total_members ?? "Total Members"} value={fpo.total_members} />
               <InfoRow
                 label={t.field_last_updated ?? "Last Updated"}
-                value={fpo.updated_at ? new Date(fpo.updated_at).toLocaleDateString() : null}
+                value={fpo.updated_at ? new Date(fpo.updated_at).toLocaleDateString(dateLocale) : null}
               />
             </CardContent>
           </Card>
@@ -127,7 +133,9 @@ export default function GovernmentFPODetailPage({ params }: { params: Promise<{ 
               <InfoRow label={tApp.field_reg_number ?? "Registration Number"} value={fpo.registration_number} />
               <InfoRow
                 label={tApp.field_date_of_reg ?? "Date of Registration"}
-                value={fpo.date_of_registration ? new Date(fpo.date_of_registration).toLocaleDateString() : null}
+                value={
+                  fpo.date_of_registration ? new Date(fpo.date_of_registration).toLocaleDateString(dateLocale) : null
+                }
               />
               <InfoRow label={tApp.field_legal_structure ?? "Legal Structure"} value={fpo.legal_structure_display} />
               <InfoRow label={tApp.field_promoting_agency ?? "Promoting Agency"} value={fpo.promoting_agency_display} />

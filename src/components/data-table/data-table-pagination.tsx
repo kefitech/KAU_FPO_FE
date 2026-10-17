@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 
-interface DataTablePaginationProps {
+export interface DataTablePaginationProps {
   page: number;
   pageSize: number;
   total: number;

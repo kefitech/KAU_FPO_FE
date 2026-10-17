@@ -37,7 +37,7 @@ function CBBOActions({ cbbo, t, tConfirm, tCommon }: { cbbo: CBBO; t: T; tConfir
       toast.success(t.toast_activated ?? "CBBO activated");
       invalidate();
     },
-    onError: () => toast.error(tCommon.update_failed ?? "Failed to activate"),
+    onError: (error: unknown) => toast.error(getErrorMessage(error) ?? tCommon.update_failed ?? "Failed to activate"),
   });
 
   const deactivateMutation = useMutation({
@@ -46,7 +46,7 @@ function CBBOActions({ cbbo, t, tConfirm, tCommon }: { cbbo: CBBO; t: T; tConfir
       toast.success(t.toast_deactivated ?? "CBBO deactivated");
       invalidate();
     },
-    onError: () => toast.error(tCommon.update_failed ?? "Failed to deactivate"),
+    onError: (error: unknown) => toast.error(getErrorMessage(error) ?? tCommon.update_failed ?? "Failed to deactivate"),
   });
 
   const resetPasswordMutation = useMutation({

@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 
 import { Tag } from "lucide-react";
 
@@ -18,6 +18,9 @@ export interface PriceFilterValue {
 }
 
 type T = Record<string, string>;
+
+/** Typing / dragging settles for this long before the filter is applied. */
+const APPLY_DELAY_MS = 300;
 
 const rupees = (amount: number) =>
   formatCurrency(amount, { currency: "INR", locale: "en-IN", minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -47,10 +50,13 @@ interface PriceRangeFilterProps {
 }
 
 /**
- * Price per unit filter for Explore Products: a dual-handle slider spanning
- * the catalogue's real price range, Min/Max boxes for exact amounts, and Go.
+ * Price per unit filter for the buyer product catalog (external buyer Explore
+ * Products and the FPO Buyer Directory): a dual-handle slider spanning
+ * the catalogue's real price range and Min/Max boxes for exact amounts.
  * Dragging a handle to its end clears that side, so "₹100 – ₹4,500+" means
- * ₹100 and above. Nothing is applied until Go (or Enter) is pressed.
+ * ₹100 and above. Changes apply on their own APPLY_DELAY_MS after the last
+ * keystroke / drag (the popover stays open); Enter applies straight away and
+ * closes it. An invalid range is never applied.
  */
 export function PriceRangeFilter({ value, bounds, onApply, t }: PriceRangeFilterProps) {
   const [open, setOpen] = useState(false);
@@ -79,6 +85,19 @@ export function PriceRangeFilter({ value, bounds, onApply, t }: PriceRangeFilter
     onApply(next);
     setOpen(false);
   };
+
+  // Parents pass a fresh inline onApply each render; read it through a ref so an
+  // unrelated re-render (e.g. results loading) doesn't restart the timer.
+  const onApplyRef = useRef(onApply);
+  onApplyRef.current = onApply;
+
+  // Auto-apply once the draft settles. Skipped when it's invalid or already
+  // applied — which also covers opening the popover (drafts = applied value).
+  useEffect(() => {
+    if (!open || invalid || (min === value.min && max === value.max)) return;
+    const timer = window.setTimeout(() => onApplyRef.current({ min, max }), APPLY_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [open, invalid, min, max, value.min, value.max]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -158,9 +177,6 @@ export function PriceRangeFilter({ value, bounds, onApply, t }: PriceRangeFilter
               className="pl-6"
             />
           </div>
-          <Button type="submit" size="sm" disabled={invalid}>
-            {t.btn_price_go ?? "Go"}
-          </Button>
         </form>
 
         {invalid && <p className="text-destructive text-xs">{t.price_error ?? "Enter a valid price range."}</p>}

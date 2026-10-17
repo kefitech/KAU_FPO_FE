@@ -20,7 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { DataTableParams, PaginatedResponse } from "@/types/pagination";
 
-import { DataTablePagination } from "./data-table-pagination";
+import { DataTablePagination, type DataTablePaginationProps } from "./data-table-pagination";
 import type { FilterConfig } from "./data-table-toolbar";
 import { DataTableToolbar } from "./data-table-toolbar";
 import { useDataTable } from "./use-data-table";
@@ -40,6 +40,12 @@ interface DataTableProps<TData> {
   toggleColumnsLabel?: string;
   searchPlaceholder?: string;
   clearLabel?: string;
+  /** Translated footer text; any label left out stays English. */
+  paginationLabels?: DataTablePaginationProps["labels"];
+  /** Translated empty-row text; defaults to "No results found." */
+  noResultsLabel?: string;
+  /** Translated serial-number column header; defaults to "SL No". */
+  slNoLabel?: string;
 }
 
 export function DataTable<TData>({
@@ -56,6 +62,9 @@ export function DataTable<TData>({
   toggleColumnsLabel,
   searchPlaceholder,
   clearLabel,
+  paginationLabels,
+  noResultsLabel,
+  slNoLabel,
 }: DataTableProps<TData>) {
   const { params, setPage, setPageSize, setSearch, setFilter, clearFilters, setOrdering, searchParams } = useDataTable({
     defaultPageSize,
@@ -107,7 +116,7 @@ export function DataTable<TData>({
 
   const slNoColumn: ColumnDef<TData> = {
     id: "_slno",
-    header: "SL No",
+    header: slNoLabel ?? "SL No",
     meta: { width: "56px" },
     enableSorting: false,
     enableHiding: false,
@@ -317,7 +326,7 @@ export function DataTable<TData>({
             ) : (
               <TableRow>
                 <TableCell colSpan={colSpan} className="h-32 text-center text-muted-foreground">
-                  No results found.
+                  {noResultsLabel ?? "No results found."}
                 </TableCell>
               </TableRow>
             )}
@@ -332,6 +341,7 @@ export function DataTable<TData>({
         onPageChange={setPage}
         onPageSizeChange={setPageSize}
         isLoading={isLoading}
+        labels={paginationLabels}
       />
     </div>
   );

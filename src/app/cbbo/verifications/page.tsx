@@ -28,12 +28,14 @@ export default function CBBOVerificationsPage() {
   const router = useRouter();
   const locale = useLocaleStore((s) => s.locale);
   const [t, setT] = useState<T>({});
+  const [tDistricts, setTDistricts] = useState<T>({});
 
   useEffect(() => {
     translationsApi
-      .getPublic(locale, "cbbo_verifications,common")
+      .getPublic(locale, "cbbo_verifications,common,districts")
       .then((data) => {
         setT({ ...(data.cbbo_verifications ?? {}), ...(data.common ?? {}) });
+        setTDistricts(data.districts ?? {});
       })
       .catch(() => undefined);
   }, [locale]);
@@ -67,7 +69,11 @@ export default function CBBOVerificationsPage() {
       accessorKey: "district_display",
       header: t.col_district ?? "District",
       meta: { hideOnMobile: true },
-      cell: ({ row }) => <span className="text-sm">{row.original.district_display ?? row.original.district}</span>,
+      cell: ({ row }) => (
+        <span className="text-sm">
+          {tDistricts[`district_${row.original.district}`] ?? row.original.district_display ?? row.original.district}
+        </span>
+      ),
     },
     {
       accessorKey: "status",
@@ -85,7 +91,9 @@ export default function CBBOVerificationsPage() {
       header: t.col_updated ?? "Updated",
       meta: { hideOnMobile: true },
       cell: ({ row }) => (
-        <span className="text-muted-foreground text-sm">{new Date(row.original.updated_at).toLocaleDateString()}</span>
+        <span className="text-muted-foreground text-sm">
+          {new Date(row.original.updated_at).toLocaleDateString(locale === "ml" ? "ml-IN" : undefined)}
+        </span>
       ),
     },
     {
@@ -123,6 +131,14 @@ export default function CBBOVerificationsPage() {
           columnsLabel={t.col_header ?? "Columns"}
           toggleColumnsLabel={t.col_toggle_columns ?? "Toggle columns"}
           searchPlaceholder={t.search_placeholder ?? "Search..."}
+          noResultsLabel={t.table_no_results}
+          slNoLabel={t.col_sl_no}
+          paginationLabels={{
+            noResults: t.pagination_no_results,
+            showing: t.pagination_showing,
+            rowsPerPage: t.pagination_rows_per_page,
+            pageOf: t.pagination_page_of,
+          }}
         />
       </Suspense>
     </div>
